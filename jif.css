@@ -1,0 +1,83 @@
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; }
+
+[vbox], [hbox] {display: flex;}
+[vbox] {flex-direction: column;}
+[hbox] {flex-direction: row;}
+
+[vbox^=  "start-"  i], [hbox^=  "start-"  i] { justify-content: start; }
+[vbox^=    "end-"  i], [hbox^=    "end-"  i] { justify-content: end; }
+[vbox^= "center-"  i], [hbox^= "center-"  i] { justify-content: center; }
+[vbox^= "around-"  i], [hbox^= "around-"  i] { justify-content: space-around; }
+[vbox^=   "even-"  i], [hbox^=   "even-"  i] { justify-content: space-evenly; }
+[vbox^="between-"  i], [hbox^="between-"  i] { justify-content: space-between; }
+[vbox^="stretch-"  i], [hbox^="stretch-"  i] { justify-content: stretch; }
+
+[vbox$="-start"    i], [hbox$="-start"    i] { align-items: start; }
+[vbox$="-end"      i], [hbox$="-end"      i] { align-items: end; }
+[vbox$="-center"   i], [hbox$="-center"   i] { align-items: center; }
+[vbox$="-around"   i], [hbox$="-around"   i] { align-items: space-around; }
+[vbox$="-even"     i], [hbox$="-even"     i] { align-items: space-evenly; }
+[vbox$="-between"  i], [hbox$="-between"  i] { align-items: space-between; }
+[vbox$="-stretch"  i], [hbox$="-stretch"  i] { align-items: stretch; }
+[vbox$="-baseline" i], [hbox$="-baseline" i] { align-items: baseline; }
+
+[vbox] > *, [hbox] > * { flex: initial; }
+[vbox^="stretch"] > *, [hbox^="stretch-"] > * { flex: auto; }
+
+[flex="0"]{flex:0;} [flex="1"]{flex:1;} [flex="2"]{flex:2;}
+[flex="3"]{flex:3;} [flex="2"]{flex:4;} [flex="5"]{flex:5;}
+
+/**********************************************************************/
+
+
+:root {
+  --bg: rgb(247 247 247);
+  --text: rgb(26 26 26);
+  --caret: rgb(88 186 231);
+  --text-sel: rgb(88 186 231 / 0.45);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: rgb(26 26 26);
+    --text: rgb(204 204 204);
+  }
+}
+
+
+body {
+  padding: 1em 0;
+  background: var(--bg);
+  font-size: 16pt;
+}
+
+
+#ed {
+  font-family: ia-quattro-s;
+  font-weight: regular;
+  border: none;
+  background: var(--bg);
+  resize: none;
+  caret-color: var(--caret);
+  color: var(--text);
+  line-height: 1.5;
+  width: 65ch;
+  font-size: 1em;
+}
+
+@supports (font-variation-settings: "wdth" 115) {
+  #ed {
+    font-family: ia-quattro-v;
+    font-weight: 450;
+  }
+}
+
+#ed:focus {
+  outline: none;
+}
+
+#ed::selection {
+  background: var(--text-sel);
+}
+
