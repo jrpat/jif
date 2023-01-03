@@ -18,9 +18,31 @@
   </head>
 
   <body vbox=stretch-center>
-    <textarea id=ed cols=70 autofocus></textarea>
+    <textarea id=ed cols=70 autofocus style="font-size:16pt"></textarea>
+
+    <div id=ui hbox=start-stretch>
+      <div class=uictrl>Config
+        <div class=menu>
+          <button id=add-config>Add</button>
+          <hr>
+          <div id=configs vbox=start-stretch>
+<!--            <div cfgid=123 hbox=-center>-->
+<!--              <input name=auto type=checkbox />-->
+<!--              <input name=path disabled value="https://gist.githubusercontent.com/jrpat/c618d08aa8c5e0f6aa32e6f2185d2fec/raw/jifconfig.js">-->
+<!--              <button name=load>↺</button>-->
+<!--            </div>-->
+          </div>
+        </div>
+      </div>
+      <div flex=1></div>
+      <div class=uictrl id=stat><i>62</i> Words</div>
+    </div>
   </body>
 
   <script src="jif.js"></script>
+
+  <script>
+    console.log("OK")
+  </script>
 </html>
 

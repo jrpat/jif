@@ -1,32 +1,44 @@
 ////////////////////////////////////////////////////////////////////////
+const D=document, B=D.body, LS=localStorage, U=undefined, O=Object
+const $=D.querySelector.bind(D), $$=D.querySelectorAll.bind(D)
+const tojson = x => U===x ? '' : JSON.stringify(x)
+const unjson = x => U===x ? undefined : JSON.parse(x)
+const db = {set: (k,v) => LS.setItem(k, tojson(v)),
+            get: (k) => unjson(LS.getItem(k)),
+            del: (k) => LS.removeItem(k), raw: LS}
+const AsyncFunction = (async function(){}).constructor
 EventTarget.prototype.on = EventTarget.prototype.addEventListener
 EventTarget.prototype.off = EventTarget.prototype.removeEventListener
+Element.prototype.$ = Element.prototype.querySelector
+Element.prototype.$$ = Element.prototype.querySelectorAll
+const stopevt = e => { e.preventDefault(); e.stopPropagation(); }
 ////////////////////////////////////////////////////////////////////////
 
 
-document.designMode = 'on' // needed for execCommand
+const cmd = (cmd, arg) => document.execCommand(cmd, false, arg)
+const cors = url => `https://proxy.cors.sh/${url}`
+
+const ed = $('#ed')
+const ui = $('#ui')
+const stat = $('#stat')
 
 
-const TRIG_TIMEOUT = 1000
-const SNIP_LOOKAHEAD = 500
+const api = {}
 
-
-let ed = document.getElementById('ed')
-
-let jif = {
+const jif = {
   opt: {
     trig_timeout: 1000,
     snip_lookahead: 500,
   },
   trigs: {},
-  api: {},
 }
 
 let T = null
 
 
 const keyabbrs = {
-  'lt':'<', 'esc':'escape', 'cr':'enter', 'space':' ', 'bslash':"\\", 'bar':'|', 
+  'lt':'<', 'esc':'escape', 'cr':'enter', 'space':' ', 'bslash':"\\",
+  'bar':'|', 'bs':'backspace',
   'left':'arrowleft', 'right':'arrowright', 'up':'arrowup', 'down':'arrowdown'
 }
 
@@ -37,6 +49,7 @@ function keyabbr(k) {
 }
 
 function keyrep_str(s) {
+  if (/^[A-Z]$/.test(s)) { s = '<s.'+s+'>' }
   s = s.trim().toLowerCase()
   if (s[0] != '<') { return s }
   let k = s.slice(1, -1).split(/[-.]/)
@@ -61,39 +74,19 @@ function keyseq(k) {
     .map(keyrep_str)
 }
 
-
-function curpos() {
-  return ed.selectionEnd
-}
-
-function cursel() {
-  return [ed.selectionStart, ed.selectionEnd]
-}
-
-function setpos(pos) {
-  ed.setSelectionRange(pos, pos)
-}
-
-function setsel(bgn, end) {
-  ed.setSelectionRange(bgn, end, (bgn < end) ? 'forward' : 'backward')
-}
-
-function lookat(pos, len) {
-  if (pos == null) { pos = curpos() }
-  return ed.value.slice(pos, pos + (len||1))
-}
-
-function instxt(text, bgn, end) {
+function withsel(bgn, end) {
   ed.focus()
-  if (bgn != null) ed.setSelectionRange(bgn, (end==null ? bgn : end));
-  document.execCommand('insertText', false, text)
+  if (bgn != null) setsel(bgn, (end==null) ? bgn : end)
 }
 
-function deltxt(bgn, end) {
-  ed.focus()
-  if (bgn != null) ed.setSelectionRange(bgn, (end==null ? bgn : end))
-  document.execCommand('delete', false)
-}
+const curpos = () => ed.selectionEnd
+const selbgn = () => ed.selectionStart
+const cursel = () => [ed.selectionStart, ed.selectionEnd]
+const setpos = (p) => ed.setSelectionRange(p, p)
+const setsel = (b,e) => ed.setSelectionRange(b,e, ((b<e)?'for':'back')+'ward')
+const gettxt = (b=curpos(), e=0) => ed.value.slice(b, (e ? e : b+1))
+const instxt = (t,b,e) => { withsel(b,e); cmd('insertText', t) }
+const deltxt = (b,e) => { withsel(b,e); cmd('delete') }
 
 function addtrig(seq, fn) {
   let trigs = jif.trigs
@@ -109,41 +102,51 @@ function addtrig(seq, fn) {
   }
 }
 
+
 function snipexpand(snip, bgn, end) {
+  if (!snip) { return }
   if (bgn == null) { bgn = end = curpos() }
+  let sel = cursel()
+  let zero = (sel[0] == sel[1]) ? '' : gettxt(...sel)
   instxt(snip, bgn, end)
-  snipnext(bgn)
+  snipnext(zero, bgn, snip.length)
 }
 
-function snipnext(pos) {
-  if (pos == null) { pos = curpos() }
-  const look = ed.value.slice(pos, jif.opt.snip_lookahead)
+function snipnext(
+  zero = '',
+  pos = curpos(),
+  lookahead = jif.opt.snip_lookahead,
+) {
+  const look = ed.value.slice(pos, pos+lookahead)
   const matches = look.matchAll(/%\d+/g)
-  let next = [9999, 0, 0]
+  let next = [9999, -1, -1, null]
   for (const match of matches) {
     const m = match[0]
     const mn = parseInt(m.slice(1), 10)
     if (mn < next[0]) {
-      next = [mn, match.index, m.length]
+      next = [mn, match.index, m.length, m]
       if (mn == 0) { break }
     }
   }
-  let bgn = pos + next[1]
-  let end = bgn + next[2]
-  setsel(bgn, end)
-  document.execCommand('delete')
+  if (next[3] != null) {
+    let bgn = pos + next[1]
+    let end = bgn + next[2]
+    setsel(bgn, end)
+    if (next[0] == 0) { cmd('insertText', zero) }
+  }
 }
 
 
 function T_start(t) {
   if (!T) {
-    T = {startpos: curpos()}
+    T = {pos: selbgn()}
   } else {
     clearTimeout(T.timer)
   }
   T.active = t
   const wait = Object.keys(t.trigs).length > 0
   T.timer = setTimeout(T_fin, wait ? jif.opt.trig_timeout : 1)
+  return wait
 }
 
 function T_cancel() {
@@ -161,89 +164,205 @@ function T_fin() {
 }
 
 
-const ignorekeys = ['Alt', 'Control', 'Meta', 'Shift']
+function ui_toggle() {
+  ui.classList.toggle('visible')
+}
 
-ed.on('keydown', e => {
-  if (e.repeat || (ignorekeys.includes(e.key))) { return true }
+function ui_show() {
 
-  if (e.key == 'Tab') { snipnext(); e.preventDefault(); return false }
+}
 
-  const rep = keyrep_evt(e)
-  const trigs = (T ? T.active : jif).trigs
-  const newtrig = trigs[rep]
 
-  if (newtrig) {
-    let ret = T_start(newtrig)
-  } else {
-    T_cancel()
-  }
-
-  return true
-})
+function zoom_text(n) {
+  const pt = parseInt(ed.style.fontSize, 10)
+  ed.style.fontSize = (pt + n)+'pt'
+}
 
 
 ////////////////////////////////////////////////////////////////////////
 
 
-jif.api.opt = (key, val) => {
+const ignorekeys = new Set('Alt', 'Control', 'Meta', 'Shift')
+const brackets = {'(':')', '[':']', '{':'}'}
+
+
+ed.on('keydown', e => {
+  if (e.repeat || (ignorekeys.has(e.key))) {
+    return true
+  }
+
+  if (e.key == 'Backspace') {
+    const pos = curpos()
+    const close = brackets[ed.value[pos-1]]
+    if (close && (ed.value[pos] == close)) { cmd('forwardDelete') }
+    return true
+  }
+
+  if (e.key == 'Tab') {
+    stopevt(e)
+    snipnext()
+    return false
+  }
+
+  const rep = keyrep_evt(e)
+  const trigs = (T ? T.active : jif).trigs
+  const trig = trigs[rep]
+
+  if (trig) {
+    const wait = T_start(trig)
+    if (!wait) { stopevt(e) }
+  }
+  else {
+    T_cancel()
+  }
+})
+
+
+document.on('keydown', e => {
+  if (e.ctrlKey) {
+    if (e.key == "\\") { stopevt(e); ui_toggle() }
+    if (e.key == ";")  { stopevt(e); cli_toggle() }
+  }
+
+  if (e.metaKey) {
+    if (e.key == '=') { stopevt(e); zoom_text( 2) }
+    if (e.key == '-') { stopevt(e); zoom_text(-2) }
+    if (e.key == '0') { ed.style.fontSize = '16pt' }
+  }
+}, true)
+
+
+////////////////////////////////////////////////////////////////////////
+
+
+api.opt = (key, val) => {
   if (val === undefined) { return jif.opt[key] }
   jif.opt[key] = val
 }
 
-jif.api.key = (...args) => {
-  const len = args.length
-  for (let i=0; i < len; i+=2) {
-    let [key, fn] = [args[i], args[i+1]]
-    if (fn) addtrig(keyseq(key), fn)
+api.key = (keys) => {
+  for (const [key, fn] of O.entries(keys)) {
+    addtrig(keyseq(key), fn)
   }
 }
 
-jif.api.map = (...args) => {
-  const len = args.length
-  for (let i=0; i < len; i+=2) {
-    let [key, sub] = [args[i], args[i+1]]
-    if (!sub) { continue }
-    if (typeof(sub) == 'function') {
-      addtrig(keyseq(key), () => {
-        let pos = curpos()
-        snipexpand(sub(), T.startpos, pos)
-      })
-    } else {
-      if (/%\d+/.test(sub))
-        addtrig(keyseq(key), () => snipexpand(sub, T.startpos, curpos()))
-      else
-        addtrig(keyseq(key), () => instxt(sub, T.startpos, curpos()))
-    }
+api.map = (maps) => {
+  for (const [key, sub] of O.entries(maps)) {
+    const seq = keyseq(key)
+    if (typeof(sub) == 'function')
+      addtrig(seq, (pos=curpos()) => snipexpand(sub(), T.pos, pos));
+    else
+      addtrig(seq, () => snipexpand(sub, T.pos, curpos()))
   }
 }
 
-jif.api.ins = instxt
-jif.api.del = deltxt
-jif.api.get = lookat
-jif.api.pos = (n) => (n==null) ? curpos() : setpos(n)
-jif.api.sel = (b,e) => (b==null) ? cursel() : setsel(b,e)
+api.ins = instxt
+api.del = deltxt
+api.get = gettxt
+api.pos = (n) => (n==null) ? curpos() : setpos(n)
+api.sel = (b,e) => (b==null) ? cursel() : setsel(b,e)
 
-jif.api.tstart = () => T ? T.startpos : null
+api.tstart = () => T ? T.pos : null
 
-jif.api.left = () => setpos(curpos() - 1)
-jif.api.right = () => setpos(curpos() + 1)
+api.move = (n) => setpos(curpos() + n)
+api.left = () => api.move(-1)
+api.right = () => api.move(1)
+
+api.map({
+  '(': '(%0)',
+  '[': '[%0]',
+  '{': '{%0}',
+})
+
+api.map({
+  ')': () => ((gettxt() == ')' && deltxt(curpos()+1)), ')'),
+  ']': () => ((gettxt() == ']' && deltxt(curpos()+1)), ']'),
+  '}': () => ((gettxt() == '}' && deltxt(curpos()+1)), '}'),
+})
+
+
+window.api = api
 
 
 ////////////////////////////////////////////////////////////////////////
 
 
-window.api = jif.api
+window.config = async function(code) {
+  (new AsyncFunction(...O.keys(api), code))(...O.values(api))
+}
+
+async function load_config(loc) {
+  if (loc.startsWith('http')) {
+    const resp = await fetch(`${loc}?jifbuster=${Date.now()}`, {cache:'no-cache'})
+    const text = await resp.text()
+    config(text)
+  } else {
+
+  }
+}
 
 
-//jif.api.key(';[', () => { console.log("OK!") })
+const configs = db.get('configs') || []
 
-jif.api.map(';[', '$[%0]')
-jif.api.map('(', '(%0)')
-jif.api.map(';s', '$')
+function find_config(path) {
+  return configs.find(c => c.path == path)
+}
 
-jif.api.map(')', () => {
-  if (jif.api.get() == ')') { jif.api.del(curpos() + 1) }
-  return ')'
+function list_config(c) {
+  const elem = $('#configs')
+  elem.innerHTML += `<div hbox=between-center>
+    <input name=auto type=checkbox ${c.auto ? 'checked' : ''}>
+    <input name=path disabled value="${c.path}">
+    <button name=load>↺</button>
+  </div>`
+}
+
+if (configs) {
+  configs.forEach(c => {
+    if (c.auto) { load_config(c.path) }
+    list_config(c)
+  })
+}
+
+
+$('#configs').on('click', e => {
+  const t = e.target
+  if (t.name == 'load') {
+    load_config(t.parentElement.$('[name="path"]').value)
+  }
 })
+
+$('#configs').on('change', e => {
+  const t = e.target
+  if (t.name == 'auto') {
+    const par = t.parentElement
+    const path = par.$('[name="path"]').value
+    load_config(path)
+    find_config(path).auto = t.checked
+    db.set('configs', configs)
+  }
+})
+
+$('#add-config').on('click', () => {
+  const path = prompt('Config path:')
+  let cfg = find_config(path)
+  if (!cfg) {
+    cfg = {auto:false, path}
+    configs.push(cfg)
+    list_config(cfg)
+  }
+  db.set('configs', configs)
+})
+
+
+////////////////////////////////////////////////////////////////////////
+
+
+api.map({
+  '<m.i>': '\\I{%0}',
+  '<m.b>': '\\B{%0}',
+  ':S:':   '\\S{%0}',
+})
+
 
 

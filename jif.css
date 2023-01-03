@@ -34,6 +34,7 @@ html, body { width:100%; height:100%; }
 :root {
   --bg: rgb(247 247 247);
   --text: rgb(26 26 26);
+  --line: rgb(26 26 26 / 0.1);
   --caret: rgb(0 195 255);
   --text-sel: rgb(0 195 255 / 0.275);
 }
@@ -42,14 +43,22 @@ html, body { width:100%; height:100%; }
   :root {
     --bg: rgb(26 26 26);
     --text: rgb(204 204 204);
+    --line: rgb(204 204 204 / 0.1);
   }
 }
 
+html {
+  font-size: 16pt;
+}
 
 body {
-  padding: 2em 0;
+  padding: 2rem 0;
   background: var(--bg);
-  font-size: 16pt;
+  color: var(--text);
+}
+
+body.windowed {
+  padding-top: 1em;
 }
 
 
@@ -63,7 +72,6 @@ body {
   color: var(--text);
   line-height: 1.6667;
   width: 64ch;
-  font-size: 1em;
 }
 
 @supports (font-variation-settings: "wdth" 115) {
@@ -79,5 +87,87 @@ body {
 
 #ed::selection {
   background-color: var(--text-sel);
+}
+
+
+#ui {
+  position: fixed;
+  height: 1.5rem;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  border-top: 1px solid var(--line);
+  font-size: 11pt;
+  font-family: system-ui;
+  text-size-adjust: none;
+  cursor: default;
+/*  visibility: hidden;*/
+}
+
+#ui.visible {
+  visibility: visible;
+}
+
+.uictrl {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0 1em;
+}
+
+.uictrl .menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  visibility: hidden;
+  width: 12rem;
+  border: 1px solid var(--line);
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+  z-index: 999;
+  line-height: 1.5;
+  padding: 0.75em 1em;
+}
+
+.menu > hr {
+  margin: 0.25em 0 0.75em 0;
+  border: none;
+  height: 1px;
+  background: var(--line);
+}
+
+.uictrl:hover .menu {
+  visibility: visible;
+}
+
+.menu button {
+  color: var(--caret);
+  border: none;
+  background: none;
+  font-size: 10pt;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.menu button:active {
+  transform: scale(0.975);
+}
+
+#stat i {
+  font-style: normal;
+  padding-right: 0.5ch;
+}
+
+#configs {
+  max-height: 20rem;
+  overflow-y: scroll;
+}
+
+#configs [name="path"] {
+  margin: 0 1em;
+  flex: 1;
 }
 
