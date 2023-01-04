@@ -11,12 +11,15 @@ EventTarget.prototype.on = EventTarget.prototype.addEventListener
 EventTarget.prototype.off = EventTarget.prototype.removeEventListener
 Element.prototype.$ = Element.prototype.querySelector
 Element.prototype.$$ = Element.prototype.querySelectorAll
+const html = (s) => { let e,d=document.createElement('div');
+  d.innerHTML=s; e=d.firstElementChild; e.remove(); return e }
 const stopevt = e => { e.preventDefault(); e.stopPropagation(); }
+const debounce = (ms, f) => {let t; return (...args) => {
+  clearTimeout(t); t = setTimeout(f.bind(null, ...args), ms)}}
 ////////////////////////////////////////////////////////////////////////
 
 
 const cmd = (cmd, arg) => document.execCommand(cmd, false, arg)
-const cors = url => `https://proxy.cors.sh/${url}`
 
 const ed = $('#ed')
 const ui = $('#ui')
@@ -29,8 +32,10 @@ const jif = {
   opt: {
     trig_timeout: 1000,
     snip_lookahead: 500,
+    cors: (url) => `https://cors.jif-editor.workers.dev/?${url}`
   },
   trigs: {},
+  pairs: {},
 }
 
 let T = null
@@ -118,7 +123,7 @@ function snipnext(
   lookahead = jif.opt.snip_lookahead,
 ) {
   const look = ed.value.slice(pos, pos+lookahead)
-  const matches = look.matchAll(/%\d+/g)
+  const matches = look.matchAll(/\^\d+/g)
   let next = [9999, -1, -1, null]
   for (const match of matches) {
     const m = match[0]
@@ -138,6 +143,7 @@ function snipnext(
 
 
 function T_start(t) {
+  if (T == 0) { T = null; return true } // ctrl-v
   if (!T) {
     T = {pos: selbgn()}
   } else {
@@ -159,7 +165,7 @@ function T_fin() {
   if (!T) { return }
   clearTimeout(T.timer)
   const t = T.active
-  if (t.f) { t.f() }
+  if (t.f) { t.f(curpos()) }
   T = null
 }
 
@@ -168,14 +174,51 @@ function ui_toggle() {
   ui.classList.toggle('visible')
 }
 
-function ui_show() {
+function zoom_text(n, pt) {
+  if (!pt) { pt = parseInt(ed.style.fontSize, 10) }
+  pt += n
+  ed.style.fontSize = pt+'pt'
+  db.set('zoom', pt)
+}
 
+function toggle_spell(spell) {
+  if (spell === undefined) { spell = !ed.spellcheck }
+  ed.spellcheck = spell
+  ed.value = ed.value
 }
 
 
-function zoom_text(n) {
-  const pt = parseInt(ed.style.fontSize, 10)
-  ed.style.fontSize = (pt + n)+'pt'
+function open_file(loc) {
+  if (loc == null) {
+    const input = html('<input type="file">')
+    input.dispatchEvent(new Event('click'))
+  }
+}
+
+
+function show_config() {
+  if ($('#config')) { return }
+  const frame = html('<iframe id=config src="/config.html">')
+  B.appendChild(frame)
+}
+
+function hide_config() {
+  let frame = $('#config')
+  if (!frame) { return }
+  configure(frame.contentWindow.ed.value)
+  frame.remove()
+}
+
+async function fetch_config(url) {
+  url = new URL(url)
+  url.searchParams.set('jifbuster', Date.now())
+  let resp = await(fetch(jif.opt.cors(url), {cache: 'no-store'}))
+  if (resp.ok) { configure(await resp.text()) }
+}
+
+window.configure = function configure(code) {
+  if (!code) { return }
+  (new AsyncFunction(...O.keys(api), code))(...O.values(api))
 }
 
 
@@ -183,7 +226,6 @@ function zoom_text(n) {
 
 
 const ignorekeys = new Set('Alt', 'Control', 'Meta', 'Shift')
-const brackets = {'(':')', '[':']', '{':'}'}
 
 
 ed.on('keydown', e => {
@@ -192,9 +234,9 @@ ed.on('keydown', e => {
   }
 
   if (e.key == 'Backspace') {
-    const pos = curpos()
-    const close = brackets[ed.value[pos-1]]
-    if (close && (ed.value[pos] == close)) { cmd('forwardDelete') }
+    const p = curpos()
+    const close = jif.pairs[ed.value[p-1]]
+    if (close && (ed.value[p] == close)) { cmd('forwardDelete') }
     return true
   }
 
@@ -202,6 +244,13 @@ ed.on('keydown', e => {
     stopevt(e)
     snipnext()
     return false
+  }
+
+  if (e.ctrlKey && (e.key == 'v')) {
+    T = 0; instxt('¬')
+    const pos = curpos()
+    setsel(pos-1, pos)
+    return true
   }
 
   const rep = keyrep_evt(e)
@@ -221,13 +270,15 @@ ed.on('keydown', e => {
 document.on('keydown', e => {
   if (e.ctrlKey) {
     if (e.key == "\\") { stopevt(e); ui_toggle() }
-    if (e.key == ";")  { stopevt(e); cli_toggle() }
+    if (e.key == ";")  { stopevt(e); show_config() }
+    if (e.key == 'o')  { stopevt(e); open_file() }
   }
 
   if (e.metaKey) {
     if (e.key == '=') { stopevt(e); zoom_text( 2) }
     if (e.key == '-') { stopevt(e); zoom_text(-2) }
-    if (e.key == '0') { ed.style.fontSize = '16pt' }
+    if (e.key == '0') { stopevt(e); zoom_text(0, 16) }
+    if (e.key == 'o') { stopevt(e); open_file() }
   }
 }, true)
 
@@ -250,9 +301,25 @@ api.map = (maps) => {
   for (const [key, sub] of O.entries(maps)) {
     const seq = keyseq(key)
     if (typeof(sub) == 'function')
-      addtrig(seq, (pos=curpos()) => snipexpand(sub(), T.pos, pos));
+      addtrig(seq, (pos) => snipexpand(sub(pos), T.pos, pos));
     else
-      addtrig(seq, () => snipexpand(sub, T.pos, curpos()))
+      addtrig(seq, (pos) => snipexpand(sub, T.pos, pos));
+  }
+}
+
+api.pair = (pairs) => {
+  for (const [a,z] of O.entries(pairs)) {
+    jif.pairs[a] = z
+    if (a != z) {
+      api.map({
+        [a]: `${a}^0${z}`,
+        [z]: (p) => ((gettxt() == z && deltxt(p+1)), z)
+      })
+    } else {
+      api.map({
+        [a]: (p) => (gettxt() == z ? (deltxt(p+1), z) : `${a}^0${z}`)
+      })
+    }
   }
 }
 
@@ -264,21 +331,11 @@ api.sel = (b,e) => (b==null) ? cursel() : setsel(b,e)
 
 api.tstart = () => T ? T.pos : null
 
+api.config = fetch_config
+
 api.move = (n) => setpos(curpos() + n)
 api.left = () => api.move(-1)
 api.right = () => api.move(1)
-
-api.map({
-  '(': '(%0)',
-  '[': '[%0]',
-  '{': '{%0}',
-})
-
-api.map({
-  ')': () => ((gettxt() == ')' && deltxt(curpos()+1)), ')'),
-  ']': () => ((gettxt() == ']' && deltxt(curpos()+1)), ']'),
-  '}': () => ((gettxt() == '}' && deltxt(curpos()+1)), '}'),
-})
 
 
 window.api = api
@@ -287,82 +344,14 @@ window.api = api
 ////////////////////////////////////////////////////////////////////////
 
 
-window.config = async function(code) {
-  (new AsyncFunction(...O.keys(api), code))(...O.values(api))
-}
-
-async function load_config(loc) {
-  if (loc.startsWith('http')) {
-    const resp = await fetch(`${loc}?jifbuster=${Date.now()}`, {cache:'no-cache'})
-    const text = await resp.text()
-    config(text)
-  } else {
-
-  }
-}
-
-
-const configs = db.get('configs') || []
-
-function find_config(path) {
-  return configs.find(c => c.path == path)
-}
-
-function list_config(c) {
-  const elem = $('#configs')
-  elem.innerHTML += `<div hbox=between-center>
-    <input name=auto type=checkbox ${c.auto ? 'checked' : ''}>
-    <input name=path disabled value="${c.path}">
-    <button name=load>↺</button>
-  </div>`
-}
-
-if (configs) {
-  configs.forEach(c => {
-    if (c.auto) { load_config(c.path) }
-    list_config(c)
-  })
-}
-
-
-$('#configs').on('click', e => {
-  const t = e.target
-  if (t.name == 'load') {
-    load_config(t.parentElement.$('[name="path"]').value)
-  }
-})
-
-$('#configs').on('change', e => {
-  const t = e.target
-  if (t.name == 'auto') {
-    const par = t.parentElement
-    const path = par.$('[name="path"]').value
-    load_config(path)
-    find_config(path).auto = t.checked
-    db.set('configs', configs)
-  }
-})
-
-$('#add-config').on('click', () => {
-  const path = prompt('Config path:')
-  let cfg = find_config(path)
-  if (!cfg) {
-    cfg = {auto:false, path}
-    configs.push(cfg)
-    list_config(cfg)
-  }
-  db.set('configs', configs)
-})
+api.pair({'(':')', '[':']', '{':'}', '"':'"'})
 
 
 ////////////////////////////////////////////////////////////////////////
 
 
-api.map({
-  '<m.i>': '\\I{%0}',
-  '<m.b>': '\\B{%0}',
-  ':S:':   '\\S{%0}',
-})
-
+configure(localStorage.getItem('config'))
+zoom_text(0, db.get('zoom'))
+toggle_spell(db.get('spell'))
 
 
