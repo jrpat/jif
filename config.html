@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+  <head>
+    <title>JIF : Config</title>
+    <link rel=stylesheet href="jif.css">
+    <style>
+      #ed {
+        font-size: 100%;
+        font-family: monospace;
+        border: 1px solid var(--line);
+        padding: 0.5em 1em;
+      }
+
+      button {
+        position: fixed;
+        top: 0;
+        right: 0;
+        border: none;
+        background: none;
+        font-size: 20pt;
+        line-height: 0;
+        height: 60px;
+        width: 60px;
+        padding-bottom: 3px;
+        text-align: center;
+        border-bottom-left-radius: 5px;
+        color: var(--text);
+      }
+
+      button:hover {
+        background: var(--line);
+      }
+    </style>
+  </head>
+  <body vbox=stretch-center>
+    <button onclick="parent.hide_config()">&times;</button>
+    <textarea id=ed cols=80 autofocus
+      autocapitalize=off
+      autocorrect=off
+      autocomplete=off
+      spellcheck="false"
+    ></textarea>
+    <script src="jif.js"></script>
+
+    <script>
+      const save = debounce(500, () => {
+        localStorage.setItem('config', ed.value)
+      })
+
+      ed.on('keydown', e => {
+        save()
+
+        if (e.key == 'Tab') {
+          document.execCommand('insertText', false, '  ')
+          e.preventDefault()
+          return false
+        }
+      })
+
+      window.on('beforeunload', e => {
+        window.opener.configure(ed.value)
+      })
+
+      window.api.pair({"'":"'"})
+
+      ed.value = localStorage.getItem('config')
+      ed.focus(); ed.selectionStart = 9999
+    </script>
+  </body>
+</html>
+

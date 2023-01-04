@@ -3,6 +3,7 @@
 !.gitignore
 
 !index.html
+!config.html
 !jif.css
 !jif.js
 
