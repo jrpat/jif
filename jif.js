@@ -13,15 +13,16 @@ Element.prototype.$ = Element.prototype.querySelector
 Element.prototype.$$ = Element.prototype.querySelectorAll
 const html = (s) => { let e,d=document.createElement('div');
   d.innerHTML=s; e=d.firstElementChild; e.remove(); return e }
-const stopevt = e => { e.preventDefault(); e.stopPropagation(); }
+const stopevt = e => (e.preventDefault(), e.stopPropagation(), false)
 const debounce = (ms, f) => {let t; return (...args) => {
   clearTimeout(t); t = setTimeout(f.bind(null, ...args), ms)}}
+const wait = (ms) => new Promise(r => setTimeout(r, ms))
 ////////////////////////////////////////////////////////////////////////
 
 
 const cmd = (cmd, arg) => document.execCommand(cmd, false, arg)
 
-const ed = $('#ed')
+let ed = $('#ed')
 const ui = $('#ui')
 const stat = $('#stat')
 
@@ -79,16 +80,21 @@ function keyseq(k) {
     .map(keyrep_str)
 }
 
-function withsel(bgn, end) {
+function eddo(f) {
   ed.focus()
-  if (bgn != null) setsel(bgn, (end==null) ? bgn : end)
+  return f()
+}
+
+function withsel(b, e) {
+  ed.focus()
+  if (b != null) ed.setSelectionRange(b, (e==null) ? b : e)
 }
 
 const curpos = () => ed.selectionEnd
 const selbgn = () => ed.selectionStart
-const cursel = () => [ed.selectionStart, ed.selectionEnd]
-const setpos = (p) => ed.setSelectionRange(p, p)
-const setsel = (b,e) => ed.setSelectionRange(b,e, ((b<e)?'for':'back')+'ward')
+const cursel = () => eddo(window.getSelection)
+const setpos = (p) => eddo(() => ed.setSelectionRange(p,p))
+const setsel = (b,e,d) => eddo(() => ed.setSelectionRange(b,e,d))
 const gettxt = (b=curpos(), e=0) => ed.value.slice(b, (e ? e : b+1))
 const instxt = (t,b,e) => { withsel(b,e); cmd('insertText', t) }
 const deltxt = (b,e) => { withsel(b,e); cmd('delete') }
@@ -111,8 +117,7 @@ function addtrig(seq, fn) {
 function snipexpand(snip, bgn, end) {
   if (!snip) { return }
   if (bgn == null) { bgn = end = curpos() }
-  let sel = cursel()
-  let zero = (sel[0] == sel[1]) ? '' : gettxt(...sel)
+  let zero = cursel().toString()
   instxt(snip, bgn, end)
   snipnext(zero, bgn, snip.length)
 }
@@ -181,15 +186,52 @@ function zoom_text(n, pt) {
   db.set('zoom', pt)
 }
 
-function toggle_spell(spell) {
+async function toggle_spell(spell) {
   if (spell === undefined) { spell = !ed.spellcheck }
   ed.spellcheck = spell
-  ed.value = ed.value
+  db.set('spell', spell)
+  $('#spelltoggle').classList.toggle('checked', spell)
+
+  if (spell) {
+    // Forcing spellcheck is non-trivial and takes a long time.
+    // See https://stackoverflow.com/questions/1884829/force-spell-check-on-a-textarea-in-webkit
+    ed.focus()
+  } else {
+    // This hack removes the spellcheck lines that are already there.
+    let par = ed.parentElement
+    let st = ed.scrollTop
+    let ss = ed.selectionStart
+    let se = ed.selectionEnd
+    ed.remove()
+    let ned = ed.cloneNode()
+    ed = ned
+    setTimeout(() => {
+      par.appendChild(ed)
+      setTimeout(() => {
+        ed.focus()
+        ed.scrollTop = st
+        ed.selectionStart = ss
+        ed.selectionEnd = se
+      }, 1)
+    }, 1)
+  }
 }
 
 
-function open_file(loc) {
-  if (loc == null) {
+function stat_calc() {
+  $('#stat-chars').innerText = ed.value.length+' Characters'
+
+  const nwords = (ed.value.match(/\s+/g) || []).length
+  $('#stat-words').innerText = nwords+' Words'
+}
+
+function stat_change() {
+  e.target.firstElementChild.selected = true
+}
+
+
+function open_file(f) {
+  if (f == null) {
     const input = html('<input type="file">')
     input.dispatchEvent(new Event('click'))
   }
@@ -225,7 +267,7 @@ window.configure = function configure(code) {
 ////////////////////////////////////////////////////////////////////////
 
 
-const ignorekeys = new Set('Alt', 'Control', 'Meta', 'Shift')
+const ignorekeys = new Set(['Alt', 'Control', 'Meta', 'Shift'])
 
 
 ed.on('keydown', e => {
@@ -269,12 +311,14 @@ ed.on('keydown', e => {
 
 document.on('keydown', e => {
   if (e.ctrlKey) {
+    if (e.key == 'Control') { return }
     if (e.key == "\\") { stopevt(e); ui_toggle() }
     if (e.key == ";")  { stopevt(e); show_config() }
     if (e.key == 'o')  { stopevt(e); open_file() }
   }
 
   if (e.metaKey) {
+    if (e.key == 'Meta') { return }
     if (e.key == '=') { stopevt(e); zoom_text( 2) }
     if (e.key == '-') { stopevt(e); zoom_text(-2) }
     if (e.key == '0') { stopevt(e); zoom_text(0, 16) }

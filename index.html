@@ -17,20 +17,25 @@
     <link rel=stylesheet href="jif.css">
   </head>
 
-  <body vbox=stretch-center>
+  <body vbox=stretch-center ondrop="open_file(event)">
     <div vbox=stretch-stretch style="overflow-y:hidden;">
       <textarea id=ed autofocus
         style="font-size:16pt"
-        autocorrect=off
         autocomplete=off
       ></textarea>
     </div>
 
     <div id=ui hbox=start-stretch>
       <button class=uictrl onclick="show_config()">Config</button>
-      <button class=uictrl onclick="toggle_spell()">Spell</button>
+      <button class=uictrl onclick="toggle_spell()" id=spelltoggle>Spell</button>
       <div flex=1></div>
-      <div class=uictrl id=stat><i>62</i> Words</div>
+      <div class=uictrl id=statbtn>Stats
+        <select id=stat onmousedown="stat_calc()" onchange="stat_change()">
+          <option disabled selected>Document Stats</option>
+          <option id=stat-chars>124 Characters</option>
+          <option id=stat-words>62 Words</option>
+        </select>
+      </div>
     </div>
 
     <script src="jif.js"></script>

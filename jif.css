@@ -67,12 +67,28 @@ html, body { width:100%; height:100%; }
 
 html {
   font-size: 16pt;
+  font-family: system-ui;
 }
 
 body {
   padding: 2rem 0;
   background: var(--bg);
   color: var(--text);
+}
+
+body.dragover:after {
+  content: 'Drop to Open';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  opacity: 0.5;
+  text-align: center;
+  line-height: 100vh;
+  font-size: 2.5vw;
+  z-index: 99999;
 }
 
 body.windowed {
@@ -112,6 +128,10 @@ body.windowed {
   background-color: var(--text-sel);
 }
 
+#ed.working {
+  opacity: 0.5;
+}
+
 
 #ui {
   position: fixed;
@@ -138,20 +158,15 @@ body.windowed {
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 0 1em;
+  padding: 0 1em 2px 1em;
   border: none;
   background: none;
   font-size: 11pt;
-  color: var(--text);
+  color: ButtonText;
 }
 
 button.uictrl:hover {
   background: var(--line);
-}
-
-#stat i {
-  font-style: normal;
-  padding-right: 0.5ch;
 }
 
 
@@ -165,5 +180,28 @@ button.uictrl:hover {
   border: 1px solid var(--text);
   border-radius: 5px;
   z-index: 999;
+  background: var(--bg);
+}
+
+
+#spelltoggle:before {
+  content: '☐';
+  padding-right: 4px;
+  margin-left: -3px;
+  opacity: 0.5;
+}
+
+
+#spelltoggle.checked:before {
+  content: '☑';
+  opacity: 1;
+}
+
+#stat {
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 2em;
 }
 
