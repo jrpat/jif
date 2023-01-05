@@ -103,7 +103,7 @@ const selbgn = () => ed.selectionStart
 const cursel = () => ed.value.slice(selbgn(), curpos())
 const setpos = (p) => (fed(), ed.setSelectionRange(p,p))
 const setsel = (b,e,d) => { fed(); ed.setSelectionRange(b,e,d) }
-const gettxt = (b=curpos(), e=0) => ed.value.slice(b, (e ? e : b+1))
+const gettxt = (b=curpos(), e) => ed.value.slice(b, (e ?? b+1))
 const instxt = (t,b,e) => { setsel(b,e); cmd('insertText', t) }
 const deltxt = (b,e=b) => { setsel(b,e); cmd('delete') }
 
@@ -225,7 +225,6 @@ function stat_calc() {
 function open_file(f) {
   if (f == null) {
     const input = html('<input type="file">')
-    
     input.dispatchEvent(new Event('click'))
   }
 }
@@ -344,7 +343,8 @@ document.on('keydown', e => {
 
 $$('.uictrl > select').forEach(elem => {
   elem.on('change', (e) => {
-    elem.handle[e.target.value]()
+    let f = (elem.handle||{})[e.target.value]
+    if (f) { f() }
     delay(() => { e.target.firstElementChild.selected = true })
   })
 })
