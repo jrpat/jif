@@ -252,9 +252,14 @@ function show_cli() {
   if (!f) { return }
   let sx = x.replace("'", "\\'")
   let sy = y.replace("'", "\\'")
-  jif.log.push(`${c}('${sx}', ${sy})`)
-  try { f(x, eval(y)) }
-  catch(e) { f(x, sy) }
+  try {
+    f(x, eval(y))
+    jif.log.push(`${c}('${sx}', ${y})`)
+  }
+  catch(e) {
+    f(x, sy)
+    jif.log.push(`${c}('${sx}', '${sy}')`)
+  }
 }
 
 function show_log() {
