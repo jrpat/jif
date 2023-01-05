@@ -182,10 +182,10 @@ function zoom_text(n, pt) {
 }
 
 async function toggle_spell(spell) {
-  if (spell === undefined) { spell = !ed.spellcheck }
+  spell ??= !ed.spellcheck
   ed.spellcheck = spell
   db.set('spell', spell)
-
+  ed.focus()
   if (spell) {
     // Forcing spellcheck is non-trivial and takes a long time.
     // https://stackoverflow.com/questions/1884829/force-spell-check-on-a-textarea-in-webkit
@@ -193,23 +193,6 @@ async function toggle_spell(spell) {
     ed.focus()
   } else {
     $('#spelltgl').innerHTML = `Check Spelling${'&nbsp;'.repeat(6)}`
-    // This hack removes the spellcheck lines that are already there.
-    let par = ed.parentElement
-    let st = ed.scrollTop
-    let ss = ed.selectionStart
-    let se = ed.selectionEnd
-    ed.remove()
-    let ned = ed.cloneNode()
-    ed = ned
-    delay(() => {
-      par.appendChild(ed)
-      delay(() => {
-        ed.focus()
-        ed.scrollTop = st
-        ed.selectionStart = ss
-        ed.selectionEnd = se
-      })
-    })
   }
 }
 
@@ -251,7 +234,7 @@ async function fetch_config(url) {
   if (resp.ok) { configure(await resp.text()) }
 }
 
-window.configure = function configure(code) {
+window.configure = (code) => {
   if (!code) { return }
   (new AsyncFunction(...O.keys(api), code))(...O.values(api))
 }
@@ -315,7 +298,7 @@ ed.on('keydown', e => {
 
   if (trig) {
     const wait = T_start(trig)
-//    if (!wait) { stopevt(e) }
+    if (!wait) { stopevt(e) }
   }
   else {
     T_cancel()
@@ -417,5 +400,4 @@ window.api = api
 
 
 api.pair({'(':')', '[':']', '{':'}', '"':'"'})
-
 

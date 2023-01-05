@@ -108,7 +108,7 @@ body.windowed {
   line-height: 1.6667;
   max-width: 92vw;
   box-sizing: content-box;
-  padding: 0 calc((100vw - 64ch) / 2);
+  padding: 0 max(calc((100vw - 64ch) / 2), 5vw);
   padding-bottom: calc(100vh - 4rem - 2em);
   padding-top: 2rem;
   z-index: 1;
