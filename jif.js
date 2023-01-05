@@ -17,6 +17,7 @@ const stopevt = e => (e.preventDefault(), e.stopPropagation(), false)
 const debounce = (ms, f) => {let t; return (...args) => {
   clearTimeout(t); t = setTimeout(f.bind(null, ...args), ms)}}
 const delay = (f, ms=1) => setTimeout(f, ms)
+const is_string = s => (typeof(s) == 'string')
 ////////////////////////////////////////////////////////////////////////
 
 
@@ -34,6 +35,7 @@ const jif = {
     snip_lookahead: 500,
     cors: (url) => `https://cors.jif-editor.workers.dev/?${url}`
   },
+  log: [],
   trigs: {},
   pairs: {},
 }
@@ -167,8 +169,9 @@ function T_fin() {
 }
 
 
-function ui_toggle() {
-  ui.classList.toggle('visible')
+function toggle_ui(visible) {
+  ui.classList.toggle('visible', visible)
+  db.set('ui', ui.classList.contains('visible'))
 }
 
 function zoom_text(n, pt) {
@@ -255,6 +258,26 @@ window.configure = function configure(code) {
 }
 
 
+function show_cli() {
+  let cmd = prompt('')
+  if (!cmd) { return }
+  cmd = cmd.match(/(\S+)\s+(\S+)\s+(.+)/)
+  if (!cmd) { return }
+  let [_, c, x, y] = cmd
+  let f = api[c]
+  if (!f) { return }
+  let sx = x.replace("'", "\\'")
+  let sy = y.replace("'", "\\'")
+  jif.log.push(`${c}('${sx}', '${sy}')`)
+  console.log(jif.log)
+  f(x, y)
+}
+
+function show_log() {
+  alert(jif.log.join('\n'))
+}
+
+
 ////////////////////////////////////////////////////////////////////////
 
 
@@ -303,8 +326,10 @@ ed.on('keydown', e => {
 document.on('keydown', e => {
   if (e.ctrlKey) {
     if (e.key == 'Control') { return }
-    if (e.key == "\\") { stopevt(e); ui_toggle() }
-    if (e.key == ";")  { stopevt(e); show_config() }
+    if (e.key == "\\") { stopevt(e); toggle_ui() }
+    if (e.key == ";")  { stopevt(e); show_cli() }
+    if (e.key == ':')  { stopevt(e); show_log() }
+    if (e.key == "`")  { stopevt(e); show_config() }
     if (e.key == 'o')  { stopevt(e); open_file() }
   }
 
@@ -320,6 +345,7 @@ document.on('keydown', e => {
 
 $$('.uictrl > select').forEach(elem => {
   elem.on('change', (e) => {
+    elem.handle[e.target.value]()
     delay(() => { e.target.firstElementChild.selected = true })
   })
 })
@@ -334,14 +360,14 @@ api.opt = (key, val) => {
 }
 
 api.key = (keys, x) => {
-  if (typeof(keys) == 'string') { keys = {keys: x} }
+  if (is_string(keys)) { keys = {[keys]: x} }
   for (const [key, fn] of O.entries(keys)) {
     addtrig(keyseq(key), fn)
   }
 }
 
 api.map = (maps, x) => {
-  if (typeof(maps) == 'string') { maps = {maps: x} }
+  if (is_string(maps)) { maps = {[maps]: x} }
   for (const [key, sub] of O.entries(maps)) {
     const seq = keyseq(key)
     if (typeof(sub) == 'function')
@@ -352,7 +378,7 @@ api.map = (maps, x) => {
 }
 
 api.pair = (pairs, x) => {
-  if (typeof(pairs) == 'string') { pairs = {pairs: x} }
+  if (is_string(pairs)) { pairs = {[pairs]: x} }
   for (const [a,z] of O.entries(pairs)) {
     jif.pairs[a] = z
     if (a != z) {

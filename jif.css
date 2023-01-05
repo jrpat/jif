@@ -163,7 +163,7 @@ body.windowed {
   border: none;
   background: none;
   font-size: 11pt;
-  color: ButtonText;
+  color: var(--text);
 }
 
 .uictrl:hover {

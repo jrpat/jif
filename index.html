@@ -40,6 +40,13 @@
         </select>
       </div>
       <div flex=1></div>
+      <div class=uictrl>Cmd
+        <select id=menu-cmd>
+          <option disabled selected>Command          </option>
+          <option value=cli>Enter Command</option>
+          <option value=log>View Log</option>
+        </select>
+      </div>
       <div class=uictrl>Stats
         <select id=menu-stat onmousedown="stat_calc()">
           <option disabled selected>Stats            </option>
@@ -52,33 +59,26 @@
     <script src="jif.js"></script>
 
     <script>
-      $('#menu-file').on('change', e => {
-        const val = e.target.value
-        if (val == 'new') {
-          console.log('new file')
-        }
-        if (val == 'open') {
-          console.log('open file')
-        }
-        if (val == 'save') {
-          console.log('save file')
-        }
-      })
+      $('#menu-file').handle = {
+        'new': (() => console.log('new file')),
+        'open': (() => console.log('open file')),
+        'save': (() => console.log('save file')),
+      }
 
+      $('#menu-opt').handle = {
+        'config': show_config,
+        'spell': toggle_spell,
+      }
 
-      $('#menu-opt').on('change', e => {
-        const val = e.target.value
-        if (val == 'config') {
-          show_config()
-        }
-        if (val == 'spell') {
-          toggle_spell()
-        }
-      })
+      $('#menu-cmd').handle = {
+        'cli': show_cli,
+        'log': show_log,
+      }
 
       configure(localStorage.getItem('config'))
       zoom_text(0, db.get('zoom'))
       toggle_spell(db.get('spell'))
+      toggle_ui(db.get('ui'))
     </script>
   </body>
 </html>
