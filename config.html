@@ -5,11 +5,10 @@
     <link rel=stylesheet href="jif.css">
     <style>
       #ed {
-        font-size: 100%;
+        font-size: 12pt;
         font-family: monospace;
         border: 1px solid var(--line);
-        padding: 0.5em 1em;
-        width: 80ch;
+        padding: 0.5em calc((100% - 80ch) / 2);
       }
 
       button {
@@ -22,10 +21,11 @@
         line-height: 0;
         height: 60px;
         width: 60px;
-        padding-bottom: 3px;
+        padding-bottom: 5px;
         text-align: center;
         border-bottom-left-radius: 5px;
         color: var(--text);
+        z-index: 99;
       }
 
       button:hover {
@@ -33,9 +33,9 @@
       }
     </style>
   </head>
-  <body vbox=stretch-center>
+  <body vbox=stretch-stretch>
     <button onclick="parent.hide_config()">&times;</button>
-    <textarea id=ed cols=80 autofocus
+    <textarea id=ed autofocus
       autocapitalize=off
       autocorrect=off
       autocomplete=off
@@ -58,8 +58,13 @@
         }
       })
 
+      document.on('keydown', e => {
+        if (e.key == 'Escape') { parent.hide_config() }
+      }, true)
+
       window.on('beforeunload', e => {
-        window.opener.configure(ed.value)
+        const o = window.opener
+        if (o) o.configure(ed.value)
       })
 
       window.api.pair({"'":"'"})

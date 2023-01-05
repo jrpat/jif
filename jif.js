@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////////////////////////////
 const D=document, B=D.body, LS=localStorage, U=undefined, O=Object
 const $=D.querySelector.bind(D), $$=D.querySelectorAll.bind(D)
-const tojson = x => U===x ? '' : JSON.stringify(x)
-const unjson = x => U===x ? undefined : JSON.parse(x)
+const tojson = x => ((U===x || x=='') ? null : JSON.stringify(x))
+const unjson = x => ((U===x || x=='') ? undefined : JSON.parse(x))
 const db = {set: (k,v) => LS.setItem(k, tojson(v)),
             get: (k) => unjson(LS.getItem(k)),
             del: (k) => LS.removeItem(k), raw: LS}
@@ -16,7 +16,7 @@ const html = (s) => { let e,d=document.createElement('div');
 const stopevt = e => (e.preventDefault(), e.stopPropagation(), false)
 const debounce = (ms, f) => {let t; return (...args) => {
   clearTimeout(t); t = setTimeout(f.bind(null, ...args), ms)}}
-const wait = (ms) => new Promise(r => setTimeout(r, ms))
+const delay = (f, ms=1) => setTimeout(f, ms)
 ////////////////////////////////////////////////////////////////////////
 
 
@@ -24,7 +24,6 @@ const cmd = (cmd, arg) => document.execCommand(cmd, false, arg)
 
 let ed = $('#ed')
 const ui = $('#ui')
-const stat = $('#stat')
 
 
 const api = {}
@@ -80,25 +79,6 @@ function keyseq(k) {
     .map(keyrep_str)
 }
 
-function eddo(f) {
-  ed.focus()
-  return f()
-}
-
-function withsel(b, e) {
-  ed.focus()
-  if (b != null) ed.setSelectionRange(b, (e==null) ? b : e)
-}
-
-const curpos = () => ed.selectionEnd
-const selbgn = () => ed.selectionStart
-const cursel = () => eddo(window.getSelection)
-const setpos = (p) => eddo(() => ed.setSelectionRange(p,p))
-const setsel = (b,e,d) => eddo(() => ed.setSelectionRange(b,e,d))
-const gettxt = (b=curpos(), e=0) => ed.value.slice(b, (e ? e : b+1))
-const instxt = (t,b,e) => { withsel(b,e); cmd('insertText', t) }
-const deltxt = (b,e) => { withsel(b,e); cmd('delete') }
-
 function addtrig(seq, fn) {
   let trigs = jif.trigs
   let slen = seq.length
@@ -114,10 +94,22 @@ function addtrig(seq, fn) {
 }
 
 
+function fed() { ed.focus() }
+
+const curpos = () => ed.selectionEnd
+const selbgn = () => ed.selectionStart
+const cursel = () => ed.value.slice(selbgn(), curpos())
+const setpos = (p) => (fed(), ed.setSelectionRange(p,p))
+const setsel = (b,e,d) => { fed(); ed.setSelectionRange(b,e,d) }
+const gettxt = (b=curpos(), e=0) => ed.value.slice(b, (e ? e : b+1))
+const instxt = (t,b,e) => { setsel(b,e); cmd('insertText', t) }
+const deltxt = (b,e) => { setsel(b,e=b); cmd('delete') }
+
+
 function snipexpand(snip, bgn, end) {
   if (!snip) { return }
   if (bgn == null) { bgn = end = curpos() }
-  let zero = cursel().toString()
+  let zero = cursel()
   instxt(snip, bgn, end)
   snipnext(zero, bgn, snip.length)
 }
@@ -156,7 +148,7 @@ function T_start(t) {
   }
   T.active = t
   const wait = Object.keys(t.trigs).length > 0
-  T.timer = setTimeout(T_fin, wait ? jif.opt.trig_timeout : 1)
+  T.timer = delay(T_fin, (wait ? jif.opt.trig_timeout : 1))
   return wait
 }
 
@@ -190,13 +182,14 @@ async function toggle_spell(spell) {
   if (spell === undefined) { spell = !ed.spellcheck }
   ed.spellcheck = spell
   db.set('spell', spell)
-  $('#spelltoggle').classList.toggle('checked', spell)
 
   if (spell) {
     // Forcing spellcheck is non-trivial and takes a long time.
-    // See https://stackoverflow.com/questions/1884829/force-spell-check-on-a-textarea-in-webkit
+    // https://stackoverflow.com/questions/1884829/force-spell-check-on-a-textarea-in-webkit
+    $('#spelltgl').innerHTML = `Check Spelling${'&nbsp;'.repeat(5)}✓`
     ed.focus()
   } else {
+    $('#spelltgl').innerHTML = `Check Spelling${'&nbsp;'.repeat(6)}`
     // This hack removes the spellcheck lines that are already there.
     let par = ed.parentElement
     let st = ed.scrollTop
@@ -205,15 +198,15 @@ async function toggle_spell(spell) {
     ed.remove()
     let ned = ed.cloneNode()
     ed = ned
-    setTimeout(() => {
+    delay(() => {
       par.appendChild(ed)
-      setTimeout(() => {
+      delay(() => {
         ed.focus()
         ed.scrollTop = st
         ed.selectionStart = ss
         ed.selectionEnd = se
-      }, 1)
-    }, 1)
+      })
+    })
   }
 }
 
@@ -225,14 +218,11 @@ function stat_calc() {
   $('#stat-words').innerText = nwords+' Words'
 }
 
-function stat_change() {
-  e.target.firstElementChild.selected = true
-}
-
 
 function open_file(f) {
   if (f == null) {
     const input = html('<input type="file">')
+    
     input.dispatchEvent(new Event('click'))
   }
 }
@@ -249,6 +239,7 @@ function hide_config() {
   if (!frame) { return }
   configure(frame.contentWindow.ed.value)
   frame.remove()
+  ed.focus()
 }
 
 async function fetch_config(url) {
@@ -327,6 +318,13 @@ document.on('keydown', e => {
 }, true)
 
 
+$$('.uictrl > select').forEach(elem => {
+  elem.on('change', (e) => {
+    delay(() => { e.target.firstElementChild.selected = true })
+  })
+})
+
+
 ////////////////////////////////////////////////////////////////////////
 
 
@@ -335,13 +333,15 @@ api.opt = (key, val) => {
   jif.opt[key] = val
 }
 
-api.key = (keys) => {
+api.key = (keys, x) => {
+  if (typeof(keys) == 'string') { keys = {keys: x} }
   for (const [key, fn] of O.entries(keys)) {
     addtrig(keyseq(key), fn)
   }
 }
 
-api.map = (maps) => {
+api.map = (maps, x) => {
+  if (typeof(maps) == 'string') { maps = {maps: x} }
   for (const [key, sub] of O.entries(maps)) {
     const seq = keyseq(key)
     if (typeof(sub) == 'function')
@@ -351,7 +351,8 @@ api.map = (maps) => {
   }
 }
 
-api.pair = (pairs) => {
+api.pair = (pairs, x) => {
+  if (typeof(pairs) == 'string') { pairs = {pairs: x} }
   for (const [a,z] of O.entries(pairs)) {
     jif.pairs[a] = z
     if (a != z) {
@@ -389,13 +390,5 @@ window.api = api
 
 
 api.pair({'(':')', '[':']', '{':'}', '"':'"'})
-
-
-////////////////////////////////////////////////////////////////////////
-
-
-configure(localStorage.getItem('config'))
-zoom_text(0, db.get('zoom'))
-toggle_spell(db.get('spell'))
 
 

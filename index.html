@@ -17,21 +17,32 @@
     <link rel=stylesheet href="jif.css">
   </head>
 
-  <body vbox=stretch-center ondrop="open_file(event)">
-    <div vbox=stretch-stretch style="overflow-y:hidden;">
-      <textarea id=ed autofocus
-        style="font-size:16pt"
-        autocomplete=off
-      ></textarea>
-    </div>
+  <body vbox=stretch-stretch ondrop="open_file(event)">
+    <textarea id=ed autofocus
+      style="font-size:16pt"
+      autocomplete=off
+    ></textarea>
 
     <div id=ui hbox=start-stretch>
-      <button class=uictrl onclick="show_config()">Config</button>
-      <button class=uictrl onclick="toggle_spell()" id=spelltoggle>Spell</button>
+      <div class=uictrl>File
+        <select id=menu-file>
+          <option disabled selected>File             </option>
+          <option value=new>New</option>
+          <option value=open>Open</option>
+          <option value=save>Save</option>
+        </select>
+      </div>
+      <div class=uictrl>Options
+        <select id=menu-opt>
+          <option disabled selected>Options          </option>
+          <option value=config>Edit Config</option>
+          <option value=spell id=spelltgl>Spell</option>
+        </select>
+      </div>
       <div flex=1></div>
-      <div class=uictrl id=statbtn>Stats
-        <select id=stat onmousedown="stat_calc()" onchange="stat_change()">
-          <option disabled selected>Document Stats</option>
+      <div class=uictrl>Stats
+        <select id=menu-stat onmousedown="stat_calc()">
+          <option disabled selected>Stats            </option>
           <option id=stat-chars>124 Characters</option>
           <option id=stat-words>62 Words</option>
         </select>
@@ -39,6 +50,36 @@
     </div>
 
     <script src="jif.js"></script>
+
+    <script>
+      $('#menu-file').on('change', e => {
+        const val = e.target.value
+        if (val == 'new') {
+          console.log('new file')
+        }
+        if (val == 'open') {
+          console.log('open file')
+        }
+        if (val == 'save') {
+          console.log('save file')
+        }
+      })
+
+
+      $('#menu-opt').on('change', e => {
+        const val = e.target.value
+        if (val == 'config') {
+          show_config()
+        }
+        if (val == 'spell') {
+          toggle_spell()
+        }
+      })
+
+      configure(localStorage.getItem('config'))
+      zoom_text(0, db.get('zoom'))
+      toggle_spell(db.get('spell'))
+    </script>
   </body>
 </html>
 
