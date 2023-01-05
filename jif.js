@@ -105,7 +105,7 @@ const setpos = (p) => (fed(), ed.setSelectionRange(p,p))
 const setsel = (b,e,d) => { fed(); ed.setSelectionRange(b,e,d) }
 const gettxt = (b=curpos(), e=0) => ed.value.slice(b, (e ? e : b+1))
 const instxt = (t,b,e) => { setsel(b,e); cmd('insertText', t) }
-const deltxt = (b,e) => { setsel(b,e=b); cmd('delete') }
+const deltxt = (b,e=b) => { setsel(b,e); cmd('delete') }
 
 
 function snipexpand(snip, bgn, end) {
@@ -268,9 +268,8 @@ function show_cli() {
   if (!f) { return }
   let sx = x.replace("'", "\\'")
   let sy = y.replace("'", "\\'")
-  jif.log.push(`${c}('${sx}', '${sy}')`)
-  console.log(jif.log)
-  f(x, y)
+  jif.log.push(`${c}('${sx}', ${sy})`)
+  f(x, eval(y))
 }
 
 function show_log() {
@@ -315,7 +314,7 @@ ed.on('keydown', e => {
 
   if (trig) {
     const wait = T_start(trig)
-    if (!wait) { stopevt(e) }
+//    if (!wait) { stopevt(e) }
   }
   else {
     T_cancel()
@@ -362,7 +361,7 @@ api.opt = (key, val) => {
 api.key = (keys, x) => {
   if (is_string(keys)) { keys = {[keys]: x} }
   for (const [key, fn] of O.entries(keys)) {
-    addtrig(keyseq(key), fn)
+    addtrig(keyseq(key), (pos) => { deltxt(T.pos, pos); fn() })
   }
 }
 
