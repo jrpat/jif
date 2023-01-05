@@ -104,7 +104,7 @@ const cursel = () => ed.value.slice(selbgn(), curpos())
 const setpos = (p) => (fed(), ed.setSelectionRange(p,p))
 const setsel = (b,e,d) => { fed(); ed.setSelectionRange(b,e,d) }
 const gettxt = (b=curpos(), e) => ed.value.slice(b, (e ?? b+1))
-const instxt = (t,b,e) => { setsel(b,e); cmd('insertText', t) }
+const instxt = (t,b=curpos(),e=b) => { setsel(b,e); cmd('insertText', t) }
 const deltxt = (b,e=b) => { setsel(b,e); cmd('delete') }
 
 
