@@ -263,6 +263,8 @@ function show_cli() {
   cmd = cmd.match(/(\S+)\s+(\S+)\s+(.+)/)
   if (!cmd) { return }
   let [_, c, x, y] = cmd
+  if (! (c && x && y)) { return }
+  c = c.toLowerCase()
   let f = api[c]
   if (!f) { return }
   let sx = x.replace("'", "\\'")
