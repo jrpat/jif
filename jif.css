@@ -55,7 +55,7 @@ html, body { width:100%; height:100%; }
 }
 
 @media (max-device-width: 812px) {
-  #ui {
+  .ui {
     visibility: visible !important;
   }
 
@@ -134,7 +134,7 @@ body.windowed {
 }
 
 
-#ui {
+.ui {
   position: fixed;
   height: 1.5rem;
   bottom: 0;
@@ -150,11 +150,11 @@ body.windowed {
   background: var(--bg);
 }
 
-#ui.visible {
+.ui.visible {
   visibility: visible;
 }
 
-.uictrl {
+.uibtn {
   position: relative;
   display: flex;
   flex-direction: row;
@@ -166,15 +166,15 @@ body.windowed {
   color: var(--text);
 }
 
-.uictrl:hover {
+.uibtn:hover {
   background: var(--line);
 }
 
-.uictrl {
+.uibtn {
   overflow: hidden;
 }
 
-.uictrl > select {
+.uibtn > select {
   opacity: 0;
   position: absolute;
   top: 0;

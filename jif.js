@@ -1,33 +1,52 @@
-////////////////////////////////////////////////////////////////////////
+/**********************************************************************/
+/*                                                                    */
+/*                                                                    */
+/*                               @@@@@@          @@@@@@@@@@@@         */
+/*                @@@@@@@@@@@   @@@@@@@@       @@@@@@@@@@@@@@@@       */
+/*                @@@@@@@@@@@  @@@@@@@@@@    @@@@@@@@@@@@@@@@@@@@     */
+/*                @@@@@@@@@@@   @@@@@@@@    @@@@@@@@@   @@@@@@@@@@    */
+/*                @@@@@@@@@@@    @@@@@@    @@@@@@@@@@   @@@@@@@@@@    */
+/*                @@@@@@@@@@@              @@@@@@@@@@   @@@@@@@@@@    */
+/*                @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@   @@@@@@@@@@    */
+/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@                 */
+/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@ @@@@@@@@@@@@@@@@@           */
+/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@ @@@@@@@@@@@@@@@@@           */
+/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@                 */
+/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@                 */
+/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@                 */
+/*     @@@@@@@@@@@@@@@@@@@@@   @@@@@@@@@@  @@@@@@@@@@                 */
+/*       @@@@@@@@@@@@@@@@@     @@@@@@@@@@  @@@@@@@@@@                 */
+/*                                                                    */
+/*                                                                    */
+/**********************************************************************/
 const D=document, B=D.body, LS=localStorage, U=undefined, O=Object
 const $=D.querySelector.bind(D), $$=D.querySelectorAll.bind(D)
+Element.prototype.$ = Element.prototype.querySelector
+Element.prototype.$$ = Element.prototype.querySelectorAll
+EventTarget.prototype.on = EventTarget.prototype.addEventListener
+EventTarget.prototype.off = EventTarget.prototype.removeEventListener
+const AsyncFunction = (async function(){}).constructor
 const tojson = x => ((U===x || x=='') ? null : JSON.stringify(x))
 const unjson = x => ((U===x || x=='') ? undefined : JSON.parse(x))
 const db = {set: (k,v) => LS.setItem(k, tojson(v)),
             get: (k) => unjson(LS.getItem(k)),
             del: (k) => LS.removeItem(k), raw: LS}
-const AsyncFunction = (async function(){}).constructor
-EventTarget.prototype.on = EventTarget.prototype.addEventListener
-EventTarget.prototype.off = EventTarget.prototype.removeEventListener
-Element.prototype.$ = Element.prototype.querySelector
-Element.prototype.$$ = Element.prototype.querySelectorAll
-const html = (s) => { let e,d=document.createElement('div');
+const html = s => { let e,d=D.createElement('div');
   d.innerHTML=s; e=d.firstElementChild; e.remove(); return e }
 const stopevt = e => (e.preventDefault(), e.stopPropagation(), false)
 const debounce = (ms, f) => {let t; return (...args) => {
   clearTimeout(t); t = setTimeout(f.bind(null, ...args), ms)}}
 const delay = (f, ms=1) => setTimeout(f, ms)
 const is_string = s => (typeof(s) == 'string')
+/**********************************************************************/
+window.db = db // debugging convenience
+
+
+
 ////////////////////////////////////////////////////////////////////////
-
-
-const cmd = (cmd, arg) => document.execCommand(cmd, false, arg)
+// State
 
 let ed = $('#ed')
-const ui = $('#ui')
-
-
-const api = {}
 
 const jif = {
   opt: {
@@ -40,13 +59,19 @@ const jif = {
   pairs: {},
 }
 
+const api = {}
+
+
+
+////////////////////////////////////////////////////////////////////////
+// Triggers
+
 let T = null
 
-
 const keyabbrs = {
-  'lt':'<', 'esc':'escape', 'cr':'enter', 'space':' ', 'bslash':"\\",
-  'bar':'|', 'bs':'backspace',
-  'left':'arrowleft', 'right':'arrowright', 'up':'arrowup', 'down':'arrowdown'
+  'esc':'escape', 'cr':'enter', 'space':' ', 'bslash':"\\",
+  'bar':'|', 'bs':'backspace', 'lt':'<', 'left':'arrowleft',
+  'right':'arrowright', 'up':'arrowup', 'down':'arrowdown'
 }
 
 const shifted = '~!@#$%^&*()-+{}|:"<>?'.split('')
@@ -82,74 +107,33 @@ function keyseq(k) {
 }
 
 function addtrig(seq, fn) {
-  let trigs = jif.trigs
-  let slen = seq.length
-  for (let i=0; i < slen; ++i) {
-    let rep = seq[i]
-    if (!trigs[rep]) { trigs[rep] = {f:null, trigs:{}} }
-    if (i == slen-1) {
-      trigs[rep].f = fn
-    } else {
-      trigs = trigs[rep].trigs
-    }
+  let t, trigs = jif.trigs
+  for (const rep of seq) {
+    t = trigs[rep] ??= {f:null, trigs:{}}
+    trigs = t.trigs
   }
+  t.f = fn
+}
+
+function deltrig(seq) {
+  let t, trigs = jif.trigs
+  for (const rep of seq.slice(0,-1)) {
+    t = trigs[rep]; if (!t) { return }
+    trigs = t.trigs
+  }
+  delete trigs[seq.at(-1)]
 }
 
 
-function fed() { ed.focus() }
-
-const curpos = () => ed.selectionEnd
-const selbgn = () => ed.selectionStart
-const cursel = () => ed.value.slice(selbgn(), curpos())
-const setpos = (p) => (fed(), ed.setSelectionRange(p,p))
-const setsel = (b,e,d) => { fed(); ed.setSelectionRange(b,e,d) }
-const gettxt = (b=curpos(), e) => ed.value.slice(b, (e ?? b+1))
-const instxt = (t,b=curpos(),e=b) => { setsel(b,e); cmd('insertText', t) }
-const deltxt = (b,e=b) => { setsel(b,e); cmd('delete') }
-
-
-function snipexpand(snip, bgn, end) {
-  if (!snip) { return }
-  if (bgn == null) { bgn = end = curpos() }
-  let zero = cursel()
-  instxt(snip, bgn, end)
-  snipnext(zero, bgn, snip.length)
-}
-
-function snipnext(
-  zero = '',
-  pos = curpos(),
-  lookahead = jif.opt.snip_lookahead,
-) {
-  const look = ed.value.slice(pos, pos+lookahead)
-  const matches = look.matchAll(/\^\d+/g)
-  let next = [9999, -1, -1, null]
-  for (const match of matches) {
-    const m = match[0]
-    const mn = parseInt(m.slice(1), 10)
-    if (mn < next[0]) {
-      next = [mn, match.index, m.length, m]
-      if (mn == 0) { break }
-    }
-  }
-  if (next[3] != null) {
-    let bgn = pos + next[1]
-    let end = bgn + next[2]
-    setsel(bgn, end)
-    if (next[0] == 0) { cmd('insertText', zero) }
-  }
-}
-
+function T_ignore() { T = 0; return true }
+function T_reset() { T = null; return true }
 
 function T_start(t) {
-  if (T == 0) { T = null; return true } // ctrl-v
-  if (!T) {
-    T = {pos: selbgn()}
-  } else {
-    clearTimeout(T.timer)
-  }
+  if (T == 0) { return T_reset() }
+  if (T) { clearTimeout(T.timer) }
+  T ??= {pos:ed.selectionStart, fill:gettxt(...cursel())}
   T.active = t
-  const wait = Object.keys(t.trigs).length > 0
+  const wait = O.keys(t.trigs).length > 0
   T.timer = delay(T_fin, (wait ? jif.opt.trig_timeout : 1))
   return wait
 }
@@ -169,9 +153,66 @@ function T_fin() {
 }
 
 
-function toggle_ui(visible) {
-  ui.classList.toggle('visible', visible)
-  db.set('ui', ui.classList.contains('visible'))
+
+////////////////////////////////////////////////////////////////////////
+// Text Operations
+
+const cmd = (c, arg) => { ed.focus(); D.execCommand(c, false, arg) }
+
+const selobj = () => (ed.focus(), window.getSelection())
+
+const curpos = () => ed.selectionEnd
+const selanc = () => ed.selectionStart
+const cursel = () => [ed.selectionStart, ed.selectionEnd]
+const setpos = (p) => ed.setSelectionRange(p,p)
+const setsel = (b,e,d) => (b!=null) && ed.setSelectionRange(b,e??b,d)
+const gettxt = (b=curpos(), e) => ed.value.slice(b, (e ?? b+1))
+const deltxt = (b,e=b) => { setsel(b,e); cmd('delete') }
+const instxt = (t,b,e=b) => { setsel(b,e); cmd('insertText', t) }
+
+
+
+////////////////////////////////////////////////////////////////////////
+// Snippets
+
+function snipexpand(snip, fill=T?.fill) {
+  instxt(snip||'')
+  if (snip) { snipnext(fill, T?.pos, snip.length) }
+}
+
+function snipnext(
+  fill = '',
+  pos = curpos(),
+  lookahead = jif.opt.snip_lookahead,
+) {
+  const look = ed.value.slice(pos, pos+lookahead)
+  const matches = look.matchAll(/\^\d+/g)
+  let next = [9999, -1, -1, null]
+  for (const match of matches) {
+    const m = match[0]
+    const mn = parseInt(m.slice(1), 10) || 0
+    if (mn < next[0]) {
+      next = [mn, match.index, m.length, m]
+      if (mn == 0) { break }
+    }
+  }
+  if (next[3] != null) {
+    const bgn = pos + next[1]
+    const end = bgn + next[2]
+    setsel(bgn, end)
+    if (next[0] == 0) { instxt(fill) }
+  }
+}
+
+
+
+////////////////////////////////////////////////////////////////////////
+// UI
+
+function toggle_ui(vis) {
+  vis ??= !$('.ui').classList.contains('visible')
+  $$('.ui').forEach(x => x.classList.toggle('visible', vis))
+  db.set('ui', vis)
 }
 
 function zoom_text(n, pt) {
@@ -181,37 +222,28 @@ function zoom_text(n, pt) {
   db.set('zoom', pt)
 }
 
-async function toggle_spell(spell) {
+function toggle_spell(spell) {
   spell ??= !ed.spellcheck
   ed.spellcheck = spell
   db.set('spell', spell)
   ed.focus()
-  if (spell) {
-    // Forcing spellcheck is non-trivial and takes a long time.
-    // https://stackoverflow.com/questions/1884829/force-spell-check-on-a-textarea-in-webkit
-    $('#spelltgl').innerHTML = `Check Spelling${'&nbsp;'.repeat(5)}✓`
-    ed.focus()
-  } else {
-    $('#spelltgl').innerHTML = `Check Spelling${'&nbsp;'.repeat(6)}`
-  }
+  // Forcing spellcheck redrawing is non-trivial and takes a long time.
+  // https://stackoverflow.com/questions/1884829/force-spell-check-on-a-textarea-in-webkit
+  $('#menu-Options-Spell').innerHTML =
+    'Check Spelling    '+(spell?'✓':' ')
+  return spell
 }
-
 
 function stat_calc() {
-  $('#stat-chars').innerText = ed.value.length+' Characters'
-
+  const nchars = ed.value.length
   const nwords = (ed.value.match(/\s+/g) || []).length
-  $('#stat-words').innerText = nwords+' Words'
+  return {nchars, nwords}
 }
 
-
-function open_file(f) {
-  if (f == null) {
-    const input = html('<input type="file">')
-    input.dispatchEvent(new Event('click'))
-  }
+function configure(code) {
+  if (!code) { return }
+  (new AsyncFunction(...O.keys(api), code))(...O.values(api))
 }
-
 
 function show_config() {
   if ($('#config')) { return }
@@ -219,7 +251,7 @@ function show_config() {
   B.appendChild(frame)
 }
 
-function hide_config() {
+window.hide_config = function() {
   let frame = $('#config')
   if (!frame) { return }
   configure(frame.contentWindow.ed.value)
@@ -233,12 +265,6 @@ async function fetch_config(url) {
   let resp = await(fetch(jif.opt.cors(url), {cache: 'no-store'}))
   if (resp.ok) { configure(await resp.text()) }
 }
-
-window.configure = (code) => {
-  if (!code) { return }
-  (new AsyncFunction(...O.keys(api), code))(...O.values(api))
-}
-
 
 function show_cli() {
   let cmd = prompt('')
@@ -255,8 +281,7 @@ function show_cli() {
   try {
     f(x, eval(y))
     jif.log.push(`${c}('${sx}', ${y})`)
-  }
-  catch(e) {
+  } catch(e) {
     f(x, sy)
     jif.log.push(`${c}('${sx}', '${sy}')`)
   }
@@ -267,14 +292,55 @@ function show_log() {
 }
 
 
+const menu_id = t => t.replace(/\W+/g, '_')
+
+function uimenu_btn(name, items) {
+  const handlers = {}
+  const btn = html(`<div class=uibtn>${name}</div>`)
+  const menu = html(`<select id=menu-${menu_id(name)}></select>`)
+  const title = `${name}${'&nbsp;'.repeat(16 - name.length)}`
+  const titleopt = html(`<option disabled selected>${title}</option>`)
+  menu.appendChild(titleopt)
+  btn.appendChild(menu)
+  menu.on('change', e => {
+    handlers[e.target.value]()
+    delay(() => { titleopt.selected = true })
+  })
+  const lng = items.reduce((l,i) => (Math.max(i[0].length, l)), 0)
+  for (const it of items) {
+    if (is_string(it)) {
+      menu.insertAdjacentHTML('beforeend',
+        `<option disabled>${'─'.repeat(lng*0.67)}&nbsp;</option>`)
+    } else {
+      const [text, fn] = it
+      const id = `menu-${menu_id(name)}-${menu_id(text)}`
+      menu.insertAdjacentHTML('beforeend',
+        `<option id=${id} value="${text}">${text}</option>`)
+      handlers[text] = fn || (function(){})
+    }
+  }
+  return btn
+}
+
+function uimenu_space() {
+  return html('<div flex=1></div>')
+}
+
+function uimenu(menus) {
+  const elem = $('#ui-menu')
+  for (const m of menus) {
+    elem.appendChild(is_string(m) ? uimenu_space() : uimenu_btn(...m))
+  }
+}
+
+
+
 ////////////////////////////////////////////////////////////////////////
-
-
-const ignorekeys = new Set(['Alt', 'Control', 'Meta', 'Shift'])
-
+// Keyboard Handling
 
 ed.on('keydown', e => {
-  if (e.repeat || (ignorekeys.has(e.key))) {
+  if ((e.altKey && e.key=='Alt') || (e.ctrlKey && e.key=='Control') ||
+      (e.metaKey && e.key=='Meta') || (e.shiftKey && e.key=='Shift')) {
     return true
   }
 
@@ -292,9 +358,10 @@ ed.on('keydown', e => {
   }
 
   if (e.ctrlKey && (e.key == 'v')) {
-    T = 0; instxt('¬')
-    const pos = curpos()
-    setsel(pos-1, pos)
+    T_ignore()
+    instxt('¬')
+    const p = curpos()
+    setsel(p-1, p)
     return true
   }
 
@@ -303,10 +370,9 @@ ed.on('keydown', e => {
   const trig = trigs[rep]
 
   if (trig) {
-    const wait = T_start(trig)
-    if (!wait) { stopevt(e) }
-  }
-  else {
+    T_start(trig)
+    if (e.metaKey) { stopevt(e) }
+  } else {
     T_cancel()
   }
 })
@@ -314,16 +380,16 @@ ed.on('keydown', e => {
 
 document.on('keydown', e => {
   if (e.ctrlKey) {
-    if (e.key == 'Control') { return }
-    if (e.key == "\\") { stopevt(e); toggle_ui() }
+    if (e.key == 'Control') { return true }
+    if (e.key == "-")  { stopevt(e); toggle_ui() }
+    if (e.key == "\\") { stopevt(e); show_config() }
     if (e.key == ";")  { stopevt(e); show_cli() }
     if (e.key == ':')  { stopevt(e); show_log() }
-    if (e.key == "`")  { stopevt(e); show_config() }
     if (e.key == 'o')  { stopevt(e); open_file() }
   }
 
   if (e.metaKey) {
-    if (e.key == 'Meta') { return }
+    if (e.key == 'Meta') { return true }
     if (e.key == '=') { stopevt(e); zoom_text( 2) }
     if (e.key == '-') { stopevt(e); zoom_text(-2) }
     if (e.key == '0') { stopevt(e); zoom_text(0, 16) }
@@ -332,54 +398,35 @@ document.on('keydown', e => {
 }, true)
 
 
-$$('.uictrl > select').forEach(elem => {
-  elem.on('change', (e) => {
-    let f = (elem.handle||{})[e.target.value]
-    if (f) { f() }
-    delay(() => { e.target.firstElementChild.selected = true })
-  })
-})
-
 
 ////////////////////////////////////////////////////////////////////////
+// API
 
-
-api.opt = (key, val) => {
-  if (val === undefined) { return jif.opt[key] }
-  jif.opt[key] = val
-}
-
-api.key = (keys, x) => {
-  if (is_string(keys)) { keys = {[keys]: x} }
-  for (const [key, fn] of O.entries(keys)) {
-    addtrig(keyseq(key), (pos) => { deltxt(T.pos, pos); fn() })
-  }
-}
+window.api = api
 
 api.map = (maps, x) => {
   if (is_string(maps)) { maps = {[maps]: x} }
   for (const [key, sub] of O.entries(maps)) {
     const seq = keyseq(key)
-    if (typeof(sub) == 'function')
-      addtrig(seq, (pos) => snipexpand(sub(pos), T.pos, pos));
+    if (!sub)
+      deltrig(seq)
+    else if (typeof(sub) == 'function')
+      addtrig(seq, (p) => { setsel(T.pos, p); snipexpand(sub(p)) });
     else
-      addtrig(seq, (pos) => snipexpand(sub, T.pos, pos));
+      addtrig(seq, (p) => { setsel(T.pos, p); snipexpand(sub) });
   }
 }
 
 api.pair = (pairs, x) => {
   if (is_string(pairs)) { pairs = {[pairs]: x} }
+  const get=api.get, ext=api.ext
   for (const [a,z] of O.entries(pairs)) {
     jif.pairs[a] = z
     if (a != z) {
-      api.map({
-        [a]: `${a}^0${z}`,
-        [z]: (p) => ((gettxt() == z && deltxt(p+1)), z)
-      })
+      api.map({[a]: `${a}^0${z}`,
+               [z]: p => ((get()==z && ext(1)), z)})
     } else {
-      api.map({
-        [a]: (p) => (gettxt() == z ? (deltxt(p+1), z) : `${a}^0${z}`)
-      })
+      api.map({[a]: p => (get()==z ? (ext(1), z) : `${a}^0${z}`)})
     }
   }
 }
@@ -388,22 +435,31 @@ api.ins = instxt
 api.del = deltxt
 api.get = gettxt
 api.pos = (n) => (n==null) ? curpos() : setpos(n)
+api.anc = (n) => (n==null) ? selanc() : setsel(n, curpos())
 api.sel = (b,e) => (b==null) ? cursel() : setsel(b,e)
+api.ext = (n) => (ed.selectionEnd += n)
+
+api.snip = snipexpand
 
 api.tstart = () => T ? T.pos : null
+api.tfill = () => T ? T.fill : null
 
 api.config = fetch_config
+
+api.sel.obj = selobj
 
 api.move = (n) => setpos(curpos() + n)
 api.left = () => api.move(-1)
 api.right = () => api.move(1)
+api.up = () => selobj().modify('move', 'backward', 'line')
+api.down = () => selobj().modify('move', 'forward', 'line')
 
+api.opt = (k,v) => (v==null) ? jif.opt[k] : (jif.opt[k] = v)
 
-window.api = api
 
 
 ////////////////////////////////////////////////////////////////////////
-
+// Default Config
 
 api.pair({'(':')', '[':']', '{':'}', '"':'"'})
 

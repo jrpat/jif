@@ -23,57 +23,43 @@
       autocomplete=off
     ></textarea>
 
-    <div id=ui hbox=start-stretch>
-      <div class=uictrl>File
-        <select id=menu-file>
-          <option disabled selected>File             </option>
-          <option value=new>New</option>
-          <option value=open>Open</option>
-          <option value=save>Save</option>
-        </select>
-      </div>
-      <div class=uictrl>Options
-        <select id=menu-opt>
-          <option disabled selected>Options          </option>
-          <option value=config>Edit Config</option>
-          <option value=spell id=spelltgl>Spell</option>
-        </select>
-      </div>
-      <div flex=1></div>
-      <div class=uictrl>Cmd
-        <select id=menu-cmd>
-          <option disabled selected>Command          </option>
-          <option value=cli>Enter Command</option>
-          <option value=log>View Log</option>
-        </select>
-      </div>
-      <div class=uictrl>Stats
-        <select id=menu-stat onmousedown="stat_calc()">
-          <option disabled selected>Stats            </option>
-          <option id=stat-chars>124 Characters</option>
-          <option id=stat-words>62 Words</option>
-        </select>
-      </div>
-    </div>
+    <div id=ui-menu class=ui hbox=start-stretch></div>
 
     <script src="jif.js"></script>
 
     <script>
-      $('#menu-file').handle = {
-        'new': (() => console.log('new file')),
-        'open': (() => console.log('open file')),
-        'save': (() => console.log('save file')),
-      }
+      uimenu([
+        ['File', [
+          ['New', () => console.log('new file')],
+          ['New in New Window', () => console.log('new file')],
+          '---',
+          ['Open', () => console.log('open file')],
+          ['Open in New Window', () => console.log('open file')],
+          '---',
+          ['Save', () => console.log('save file')],
+        ]],
+        ['Options', [
+          ['Edit Config', show_config],
+          ['Spell', toggle_spell],
+        ]],
+        '---',
+        ['Cmd', [
+          ['Enter Command', show_cli],
+          ['View Log', show_log],
+        ]],
+        ['Stats', [
+          ['chars'],
+          ['words'],
+        ]]
+      ])
 
-      $('#menu-opt').handle = {
-        'config': show_config,
-        'spell': toggle_spell,
-      }
-
-      $('#menu-cmd').handle = {
-        'cli': show_cli,
-        'log': show_log,
-      }
+      $('#menu-Stats').on('mousedown', e => {
+        let s = stat_calc()
+        let nc = s.nchars.toLocaleString()
+        let nw = s.nwords.toLocaleString()
+        $('#menu-Stats-chars').innerText = nc+' Characters'
+        $('#menu-Stats-words').innerText = nw+' Words'
+      })
 
       configure(localStorage.getItem('config'))
       zoom_text(0, db.get('zoom'))
