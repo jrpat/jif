@@ -1,7 +1,6 @@
 <!doctype html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
       @font-face {
         font-family: 'ia-quattro-v';
@@ -10,16 +9,17 @@
 
       @font-face {
         font-family: 'ia-quattro-s';
-        src: url('fonts/iAWriterQuattroS-Regular.ttf');
+        src: url('fonts/iAWriterQuattroS-Regular.ttf') format('truetype');
       }
     </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JIF</title>
-    <link rel=stylesheet href="jif.css">
+    <link rel=stylesheet media=screen href="jif.css">
   </head>
 
   <body vbox=stretch-stretch ondrop="open_file(event)">
     <textarea id=ed autofocus
-      style="font-size:16pt"
+      style="font-size:13.5pt"
       autocomplete=off
     ></textarea>
 
@@ -30,13 +30,16 @@
     <script>
       uimenu([
         ['File', [
-          ['New', () => console.log('new file')],
+          ['New in This Window', () => console.log('new file')],
           ['New in New Window', () => console.log('new file')],
           '---',
-          ['Open', () => console.log('open file')],
+          ['Open in This Window', () => console.log('open file')],
           ['Open in New Window', () => console.log('open file')],
           '---',
           ['Save', () => console.log('save file')],
+          ['Rename…', () => console.log('rename')],
+          '---',
+          ['Page Setup…', () => console.log('print setup')],
         ]],
         ['Options', [
           ['Edit Config', show_config],
@@ -62,9 +65,14 @@
       })
 
       configure(localStorage.getItem('config'))
-      zoom_text(0, db.get('zoom'))
+      // zoom_text(0, db.get('zoom'))
       toggle_spell(db.get('spell'))
       toggle_ui(db.get('ui'))
+
+
+      // temporary
+      ed.value = LS.getItem('text') || ''
+      // ed.innerText = LS.getItem('text') || ''
     </script>
   </body>
 </html>

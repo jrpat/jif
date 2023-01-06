@@ -34,8 +34,8 @@ const db = {set: (k,v) => LS.setItem(k, tojson(v)),
 const html = s => { let e,d=D.createElement('div');
   d.innerHTML=s; e=d.firstElementChild; e.remove(); return e }
 const stopevt = e => (e.preventDefault(), e.stopPropagation(), false)
-const debounce = (ms, f) => {let t; return (...args) => {
-  clearTimeout(t); t = setTimeout(f.bind(null, ...args), ms)}}
+//const debounce = (ms, f) => {let t; return (...args) => {
+//  clearTimeout(t); t = setTimeout(f.bind(null, ...args), ms)}}
 const delay = (f, ms=1) => setTimeout(f, ms)
 const is_string = s => (typeof(s) == 'string')
 /**********************************************************************/
@@ -60,6 +60,18 @@ const jif = {
 }
 
 const api = {}
+
+
+
+////////////////////////////////////////////////////////////////////////
+// Integration
+
+window.JIF ??= {}
+
+JIF.autosave ??= function(filename, content) {
+  if (!content) { return }
+  LS.setItem('text', content)
+}
 
 
 
@@ -310,7 +322,7 @@ function uimenu_btn(name, items) {
   for (const it of items) {
     if (is_string(it)) {
       menu.insertAdjacentHTML('beforeend',
-        `<option disabled>${'─'.repeat(lng*0.67)}&nbsp;</option>`)
+        `<option disabled>${'─'.repeat(lng*0.66)}&nbsp;</option>`)
     } else {
       const [text, fn] = it
       const id = `menu-${menu_id(name)}-${menu_id(text)}`
@@ -338,11 +350,17 @@ function uimenu(menus) {
 ////////////////////////////////////////////////////////////////////////
 // Keyboard Handling
 
+let as_timer
+const autosave = function() { JIF.autosave('x', ed.value) }
+
 ed.on('keydown', e => {
   if ((e.altKey && e.key=='Alt') || (e.ctrlKey && e.key=='Control') ||
       (e.metaKey && e.key=='Meta') || (e.shiftKey && e.key=='Shift')) {
     return true
   }
+
+  clearTimeout(as_timer)
+  setTimeout(autosave, 1000)
 
   if (e.key == 'Backspace') {
     const p = curpos()
@@ -381,21 +399,31 @@ ed.on('keydown', e => {
 document.on('keydown', e => {
   if (e.ctrlKey) {
     if (e.key == 'Control') { return true }
-    if (e.key == "-")  { stopevt(e); toggle_ui() }
-    if (e.key == "\\") { stopevt(e); show_config() }
-    if (e.key == ";")  { stopevt(e); show_cli() }
-    if (e.key == ':')  { stopevt(e); show_log() }
-    if (e.key == 'o')  { stopevt(e); open_file() }
+    switch (e.key) {
+      case "-": { stopevt(e); toggle_ui() } break;
+      case ",": { stopevt(e); show_config() } break;
+      case ";": { stopevt(e); show_cli() } break;
+      case ':': { stopevt(e); show_log() } break;
+      case 'o': { stopevt(e); open_file() } break;
+    }
   }
 
   if (e.metaKey) {
     if (e.key == 'Meta') { return true }
-    if (e.key == '=') { stopevt(e); zoom_text( 2) }
-    if (e.key == '-') { stopevt(e); zoom_text(-2) }
-    if (e.key == '0') { stopevt(e); zoom_text(0, 16) }
-    if (e.key == 'o') { stopevt(e); open_file() }
+    switch (e.key) {
+//      case '=': { stopevt(e); zoom_text( 2) } break;
+//      case '-': { stopevt(e); zoom_text(-2) } break;
+//      case '0': { stopevt(e); zoom_text(0, 16) } break;
+      case 'o': { stopevt(e); open_file() } break;
+      case ',': { stopevt(e); show_config() } break;
+    }
   }
 }, true)
+
+
+// [12.0pt, 1.625, 425, 0.5px]
+// [13.5pt, 1.618, 425, 0.0px]
+// [15.0pt, 1.650, 425, 0.5px]
 
 
 
@@ -413,7 +441,7 @@ api.map = (maps, x) => {
     else if (typeof(sub) == 'function')
       addtrig(seq, (p) => { setsel(T.pos, p); snipexpand(sub(p)) });
     else
-      addtrig(seq, (p) => { setsel(T.pos, p); snipexpand(sub) });
+      addtrig(seq, (p) => { debugger; setsel(T.pos, p); snipexpand(sub) });
   }
 }
 

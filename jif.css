@@ -1,10 +1,7 @@
-* { margin:0; padding:0; box-sizing:border-box; }
-html, body { width:100%; height:100%; }
-
+/**********************************************************************/
 [vbox], [hbox] {display: flex;}
 [vbox] {flex-direction: column;}
 [hbox] {flex-direction: row;}
-
 [vbox^=  "start-"  i], [hbox^=  "start-"  i] { justify-content: start; }
 [vbox^=    "end-"  i], [hbox^=    "end-"  i] { justify-content: end; }
 [vbox^= "center-"  i], [hbox^= "center-"  i] { justify-content: center; }
@@ -12,7 +9,6 @@ html, body { width:100%; height:100%; }
 [vbox^=   "even-"  i], [hbox^=   "even-"  i] { justify-content: space-evenly; }
 [vbox^="between-"  i], [hbox^="between-"  i] { justify-content: space-between; }
 [vbox^="stretch-"  i], [hbox^="stretch-"  i] { justify-content: stretch; }
-
 [vbox$="-start"    i], [hbox$="-start"    i] { align-items: start; }
 [vbox$="-end"      i], [hbox$="-end"      i] { align-items: end; }
 [vbox$="-center"   i], [hbox$="-center"   i] { align-items: center; }
@@ -21,14 +17,15 @@ html, body { width:100%; height:100%; }
 [vbox$="-between"  i], [hbox$="-between"  i] { align-items: space-between; }
 [vbox$="-stretch"  i], [hbox$="-stretch"  i] { align-items: stretch; }
 [vbox$="-baseline" i], [hbox$="-baseline" i] { align-items: baseline; }
-
 [vbox] > *, [hbox] > * { flex: initial; }
 [vbox^="stretch"] > *, [hbox^="stretch-"] > * { flex: auto; }
-
 [flex="0"]{flex:0;} [flex="1"]{flex:1;} [flex="2"]{flex:2;}
 [flex="3"]{flex:3;} [flex="2"]{flex:4;} [flex="5"]{flex:5;}
-
 /**********************************************************************/
+
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; }
 
 
 :root {
@@ -67,7 +64,6 @@ html, body { width:100%; height:100%; }
 }
 
 html {
-  font-size: 16pt;
   font-family: system-ui;
 }
 
@@ -105,7 +101,7 @@ body.windowed {
   resize: none;
   caret-color: var(--caret);
   color: var(--text);
-  line-height: 1.6667;
+  line-height: 1.618;
   max-width: 92vw;
   box-sizing: content-box;
   padding: 0 max(calc((100vw - 64ch) / 2), 5vw);
@@ -141,7 +137,7 @@ body.windowed {
   left: 0;
   width: 100%;
   border-top: 1px solid var(--line);
-  font-size: 11pt;
+  font-size: 10pt;
   font-family: system-ui;
   text-size-adjust: none;
   cursor: default;
@@ -162,7 +158,7 @@ body.windowed {
   padding: 0 1em 2px 1em;
   border: none;
   background: none;
-  font-size: 11pt;
+  font-size: 10pt;
   color: var(--text);
 }
 
@@ -194,7 +190,7 @@ body.windowed {
   border-radius: 5px;
   z-index: 999;
   background: var(--bg);
-  box-shadow: 0 8px 12px rgb()
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
 }
 
 
@@ -209,5 +205,10 @@ body.windowed {
 .spellchecking #spelltgl:before {
   content: '☑';
   opacity: 1;
+}
+
+#page {
+/*  display: none;*/
+  font-family: ETbb;
 }
 
