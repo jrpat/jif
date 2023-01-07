@@ -104,16 +104,17 @@ body.windowed {
   line-height: 1.618;
   max-width: 92vw;
   box-sizing: content-box;
-  padding: 0 max(calc((100vw - 64ch) / 2), 5vw);
+  padding: 0 max(calc((100vw - 64ch) / 2), 11vw);
   padding-bottom: calc(100vh - 4rem - 2em);
   padding-top: 2em;
   z-index: 1;
 }
 
+max(calc((100vw - (64ch + (0.125px * 64))) / 2), 5vw)
+
 @supports (font-variation-settings: "wdth" 115) {
   #ed {
     font-family: ia-quattro-v;
-    font-weight: 425;
   }
 }
 
@@ -125,14 +126,64 @@ body.windowed {
   background-color: var(--text-sel);
 }
 
-#ed.working {
-  opacity: 0.5;
+#ed[scale="-3"] {
+  font-size: 10.5pt;
+  font-weight: 425;
+  line-height: 1.715;
+  word-spacing: 0.67px;
+  letter-spacing: 0.125px;
+  --pad: max(calc((100vw - (64ch + (0.125px * 64))) / 2), 5vw);
+  padding-left: var(--pad);
+  padding-right: var(--pad);
+}
+
+#ed[scale="-2"] {
+  font-size: 11pt;
+  font-weight: 425;
+  line-height: 1.67;
+  word-spacing: 0.67px;
+}
+
+#ed[scale="-1"] {
+  font-size: 12pt;
+  font-weight: 425;
+  line-height: 1.625;
+  word-spacing: 0.5px;
+}
+
+#ed,
+#ed[scale="0"] {
+  font-size: 13.5pt;
+  font-weight: 425;
+  line-height: 1.618;
+  word-spacing: 0;
+}
+
+#ed[scale="1"] {
+  font-size: 15pt;
+  font-weight: 425;
+  line-height: 1.650;
+  word-spacing: 0.5px;
+}
+
+#ed[scale="2"] {
+  font-size: 18pt;
+  font-weight: 410;
+  line-height: 1.6;
+  word-spacing: 0.5px;
+}
+
+#ed[scale="3"] {
+  font-size: 24pt;
+  font-weight: 400;
+  line-height: 1.625;
+  word-spacing: 0.25px;
 }
 
 
-.ui {
+#ui-menu {
   position: fixed;
-  height: 1.5rem;
+  height: 2rem;
   bottom: 0;
   left: 0;
   width: 100%;
@@ -141,9 +192,12 @@ body.windowed {
   font-family: system-ui;
   text-size-adjust: none;
   cursor: default;
-  visibility: hidden;
   z-index: 9;
   background: var(--bg);
+}
+
+.ui {
+  visibility: hidden;
 }
 
 .ui.visible {
@@ -210,5 +264,11 @@ body.windowed {
 #page {
 /*  display: none;*/
   font-family: ETbb;
+}
+
+
+menu {
+  position: absolute;
+  border: 1px solid 
 }
 

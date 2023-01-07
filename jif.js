@@ -19,25 +19,26 @@
 /*                                                                    */
 /*                                                                    */
 /**********************************************************************/
-const D=document, B=D.body, LS=localStorage, U=undefined, O=Object
+const D=document, U=undefined, N=null, O=Object, M=Math
+const E_p=Element.prototype, ET_p=EventTarget.prototype
 const $=D.querySelector.bind(D), $$=D.querySelectorAll.bind(D)
-Element.prototype.$ = Element.prototype.querySelector
-Element.prototype.$$ = Element.prototype.querySelectorAll
-EventTarget.prototype.on = EventTarget.prototype.addEventListener
-EventTarget.prototype.off = EventTarget.prototype.removeEventListener
+E_p.$ = E_p.querySelector; E_p.$$ = E_p.querySelectorAll
+ET_p.on = ET_p.addEventListener; ET_p.off = ET_p.removeEventListener
+E_p.attr=function(k,v){ return this[
+  ((v===U)?'get':((v===N)?'remove':'set'))+'Attribute'](k,v)}
 const AsyncFunction = (async function(){}).constructor
-const tojson = x => ((U===x || x=='') ? null : JSON.stringify(x))
-const unjson = x => ((U===x || x=='') ? undefined : JSON.parse(x))
-const db = {set: (k,v) => LS.setItem(k, tojson(v)),
-            get: (k) => unjson(LS.getItem(k)),
-            del: (k) => LS.removeItem(k), raw: LS}
+const tojson = x => ((U===x || x==='') ? N : JSON.stringify(x))
+const unjson = x => ((U===x || x==='') ? U : JSON.parse(x))
+const db = {set: (k,v) => (localStorage.setItem(k, tojson(v)), v),
+            get: (k) => unjson(localStorage.getItem(k)),
+            del: (k) => localStorage.removeItem(k), raw:localStorage}
 const html = s => { let e,d=D.createElement('div');
   d.innerHTML=s; e=d.firstElementChild; e.remove(); return e }
 const stopevt = e => (e.preventDefault(), e.stopPropagation(), false)
-//const debounce = (ms, f) => {let t; return (...args) => {
-//  clearTimeout(t); t = setTimeout(f.bind(null, ...args), ms)}}
+const clamp = (x,min,max) => (x<=min ? min : x>=max ? max : x)
 const delay = (f, ms=1) => setTimeout(f, ms)
 const is_string = s => (typeof(s) == 'string')
+const int = (x) => parseInt(x, 10)
 /**********************************************************************/
 window.db = db // debugging convenience
 
@@ -70,7 +71,19 @@ window.JIF ??= {}
 
 JIF.autosave ??= function(filename, content) {
   if (!content) { return }
-  LS.setItem('text', content)
+  db.raw.setItem('text', content)
+}
+
+JIF.read ??= function(filename) {
+  return db.raw.getItem('text')
+}
+
+JIF.write ??= function(filename, content) {
+  console.log('write file', filename)
+}
+
+JIF.rename ??= function(oldname, newname) {
+  console.log('rename file', oldname, newname)
 }
 
 
@@ -202,7 +215,7 @@ function snipnext(
   let next = [9999, -1, -1, null]
   for (const match of matches) {
     const m = match[0]
-    const mn = parseInt(m.slice(1), 10) || 0
+    const mn = int(m.slice(1)) || 0
     if (mn < next[0]) {
       next = [mn, match.index, m.length, m]
       if (mn == 0) { break }
@@ -221,17 +234,20 @@ function snipnext(
 ////////////////////////////////////////////////////////////////////////
 // UI
 
+function set_scale(n) {
+  n = clamp(n, -3, 3)
+  ed.setAttribute('scale', n)
+  db.set('scale', n)
+}
+
+function change_scale(n) {
+  set_scale(int(ed.attr('scale'))+n)
+}
+
 function toggle_ui(vis) {
   vis ??= !$('.ui').classList.contains('visible')
   $$('.ui').forEach(x => x.classList.toggle('visible', vis))
   db.set('ui', vis)
-}
-
-function zoom_text(n, pt) {
-  if (!pt) { pt = parseInt(ed.style.fontSize, 10) }
-  pt += n
-  ed.style.fontSize = pt+'pt'
-  db.set('zoom', pt)
 }
 
 function toggle_spell(spell) {
@@ -260,7 +276,7 @@ function configure(code) {
 function show_config() {
   if ($('#config')) { return }
   const frame = html('<iframe id=config src="/config.html">')
-  B.appendChild(frame)
+  D.body.appendChild(frame)
 }
 
 window.hide_config = function() {
@@ -318,7 +334,7 @@ function uimenu_btn(name, items) {
     handlers[e.target.value]()
     delay(() => { titleopt.selected = true })
   })
-  const lng = items.reduce((l,i) => (Math.max(i[0].length, l)), 0)
+  const lng = items.reduce((l,i) => (M.max(i[0].length, l)), 0)
   for (const it of items) {
     if (is_string(it)) {
       menu.insertAdjacentHTML('beforeend',
@@ -400,30 +416,29 @@ document.on('keydown', e => {
   if (e.ctrlKey) {
     if (e.key == 'Control') { return true }
     switch (e.key) {
-      case "-": { stopevt(e); toggle_ui() } break;
-      case ",": { stopevt(e); show_config() } break;
-      case ";": { stopevt(e); show_cli() } break;
-      case ':': { stopevt(e); show_log() } break;
-      case 'o': { stopevt(e); open_file() } break;
+      case "-": toggle_ui();   break;
+      case ",": show_config(); break;
+      case ";": show_cli();    break;
+      case ':': show_log();    break;
+      case 'o': open_file();   break;
+      default: return
     }
+    stopevt(e)
   }
 
   if (e.metaKey) {
     if (e.key == 'Meta') { return true }
     switch (e.key) {
-//      case '=': { stopevt(e); zoom_text( 2) } break;
-//      case '-': { stopevt(e); zoom_text(-2) } break;
-//      case '0': { stopevt(e); zoom_text(0, 16) } break;
-      case 'o': { stopevt(e); open_file() } break;
-      case ',': { stopevt(e); show_config() } break;
+      case '=': change_scale(+1); break;
+      case '-': change_scale(-1); break;
+      case '0': set_scale(0);     break;
+      case 'o': open_file();      break;
+      case ',': show_config();    break;
+      default: return
     }
+    stopevt(e)
   }
 }, true)
-
-
-// [12.0pt, 1.625, 425, 0.5px]
-// [13.5pt, 1.618, 425, 0.0px]
-// [15.0pt, 1.650, 425, 0.5px]
 
 
 
@@ -441,7 +456,7 @@ api.map = (maps, x) => {
     else if (typeof(sub) == 'function')
       addtrig(seq, (p) => { setsel(T.pos, p); snipexpand(sub(p)) });
     else
-      addtrig(seq, (p) => { debugger; setsel(T.pos, p); snipexpand(sub) });
+      addtrig(seq, (p) => { setsel(T.pos, p); snipexpand(sub) });
   }
 }
 
