@@ -17,23 +17,27 @@
     <link rel=stylesheet media=screen href="jif.css">
   </head>
 
-  <body vbox=stretch-stretch ondrop="open_file(event)">
-    <textarea id=ed scale=2
-      autofocus autocomplete=off
-    ></textarea>
+  <body hbox=stretch ondrop="open_file(event)">
+    <div id=sidebar flex=0 class=ui vbox=start-stretch></div>
 
-    <div id=ui-menu class=ui hbox=start-stretch></div>
+    <div flex=1 vbox=stretch>
+      <textarea id=ed scale=2
+        autofocus autocomplete=off
+      ></textarea>
+
+      <div id=menu class=ui hbox=start-stretch></div>
+    </div>
 
     <script src="jif.js"></script>
 
-    <script>
-      uimenu([
+    <script type=module>
+      menu([
         ['File', [
-          ['New', () => console.log('new file')],
-          ['New in New Window', () => console.log('new file')],
+          ['New File', () => console.log('new file')],
+          ['New Window', () => console.log('new file')],
           '---',
-          ['Open', () => console.log('open file')],
-          ['Open in New Window', () => console.log('open file')],
+          ['Open File…', () => console.log('open file')],
+          ['Open Folder…', () => console.log('open folder')],
           '---',
           ['Save', () => console.log('save file')],
           ['Rename…', () => console.log('rename')],
@@ -64,14 +68,17 @@
       })
 
       configure(db.raw.getItem('config'))
+
       set_scale(db.get('scale'))
       toggle_spell(db.get('spell'))
-      toggle_ui(db.get('ui'))
 
+      togvis('menu', db.get('vis/menu'))
+      togvis('sidebar', db.get('vis/sidebar'))
 
 
       // temporary
-      ed.value = JIF.read('x')
+      ed.value = await JIF.read_file('x')
+
       window.on('beforeunload', () =>
         JIF.autosave('x', ed.value))
 

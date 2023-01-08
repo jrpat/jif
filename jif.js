@@ -23,9 +23,10 @@ const D=document, U=undefined, N=null, O=Object, M=Math
 const E_p=Element.prototype, ET_p=EventTarget.prototype
 const $=D.querySelector.bind(D), $$=D.querySelectorAll.bind(D)
 E_p.$ = E_p.querySelector; E_p.$$ = E_p.querySelectorAll
-ET_p.on = ET_p.addEventListener; ET_p.off = ET_p.removeEventListener
 E_p.attr=function(k,v){ return this[
   ((v===U)?'get':((v===N)?'remove':'set'))+'Attribute'](k,v)}
+ET_p.on = ET_p.addEventListener; ET_p.off = ET_p.removeEventListener
+ET_p.emit = function(e){this.dispatchEvent(isstr(e)?(new Event(e)):e)}
 const AsyncFunction = (async function(){}).constructor
 const tojson = x => ((U===x || x==='') ? N : JSON.stringify(x))
 const unjson = x => ((U===x || x==='') ? U : JSON.parse(x))
@@ -37,7 +38,7 @@ const html = s => { let e,d=D.createElement('div');
 const stopevt = e => (e.preventDefault(), e.stopPropagation(), false)
 const clamp = (x,min,max) => (x<=min ? min : x>=max ? max : x)
 const delay = (f, ms=1) => setTimeout(f, ms)
-const is_string = s => (typeof(s) == 'string')
+const isstr = s => (typeof(s) == 'string')
 const int = (x) => parseInt(x, 10)
 /**********************************************************************/
 window.db = db // debugging convenience
@@ -69,21 +70,43 @@ const api = {}
 
 window.JIF ??= {}
 
-JIF.autosave ??= function(filename, content) {
+JIF.autosave ??= async function(filename, content) {
   if (!content) { return }
   db.raw.setItem('text', content)
 }
 
-JIF.read ??= function(filename) {
+JIF.choose_file ??= async function() {
+}
+
+JIF.choose_folder ??= function() {
+  const mkdir = (f) => {
+    const contents = []
+    contents.name = f.name
+    contents.read = async() => contents
+    return contents
+  }
+  return new Promise((ok, err) => {
+    const input = html('<input type=file webkitdirectory directory>')
+    input.on('change', () => {
+      console.log('change')
+    })
+    input.emit('click')
+  })
+}
+
+JIF.read_file ??= async function(path) {
   return db.raw.getItem('text')
 }
 
-JIF.write ??= function(filename, content) {
+JIF.write_file ??= async function(path, content) {
   console.log('write file', filename)
 }
 
-JIF.rename ??= function(oldname, newname) {
+JIF.rename_file ??= async function(oldpath, newpath) {
   console.log('rename file', oldname, newname)
+}
+
+JIF.read_folder ??= async function(path) {
 }
 
 
@@ -230,9 +253,24 @@ function snipnext(
 }
 
 
+////////////////////////////////////////////////////////////////////////
+// Files
+
+async function choose_folder() {
+  JIF.choose_folder()
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////
 // UI
+
+function togvis(id, vis) {
+  const elem = $('#'+id)
+  vis ??= !elem.classList.contains('visible')
+  elem.classList.toggle('visible', vis)
+  db.set('vis/'+id, vis)
+}
 
 function set_scale(n) {
   n = clamp(n, -3, 3)
@@ -242,12 +280,6 @@ function set_scale(n) {
 
 function change_scale(n) {
   set_scale(int(ed.attr('scale'))+n)
-}
-
-function toggle_ui(vis) {
-  vis ??= !$('.ui').classList.contains('visible')
-  $$('.ui').forEach(x => x.classList.toggle('visible', vis))
-  db.set('ui', vis)
 }
 
 function toggle_spell(spell) {
@@ -287,11 +319,15 @@ window.hide_config = function() {
   ed.focus()
 }
 
-async function fetch_config(url) {
-  url = new URL(url)
-  url.searchParams.set('jifbuster', Date.now())
-  let resp = await(fetch(jif.opt.cors(url), {cache: 'no-store'}))
-  if (resp.ok) { configure(await resp.text()) }
+async function fetch_config(loc) {
+  if  (/^https?:/.test(loc)) {
+    const url = new URL(loc)
+    url.searchParams.set('jifbuster', Date.now())
+    let resp = await(fetch(jif.opt.cors(url), {cache: 'no-store'}))
+    if (resp.ok) { configure(await resp.text()) }
+  } else {
+    configure(await JIF.read_file(loc))
+  }
 }
 
 function show_cli() {
@@ -322,11 +358,11 @@ function show_log() {
 
 const menu_id = t => t.replace(/\W+/g, '_')
 
-function uimenu_btn(name, items) {
+function menu_btn(name, items) {
   const handlers = {}
-  const btn = html(`<div class=uibtn>${name}</div>`)
+  const btn = html(`<div class=menubtn>${name}</div>`)
   const menu = html(`<select id=menu-${menu_id(name)}></select>`)
-  const title = `${name}${'&nbsp;'.repeat(16 - name.length)}`
+  const title = `${name}${' '.repeat(32 - name.length)}`
   const titleopt = html(`<option disabled selected>${title}</option>`)
   menu.appendChild(titleopt)
   btn.appendChild(menu)
@@ -334,11 +370,9 @@ function uimenu_btn(name, items) {
     handlers[e.target.value]()
     delay(() => { titleopt.selected = true })
   })
-  const lng = items.reduce((l,i) => (M.max(i[0].length, l)), 0)
   for (const it of items) {
-    if (is_string(it)) {
-      menu.insertAdjacentHTML('beforeend',
-        `<option disabled>${'─'.repeat(lng*0.66)}&nbsp;</option>`)
+    if (isstr(it)) {
+      menu.lastElementChild.divafter = true
     } else {
       const [text, fn] = it
       const id = `menu-${menu_id(name)}-${menu_id(text)}`
@@ -347,17 +381,31 @@ function uimenu_btn(name, items) {
       handlers[text] = fn || (function(){})
     }
   }
+  if (/Firefox/.test(navigator.userAgent)) {
+    let l = M.max(items.reduce((l,i) => (M.max(i[0].length, l)), 0), 20)
+    let div = '─'.repeat(l * 0.55)
+    ;[...menu.children].forEach(it => {
+      if (it.divafter) it.insertAdjacentHTML('afterend',
+          `<option disabled>${div}&nbsp;</option>`);
+    })
+  } else {
+    // https://codepen.io/tigt/post/separators-inside-the-select-element
+    ;[...menu.children].forEach(it => {
+      if (it.divafter)
+        menu.insertBefore(D.createElement('hr'), it.nextSibling);
+    })
+  }
   return btn
 }
 
-function uimenu_space() {
+function menu_space() {
   return html('<div flex=1></div>')
 }
 
-function uimenu(menus) {
-  const elem = $('#ui-menu')
+function menu(menus) {
+  const elem = $('#menu')
   for (const m of menus) {
-    elem.appendChild(is_string(m) ? uimenu_space() : uimenu_btn(...m))
+    elem.appendChild(isstr(m) ? menu_space() : menu_btn(...m))
   }
 }
 
@@ -416,11 +464,12 @@ document.on('keydown', e => {
   if (e.ctrlKey) {
     if (e.key == 'Control') { return true }
     switch (e.key) {
-      case "-": toggle_ui();   break;
-      case ",": show_config(); break;
-      case ";": show_cli();    break;
-      case ':': show_log();    break;
-      case 'o': open_file();   break;
+      case "-":  togvis('menu');    break;
+      case "\\": togvis('sidebar'); break;
+      case ",":  show_config();     break;
+      case ";":  show_cli();        break;
+      case ":":  show_log();        break;
+      case "o":  open_file();       break;
       default: return
     }
     stopevt(e)
@@ -429,11 +478,12 @@ document.on('keydown', e => {
   if (e.metaKey) {
     if (e.key == 'Meta') { return true }
     switch (e.key) {
-      case '=': change_scale(+1); break;
-      case '-': change_scale(-1); break;
-      case '0': set_scale(0);     break;
-      case 'o': open_file();      break;
-      case ',': show_config();    break;
+      case '=': change_scale(+1);      break;
+      case '-': change_scale(-1);      break;
+      case '0': set_scale(0);          break;
+      case 'o': JIF.choose_file();     break;
+      case 'k': choose_folder();       break;
+      case ',': show_config();         break;
       default: return
     }
     stopevt(e)
@@ -448,7 +498,7 @@ document.on('keydown', e => {
 window.api = api
 
 api.map = (maps, x) => {
-  if (is_string(maps)) { maps = {[maps]: x} }
+  if (isstr(maps)) { maps = {[maps]: x} }
   for (const [key, sub] of O.entries(maps)) {
     const seq = keyseq(key)
     if (!sub)
@@ -461,7 +511,7 @@ api.map = (maps, x) => {
 }
 
 api.pair = (pairs, x) => {
-  if (is_string(pairs)) { pairs = {[pairs]: x} }
+  if (isstr(pairs)) { pairs = {[pairs]: x} }
   const get=api.get, ext=api.ext
   for (const [a,z] of O.entries(pairs)) {
     jif.pairs[a] = z
