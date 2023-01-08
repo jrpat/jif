@@ -19,7 +19,7 @@
 /*                                                                    */
 /*                                                                    */
 /**********************************************************************/
-const D=document, U=undefined, N=null, O=Object, M=Math
+const D=document, U=undefined, N=null, O=Object, M=Math, LS=localStorage
 const E_p=Element.prototype, ET_p=EventTarget.prototype
 const $=D.querySelector.bind(D), $$=D.querySelectorAll.bind(D)
 E_p.$ = E_p.querySelector; E_p.$$ = E_p.querySelectorAll
@@ -28,11 +28,13 @@ E_p.attr=function(k,v){ return this[
 ET_p.on = ET_p.addEventListener; ET_p.off = ET_p.removeEventListener
 ET_p.emit = function(e){this.dispatchEvent(isstr(e)?(new Event(e)):e)}
 const AsyncFunction = (async function(){}).constructor
+const the = (x => x)
 const tojson = x => ((U===x || x==='') ? N : JSON.stringify(x))
 const unjson = x => ((U===x || x==='') ? U : JSON.parse(x))
-const db = {set: (k,v) => (localStorage.setItem(k, tojson(v)), v),
-            get: (k) => unjson(localStorage.getItem(k)),
-            del: (k) => localStorage.removeItem(k), raw:localStorage}
+const db = {set:((k,v) => LS.setItem(k, db.to(k)(v))),
+  get:(k => db.un(k)(LS.getItem(k))), del:(k => LS.removeItem(k)),
+  to:(k=>k[0]=='='?(x=>x):tojson), un:(k=>k[0]=='='?(x=>x):unjson)
+}
 const html = s => { let e,d=D.createElement('div');
   d.innerHTML=s; e=d.firstElementChild; e.remove(); return e }
 const stopevt = e => (e.preventDefault(), e.stopPropagation(), false)
@@ -72,21 +74,22 @@ window.JIF ??= {}
 
 JIF.autosave ??= async function(filename, content) {
   if (!content) { return }
-  db.raw.setItem('text', content)
+  db.set('=text', content)
 }
 
-JIF.choose_file ??= async function() {
+JIF.autoload ??= async function(filename) {
+  return db.get('=text')
 }
 
-JIF.choose_folder ??= function() {
+JIF.choose_files ??= function() {
   const mkfile = (name, f) => f
-  const mkdir = (name, d) => ({name, dir:true,
+  const mkdir = (name, d) => ({name,
     list: async () => O.entries(d)
       .sort((a, b) => a[0] < b[0] ? -1 : 1)
       .map((e) => e[0].at(-1)=='/' ? mkdir(...e) : mkfile(...e))
   })
   return new Promise((ok, err) => {
-    const input = html('<input type=file webkitdirectory directory>')
+    const input = html('<input type=file webkitdirectory directory multiple>')
     input.on('change', () => {
       const root = {}
       for (const f of input.files) {
@@ -96,14 +99,11 @@ JIF.choose_folder ??= function() {
           dir = dir[seg+'/'] ??= {};
         dir[path.at(-1)] = f
       }
+      input.value = ''
       ok(mkdir('', root))
     })
     input.emit('click')
   })
-}
-
-JIF.read_file ??= async function(path) {
-  return db.raw.getItem('text')
 }
 
 JIF.write_file ??= async function(path, content) {
@@ -112,9 +112,6 @@ JIF.write_file ??= async function(path, content) {
 
 JIF.rename_file ??= async function(oldpath, newpath) {
   console.log('rename file', oldname, newname)
-}
-
-JIF.read_folder ??= async function(path) {
 }
 
 
@@ -272,7 +269,7 @@ async function mkfolder(f, lvl) {
     ++lvl
     const fs = await f.list()
     for (const f of fs)
-      e.appendChild(await (f.dir ? mkfolder(f, lvl) : mkfile(f, lvl)));
+      e.appendChild(await (f.list ? mkfolder(f, lvl) : mkfile(f, lvl)));
     e.off('toggle', load)
   }
   if (lvl == 0) { load(); e.open = true; }
@@ -284,16 +281,16 @@ async function mkfile(f, lvl) {
   return html(`<div class="item file" level=${lvl}><i>${f.name}`)
 }
 
-async function load_folder(root) {
+async function load_files(root) {
   const bar = $('#sidebar')
-  root = await root.list()
-  for (const f of root) {
-    bar.appendChild(await (f.dir ? mkfolder(f, 0) : mkfile(f, 0)))
+  const list = await root.list()
+  for (const f of list) {
+    bar.appendChild(await (f.list ? mkfolder(f, 0) : mkfile(f, 0)))
   }
 }
 
-async function choose_folder() {
-  load_folder(await JIF.choose_folder())
+async function choose_files() {
+  load_files(await JIF.choose_files())
 }
 
 
@@ -301,11 +298,14 @@ async function choose_folder() {
 ////////////////////////////////////////////////////////////////////////
 // UI
 
-function togvis(id, vis) {
-  const elem = $('#'+id)
-  vis ??= !elem.classList.contains('visible')
-  elem.classList.toggle('visible', vis)
-  db.set('vis/'+id, vis)
+function togvis(selector, vis) {
+  const elems = $$(selector)
+  if (!elems.length) { return }
+  for (const elem of $$(selector)) {
+    const v = vis ?? !(elem.classList.contains('visible'))
+    elem.classList.toggle('visible', v)
+    if (elem.id) { db.set('vis/'+elem.id, v) }
+  }
 }
 
 function set_scale(n) {
@@ -417,20 +417,20 @@ function menu_btn(name, items) {
       handlers[text] = fn || (function(){})
     }
   }
-  if (/Firefox/.test(navigator.userAgent)) {
-    let l = M.max(items.reduce((l,i) => (M.max(i[0].length, l)), 0), 20)
-    let div = '─'.repeat(l * 0.55)
-    ;[...menu.children].forEach(it => {
-      if (it.divafter) it.insertAdjacentHTML('afterend',
-          `<option disabled>${div}&nbsp;</option>`);
-    })
-  } else {
-    // https://codepen.io/tigt/post/separators-inside-the-select-element
-    ;[...menu.children].forEach(it => {
-      if (it.divafter)
-        menu.insertBefore(D.createElement('hr'), it.nextSibling);
-    })
-  }
+//  if (/Firefox/.test(navigator.userAgent)) {
+//    let l = M.max(items.reduce((l,i) => (M.max(i[0].length, l)), 0), 20)
+//    let div = '─'.repeat(l * 0.55)
+//    ;[...menu.children].forEach(it => {
+//      if (it.divafter) it.insertAdjacentHTML('afterend',
+//          `<option disabled>${div}&nbsp;</option>`);
+//    })
+//  } else {
+//    // https://codepen.io/tigt/post/separators-inside-the-select-element
+//    ;[...menu.children].forEach(it => {
+//      if (it.divafter)
+//        menu.insertBefore(D.createElement('hr'), it.nextSibling);
+//    })
+//  }
   return btn
 }
 
@@ -507,13 +507,13 @@ document.on('keydown', e => {
   if (e.ctrlKey) {
     if (e.key == 'Control') { return true }
     switch (e.key) {
-      case "-":  togvis('menu');    break;
-      case "\\": togvis('sidebar'); break;
-      case ",":  show_config();     break;
-      case ";":  show_cli();        break;
-      case ":":  show_log();        break;
-      case "o":  open_file();       break;
-      case "r":  reload_css();      break;
+      case "-":  togvis('#menu');    break;
+      case "\\": togvis('#sidebar'); break;
+      case ",":  show_config();      break;
+      case ";":  show_cli();         break;
+      case ":":  show_log();         break;
+      case "o":  choose_files();     break;
+      case "r":  reload_css();       break;
       default: return
     }
     stopevt(e)
@@ -526,8 +526,8 @@ document.on('keydown', e => {
       case '-': change_scale(-1);      break;
       case '0': set_scale(0);          break;
       case 'o': JIF.choose_file();     break;
-      case 'k': choose_folder();       break;
       case ',': show_config();         break;
+      case '.': togvis('.ui');         break;
       default: return
     }
     stopevt(e)

@@ -44,12 +44,12 @@
     <script src="jif.js"></script>
 
     <script>
-      const save = debounce(500, () => {
-        localStorage.setItem('config', ed.value)
-      })
-
+      const save = () => db.set('=config', ed.value)
+      
+      ed.timer = null
       ed.on('keydown', e => {
-        save()
+        clearTimeout(ed.timer)
+        ed.timer = delay(save, 500)
 
         if (e.key == 'Tab') {
           document.execCommand('insertText', false, '  ')
@@ -63,8 +63,9 @@
       }, true)
 
       window.on('beforeunload', e => {
+        db.set('=config', ed.value)
         const o = window.opener
-        if (o) o.configure(ed.value)
+        if (o) o.configure(ed.value);
       })
 
       window.api.pair({"'":"'"})

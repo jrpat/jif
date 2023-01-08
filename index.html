@@ -67,17 +67,17 @@
         $('#menu-Stats-words').innerText = nw+' Words'
       })
 
-      configure(db.raw.getItem('config'))
+      configure(db.get('=config'))
 
-      set_scale(db.get('scale'))
-      toggle_spell(db.get('spell'))
+      set_scale(db.get('scale') ?? 0)
+      toggle_spell(db.get('spell') ?? false)
 
-      togvis('menu', db.get('vis/menu'))
-      togvis('sidebar', db.get('vis/sidebar'))
+      togvis('#menu', db.get('vis/#menu') ?? false)
+      togvis('#sidebar', db.get('vis/#sidebar') ?? false)
 
 
       // temporary
-      ed.value = await JIF.read_file('x')
+      ed.value = await JIF.autoload('x')
 
       window.on('beforeunload', () =>
         JIF.autosave('x', ed.value))
