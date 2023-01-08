@@ -79,16 +79,24 @@ JIF.choose_file ??= async function() {
 }
 
 JIF.choose_folder ??= function() {
-  const mkdir = (f) => {
-    const contents = []
-    contents.name = f.name
-    contents.read = async() => contents
-    return contents
-  }
+  const mkfile = (name, f) => ({name, dir:false, read:() => f.text()})
+  const mkdir = (name, d) => ({name, dir:true,
+    read: async () => O.entries(d)
+      .sort((a, b) => a[0] < b[0] ? -1 : 1)
+      .map((e) => e[0].at(-1)=='/' ? mkdir(...e) : mkfile(...e))
+  })
   return new Promise((ok, err) => {
     const input = html('<input type=file webkitdirectory directory>')
     input.on('change', () => {
-      console.log('change')
+      const root = {}
+      for (const f of input.files) {
+        const path = f.webkitRelativePath.split('/')
+        let dir = root
+        for (const seg of path.slice(0,-1))
+          dir = dir[seg+'/'] ??= {};
+        dir[path.at(-1)] = f
+      }
+      ok(mkdir('', root))
     })
     input.emit('click')
   })
@@ -256,8 +264,32 @@ function snipnext(
 ////////////////////////////////////////////////////////////////////////
 // Files
 
+async function mkfolder(f) {
+  const elem = html(`<details><summary>${f.name}`)
+  const load = async () => {
+    const fs = await f.read()
+    for (const f of fs)
+      elem.appendChild(await (f.dir ? mkfolder(f) : mkfile(f)));
+    elem.off('toggle', load)
+  }
+  elem.on('toggle', load)
+  return elem
+}
+
+async function mkfile(f) {
+  return html(`<div class=file>${f.name}</div>`)
+}
+
+async function load_folder(root) {
+  const bar = $('#sidebar')
+  root = await root.read()
+  for (const f of root) {
+    bar.appendChild(await (f.dir ? mkfolder(f) : mkfile(f)))
+  }
+}
+
 async function choose_folder() {
-  JIF.choose_folder()
+  load_folder(await JIF.choose_folder())
 }
 
 

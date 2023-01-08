@@ -29,6 +29,9 @@ html, body { width:100%; height:100%; }
 
 
 :root {
+  --font-v: ia-quattro-v;
+  --font-s: ia-quattro-s;
+
   --bg: rgb(247 247 247);
   --text: rgb(26 26 26);
   --line: rgb(224 224 224);
@@ -100,7 +103,7 @@ body.windowed {
 
 
 #ed {
-  font-family: ia-quattro-s;
+  font-family: var(--font-s);
   caret-color: var(--caret);
   background: var(--bg);
   color: var(--text);
@@ -130,7 +133,7 @@ body.windowed {
 
 @supports (font-variation-settings: "wdth" 115) {
   #ed {
-    font-family: ia-quattro-v;
+    font-family: var(--font-v);
   }
 }
 
@@ -272,5 +275,17 @@ body.windowed {
   z-index: 9;
   border-right: 1px solid var(--line);
   resize: horizontal;
+}
+
+#sidebar details {
+  padding-left: 2ch;
+}
+
+#sidebar summary {
+  margin-left: -2ch;
+}
+
+#sidebar .file {
+  margin-left: 1.67ch;
 }
 
