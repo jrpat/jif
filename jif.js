@@ -79,9 +79,9 @@ JIF.choose_file ??= async function() {
 }
 
 JIF.choose_folder ??= function() {
-  const mkfile = (name, f) => ({name, dir:false, read:() => f.text()})
+  const mkfile = (name, f) => f
   const mkdir = (name, d) => ({name, dir:true,
-    read: async () => O.entries(d)
+    list: async () => O.entries(d)
       .sort((a, b) => a[0] < b[0] ? -1 : 1)
       .map((e) => e[0].at(-1)=='/' ? mkdir(...e) : mkfile(...e))
   })
@@ -264,27 +264,31 @@ function snipnext(
 ////////////////////////////////////////////////////////////////////////
 // Files
 
-async function mkfolder(f) {
-  const elem = html(`<details><summary>${f.name}`)
+async function mkfolder(f, lvl) {
+  const name = f.name.slice(0, -1)
+  const e = html(`
+    <details><summary class="item dir" level=${lvl}><i>${name}`)
   const load = async () => {
-    const fs = await f.read()
+    ++lvl
+    const fs = await f.list()
     for (const f of fs)
-      elem.appendChild(await (f.dir ? mkfolder(f) : mkfile(f)));
-    elem.off('toggle', load)
+      e.appendChild(await (f.dir ? mkfolder(f, lvl) : mkfile(f, lvl)));
+    e.off('toggle', load)
   }
-  elem.on('toggle', load)
-  return elem
+  if (lvl == 0) { load(); e.open = true; }
+  else { e.on('toggle', load) }
+  return e
 }
 
-async function mkfile(f) {
-  return html(`<div class=file>${f.name}</div>`)
+async function mkfile(f, lvl) {
+  return html(`<div class="item file" level=${lvl}><i>${f.name}`)
 }
 
 async function load_folder(root) {
   const bar = $('#sidebar')
-  root = await root.read()
+  root = await root.list()
   for (const f of root) {
-    bar.appendChild(await (f.dir ? mkfolder(f) : mkfile(f)))
+    bar.appendChild(await (f.dir ? mkfolder(f, 0) : mkfile(f, 0)))
   }
 }
 
@@ -492,6 +496,13 @@ ed.on('keydown', e => {
 })
 
 
+function reload_css() {
+  let oldcss = D.head.$('link[rel="stylesheet"]')
+  let newcss = html(`<link rel=stylesheet href="${oldcss.href}">`)
+  D.head.appendChild(newcss)
+  delay(() => oldcss.remove(), 100)
+}
+
 document.on('keydown', e => {
   if (e.ctrlKey) {
     if (e.key == 'Control') { return true }
@@ -502,6 +513,7 @@ document.on('keydown', e => {
       case ";":  show_cli();        break;
       case ":":  show_log();        break;
       case "o":  open_file();       break;
+      case "r":  reload_css();      break;
       default: return
     }
     stopevt(e)
