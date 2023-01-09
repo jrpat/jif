@@ -26,7 +26,6 @@ E_p.$ = E_p.querySelector; E_p.$$ = E_p.querySelectorAll
 E_p.attr=function(k,v){ return this[
   ((v===U)?'get':((v===N)?'remove':'set'))+'Attribute'](k,v)}
 ET_p.on = ET_p.addEventListener; ET_p.off = ET_p.removeEventListener
-ET_p.emit = function(e){this.dispatchEvent(isstr(e)?(new Event(e)):e)}
 const AsyncFunction = (async function(){}).constructor
 const the = (x => x)
 const tojson = x => ((U===x || x==='') ? N : JSON.stringify(x))
@@ -45,7 +44,6 @@ const int = (x) => parseInt(x, 10)
 window.db = db // debugging convenience
 
 
-
 ////////////////////////////////////////////////////////////////////////
 // State
 
@@ -60,10 +58,35 @@ const jif = {
   log: [],
   trigs: {},
   pairs: {},
-  curfile: {path:`New File from ${(new Date).toLocaleString()}`},
+  curpath: null,
 }
 
 const api = {}
+
+
+
+const currange = () => window.getSelection().getRangeAt(0)
+
+O.defineProperty(ed, 'value', {
+  get: (() => ed.innerText),
+  set: (x) => { ed.innerText = x }
+})
+
+O.defineProperty(ed, 'selectionStart', {
+  get: () => (currange().startOffset),
+  set: (i) => { let r=currange(); r.setStart(r.startContainer, i) }
+})
+
+O.defineProperty(ed, 'selectionEnd', {
+  get: () => (currange().endOffset),
+  set: (i) => { let r=currange(); r.setEnd(r.endContainer, i) }
+})
+
+ed.setSelectionRange = (b,e) => {
+  ed.selectionStart = b
+  ed.selectionEnd = e
+}
+
 
 
 
@@ -72,48 +95,64 @@ const api = {}
 
 window.JIF ??= {}
 
-JIF.autosave ??= async function(curfile) {
-//  db.set('curfile': curfile.name)
-  db.set('=text', curfile.text||'')
+JIF.autosave ??= async function(curpath, text='') {
+  db.set('=curpath', curpath)
+  db.set('=text', text)
 }
 
-JIF.autoload ??= async function(filename) {
-  return db.get('=text')
+JIF.autoload ??= async function() {
+  jif.curpath = db.get('=curpath') ?? 'unknown.txt'
+  ed.value = db.get('=text')
 }
 
-JIF.choose_files ??= function() {
-  const mkfile = (name, f) => ((f.path = f.webkitRelativePath), f)
-  const mkdir = (name, d) => ({name,
-    list: async () => O.entries(d)
-      .sort((a, b) => a[0] < b[0] ? -1 : 1)
-      .map((e) => e[0].at(-1)=='/' ? mkdir(...e) : mkfile(...e))
-  })
+JIF.choose_file ??= function() {
   return new Promise((ok, err) => {
     const input = html(
-      '<input type=file webkitdirectory directory multiple>')
+      '<input type=file>')
     input.on('change', () => {
-      const root = {}
-      for (const f of input.files) {
-        const path = f.webkitRelativePath.split('/')
-        let dir = root
-        for (const seg of path.slice(0,-1))
-          dir = dir[seg+'/'] ??= {};
-        dir[path.at(-1)] = f
-      }
+      const file = input.files[0]
       input.value = ''
-      console.log(root)
-      ok(mkdir('', root))
+      ok(file)
     })
-    input.emit('click')
+    input.click()
   })
 }
 
-JIF.write_file ??= async function(path, content) {
-  console.log('write file', filename)
+//JIF.choose_project ??= function() {
+//  const mkfile = (name, f) => ((f.path = f.webkitRelativePath), f)
+//  const mkdir = (name, d) => ({name,
+//    list: async () => O.entries(d)
+//      .sort((a, b) => a[0] < b[0] ? -1 : 1)
+//      .map((e) => e[0].at(-1)=='/' ? mkdir(...e) : mkfile(...e))
+//  })
+//  return new Promise((ok, err) => {
+//    const input = html(
+//      '<input type=file webkitdirectory directory multiple>')
+//    input.on('change', () => {
+//      const root = {}
+//      for (const f of input.files) {
+//        const path = f.webkitRelativePath.split('/')
+//        let dir = root
+//        for (const seg of path.slice(0,-1))
+//          dir = dir[seg+'/'] ??= {};
+//        dir[path.at(-1)] = f
+//      }
+//      input.value = ''
+//      ok(mkdir('', root))
+//    })
+//    input.click()
+//  })
+//}
+
+JIF.write_file ??= async function(path, content='') {
+  const filename = path.split(/\/+/g).at(-1)
+  const a = html(`<a download="${filename}" target=_blank>`)
+  a.href = `data:text/plain,${encodeURI(content)}`
+  a.click()
 }
 
 JIF.rename_file ??= async function(oldpath, newpath) {
-  console.log('rename file', oldname, newname)
+  alert("Cannot rename files in the web version")
 }
 
 
@@ -186,7 +225,9 @@ function T_reset() { T = null; return true }
 function T_start(t) {
   if (T == 0) { return T_reset() }
   if (T) { clearTimeout(T.timer) }
-  T ??= {pos:ed.selectionStart, fill:gettxt(...cursel())}
+  const s = cursel()
+  T ??= {fill:s+'', anc:selanc(s), foc:selfoc(s)}
+//  T ??= {pos:ed.selectionStart, fill:gettxt(...cursel())}
   T.active = t
   const wait = O.keys(t.trigs).length > 0
   T.timer = delay(T_fin, (wait ? jif.opt.trig_timeout : 1))
@@ -214,11 +255,12 @@ function T_fin() {
 
 const cmd = (c, arg) => { ed.focus(); D.execCommand(c, false, arg) }
 
-const selobj = () => (ed.focus(), window.getSelection())
+const cursel = () => window.getSelection()
+const selanc = (s=getSelection()) => [s.anchorNode, s.anchorOffset]
+const selfoc = (s=getSelection()) => [s.focusNode, s.focusOffset]
 
 const curpos = () => ed.selectionEnd
-const selanc = () => ed.selectionStart
-const cursel = () => [ed.selectionStart, ed.selectionEnd]
+//const cursel = () => [ed.selectionStart, ed.selectionEnd]
 const setpos = (p) => ed.setSelectionRange(p,p)
 const setsel = (b,e,d) => (b!=null) && ed.setSelectionRange(b,e??b,d)
 const gettxt = (b=curpos(), e) => ed.value.slice(b, (e ?? b+1))
@@ -231,31 +273,23 @@ const instxt = (t,b,e=b) => { setsel(b,e); cmd('insertText', t) }
 // Snippets
 
 function snipexpand(snip, fill=T?.fill) {
-  instxt(snip||'')
-  if (snip) { snipnext(fill, T?.pos, snip.length) }
+  if (!snip) { return }
+  snip = snip.replace(/\^0/g, `<b>${fill}</b>`)
+  snip = snip.replace(/\^(\d+)/g, '<i place=$1></i>')
+  ed.contentEditable = 'true'
+  cmd('insertHTML', `<p>${snip}</p>`)
+  ed.contentEditable = 'plaintext-only'
+  snipnext(true)
 }
 
-function snipnext(
-  fill = '',
-  pos = curpos(),
-  lookahead = jif.opt.snip_lookahead,
-) {
-  const look = ed.value.slice(pos, pos+lookahead)
-  const matches = look.matchAll(/\^\d+/g)
-  let next = [9999, -1, -1, null]
-  for (const match of matches) {
-    const m = match[0]
-    const mn = int(m.slice(1)) || 0
-    if (mn < next[0]) {
-      next = [mn, match.index, m.length, m]
-      if (mn == 0) { break }
-    }
-  }
-  if (next[3] != null) {
-    const bgn = pos + next[1]
-    const end = bgn + next[2]
-    setsel(bgn, end)
-    if (next[0] == 0) { instxt(fill) }
+function snipnext(first) {
+  const s = cursel()
+  const par = s.focusNode.parentElement.closest('p')
+  let next = first ? par.$('b') : par.$('i:empty')
+  if (next) {
+    const nextind = [...par.childNodes].indexOf(next) + 1
+    console.log(nextind)
+    s.setBaseAndExtent(par, nextind, par, 1)
   }
 }
 
@@ -263,43 +297,47 @@ function snipnext(
 ////////////////////////////////////////////////////////////////////////
 // Files
 
-async function mkfolder(f, lvl) {
-  const name = f.name.slice(0, -1)
-  const e = html(`
-    <details><summary class="item dir" level=${lvl}><i>${name}`)
-  const load = async () => {
-    ++lvl
-    const fs = await f.list()
-    for (const f of fs)
-      e.appendChild(await (f.list ? mkfolder(f, lvl) : mkfile(f, lvl)));
-    e.off('toggle', load)
-  }
-  if (lvl == 0) { load(); e.open = true; }
-  else { e.on('toggle', load) }
-  return e
-}
-
-async function mkfile(f, lvl) {
-  const e = html(`<div class="item file" level=${lvl}><i>${f.name}`)
-  e.on('click', () => load_file(f))
-  return e
-}
-
-async function choose_files() {
-  const root = await JIF.choose_files()
-  const bar = $('#sidebar')
-  bar.innerHTML = ''
-  const list = await root.list()
-  for (const f of list) {
-    bar.appendChild(await (f.list ? mkfolder(f, 0) : mkfile(f, 0)))
-  }
-}
+//async function mkfolder(f, lvl) {
+//  const name = f.name.slice(0, -1)
+//  const e = html(`
+//    <details><summary class="item dir" level=${lvl}><i>${name}`)
+//  const load = async () => {
+//    ++lvl
+//    const fs = await f.list()
+//    for (const f of fs)
+//      e.appendChild(await (f.list ? mkfolder(f, lvl) : mkfile(f, lvl)));
+//    e.off('toggle', load)
+//  }
+//  if (lvl == 0) { load(); e.open = true; }
+//  else { e.on('toggle', load) }
+//  return e
+//}
+//
+//async function mkfile(f, lvl) {
+//  const e = html(`<div class="item file" level=${lvl}><i>${f.name}`)
+//  e.on('click', () => load_file(f))
+//  return e
+//}
+//
+//async function choose_project() {
+//  const root = await JIF.choose_project()
+//  const bar = $('#sidebar')
+//  bar.innerHTML = ''
+//  const list = await root.list()
+//  for (const f of list) {
+//    bar.appendChild(await (f.list ? mkfolder(f, 0) : mkfile(f, 0)))
+//  }
+//}
 
 async function load_file(f) {
-  jif.curfile = {path:f.path}
+  jif.curpath = f.name
   ed.value = await f.text()
+  JIF.autosave(f.path, ed.value)
 }
 
+async function choose_file() {
+  load_file(await JIF.choose_file())
+}
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -462,7 +500,7 @@ function menu(menus) {
 // Keyboard Handling
 
 let as_timer
-const autosave = function() { JIF.autosave('x', ed.value) }
+const autosave = function() { JIF.autosave(jif.curpath, ed.value) }
 
 ed.on('keydown', e => {
   if ((e.altKey && e.key=='Alt') || (e.ctrlKey && e.key=='Control') ||
@@ -489,9 +527,9 @@ ed.on('keydown', e => {
   if (e.ctrlKey && (e.key == 'v')) {
     T_ignore()
     instxt('¬')
-    const p = curpos()
-    setsel(p-1, p)
-    return true
+    cursel().modify('extend', 'backward', 'character')
+    stopevt(e)
+    return false
   }
 
   const rep = keyrep_evt(e)
@@ -514,6 +552,11 @@ function reload_css() {
   delay(() => oldcss.remove(), 100)
 }
 
+function save_file() {
+  JIF.write_file(jif.curpath, ed.value)
+}
+
+
 document.on('keydown', e => {
   if (e.ctrlKey) {
     if (e.key == 'Control') { return true }
@@ -523,8 +566,11 @@ document.on('keydown', e => {
       case ",":  show_config();      break;
       case ";":  show_cli();         break;
       case ":":  show_log();         break;
-      case "o":  choose_files();     break;
+//      case "o":  choose_project();     break;
+      case "o":  choose_file();      break;
       case "r":  reload_css();       break;
+      case "s":  save_file();        break;
+      case "p":  choose_project();   break;
       default: return
     }
     stopevt(e)
@@ -533,12 +579,14 @@ document.on('keydown', e => {
   if (e.metaKey) {
     if (e.key == 'Meta') { return true }
     switch (e.key) {
-      case '=': change_scale(+1);      break;
-      case '-': change_scale(-1);      break;
-      case '0': set_scale(0);          break;
-      case 'o': choose_files();        break;
-      case ',': show_config();         break;
-      case '.': togvis('.ui');         break;
+      case '=': change_scale(+1);     break;
+      case '-': change_scale(-1);     break;
+      case '0': set_scale(0);         break;
+//      case 'o': choose_project();       break;
+      case 'o': choose_file();        break;
+      case ',': show_config();        break;
+      case '.': togvis('.ui');        break;
+      case 's': save_file();          break;
       default: return
     }
     stopevt(e)
@@ -561,7 +609,11 @@ api.map = (maps, x) => {
     else if (typeof(sub) == 'function')
       addtrig(seq, (p) => { setsel(T.pos, p); snipexpand(sub(p)) });
     else
-      addtrig(seq, (p) => { setsel(T.pos, p); snipexpand(sub) });
+      addtrig(seq, (p) => {
+        const s = cursel()
+        s.setBaseAndExtent(...T.anc, ...selfoc(s))
+        snipexpand(sub)
+      })
   }
 }
 
@@ -593,8 +645,6 @@ api.tstart = () => T ? T.pos : null
 api.tfill = () => T ? T.fill : null
 
 api.config = fetch_config
-
-api.sel.obj = selobj
 
 api.move = (n) => setpos(curpos() + n)
 api.left = () => api.move(-1)

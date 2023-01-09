@@ -18,13 +18,10 @@
   </head>
 
   <body hbox=stretch ondrop="open_file(event)">
-    <div id=sidebar flex=0 class=ui vbox=start-stretch></div>
+<!--    <div id=sidebar flex=0 class=ui vbox=start-stretch></div>-->
 
     <div flex=1 vbox=stretch>
-      <textarea id=ed scale=2
-        autofocus autocomplete=off
-      ></textarea>
-
+      <pre id=ed scale=0 contenteditable="plaintext-only"></pre>
       <div id=menu class=ui hbox=start-stretch></div>
     </div>
 
@@ -36,17 +33,17 @@
           ['New File', () => console.log('new file')],
           ['New Window', () => console.log('new file')],
           '---',
-          ['Open Files…', () => {choose_files()}],
+          // ['Open Project…', () => choose_project()],
+          ['Open File…', () => choose_file()],
           '---',
           ['Save', () => console.log('save file')],
-          ['Rename…', () => console.log('rename')],
           '---',
           ['Page Setup…', () => console.log('print setup')],
         ]],
         ['Options', [
           ['Edit Config', show_config],
           ['Spell', toggle_spell],
-          ['Show Sidebar', () => togvis('#sidebar')]
+          // ['Show Sidebar', () => togvis('#sidebar')],
         ]],
         '---',
         ['Cmd', [
@@ -77,14 +74,13 @@
       else
         togvis('#menu', db.get('vis/menu') ?? true)
 
-      togvis('#sidebar', db.get('vis/sidebar') ?? false)
+      // togvis('#sidebar', db.get('vis/sidebar') ?? false)
 
 
-      // temporary
-      JIF.autoload('x').then(x => ed.value = x)
+      JIF.autoload()
 
       window.on('beforeunload', () =>
-        JIF.autosave('x', ed.value))
+        JIF.autosave(jif.curfile, ed.value))
 
     </script>
   </body>

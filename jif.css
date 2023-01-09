@@ -116,6 +116,9 @@ body.windowed {
   padding-bottom: calc(100vh - 4rem);
   z-index: var(--z-ed);
 
+  white-space: pre-wrap;
+  overflow-y: scroll;
+
   --letter-spacing: 0px;
   letter-spacing: var(--letter-spacing);
 
@@ -133,6 +136,28 @@ body.windowed {
   padding-right: var(--pad);
 }
 
+#ed i {
+  font-style: normal;
+}
+
+#ed b {
+  font-weight: inherit;
+}
+
+#ed [place] {
+/*  padding: 0 1ch;*/
+}
+
+#ed [place="1"]:empty:before { content:' 1 '; }
+#ed [place="2"]:empty:before { content:' 2 '; }
+#ed [place="3"]:empty:before { content:' 3 '; }
+#ed [place="4"]:empty:before { content:' 4 '; }
+#ed [place="5"]:empty:before { content:' 5 '; }
+#ed [place="6"]:empty:before { content:' 6 '; }
+#ed [place="7"]:empty:before { content:' 7 '; }
+#ed [place="8"]:empty:before { content:' 8 '; }
+#ed [place="9"]:empty:before { content:' 9 '; }
+
 @supports (font-variation-settings: "wdth" 115) {
   #ed {
     font-family: var(--font-v);
@@ -141,6 +166,10 @@ body.windowed {
 
 #ed:focus {
   outline: none;
+}
+
+::selection {
+  background-color: var(--text-sel);
 }
 
 #ed::selection {
