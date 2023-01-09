@@ -4,18 +4,18 @@
 /*                               @@@@@@          @@@@@@@@@@@@         */
 /*                @@@@@@@@@@@   @@@@@@@@       @@@@@@@@@@@@@@@@       */
 /*                @@@@@@@@@@@  @@@@@@@@@@    @@@@@@@@@@@@@@@@@@@@     */
-/*                @@@@@@@@@@@   @@@@@@@@    @@@@@@@@@   @@@@@@@@@@    */
-/*                @@@@@@@@@@@    @@@@@@    @@@@@@@@@@   @@@@@@@@@@    */
-/*                @@@@@@@@@@@              @@@@@@@@@@   @@@@@@@@@@    */
-/*                @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@   @@@@@@@@@@    */
-/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@                 */
-/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@ @@@@@@@@@@@@@@@@@           */
-/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@ @@@@@@@@@@@@@@@@@           */
-/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@                 */
-/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@                 */
-/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@                 */
-/*     @@@@@@@@@@@@@@@@@@@@@   @@@@@@@@@@  @@@@@@@@@@                 */
-/*       @@@@@@@@@@@@@@@@@     @@@@@@@@@@  @@@@@@@@@@                 */
+/*                @@@@@@@@@@@   @@@@@@@@    @@@@@@@@@@ @@@@@@@@@@@    */
+/*                @@@@@@@@@@@    @@@@@@    @@@@@@@@@@@ @@@@@@@@@@@    */
+/*                @@@@@@@@@@@              @@@@@@@@@@@ @@@@@@@@@@@    */
+/*                @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@@ @@@@@@@@@@@    */
+/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@@                */
+/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@@@@@@@           */
+/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@@@@@@@           */
+/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@@                */
+/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@@                */
+/*    @@@@@@@@@@@ @@@@@@@@@@@  @@@@@@@@@@  @@@@@@@@@@@                */
+/*     @@@@@@@@@@@@@@@@@@@@@   @@@@@@@@@@  @@@@@@@@@@@                */
+/*       @@@@@@@@@@@@@@@@@     @@@@@@@@@@  @@@@@@@@@@@                */
 /*                                                                    */
 /*                                                                    */
 /**********************************************************************/
@@ -33,8 +33,7 @@ const tojson = x => ((U===x || x==='') ? N : JSON.stringify(x))
 const unjson = x => ((U===x || x==='') ? U : JSON.parse(x))
 const db = {set:((k,v) => LS.setItem(k, db.to(k)(v))),
   get:(k => db.un(k)(LS.getItem(k))), del:(k => LS.removeItem(k)),
-  to:(k=>k[0]=='='?(x=>x):tojson), un:(k=>k[0]=='='?(x=>x):unjson)
-}
+  to:(k=>k[0]=='='?(x=>x):tojson), un:(k=>k[0]=='='?(x=>x):unjson)}
 const html = s => { let e,d=D.createElement('div');
   d.innerHTML=s; e=d.firstElementChild; e.remove(); return e }
 const stopevt = e => (e.preventDefault(), e.stopPropagation(), false)
@@ -61,6 +60,7 @@ const jif = {
   log: [],
   trigs: {},
   pairs: {},
+  curfile: {path:`New File from ${(new Date).toLocaleString()}`},
 }
 
 const api = {}
@@ -72,9 +72,9 @@ const api = {}
 
 window.JIF ??= {}
 
-JIF.autosave ??= async function(filename, content) {
-  if (!content) { return }
-  db.set('=text', content)
+JIF.autosave ??= async function(curfile) {
+//  db.set('curfile': curfile.name)
+  db.set('=text', curfile.text||'')
 }
 
 JIF.autoload ??= async function(filename) {
@@ -82,14 +82,15 @@ JIF.autoload ??= async function(filename) {
 }
 
 JIF.choose_files ??= function() {
-  const mkfile = (name, f) => f
+  const mkfile = (name, f) => ((f.path = f.webkitRelativePath), f)
   const mkdir = (name, d) => ({name,
     list: async () => O.entries(d)
       .sort((a, b) => a[0] < b[0] ? -1 : 1)
       .map((e) => e[0].at(-1)=='/' ? mkdir(...e) : mkfile(...e))
   })
   return new Promise((ok, err) => {
-    const input = html('<input type=file webkitdirectory directory multiple>')
+    const input = html(
+      '<input type=file webkitdirectory directory multiple>')
     input.on('change', () => {
       const root = {}
       for (const f of input.files) {
@@ -100,6 +101,7 @@ JIF.choose_files ??= function() {
         dir[path.at(-1)] = f
       }
       input.value = ''
+      console.log(root)
       ok(mkdir('', root))
     })
     input.emit('click')
@@ -278,19 +280,24 @@ async function mkfolder(f, lvl) {
 }
 
 async function mkfile(f, lvl) {
-  return html(`<div class="item file" level=${lvl}><i>${f.name}`)
+  const e = html(`<div class="item file" level=${lvl}><i>${f.name}`)
+  e.on('click', () => load_file(f))
+  return e
 }
 
-async function load_files(root) {
+async function choose_files() {
+  const root = await JIF.choose_files()
   const bar = $('#sidebar')
+  bar.innerHTML = ''
   const list = await root.list()
   for (const f of list) {
     bar.appendChild(await (f.list ? mkfolder(f, 0) : mkfile(f, 0)))
   }
 }
 
-async function choose_files() {
-  load_files(await JIF.choose_files())
+async function load_file(f) {
+  jif.curfile = {path:f.path}
+  ed.value = await f.text()
 }
 
 
@@ -392,6 +399,10 @@ function show_log() {
 }
 
 
+
+////////////////////////////////////////////////////////////////////////
+// Menu
+
 const menu_id = t => t.replace(/\W+/g, '_')
 
 function menu_btn(name, items) {
@@ -417,20 +428,20 @@ function menu_btn(name, items) {
       handlers[text] = fn || (function(){})
     }
   }
-//  if (/Firefox/.test(navigator.userAgent)) {
-//    let l = M.max(items.reduce((l,i) => (M.max(i[0].length, l)), 0), 20)
-//    let div = '─'.repeat(l * 0.55)
-//    ;[...menu.children].forEach(it => {
-//      if (it.divafter) it.insertAdjacentHTML('afterend',
-//          `<option disabled>${div}&nbsp;</option>`);
-//    })
-//  } else {
-//    // https://codepen.io/tigt/post/separators-inside-the-select-element
-//    ;[...menu.children].forEach(it => {
-//      if (it.divafter)
-//        menu.insertBefore(D.createElement('hr'), it.nextSibling);
-//    })
-//  }
+  if (/Firefox/.test(navigator.userAgent)) {
+    let l = M.max(items.reduce((l,i) => (M.max(i[0].length, l)), 0), 20)
+    let div = '─'.repeat(l * 0.55)
+    ;[...menu.children].forEach(it => {
+      if (it.divafter) it.insertAdjacentHTML('afterend',
+          `<option disabled>${div}&nbsp;</option>`);
+    })
+  } else {
+    // https://codepen.io/tigt/post/separators-inside-the-select-element
+    ;[...menu.children].forEach(it => {
+      if (it.divafter)
+        menu.insertBefore(D.createElement('hr'), it.nextSibling);
+    })
+  }
   return btn
 }
 
@@ -525,7 +536,7 @@ document.on('keydown', e => {
       case '=': change_scale(+1);      break;
       case '-': change_scale(-1);      break;
       case '0': set_scale(0);          break;
-      case 'o': JIF.choose_file();     break;
+      case 'o': choose_files();        break;
       case ',': show_config();         break;
       case '.': togvis('.ui');         break;
       default: return

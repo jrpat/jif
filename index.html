@@ -30,14 +30,13 @@
 
     <script src="jif.js"></script>
 
-    <script type=module>
+    <script>
       menu([
         ['File', [
           ['New File', () => console.log('new file')],
           ['New Window', () => console.log('new file')],
           '---',
-          ['Open File…', () => console.log('open file')],
-          ['Open Folder…', () => console.log('open folder')],
+          ['Open Files…', () => {choose_files()}],
           '---',
           ['Save', () => console.log('save file')],
           ['Rename…', () => console.log('rename')],
@@ -47,6 +46,7 @@
         ['Options', [
           ['Edit Config', show_config],
           ['Spell', toggle_spell],
+          ['Show Sidebar', () => togvis('#sidebar')]
         ]],
         '---',
         ['Cmd', [
@@ -72,12 +72,16 @@
       set_scale(db.get('scale') ?? 0)
       toggle_spell(db.get('spell') ?? false)
 
-      togvis('#menu', db.get('vis/#menu') ?? false)
-      togvis('#sidebar', db.get('vis/#sidebar') ?? false)
+      if (location.hash == '#menu')
+        togvis('#menu', true)
+      else
+        togvis('#menu', db.get('vis/menu') ?? true)
+
+      togvis('#sidebar', db.get('vis/sidebar') ?? false)
 
 
       // temporary
-      ed.value = await JIF.autoload('x')
+      JIF.autoload('x').then(x => ed.value = x)
 
       window.on('beforeunload', () =>
         JIF.autosave('x', ed.value))
