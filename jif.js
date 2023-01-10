@@ -44,6 +44,7 @@ const int = (x) => parseInt(x, 10)
 window.db = db // debugging convenience
 
 
+
 ////////////////////////////////////////////////////////////////////////
 // State
 
@@ -62,31 +63,6 @@ const jif = {
 }
 
 const api = {}
-
-
-
-const currange = () => window.getSelection().getRangeAt(0)
-
-O.defineProperty(ed, 'value', {
-  get: (() => ed.innerText),
-  set: (x) => { ed.innerText = x }
-})
-
-O.defineProperty(ed, 'selectionStart', {
-  get: () => (currange().startOffset),
-  set: (i) => { let r=currange(); r.setStart(r.startContainer, i) }
-})
-
-O.defineProperty(ed, 'selectionEnd', {
-  get: () => (currange().endOffset),
-  set: (i) => { let r=currange(); r.setEnd(r.endContainer, i) }
-})
-
-ed.setSelectionRange = (b,e) => {
-  ed.selectionStart = b
-  ed.selectionEnd = e
-}
-
 
 
 
@@ -118,32 +94,6 @@ JIF.choose_file ??= function() {
   })
 }
 
-//JIF.choose_project ??= function() {
-//  const mkfile = (name, f) => ((f.path = f.webkitRelativePath), f)
-//  const mkdir = (name, d) => ({name,
-//    list: async () => O.entries(d)
-//      .sort((a, b) => a[0] < b[0] ? -1 : 1)
-//      .map((e) => e[0].at(-1)=='/' ? mkdir(...e) : mkfile(...e))
-//  })
-//  return new Promise((ok, err) => {
-//    const input = html(
-//      '<input type=file webkitdirectory directory multiple>')
-//    input.on('change', () => {
-//      const root = {}
-//      for (const f of input.files) {
-//        const path = f.webkitRelativePath.split('/')
-//        let dir = root
-//        for (const seg of path.slice(0,-1))
-//          dir = dir[seg+'/'] ??= {};
-//        dir[path.at(-1)] = f
-//      }
-//      input.value = ''
-//      ok(mkdir('', root))
-//    })
-//    input.click()
-//  })
-//}
-
 JIF.write_file ??= async function(path, content='') {
   const filename = path.split(/\/+/g).at(-1)
   const a = html(`<a download="${filename}" target=_blank>`)
@@ -154,6 +104,93 @@ JIF.write_file ??= async function(path, content='') {
 JIF.rename_file ??= async function(oldpath, newpath) {
   alert("Cannot rename files in the web version")
 }
+
+
+
+////////////////////////////////////////////////////////////////////////
+// Helpers
+
+O.defineProperty(ed, 'value', {
+  get: function() { return ed.innerText },
+  set: function(x) { ed.innerText = x }
+})
+
+O.defineProperty(Selection.prototype, 'range', {
+  get: function() { return this.getRangeAt(0) },
+  set: function(r) { this.removeAllRanges(); this.addRange(r) }
+})
+
+Selection.prototype.selectNode = function(n) {
+  const r = new Range()
+  r.selectNode(n)
+  this.removeAllRanges()
+  this.addRange(r)
+}
+
+Selection.prototype.selectNodeContents = function(n) {
+  const r = new Range()
+  r.selectNodeContents(n)
+  this.removeAllRanges()
+  this.addRange(r)
+}
+
+Selection.prototype.insertNode = function(n) {
+  this.getRangeAt(0).insertNode(n)
+}
+
+Selection.prototype.insertAndSelectNode = function(n) {
+  this.getRangeAt(0).insertNode(n)
+  this.selectNode(n)
+}
+
+Node.prototype.convertToText = function(trim) {
+  const txt = this.innerText
+  const t = D.createTextNode(trim ? txt.trim() : txt)
+  this.parentNode.insertBefore(t, this)
+  this.remove()
+  return t
+}
+
+
+
+////////////////////////////////////////////////////////////////////////
+// Text Operations
+
+function cmd(c, arg) { ed.focus(); D.execCommand(c, false, arg) }
+
+function deltxt()  { cmd('delete') }
+function instxt(t) { cmd('insertText', t) }
+
+function extcur(d,g) { getSelection().modify('extend', d, g) }
+function movcur(d,g) { getSelection().modify('move', d, g) }
+
+function extchr(d) { extcur((d<0)?'backward':'forward', 'character') }
+function movchr(d) { movcur((d<0)?'backward':'forward', 'character') }
+function extwrd(d) { extcur((d<0)?'backward':'forward', 'word') }
+function movwrd(d) { movcur((d<0)?'backward':'forward', 'word') }
+function extlin(d) { extcur((d<0)?'backward':'forward', 'line') }
+function movlin(d) { movcur((d<0)?'backward':'forward', 'line') }
+
+function adjch(fwd) {
+  let oo = fwd ? 0 : -1
+  let sib = (fwd ? 'next' : 'previous') + 'Sibling'
+  return function() {
+    let s=getSelection(), n=s.focusNode, o=(s.focusOffset + oo)
+    let ch = n.textContent[o]
+    if (!ch) {
+      do {
+        n = n[sib] ?? n.parentNode
+        if (n == ed) { return [] }
+      } while (n.textContent.length == 0)
+      o = fwd ? 0 : (n?.textContent.length - 1)
+      ch = n?.textContent[o]
+    }
+    return ch ? [ch, n, o] : []
+  }
+}
+
+const prevch = adjch(false)
+const nextch = adjch(true)
 
 
 
@@ -193,11 +230,9 @@ function keyrep_evt(e) {
 
 function keyseq(k) {
   k = k.replaceAll('>', '> ').replaceAll('<', ' <')
-  return k
-    .split(/\s+/)
-    .map(c => c[0]=='<' ? c : c.split(''))
-    .flat()
-    .map(keyrep_str)
+  return k.split(/\s+/)
+          .map(c => c[0]=='<' ? c : c.split(''))
+          .flat().map(keyrep_str)
 }
 
 function addtrig(seq, fn) {
@@ -224,10 +259,16 @@ function T_reset() { T = null; return true }
 
 function T_start(t) {
   if (T == 0) { return T_reset() }
-  if (T) { clearTimeout(T.timer) }
-  const s = cursel()
-  T ??= {fill:s+'', anc:selanc(s), foc:selfoc(s)}
-//  T ??= {pos:ed.selectionStart, fill:gettxt(...cursel())}
+  if (T) {
+    clearTimeout(T.timer)
+  } else {
+    const s = getSelection()
+    T = {fill:s.toString()}
+    s.deleteFromDocument()
+    let ins = T.ins = html('<ins>&nbsp;</ins>')
+    s.range.insertNode(ins)
+    s.selectNode(ins)
+  }
   T.active = t
   const wait = O.keys(t.trigs).length > 0
   T.timer = delay(T_fin, (wait ? jif.opt.trig_timeout : 1))
@@ -237,97 +278,81 @@ function T_start(t) {
 function T_cancel() {
   if (!T) { return }
   clearTimeout(T.timer)
+  T.ins.convertToText()
   T = null
 }
 
 function T_fin() {
   if (!T) { return }
   clearTimeout(T.timer)
+  const s = getSelection()
+  s.selectNodeContents(T.ins)
   const t = T.active
-  if (t.f) { t.f(curpos()) }
+  if (t.f) { t.f() }
   T = null
 }
 
 
 
 ////////////////////////////////////////////////////////////////////////
-// Text Operations
-
-const cmd = (c, arg) => { ed.focus(); D.execCommand(c, false, arg) }
-
-const cursel = () => window.getSelection()
-const selanc = (s=getSelection()) => [s.anchorNode, s.anchorOffset]
-const selfoc = (s=getSelection()) => [s.focusNode, s.focusOffset]
-
-const curpos = () => ed.selectionEnd
-//const cursel = () => [ed.selectionStart, ed.selectionEnd]
-const setpos = (p) => ed.setSelectionRange(p,p)
-const setsel = (b,e,d) => (b!=null) && ed.setSelectionRange(b,e??b,d)
-const gettxt = (b=curpos(), e) => ed.value.slice(b, (e ?? b+1))
-const deltxt = (b,e=b) => { setsel(b,e); cmd('delete') }
-const instxt = (t,b,e=b) => { setsel(b,e); cmd('insertText', t) }
-
-
-
-////////////////////////////////////////////////////////////////////////
 // Snippets
+
+function mksnip(snip) {
+  if (!isstr(snip)) { return snip }
+  if (snip.length == 1) { return () => snip }
+  snip = snip.replace(/\^([1-9]+)/g, '<var part=$1>&nbsp;</var>')
+  snip = snip.replace(/\^{([1-9]+):(.+?)}/g, '<var part=$1>$2</var>')
+  return (x) => snip.replace(/\^0/g, `<var part=0>${x.trim()}</var>`)
+}
 
 function snipexpand(snip, fill=T?.fill) {
   if (!snip) { return }
-  snip = snip.replace(/\^0/g, `<b>${fill}</b>`)
-  snip = snip.replace(/\^(\d+)/g, '<i place=$1></i>')
+  if (isstr(snip)) { snip = mksnip(snip) }
+  const s = getSelection()
+  const ins = s.focusNode.parentElement.closest('ins')
   ed.contentEditable = 'true'
-  cmd('insertHTML', `<p>${snip}</p>`)
+  if (ins) {
+    ins.innerHTML = snip(fill);
+    s.selectNode(ins)
+  } else {
+    cmd('insertHTML', `<ins>${snip(fill)}</ins>`);
+  }
   ed.contentEditable = 'plaintext-only'
   snipnext(true)
 }
 
 function snipnext(first) {
-  const s = cursel()
-  const par = s.focusNode.parentElement.closest('p')
-  let next = first ? par.$('b') : par.$('i:empty')
-  if (next) {
-    const nextind = [...par.childNodes].indexOf(next) + 1
-    console.log(nextind)
-    s.setBaseAndExtent(par, nextind, par, 1)
+  const s = getSelection()
+  const par = s.focusNode?.parentElement?.closest('ins')
+  if (!par) { return }
+  let r = new Range();
+  let places = [...par.$$('var')]
+  if (places.length) {
+    let n = places.reduce(((min,p) => M.min(min, int(p.part))), 999)
+    let next = par.$(`var[part="${n}"]`)
+    let txt = next.convertToText()
+    if (places.length == 1) {
+      const pp = par.parentNode
+      for (let n of [...par.childNodes]) {
+        if (n == txt)
+          n = pp.insertBefore(n, par);
+        else
+          pp.insertBefore(n, par);
+      }
+      par.remove()
+    }
+    r.selectNode(txt)
+  } else {
+    let txt = par.convertToText()
+    r.selectNode(txt)
+    r.collapse()
   }
+  s.range = r
 }
 
 
 ////////////////////////////////////////////////////////////////////////
 // Files
-
-//async function mkfolder(f, lvl) {
-//  const name = f.name.slice(0, -1)
-//  const e = html(`
-//    <details><summary class="item dir" level=${lvl}><i>${name}`)
-//  const load = async () => {
-//    ++lvl
-//    const fs = await f.list()
-//    for (const f of fs)
-//      e.appendChild(await (f.list ? mkfolder(f, lvl) : mkfile(f, lvl)));
-//    e.off('toggle', load)
-//  }
-//  if (lvl == 0) { load(); e.open = true; }
-//  else { e.on('toggle', load) }
-//  return e
-//}
-//
-//async function mkfile(f, lvl) {
-//  const e = html(`<div class="item file" level=${lvl}><i>${f.name}`)
-//  e.on('click', () => load_file(f))
-//  return e
-//}
-//
-//async function choose_project() {
-//  const root = await JIF.choose_project()
-//  const bar = $('#sidebar')
-//  bar.innerHTML = ''
-//  const list = await root.list()
-//  for (const f of list) {
-//    bar.appendChild(await (f.list ? mkfolder(f, 0) : mkfile(f, 0)))
-//  }
-//}
 
 async function load_file(f) {
   jif.curpath = f.name
@@ -499,7 +524,7 @@ function menu(menus) {
 ////////////////////////////////////////////////////////////////////////
 // Keyboard Handling
 
-let as_timer
+let autosave_timer
 const autosave = function() { JIF.autosave(jif.curpath, ed.value) }
 
 ed.on('keydown', e => {
@@ -508,28 +533,35 @@ ed.on('keydown', e => {
     return true
   }
 
-  clearTimeout(as_timer)
-  setTimeout(autosave, 1000)
+  clearTimeout(autosave_timer)
+  autosave_timer = setTimeout(autosave, 1000)
 
   if (e.key == 'Backspace') {
-    const p = curpos()
-    const close = jif.pairs[ed.value[p-1]]
-    if (close && (ed.value[p] == close)) { cmd('forwardDelete') }
+    const s = getSelection()
+    if (!s.isCollapsed) { return true }
+    const [pch, pnode, poff] = prevch()
+    const close = jif.pairs[pch]
+    if (!close) { return true }
+    const [nch, nnode, noff] = nextch()
+    if (nch == close) {
+      let r = new Range()
+      r.setStart(pnode, poff)
+      r.setEnd(nnode, noff + 1)
+      s.range = r
+    }
     return true
   }
 
   if (e.key == 'Tab') {
-    stopevt(e)
     snipnext()
-    return false
+    return stopevt(e)
   }
 
   if (e.ctrlKey && (e.key == 'v')) {
     T_ignore()
     instxt('¬')
-    cursel().modify('extend', 'backward', 'character')
-    stopevt(e)
-    return false
+    extcur('backward', 'character')
+    return stopevt(e)
   }
 
   const rep = keyrep_evt(e)
@@ -573,7 +605,7 @@ document.on('keydown', e => {
       case "p":  choose_project();   break;
       default: return
     }
-    stopevt(e)
+    return stopevt(e)
   }
 
   if (e.metaKey) {
@@ -589,7 +621,7 @@ document.on('keydown', e => {
       case 's': save_file();          break;
       default: return
     }
-    stopevt(e)
+    return stopevt(e)
   }
 }, true)
 
@@ -602,55 +634,60 @@ window.api = api
 
 api.map = (maps, x) => {
   if (isstr(maps)) { maps = {[maps]: x} }
-  for (const [key, sub] of O.entries(maps)) {
+  for (let [key, sub] of O.entries(maps)) {
     const seq = keyseq(key)
-    if (!sub)
+    if (!sub) {
       deltrig(seq)
-    else if (typeof(sub) == 'function')
-      addtrig(seq, (p) => { setsel(T.pos, p); snipexpand(sub(p)) });
-    else
-      addtrig(seq, (p) => {
-        const s = cursel()
-        s.setBaseAndExtent(...T.anc, ...selfoc(s))
-        snipexpand(sub)
-      })
+    } else if (typeof(sub) == 'function') {
+      addtrig(seq, () => snipexpand(sub()))
+    } else {
+      sub = mksnip(sub)
+      addtrig(seq, () => snipexpand(sub))
+    }
   }
 }
 
 api.pair = (pairs, x) => {
   if (isstr(pairs)) { pairs = {[pairs]: x} }
-  const get=api.get, ext=api.ext
+  const ext=api.ext, nextis=api.nextis
   for (const [a,z] of O.entries(pairs)) {
     jif.pairs[a] = z
     if (a != z) {
       api.map({[a]: `${a}^0${z}`,
-               [z]: p => ((get()==z && ext(1)), z)})
+               [z]: () => {
+//                 if (nextis(z)) { extchr() }
+                 extchr()
+                 return z
+               }
+//               [z]: () => ((nextis(z) && extchr()), z)
+      })
     } else {
-      api.map({[a]: p => (get()==z ? (ext(1), z) : `${a}^0${z}`)})
+      api.map({[a]: () => (nextis(z) ? (extchr(), z) : `${a}^0${z}`)})
     }
   }
 }
 
 api.ins = instxt
 api.del = deltxt
-api.get = gettxt
-api.pos = (n) => (n==null) ? curpos() : setpos(n)
-api.anc = (n) => (n==null) ? selanc() : setsel(n, curpos())
-api.sel = (b,e) => (b==null) ? cursel() : setsel(b,e)
-api.ext = (n) => (ed.selectionEnd += n)
 
-api.snip = snipexpand
+api.mov = movcur
+api.ext = extcur
 
-api.tstart = () => T ? T.pos : null
-api.tfill = () => T ? T.fill : null
+api.prev = prevch
+api.next = nextch
+api.previs = (ch) => prevch()[0] == ch
+api.nextis = (ch) => nextch()[0] == ch
+
+api.extchr = extchr
+api.movchr = movchr
+api.extwrd = extwrd
+api.movwrd = movwrd
+api.extlin = extlin
+api.movlin = movlin
+
+api.fill = () => T?.fill
 
 api.config = fetch_config
-
-api.move = (n) => setpos(curpos() + n)
-api.left = () => api.move(-1)
-api.right = () => api.move(1)
-api.up = () => selobj().modify('move', 'backward', 'line')
-api.down = () => selobj().modify('move', 'forward', 'line')
 
 api.opt = (k,v) => (v==null) ? jif.opt[k] : (jif.opt[k] = v)
 

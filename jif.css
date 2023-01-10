@@ -37,6 +37,7 @@ html, body { width:100%; height:100%; }
   --line: rgb(224 224 224);
   --caret: rgb(0 195 255);
   --text-sel: rgb(0 195 255 / 0.33);
+  --placeholder-bg: rgb(26 26 26 / 0.1);
   --sidebar: rgb(252 252 252);
   --sidebar-item-hover: rgb(240 240 240);
 
@@ -136,27 +137,16 @@ body.windowed {
   padding-right: var(--pad);
 }
 
-#ed i {
+#ed ins {
+  text-decoration: none;
+}
+
+#ed var {
   font-style: normal;
+  font-weight: normal;
+  border-radius: 3px;
+  background: var(--placeholder-bg);
 }
-
-#ed b {
-  font-weight: inherit;
-}
-
-#ed [place] {
-/*  padding: 0 1ch;*/
-}
-
-#ed [place="1"]:empty:before { content:' 1 '; }
-#ed [place="2"]:empty:before { content:' 2 '; }
-#ed [place="3"]:empty:before { content:' 3 '; }
-#ed [place="4"]:empty:before { content:' 4 '; }
-#ed [place="5"]:empty:before { content:' 5 '; }
-#ed [place="6"]:empty:before { content:' 6 '; }
-#ed [place="7"]:empty:before { content:' 7 '; }
-#ed [place="8"]:empty:before { content:' 8 '; }
-#ed [place="9"]:empty:before { content:' 9 '; }
 
 @supports (font-variation-settings: "wdth" 115) {
   #ed {
