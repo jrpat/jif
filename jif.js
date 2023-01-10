@@ -221,11 +221,11 @@ function keyrep_str(s) {
 }
 
 function keyrep_evt(e) {
-  let a = e.altKey ? 'a.' : ''
-  let c = e.ctrlKey ? 'c.' : ''
-  let m = e.metaKey ? 'm.' : ''
-  let s = (e.shiftKey && !shifted.includes(e.key)) ? 's.' : ''
-  return a + c + m + s + e.key.toLowerCase()
+  return (e.altKey ? 'a.' : '')
+       + (e.ctrlKey ? 'c.' : '')
+       + (e.metaKey ? 'm.' : '')
+       + ((e.shiftKey && !shifted.includes(e.key)) ? 's.' : '')
+       + e.key.toLowerCase()
 }
 
 function keyseq(k) {
@@ -263,22 +263,26 @@ function T_start(t) {
     clearTimeout(T.timer)
   } else {
     const s = getSelection()
-    T = {fill:s.toString()}
-    s.deleteFromDocument()
-    let ins = T.ins = html('<ins>&nbsp;</ins>')
-    s.range.insertNode(ins)
+    const fill = s.toString()
+    T = {fill}
+    const ins = T.ins = document.createElement('ins')
+    s.range.surroundContents(ins)
+    if (!fill.length) { ins.innerHTML = '&nbsp;' }
     s.selectNode(ins)
   }
   T.active = t
   const wait = O.keys(t.trigs).length > 0
-  T.timer = delay(T_fin, (wait ? jif.opt.trig_timeout : 1))
+  if (wait)
+    T.timer = delay(T_fin, jif.opt.trig_timeout)
+  else
+    T_fin()
   return wait
 }
 
 function T_cancel() {
   if (!T) { return }
   clearTimeout(T.timer)
-  T.ins.convertToText()
+  T.ins.outerText = T.ins.innerText
   T = null
 }
 
@@ -286,7 +290,11 @@ function T_fin() {
   if (!T) { return }
   clearTimeout(T.timer)
   const s = getSelection()
-  s.selectNodeContents(T.ins)
+  const r = new Range()
+  r.setStartAfter(T.ins)
+  r.setEndAfter(T.ins)
+  s.range = r
+  T.ins.remove()
   const t = T.active
   if (t.f) { t.f() }
   T = null
@@ -297,58 +305,49 @@ function T_fin() {
 ////////////////////////////////////////////////////////////////////////
 // Snippets
 
-function mksnip(snip) {
-  if (!isstr(snip)) { return snip }
-  if (snip.length == 1) { return () => snip }
-  snip = snip.replace(/\^([1-9]+)/g, '<var part=$1>&nbsp;</var>')
-  snip = snip.replace(/\^{([1-9]+):(.+?)}/g, '<var part=$1>$2</var>')
-  return (x) => snip.replace(/\^0/g, `<var part=0>${x.trim()}</var>`)
-}
-
-function snipexpand(snip, fill=T?.fill) {
+function snipexpand(snip, fill=(T.fill ?? '\xA0\xA0')) {
+  if (typeof(snip) == 'function') { snip = snip() }
   if (!snip) { return }
-  if (isstr(snip)) { snip = mksnip(snip) }
+  const parts = snip.split(/__+/)
   const s = getSelection()
-  const ins = s.focusNode.parentElement.closest('ins')
-  ed.contentEditable = 'true'
-  if (ins) {
-    ins.innerHTML = snip(fill);
-    s.selectNode(ins)
-  } else {
-    cmd('insertHTML', `<ins>${snip(fill)}</ins>`);
-  }
-  ed.contentEditable = 'plaintext-only'
-  snipnext(true)
+  const r = s.getRangeAt(0)
+  const fillnode = D.createTextNode(fill)
+  let last = snipnext.last = D.createTextNode(parts.slice(1).join(fill))
+  r.insertNode(last)
+//  const places = snipnext.places = []
+//  snipnext.last = null
+//  for (const part of parts.slice(1).reverse()) {
+//    const p = D.createTextNode(part)
+//    const f = D.createTextNode('\xA0')
+//    snipnext.last ??= p
+//    places.push(f)
+//    r.insertNode(p)
+//    r.insertNode(f)
+//    // TODO: wrong
+//  }
+  r.insertNode(fillnode)
+  r.insertNode(D.createTextNode(parts[0]))
+  s.selectNode(fillnode)
 }
 
-function snipnext(first) {
-  const s = getSelection()
-  const par = s.focusNode?.parentElement?.closest('ins')
-  if (!par) { return }
-  let r = new Range();
-  let places = [...par.$$('var')]
-  if (places.length) {
-    let n = places.reduce(((min,p) => M.min(min, int(p.part))), 999)
-    let next = par.$(`var[part="${n}"]`)
-    let txt = next.convertToText()
-    if (places.length == 1) {
-      const pp = par.parentNode
-      for (let n of [...par.childNodes]) {
-        if (n == txt)
-          n = pp.insertBefore(n, par);
-        else
-          pp.insertBefore(n, par);
-      }
-      par.remove()
-    }
-    r.selectNode(txt)
+function snipnext() {
+  if (snipnext.places?.length) {
+    const place = snipnext.places.pop()
+    getSelection().selectNode(place)
+    return
   } else {
-    let txt = par.convertToText()
-    r.selectNode(txt)
-    r.collapse()
+    snipnext.places = null
   }
-  s.range = r
+  const last = snipnext.last
+  snipnext.last = null
+  if (last) {
+    const r = new Range()
+    r.setStartAfter(last)
+    r.setEndAfter(last)
+    getSelection().range = r
+  }
 }
+
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -365,18 +364,9 @@ async function choose_file() {
 }
 
 
+
 ////////////////////////////////////////////////////////////////////////
 // UI
-
-function togvis(selector, vis) {
-  const elems = $$(selector)
-  if (!elems.length) { return }
-  for (const elem of $$(selector)) {
-    const v = vis ?? !(elem.classList.contains('visible'))
-    elem.classList.toggle('visible', v)
-    if (elem.id) { db.set('vis/'+elem.id, v) }
-  }
-}
 
 function set_scale(n) {
   n = clamp(n, -3, 3)
@@ -392,18 +382,27 @@ function toggle_spell(spell) {
   spell ??= !ed.spellcheck
   ed.spellcheck = spell
   db.set('spell', spell)
-  ed.focus()
   // Forcing spellcheck redrawing is non-trivial and takes a long time.
   // https://stackoverflow.com/questions/1884829/force-spell-check-on-a-textarea-in-webkit
-  $('#menu-Options-Spell').innerHTML =
-    'Check Spelling    '+(spell?'✓':' ')
   return spell
 }
 
 function stat_calc() {
-  const nchars = ed.value.length
-  const nwords = (ed.value.match(/\s+/g) || []).length
-  return {nchars, nwords}
+  const v = ed.value
+  return {
+      nchars: v.length
+    , nwords: (v.match(/\s+/g) || []).length
+    , nsents: (v.match(/(\.(\s|$))|(\S\s+\n+)/g) || []).length
+  }
+}
+
+function show_stats() {
+  const s = stat_calc()
+  alert(`
+    ${s.nchars.toLocaleString()} Characters
+    ${s.nwords.toLocaleString()} Words
+    ${s.nsents.toLocaleString()} Sentences
+  `)
 }
 
 function configure(code) {
@@ -437,6 +436,7 @@ async function fetch_config(loc) {
 }
 
 function show_cli() {
+  let r = getSelection().range
   let cmd = prompt('')
   if (!cmd) { return }
   cmd = cmd.match(/(\S+)\s+(\S+)\s+(.+)/)
@@ -455,68 +455,11 @@ function show_cli() {
     f(x, sy)
     jif.log.push(`${c}('${sx}', '${sy}')`)
   }
+  getSelection().range = r
 }
 
 function show_log() {
   alert(jif.log.join('\n'))
-}
-
-
-
-////////////////////////////////////////////////////////////////////////
-// Menu
-
-const menu_id = t => t.replace(/\W+/g, '_')
-
-function menu_btn(name, items) {
-  const handlers = {}
-  const btn = html(`<div class=menubtn>${name}</div>`)
-  const menu = html(`<select id=menu-${menu_id(name)}></select>`)
-  const title = `${name}${' '.repeat(32 - name.length)}`
-  const titleopt = html(`<option disabled selected>${title}</option>`)
-  menu.appendChild(titleopt)
-  btn.appendChild(menu)
-  menu.on('change', e => {
-    handlers[e.target.value]()
-    delay(() => { titleopt.selected = true })
-  })
-  for (const it of items) {
-    if (isstr(it)) {
-      menu.lastElementChild.divafter = true
-    } else {
-      const [text, fn] = it
-      const id = `menu-${menu_id(name)}-${menu_id(text)}`
-      menu.insertAdjacentHTML('beforeend',
-        `<option id=${id} value="${text}">${text}</option>`)
-      handlers[text] = fn || (function(){})
-    }
-  }
-  if (/Firefox/.test(navigator.userAgent)) {
-    let l = M.max(items.reduce((l,i) => (M.max(i[0].length, l)), 0), 20)
-    let div = '─'.repeat(l * 0.55)
-    ;[...menu.children].forEach(it => {
-      if (it.divafter) it.insertAdjacentHTML('afterend',
-          `<option disabled>${div}&nbsp;</option>`);
-    })
-  } else {
-    // https://codepen.io/tigt/post/separators-inside-the-select-element
-    ;[...menu.children].forEach(it => {
-      if (it.divafter)
-        menu.insertBefore(D.createElement('hr'), it.nextSibling);
-    })
-  }
-  return btn
-}
-
-function menu_space() {
-  return html('<div flex=1></div>')
-}
-
-function menu(menus) {
-  const elem = $('#menu')
-  for (const m of menus) {
-    elem.appendChild(isstr(m) ? menu_space() : menu_btn(...m))
-  }
 }
 
 
@@ -527,34 +470,39 @@ function menu(menus) {
 let autosave_timer
 const autosave = function() { JIF.autosave(jif.curpath, ed.value) }
 
+const modkeys = ['Alt', 'Control', 'Meta', 'Shift']
+
 ed.on('keydown', e => {
-  if ((e.altKey && e.key=='Alt') || (e.ctrlKey && e.key=='Control') ||
-      (e.metaKey && e.key=='Meta') || (e.shiftKey && e.key=='Shift')) {
+  const ismod = e.altKey || e.ctrlKey || e.metaKey
+
+  if ((ismod || e.shiftKey) && modkeys.includes(e.key)) {
     return true
   }
 
   clearTimeout(autosave_timer)
   autosave_timer = setTimeout(autosave, 1000)
 
-  if (e.key == 'Backspace') {
-    const s = getSelection()
-    if (!s.isCollapsed) { return true }
-    const [pch, pnode, poff] = prevch()
-    const close = jif.pairs[pch]
-    if (!close) { return true }
-    const [nch, nnode, noff] = nextch()
-    if (nch == close) {
-      let r = new Range()
-      r.setStart(pnode, poff)
-      r.setEnd(nnode, noff + 1)
-      s.range = r
+  if (!ismod) {
+    if (e.key == 'Backspace') {
+      const s = getSelection()
+      if (!s.isCollapsed) { return true }
+      const [pch, pnode, poff] = prevch()
+      const close = jif.pairs[pch]
+      if (!close) { return true }
+      const [nch, nnode, noff] = nextch()
+      if (nch == close) {
+        let r = new Range()
+        r.setStart(pnode, poff)
+        r.setEnd(nnode, noff + 1)
+        s.range = r
+      }
+      return true
     }
-    return true
-  }
 
-  if (e.key == 'Tab') {
-    snipnext()
-    return stopevt(e)
+    if (e.key == 'Tab') {
+      snipnext()
+      return stopevt(e)
+    }
   }
 
   if (e.ctrlKey && (e.key == 'v')) {
@@ -569,8 +517,8 @@ ed.on('keydown', e => {
   const trig = trigs[rep]
 
   if (trig) {
-    T_start(trig)
-    if (e.metaKey) { stopevt(e) }
+    const wait = T_start(trig)
+    if (e.metaKey || !wait) { stopevt(e) }
   } else {
     T_cancel()
   }
@@ -590,36 +538,22 @@ function save_file() {
 
 
 document.on('keydown', e => {
-  if (e.ctrlKey) {
-    if (e.key == 'Control') { return true }
-    switch (e.key) {
-      case "-":  togvis('#menu');    break;
-      case "\\": togvis('#sidebar'); break;
-      case ",":  show_config();      break;
-      case ";":  show_cli();         break;
-      case ":":  show_log();         break;
-//      case "o":  choose_project();     break;
-      case "o":  choose_file();      break;
-      case "r":  reload_css();       break;
-      case "s":  save_file();        break;
-      case "p":  choose_project();   break;
-      default: return
+  if (e.ctrlKey || e.metaKey) {
+    if ((e.key == 'Control') || e.key == 'Meta') {
+      return true
     }
-    return stopevt(e)
-  }
-
-  if (e.metaKey) {
-    if (e.key == 'Meta') { return true }
     switch (e.key) {
-      case '=': change_scale(+1);     break;
-      case '-': change_scale(-1);     break;
-      case '0': set_scale(0);         break;
-//      case 'o': choose_project();       break;
-      case 'o': choose_file();        break;
-      case ',': show_config();        break;
-      case '.': togvis('.ui');        break;
-      case 's': save_file();          break;
-      default: return
+      case ',': show_config();      break;
+      case ';': show_cli();         break;
+      case ':': show_log();         break;
+      case 'o': choose_file();      break;
+      case 'r': reload_css();       break;
+      case 's': save_file();        break;
+      case '=': change_scale(+1);   break;
+      case '-': change_scale(-1);   break;
+      case '0': set_scale(0);       break;
+      case '3': show_stats();       break;
+      default: return true
     }
     return stopevt(e)
   }
@@ -636,33 +570,25 @@ api.map = (maps, x) => {
   if (isstr(maps)) { maps = {[maps]: x} }
   for (let [key, sub] of O.entries(maps)) {
     const seq = keyseq(key)
-    if (!sub) {
+    if (!sub)
       deltrig(seq)
-    } else if (typeof(sub) == 'function') {
+    else if (typeof(sub) == 'function')
       addtrig(seq, () => snipexpand(sub()))
-    } else {
-      sub = mksnip(sub)
+    else
       addtrig(seq, () => snipexpand(sub))
-    }
   }
 }
 
 api.pair = (pairs, x) => {
   if (isstr(pairs)) { pairs = {[pairs]: x} }
-  const ext=api.ext, nextis=api.nextis
+  const nextis=api.nextis
   for (const [a,z] of O.entries(pairs)) {
     jif.pairs[a] = z
     if (a != z) {
-      api.map({[a]: `${a}^0${z}`,
-               [z]: () => {
-//                 if (nextis(z)) { extchr() }
-                 extchr()
-                 return z
-               }
-//               [z]: () => ((nextis(z) && extchr()), z)
-      })
+      api.map({[a]: `${a}__${z}`,
+               [z]: () => (nextis(z) ? (movchr(), '') : z)})
     } else {
-      api.map({[a]: () => (nextis(z) ? (extchr(), z) : `${a}^0${z}`)})
+      api.map({[a]: () => (nextis(z) ? (movchr(), '') : `${a}__${z}`)})
     }
   }
 }

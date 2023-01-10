@@ -28,54 +28,12 @@
     <script src="jif.js"></script>
 
     <script>
-      menu([
-        ['File', [
-          ['New File', () => console.log('new file')],
-          ['New Window', () => console.log('new file')],
-          '---',
-          // ['Open Project…', () => choose_project()],
-          ['Open File…', () => choose_file()],
-          '---',
-          ['Save', () => console.log('save file')],
-          '---',
-          ['Page Setup…', () => console.log('print setup')],
-        ]],
-        ['Options', [
-          ['Edit Config', show_config],
-          ['Spell', toggle_spell],
-          // ['Show Sidebar', () => togvis('#sidebar')],
-        ]],
-        '---',
-        ['Cmd', [
-          ['Enter Command', show_cli],
-          ['View Log', show_log],
-        ]],
-        ['Stats', [
-          ['chars'],
-          ['words'],
-        ]]
-      ])
-
-      $('#menu-Stats').on('mousedown', e => {
-        let s = stat_calc()
-        let nc = s.nchars.toLocaleString()
-        let nw = s.nwords.toLocaleString()
-        $('#menu-Stats-chars').innerText = nc+' Characters'
-        $('#menu-Stats-words').innerText = nw+' Words'
-      })
-
       configure(db.get('=config'))
 
       set_scale(db.get('scale') ?? 0)
       toggle_spell(db.get('spell') ?? false)
 
-      if (location.hash == '#menu')
-        togvis('#menu', true)
-      else
-        togvis('#menu', db.get('vis/menu') ?? true)
-
-      // togvis('#sidebar', db.get('vis/sidebar') ?? false)
-
+      /////
 
       JIF.autoload()
 
