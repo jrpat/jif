@@ -45,7 +45,8 @@
       window.api.pair({"'":"'"})
 
       ed.innerText = db.get('=config')
-      ed.focus()
+
+      getSelection().setBaseAndExtent(ed, 0, ed, 0)
     </script>
   </body>
 </html>

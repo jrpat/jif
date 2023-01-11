@@ -121,8 +121,9 @@ body.windowed {
       (var(--chars) * 1ch)
     + (var(--chars) * var(--letter-spacing))
     + (var(--words) * var(--word-spacing)))));
-  padding-left: var(--pad);
-  padding-right: var(--pad);
+
+  padding-left: max(10%, var(--pad));
+  padding-right: max(10%, var(--pad));
 }
 
 #ed ins {

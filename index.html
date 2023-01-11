@@ -38,6 +38,10 @@
       window.on('beforeunload', () =>
         JIF.autosave(jif.curfile, ed.value))
 
+      /////
+
+      getSelection().setBaseAndExtent(ed, 0, ed, 0)
+
     </script>
   </body>
 </html>

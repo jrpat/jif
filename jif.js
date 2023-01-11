@@ -249,17 +249,28 @@ function T_start(t) {
   }
   T.active = t
   const wait = O.keys(t.trigs).length > 0
-  if (wait)
-    T.timer = delay(T_fin, jif.opt.trig_timeout)
-  else
+  if (wait) {
+    if (t.f)
+      T.timer = delay(T_fin, jif.opt.trig_timeout);
+    else
+      T.timer = delay(T_cancel, jif.opt.trig_timeout);
+  } else {
     T_fin()
+  }
   return wait
 }
 
 function T_cancel() {
   if (!T) { return }
   clearTimeout(T.timer)
-  T.ins.outerText = T.ins.innerText
+  const s = getSelection()
+  const r = new Range()
+  const txt = T.ins.innerText
+  r.setStartAfter(T.ins)
+  r.setEndAfter(T.ins)
+  s.range = r
+  T.ins.remove()
+  instxt(txt)
   T = null
 }
 
@@ -411,6 +422,7 @@ async function fetch_config(loc) {
 
 function show_cli() {
   let r = getSelection().range
+  console.log(r.startContainer, r.startOffset, r.endContainer, r.endOffset)
   let cmd = prompt('')
   if (!cmd) { return }
   cmd = cmd.match(/(\S+)\s+(\S+)\s+(.+)/)
@@ -430,6 +442,9 @@ function show_cli() {
     jif.log.push(`${c}('${sx}', '${sy}')`)
   }
   getSelection().range = r
+
+  let R = getSelection().range
+  console.log(R.startContainer, R.startOffset, R.endContainer, R.endOffset)
 }
 
 function show_log() {
@@ -557,7 +572,8 @@ api.pair = (pairs, x) => {
     jpairs[a] = z
     if (a != z) {
       api.map({[a]: `${a}__${z}`,
-               [z]: () => (nextch()==z ? movchr() : z)})
+               [z]: () => (nextch()==z ? movchr() : z)
+      })
     } else {
       api.map({[a]: () => (nextch()==z ? movchr() : `${a}__${z}`)})
     }
