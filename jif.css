@@ -37,14 +37,6 @@ html, body { width:100%; height:100%; }
   --line: rgb(224 224 224);
   --caret: rgb(0 195 255);
   --text-sel: rgb(0 195 255 / 0.33);
-  --placeholder-bg: rgb(26 26 26 / 0.1);
-  --sidebar: rgb(252 252 252);
-  --sidebar-item-hover: rgb(240 240 240);
-
-  --menu-height: 2rem;
-
-  --z-ui: 2;
-  --z-ed: 1;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -52,8 +44,6 @@ html, body { width:100%; height:100%; }
     --bg: rgb(26 26 26);
     --text: rgb(204 204 204);
     --line: rgb(44 44 44);
-    --sidebar: rgb(20 20 20);
-    --sidebar-item-hover: rgb(33 33 33);
   }
 }
 
@@ -100,6 +90,9 @@ body.windowed {
   padding-top: 1em;
 }
 
+::selection {
+  background-color: var(--text-sel);
+}
 
 #ed {
   font-family: var(--font-s);
@@ -111,7 +104,6 @@ body.windowed {
   box-sizing: content-box;
   padding-top: 62px;
   padding-bottom: calc(100vh - 4rem);
-  z-index: var(--z-ed);
 
   white-space: pre-wrap;
   overflow-y: scroll;
@@ -134,14 +126,9 @@ body.windowed {
 }
 
 #ed ins {
-  text-decoration: none;
-}
-
-#ed var {
-  font-style: normal;
-  font-weight: normal;
-  border-radius: 3px;
-  background: var(--placeholder-bg);
+  font-style: inherit;
+  font-weight: inherit;
+  text-decoration: inherit;
 }
 
 @supports (font-variation-settings: "wdth" 115) {
@@ -152,14 +139,6 @@ body.windowed {
 
 #ed:focus {
   outline: none;
-}
-
-::selection {
-  background-color: var(--text-sel);
-}
-
-#ed::selection {
-  background-color: var(--text-sel);
 }
 
 #ed[scale="-3"] {

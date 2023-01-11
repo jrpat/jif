@@ -8,70 +8,44 @@
         font-size: 12pt;
         font-family: monospace;
         border: 1px solid var(--line);
-        padding: 0.5em calc((100% - 80ch) / 2);
-      }
-
-      button {
-        position: fixed;
-        top: 0;
-        right: 0;
-        border: none;
-        background: none;
-        font-size: 20pt;
-        line-height: 0;
-        height: 60px;
-        width: 60px;
-        padding-bottom: 5px;
-        text-align: center;
-        border-bottom-left-radius: 5px;
-        color: var(--text);
-        z-index: 99;
-      }
-
-      button:hover {
-        background: var(--line);
+        padding: 1em calc((100% - 80ch) / 2);
       }
     </style>
   </head>
   <body vbox=stretch-stretch>
-    <button onclick="parent.hide_config()">&times;</button>
-    <textarea id=ed autofocus
+    <pre id=ed contenteditable="plaintext-only"
+      autofocus
       autocapitalize=off
       autocorrect=off
       autocomplete=off
-      spellcheck="false"
+      spellcheck=false
     ></textarea>
+
     <script src="jif.js"></script>
 
     <script>
-      const save = () => db.set('=config', ed.value)
-      
-      ed.timer = null
       ed.on('keydown', e => {
-        clearTimeout(ed.timer)
-        ed.timer = delay(save, 500)
-
         if (e.key == 'Tab') {
-          document.execCommand('insertText', false, '  ')
-          e.preventDefault()
-          return false
+          instxt('  ')
+          return stopevt(e)
         }
-      })
-
-      document.on('keydown', e => {
-        if (e.key == 'Escape') { parent.hide_config() }
       }, true)
 
-      window.on('beforeunload', e => {
-        db.set('=config', ed.value)
-        const o = window.opener
-        if (o) o.configure(ed.value);
-      })
+      document.on('keydown', e => {
+        if (e.key == 'Escape') {
+          parent.hide_config()
+          return stopevt(e)
+        }
+        if ((e.metaKey || e.ctrlKey) && (e.key == 'Enter')) {
+          parent.configure(ed.value)
+          parent.hide_config()
+        }
+      }, true)
 
       window.api.pair({"'":"'"})
 
-      ed.value = localStorage.getItem('config')
-      ed.focus(); ed.selectionStart = 9999
+      ed.innerText = db.get('=config')
+      ed.focus()
     </script>
   </body>
 </html>

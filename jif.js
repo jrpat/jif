@@ -58,9 +58,10 @@ const jif = {
   },
   log: [],
   trigs: {},
-  pairs: {},
   curpath: null,
 }
+
+const jpairs = {}
 
 const api = {}
 
@@ -127,30 +128,6 @@ Selection.prototype.selectNode = function(n) {
   this.addRange(r)
 }
 
-Selection.prototype.selectNodeContents = function(n) {
-  const r = new Range()
-  r.selectNodeContents(n)
-  this.removeAllRanges()
-  this.addRange(r)
-}
-
-Selection.prototype.insertNode = function(n) {
-  this.getRangeAt(0).insertNode(n)
-}
-
-Selection.prototype.insertAndSelectNode = function(n) {
-  this.getRangeAt(0).insertNode(n)
-  this.selectNode(n)
-}
-
-Node.prototype.convertToText = function(trim) {
-  const txt = this.innerText
-  const t = D.createTextNode(trim ? txt.trim() : txt)
-  this.parentNode.insertBefore(t, this)
-  this.remove()
-  return t
-}
-
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -161,36 +138,36 @@ function cmd(c, arg) { ed.focus(); D.execCommand(c, false, arg) }
 function deltxt()  { cmd('delete') }
 function instxt(t) { cmd('insertText', t) }
 
-function extcur(d,g) { getSelection().modify('extend', d, g) }
-function movcur(d,g) { getSelection().modify('move', d, g) }
+function extsel(d,g,n) {while(n--) getSelection().modify('extend',d,g)}
+function movcur(d,g,n) {while(n--) getSelection().modify('move',d,g)}
 
-function extchr(d) { extcur((d<0)?'backward':'forward', 'character') }
-function movchr(d) { movcur((d<0)?'backward':'forward', 'character') }
-function extwrd(d) { extcur((d<0)?'backward':'forward', 'word') }
-function movwrd(d) { movcur((d<0)?'backward':'forward', 'word') }
-function extlin(d) { extcur((d<0)?'backward':'forward', 'line') }
-function movlin(d) { movcur((d<0)?'backward':'forward', 'line') }
+const dir = (d) => ((d < 0) ? 'backward' : 'forward')
 
-function adjch(fwd) {
-  let oo = fwd ? 0 : -1
-  let sib = (fwd ? 'next' : 'previous') + 'Sibling'
-  return function() {
-    let s=getSelection(), n=s.focusNode, o=(s.focusOffset + oo)
-    let ch = n.textContent[o]
-    if (!ch) {
-      do {
-        n = n[sib] ?? n.parentNode
-        if (n == ed) { return [] }
-      } while (n.textContent.length == 0)
-      o = fwd ? 0 : (n?.textContent.length - 1)
-      ch = n?.textContent[o]
+function extchr(d=1) { extsel(dir(d), 'character', M.abs(d)) }
+function movchr(d=1) { movcur(dir(d), 'character', M.abs(d)) }
+function extwrd(d=1) { extsel(dir(d), 'word', M.abs(d)) }
+function movwrd(d=1) { movcur(dir(d), 'word', M.abs(d)) }
+function extlin(d=1) { extsel(dir(d), 'line', M.abs(d)) }
+function movlin(d=1) { movcur(dir(d), 'line', M.abs(d)) }
+
+
+function adjch(dir, idx, rev) {
+  return function(n=1) {
+    const s=getSelection(), r=s.range
+    if (!s.isCollapsed) {
+      const rr = r.cloneRange()
+      s.range = (rr.collapse(idx == 0), rr)
     }
-    return ch ? [ch, n, o] : []
+    let m = n
+    while (m--) s.modify('extend', dir, 'character')
+    const ch = s.toString()
+    s.range = r
+    return ch
   }
 }
 
-const prevch = adjch(false)
-const nextch = adjch(true)
+const nextch = adjch('forward',  -1)
+const prevch = adjch('backward',  0)
 
 
 
@@ -306,27 +283,26 @@ function T_fin() {
 // Snippets
 
 function snipexpand(snip, fill=(T.fill ?? '\xA0\xA0')) {
-  if (typeof(snip) == 'function') { snip = snip() }
-  if (!snip) { return }
-  const parts = snip.split(/__+/)
-  const s = getSelection()
-  const r = s.getRangeAt(0)
-  const fillnode = D.createTextNode(fill)
-  let last = snipnext.last = D.createTextNode(parts.slice(1).join(fill))
-  r.insertNode(last)
-//  const places = snipnext.places = []
-//  snipnext.last = null
-//  for (const part of parts.slice(1).reverse()) {
-//    const p = D.createTextNode(part)
-//    const f = D.createTextNode('\xA0')
-//    snipnext.last ??= p
-//    places.push(f)
-//    r.insertNode(p)
-//    r.insertNode(f)
-//    // TODO: wrong
-//  }
+  if (!(snip && isstr(snip))) { return }
+  const s=getSelection(), r=s.getRangeAt(0)
+  const fillnode = new Text(fill)
+  const places = snipnext.places = []
+  let [t1, t2, ...rest] = snip.split(/__+/).map(s => new Text(s))
+  if (rest.length) {
+    rest.reverse()
+    snipnext.last = rest[0]
+    for (const t of rest) {
+      r.insertNode(t)
+      const place = D.createTextNode('•')
+      places.push(place)
+      r.insertNode(place)
+    }
+  } else {
+    snipnext.last = t2
+  }
+  if (t2) { r.insertNode(t2) }
   r.insertNode(fillnode)
-  r.insertNode(D.createTextNode(parts[0]))
+  r.insertNode(t1)
   s.selectNode(fillnode)
 }
 
@@ -335,8 +311,6 @@ function snipnext() {
     const place = snipnext.places.pop()
     getSelection().selectNode(place)
     return
-  } else {
-    snipnext.places = null
   }
   const last = snipnext.last
   snipnext.last = null
@@ -405,22 +379,22 @@ function show_stats() {
   `)
 }
 
-function configure(code) {
-  if (!code) { return }
-  (new AsyncFunction(...O.keys(api), code))(...O.values(api))
-}
-
 function show_config() {
   if ($('#config')) { return }
   const frame = html('<iframe id=config src="/config.html">')
   D.body.appendChild(frame)
 }
 
+window.configure = function(code) {
+  if (!code) { return }
+  (new AsyncFunction(...O.keys(api), code))(...O.values(api))
+}
+
 window.hide_config = function() {
-  let frame = $('#config')
-  if (!frame) { return }
-  configure(frame.contentWindow.ed.value)
-  frame.remove()
+  const c = $('#config')
+  if (!c) { return }
+  db.set('=config', c.contentWindow.ed.innerText)
+  c.remove()
   ed.focus()
 }
 
@@ -452,7 +426,7 @@ function show_cli() {
     f(x, eval(y))
     jif.log.push(`${c}('${sx}', ${y})`)
   } catch(e) {
-    f(x, sy)
+    f(x, y)
     jif.log.push(`${c}('${sx}', '${sy}')`)
   }
   getSelection().range = r
@@ -485,16 +459,14 @@ ed.on('keydown', e => {
   if (!ismod) {
     if (e.key == 'Backspace') {
       const s = getSelection()
-      if (!s.isCollapsed) { return true }
-      const [pch, pnode, poff] = prevch()
-      const close = jif.pairs[pch]
+      const prev = s.focusNode.textContent[s.focusOffset-1]
+      const close = jpairs[prev]
       if (!close) { return true }
-      const [nch, nnode, noff] = nextch()
-      if (nch == close) {
-        let r = new Range()
-        r.setStart(pnode, poff)
-        r.setEnd(nnode, noff + 1)
-        s.range = r
+      const next = nextch()
+      if (next == close) {
+        s.modify('move', 'backward', 'character')
+        s.modify('extend', 'forward', 'character')
+        s.modify('extend', 'forward', 'character')
       }
       return true
     }
@@ -507,8 +479,8 @@ ed.on('keydown', e => {
 
   if (e.ctrlKey && (e.key == 'v')) {
     T_ignore()
-    instxt('¬')
-    extcur('backward', 'character')
+    cmd('insertText', '¬')
+    extsel('backward', 'character')
     return stopevt(e)
   }
 
@@ -581,14 +553,13 @@ api.map = (maps, x) => {
 
 api.pair = (pairs, x) => {
   if (isstr(pairs)) { pairs = {[pairs]: x} }
-  const nextis=api.nextis
   for (const [a,z] of O.entries(pairs)) {
-    jif.pairs[a] = z
+    jpairs[a] = z
     if (a != z) {
       api.map({[a]: `${a}__${z}`,
-               [z]: () => (nextis(z) ? (movchr(), '') : z)})
+               [z]: () => (nextch()==z ? movchr() : z)})
     } else {
-      api.map({[a]: () => (nextis(z) ? (movchr(), '') : `${a}__${z}`)})
+      api.map({[a]: () => (nextch()==z ? movchr() : `${a}__${z}`)})
     }
   }
 }
@@ -597,12 +568,7 @@ api.ins = instxt
 api.del = deltxt
 
 api.mov = movcur
-api.ext = extcur
-
-api.prev = prevch
-api.next = nextch
-api.previs = (ch) => prevch()[0] == ch
-api.nextis = (ch) => nextch()[0] == ch
+api.ext = extsel
 
 api.extchr = extchr
 api.movchr = movchr
@@ -610,6 +576,9 @@ api.extwrd = extwrd
 api.movwrd = movwrd
 api.extlin = extlin
 api.movlin = movlin
+
+api.prev = prevch
+api.next = nextch
 
 api.fill = () => T?.fill
 
