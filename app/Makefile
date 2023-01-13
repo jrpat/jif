@@ -5,13 +5,13 @@ iargs := -Ilib/webview
 dep := .build/html.hh
 src := jif.cc
 
-res := ../www/jif.css \
-			 ../www/jif.js \
+res := ../jif.css \
+			 ../jif.js \
 			 app.js \
 			 index.html \
 			 .build/font.ttf.b64
 
-ttf := ../www/fonts/iAWriterQuattroV.ttf
+ttf := ../fonts/iAWriterQuattroV.ttf
 
 
 default: .build/$(arch)/jif
