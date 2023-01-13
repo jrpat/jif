@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+  <head>
+    <title>JIF</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      @font-face {
+        font-family: 'ia-quattro-v';
+        src: url('fonts/iAWriterQuattroV.ttf') format('truetype');
+      }
+
+      #config {
+        position: fixed;
+        top: 5vh;
+        left: 5vw;
+        width: 90vw;
+        height: calc(90vh - 1.5rem);
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--text);
+        border-radius: 5px;
+        z-index: 999;
+        background: var(--bg);
+        box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
+      }
+    </style>
+    <link rel=stylesheet media=screen href="jif.css">
+  </head>
+
+  <body vbox=stretch>
+    <pre id=ed scale=0 contenteditable=plaintext-only spellcheck=true></pre>
+
+    <script src="jif.js"></script>
+    <script src="web.js" type=module></script>
+  </body>
+</html>
+

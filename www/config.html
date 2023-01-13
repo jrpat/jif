@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+  <head>
+    <title>JIF : Config</title>
+    <link rel=stylesheet href="jif.css">
+    <style>
+      #ed {
+        font-size: 12pt;
+        font-family: monospace;
+        border: 1px solid var(--line);
+        padding: 1em calc((100% - 80ch) / 2);
+      }
+    </style>
+  </head>
+  <body vbox=stretch-stretch>
+    <pre id=ed contenteditable=plaintext-only
+      autocapitalize=off
+      autocorrect=off
+      autocomplete=off
+      spellcheck=false
+    ></textarea>
+
+    <script src="jif.js"></script>
+
+    <script>
+      ed.on('keydown', e => {
+        if (e.key == 'Tab') {
+          instxt('  ')
+          return stopevt(e)
+        }
+      }, true)
+
+      document.on('keydown', e => {
+        if (e.key == 'Escape') {
+          parent.hide_config()
+          return stopevt(e)
+        }
+        if ((e.metaKey || e.ctrlKey) && (e.key == 'Enter')) {
+          parent.configure(ed.value)
+          parent.hide_config()
+        }
+      }, true)
+
+      window.api.pair({"'":"'"})
+
+      ed.innerText = db.get('=config')
+
+      getSelection().setBaseAndExtent(ed, 0, ed, 0)
+    </script>
+  </body>
+</html>
+
