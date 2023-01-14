@@ -31,7 +31,7 @@ lin: .build/linux/jif
 		> $@
 
 .build/font.ttf.b64: $(ttf) Makefile | .build
-	@base64 -i $(ttf) -o $@
+	@base64 -i $(ttf) > $@
 
 
 .build/darwin/jif: $(src) $(dep) $(lib) | .build/darwin
