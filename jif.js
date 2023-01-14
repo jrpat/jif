@@ -318,8 +318,16 @@ async function save_file() {
   JIF.write_file(jif.curpath, ed.value)
 }
 
-async function choose_file() {
-  load_file(await JIF.choose_file())
+async function choose_file_open() {
+  load_file(await JIF.choose_file_open())
+}
+
+async function choose_file_save() {
+  JIF.choose_file_save()
+}
+
+async function new_file() {
+  JIF.new_file()
 }
 
 
@@ -454,9 +462,10 @@ jif.hotkeys = {
   ',': JIF.edit_config,
   ';': show_cmd,
   ':': show_log,
-  'o': choose_file,
+  'o': choose_file_open,
   'r': reload_css,
   's': save_file,
+  'n': new_file,
   '3': show_stats,
   '=': (() => change_scale(+1)),
   '-': (() => change_scale(-1)),
