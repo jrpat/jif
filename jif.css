@@ -28,8 +28,7 @@ html, body { width:100%; height:100%; }
 
 
 :root {
-  --font-v: ia-quattro-v;
-  --font-s: ia-quattro-s;
+  --font: ia-quattro-v;
 
   --bg: rgb(247 247 247);
   --text: rgb(26 26 26);
@@ -96,7 +95,7 @@ body.dragover:after {
 }
 
 #ed {
-  font-family: var(--font-s);
+  font-family: var(--font);
   caret-color: var(--caret);
   background: var(--bg);
   color: var(--text);
@@ -131,12 +130,6 @@ body.dragover:after {
   font-style: inherit;
   font-weight: inherit;
   text-decoration: inherit;
-}
-
-@supports (font-variation-settings: "wdth" 115) {
-  #ed {
-    font-family: var(--font-v);
-  }
 }
 
 #ed:focus {

@@ -1,6 +1,7 @@
-arch := $(shell echo $(shell uname -s) | tr '[:upper:]' '[:lower:]')
+OS := $(shell echo $(shell uname -s) | tr '[:upper:]' '[:lower:]')
 
 IFLAGS := -Ilib
+CFLAGS := -std=c++17 -Wall
 
 dep := .build/html.hh
 src := jif.cc
@@ -20,7 +21,7 @@ res := ../jif.css \
 ttf := ../fonts/iAWriterQuattroV.ttf
 
 
-default: .build/$(arch)/jif
+default: .build/$(OS)/jif
 mac: .build/darwin/jif
 lin: .build/linux/jif
 
@@ -35,11 +36,13 @@ lin: .build/linux/jif
 
 
 .build/darwin/jif: $(src) $(dep) $(lib) | .build/darwin
-	$(CXX) $(src) -std=c++17 $(IFLAGS) -framework WebKit -o $@
+	$(CXX) $(src) $(CFLAGS) $(IFLAGS) -framework WebKit -o $@
 
+lib-gtk := gtk+-3.0
+lib-webkit2gtk := webkit2gtk-4.1
 .build/linux/jif: $(src) $(dep) $(lib) | .build/linux
-	$(CXX) $(src) -std=c++17 $(IFLAGS) -o $@ \
-		$(pkg-config --cflags --libs gtk+-3.0 webkit2gtk-4.0)
+	$(CXX) $(src) $(CFLAGS) $(IFLAGS) -o $@ \
+		$$(pkg-config --cflags --libs $(lib-gtk) $(lib-webkit2gtk))
 
 
 v-webview := 73aee3dae7457e3b08b9f4445793b10985c50803
@@ -66,7 +69,7 @@ lib/subprocess.hpp:
 	mkdir -p $@
 
 
-run: .build/$(arch)/jif
+run: .build/$(OS)/jif
 	$<
 
 clean:

@@ -41,9 +41,6 @@ Str js_dialog_save(Str args) {
 }
 
 Str js_newwin(Str args) {
-//   sp::command cmd {bin};
-//   cmd.run();
-  return "";
 }
 
 Str js_quit(Str args) {
