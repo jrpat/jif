@@ -18,9 +18,10 @@
       autocorrect=off
       autocomplete=off
       spellcheck=false
-    ></textarea>
+    ></pre>
 
     <script src="jif.js"></script>
+    <script src="web.js"></script>
 
     <script>
       ed.on('keydown', e => {
@@ -45,7 +46,9 @@
 
       ed.innerText = db.get('=config')
 
-      getSelection().setBaseAndExtent(ed, 0, ed, 0)
+      setTimeout(() => {
+        getSelection().setBaseAndExtent(ed, 0, ed, 0)
+      }, 100)
     </script>
   </body>
 </html>

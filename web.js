@@ -9,6 +9,8 @@ const db = {set:((k,v) => (v===U)?db.del(k):LS.setItem(k,db.to(k)(v))),
 window.db = db // debugging convenience
 ////////////////////////////////////////////////////////////////////////
 
+const JIF = window.JIF
+
 
 JIF.autosave = async function(curpath, text='') {
   db.set('=curpath', curpath)

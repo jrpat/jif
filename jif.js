@@ -459,7 +459,7 @@ function hotkey(keys, x) {
 }
 
 jif.hotkeys = {
-  ',': JIF.edit_config,
+  ',': (() => JIF.edit_config()),
   ';': show_cmd,
   ':': show_log,
   'o': choose_file_open,
