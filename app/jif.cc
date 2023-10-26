@@ -41,6 +41,7 @@ Str js_dialog_save(Str args) {
 }
 
 Str js_newwin(Str args) {
+  return "";
 }
 
 Str js_quit(Str args) {
