@@ -10,39 +10,32 @@ import {
   ZR_KEY_RIGHT,
 } from "@rezi-ui/core/keybindings";
 import { createNodeApp } from "@rezi-ui/node";
+import type { ResolvedAppConfig } from "./config/index.ts";
 import { createBindings } from "./commands/definitions.ts";
 import type { AppState } from "./domain/types.ts";
 import { JjClient } from "./jj/client.ts";
+import { createAppStore, type AppStore } from "./state/appStore.ts";
 import {
-  applyRepositoryData,
-  backspaceCommandText,
-  blurCommandBar,
-  cancelCommandState,
   commandCanExecute,
-  createInitialState,
-  deleteCommandText,
-  focusCommandBar,
   getDisplayedCommandText,
   getFocusedRevision,
-  insertCommandText,
-  moveCommandCursor,
-  moveFocus,
-  openFocusedRevision,
-  pushEvent,
-  setError,
-  setLoading,
-  setRevisionFiles,
-  startRebaseCommand,
-  toggleRebaseDescendants,
 } from "./state/store.ts";
-import { renderApp } from "./ui/render.ts";
+import { renderApp } from "./ui/render.tsx";
 
-export async function createJifApplication(repoPath: string) {
+export async function createJifApplication(
+  repoPath: string,
+  config: ResolvedAppConfig,
+) {
   const client = new JjClient(repoPath);
-  let currentState: AppState = createInitialState(repoPath);
+  let app!: ReturnType<typeof createNodeApp<AppState>>;
 
-  const app = createNodeApp({
-    initialState: currentState,
+  const store = createAppStore(repoPath, () => {
+    app.update(() => store.snapshot());
+  });
+
+  app = createNodeApp<AppState>({
+    initialState: store.snapshot(),
+    theme: config.colorScheme.theme,
     config: {
       fpsCap: 30,
       themeTransitionFrames: 4,
@@ -50,62 +43,40 @@ export async function createJifApplication(repoPath: string) {
     },
   });
 
-  const updateState = (updater: (state: AppState) => AppState) => {
-    app.update((previousState) => {
-      currentState = updater(previousState as AppState);
-      return currentState;
-    });
-  };
-
   const controller = {
     moveFocus(delta: number) {
-      updateState((state) => moveFocus(state, delta));
+      store.actions.moveFocus(delta);
     },
     openFocusedRevision() {
-      const revision = getFocusedRevision(currentState);
+      const revision = getFocusedRevision(store.snapshot());
       if (!revision) {
         return;
       }
 
-      updateState((state) => openFocusedRevision(state));
+      store.actions.openFocusedRevision();
       if (revision.files.length === 0) {
         void (async () => {
           try {
             const files = await client.loadChangedFiles(revision.changeId);
-            updateState((state) => setRevisionFiles(state, revision.changeId, files));
+            store.actions.setRevisionFiles(revision.changeId, files);
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            updateState((state) => pushEvent(state, message, "error"));
+            store.actions.pushEvent(message, "error");
           }
         })();
       }
     },
     closeFocusedRevision() {
-      updateState((state) => ({
-        ...state,
-        expandedRevisionId:
-          getFocusedRevision(state)?.changeId === state.expandedRevisionId
-            ? null
-            : state.expandedRevisionId,
-        focusedFileIndex: 0,
-      }));
+      store.actions.closeFocusedRevision();
     },
     cancelOrBlur() {
-      updateState((state) => {
-        if (state.commandBar.focus) {
-          return cancelCommandState(state);
-        }
-        if (state.commandDraft) {
-          return cancelCommandState(state);
-        }
-        return blurCommandBar(state);
-      });
+      store.actions.cancelCommand();
     },
     confirm() {
       void executeCurrentCommand();
     },
     startRebase() {
-      const revision = getFocusedRevision(currentState);
+      const revision = getFocusedRevision(store.snapshot());
       if (!revision) {
         return;
       }
@@ -113,18 +84,16 @@ export async function createJifApplication(repoPath: string) {
       void (async () => {
         try {
           const descendants = await client.resolveDescendants(revision.changeId);
-          updateState((state) => startRebaseCommand(state, descendants));
-          updateState((state) =>
-            pushEvent(state, `Composing rebase for ${revision.changeId}`, "info"),
-          );
+          store.actions.startRebaseCommand(descendants);
+          store.actions.pushEvent(`Composing rebase for ${revision.changeId}`, "info");
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          updateState((state) => pushEvent(state, message, "error"));
+          store.actions.pushEvent(message, "error");
         }
       })();
     },
     toggleRebaseDescendants() {
-      const draft = currentState.commandDraft;
+      const draft = store.snapshot().commandDraft;
       if (draft?.kind !== "rebase") {
         return;
       }
@@ -132,40 +101,39 @@ export async function createJifApplication(repoPath: string) {
       void (async () => {
         try {
           const descendants = await client.resolveDescendants(draft.sourceRevisionId);
-          updateState((state) => toggleRebaseDescendants(state, descendants));
+          store.actions.toggleRebaseDescendants(descendants);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          updateState((state) => pushEvent(state, message, "error"));
+          store.actions.pushEvent(message, "error");
         }
       })();
     },
   };
 
-  app.view((state) => {
-    currentState = state as AppState;
-    return renderApp(currentState);
+  app.view(() => {
+    return renderApp(store.state, config);
   });
 
   app.keys(createBindings(controller));
   app.onEvent((event) => {
-    handleEvent(event, updateState, currentState);
+    handleEvent(event, store);
   });
 
   async function refreshRepository() {
-    updateState((state) => setLoading(state, true));
+    store.actions.setLoading(true);
     try {
       await client.verifyRepository();
       const repositoryData = await client.loadRepository();
-      updateState((state) => applyRepositoryData(state, repositoryData));
+      store.actions.applyRepositoryData(repositoryData);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      updateState((state) => setError(state, message));
-      updateState((state) => pushEvent(state, message, "error"));
+      store.actions.setError(message);
+      store.actions.pushEvent(message, "error");
     }
   }
 
   async function executeCurrentCommand() {
-    const state = currentState;
+    const state = store.snapshot();
     if (!commandCanExecute(state)) {
       return;
     }
@@ -175,32 +143,30 @@ export async function createJifApplication(repoPath: string) {
       return;
     }
 
-    updateState((previousState) => setLoading(previousState, true));
+    store.actions.setLoading(true);
 
     try {
       const resultMessage = await client.executeCommand(commandText);
-      updateState((previousState) => cancelCommandState(previousState));
-      updateState((previousState) =>
-        pushEvent(previousState, resultMessage, "success"),
-      );
+      store.actions.cancelCommand();
+      store.actions.pushEvent(resultMessage, "success");
       await refreshRepository();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      updateState((previousState) => pushEvent(previousState, message, "error"));
-      updateState((previousState) => setLoading(previousState, false));
+      store.actions.pushEvent(message, "error");
+      store.actions.setLoading(false);
     }
   }
 
   return {
     app,
     refreshRepository,
+    dispose: store.dispose,
   };
 }
 
 function handleEvent(
   event: UiEvent,
-  updateState: (updater: (state: AppState) => AppState) => void,
-  currentState: AppState,
+  store: AppStore,
 ) {
   if (event.kind !== "engine") {
     return;
@@ -208,13 +174,13 @@ function handleEvent(
 
   if (event.event.kind === "text") {
     const text = String.fromCodePoint(event.event.codepoint);
-    if (!currentState.commandBar.focus && text === ":") {
-      updateState((state) => focusCommandBar(state));
+    if (!store.snapshot().commandBar.focus && text === ":") {
+      store.actions.focusCommandBar();
       return;
     }
 
-    if (currentState.commandBar.focus) {
-      updateState((state) => insertCommandText(state, text));
+    if (store.snapshot().commandBar.focus) {
+      store.actions.insertCommandText(text);
     }
     return;
   }
@@ -225,21 +191,21 @@ function handleEvent(
 
   switch (event.event.key) {
     case ZR_KEY_ESCAPE:
-      updateState((state) => cancelCommandState(state));
+      store.actions.cancelCommand();
       break;
     case ZR_KEY_ENTER:
       break;
     case ZR_KEY_BACKSPACE:
-      updateState((state) => backspaceCommandText(state));
+      store.actions.backspaceCommandText();
       break;
     case ZR_KEY_DELETE:
-      updateState((state) => deleteCommandText(state));
+      store.actions.deleteCommandText();
       break;
     case ZR_KEY_LEFT:
-      updateState((state) => moveCommandCursor(state, -1));
+      store.actions.moveCommandCursor(-1);
       break;
     case ZR_KEY_RIGHT:
-      updateState((state) => moveCommandCursor(state, 1));
+      store.actions.moveCommandCursor(1);
       break;
   }
 }

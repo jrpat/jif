@@ -1,10 +1,12 @@
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { loadAppConfig } from "./config/index.ts";
 import { createJifApplication } from "./app.ts";
 import { materializeSampleRepo } from "./dev/sampleRepo.ts";
 
 export async function main(argv: readonly string[]) {
   const runSample = argv.includes("--sample");
+  const config = await loadAppConfig();
 
   const repoPath = runSample
     ? (await materializeSampleRepo({
@@ -12,7 +14,7 @@ export async function main(argv: readonly string[]) {
       })).repoPath
     : process.cwd();
 
-  const { app, refreshRepository } = await createJifApplication(repoPath);
+  const { app, refreshRepository } = await createJifApplication(repoPath, config);
   void refreshRepository();
   await app.run();
 }

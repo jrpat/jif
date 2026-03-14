@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "@rezi-ui/core": "^0.1.0-alpha.60",
-    "@rezi-ui/node": "^0.1.0-alpha.60"
+    "@rezi-ui/jsx": "0.1.0-alpha.60",
+    "@rezi-ui/node": "^0.1.0-alpha.60",
+    "@solidjs/signals": "^0.12.0"
   }
 }

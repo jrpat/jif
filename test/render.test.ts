@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
 import { createTestRenderer } from "@rezi-ui/core";
+import { defaultAppConfig, resolveAppConfig } from "../src/config/index.ts";
 import type { AppState } from "../src/domain/types.ts";
 import { createInitialState } from "../src/state/store.ts";
-import { renderApp } from "../src/ui/render.ts";
+import { renderApp } from "../src/ui/render.tsx";
 
 test("renderApp shows command bar and revision identity", () => {
   const renderer = createTestRenderer({
@@ -26,7 +27,7 @@ test("renderApp shows command bar and revision identity", () => {
     ],
   };
 
-  const result = renderer.render(renderApp(state));
+  const result = renderer.render(renderApp(state, resolveAppConfig(defaultAppConfig)));
   const text = result.toText();
   expect(text).toContain("command");
   expect(text).toContain("aaaaaaaa");

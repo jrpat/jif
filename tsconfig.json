@@ -6,6 +6,7 @@
     "module": "Preserve",
     "moduleDetection": "force",
     "jsx": "react-jsx",
+    "jsxImportSource": "@rezi-ui/jsx",
     "allowJs": true,
 
     // Bundler mode

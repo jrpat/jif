@@ -6,7 +6,9 @@
       "name": "jif",
       "dependencies": {
         "@rezi-ui/core": "^0.1.0-alpha.60",
+        "@rezi-ui/jsx": "0.1.0-alpha.60",
         "@rezi-ui/node": "^0.1.0-alpha.60",
+        "@solidjs/signals": "^0.12.0",
       },
       "devDependencies": {
         "@types/bun": "^1.3.10",
@@ -19,9 +21,13 @@
   "packages": {
     "@rezi-ui/core": ["@rezi-ui/core@0.1.0-alpha.60", "", {}, "sha512-UWiYQArvQle5tz3BhXGV612c+xvivTyNBkK+xsmcLfW2lMORY56JSL+SzprJ6cf+U/yKd4DDLpqVjkDaYJoyAA=="],
 
+    "@rezi-ui/jsx": ["@rezi-ui/jsx@0.1.0-alpha.60", "", { "dependencies": { "@rezi-ui/core": "0.1.0-alpha.60" } }, "sha512-kJbzb6I9EQ6mbs0tko1Se4HmAZChX7/E6bbJc+OWw19gDZeS5vMAw6uDu3q7rx4UFeULGB8RCj5BxLGxSgfLDg=="],
+
     "@rezi-ui/native": ["@rezi-ui/native@0.1.0-alpha.60", "", {}, "sha512-JDMx9CtXSLJ8IwBGy0xUCAjZox7XkZC08FyuzdqFcb1ZkqgQWzuBMJfvpQB3jPG5ISDyPsUQ+QBMe+KbJVplwA=="],
 
     "@rezi-ui/node": ["@rezi-ui/node@0.1.0-alpha.60", "", { "dependencies": { "@rezi-ui/core": "0.1.0-alpha.60", "@rezi-ui/native": "0.1.0-alpha.60" } }, "sha512-m6Tmsyp79NpqtldlNfr9Xof9SGXeKoFGdzmTQfZbwthozAyd/Di9xQOhrD5Gjs7tVqciZID4lkN3ZLQQhxNRKg=="],
+
+    "@solidjs/signals": ["@solidjs/signals@0.12.0", "", {}, "sha512-4yeBvMCTCCPZZ1G/x0XUVg82tgC/gLikPhl91cSdGvZXMLQUEHO9Ugbca0MfICcHHJXySieFyZrMNlQ5rWcGyQ=="],
 
     "@types/bun": ["@types/bun@1.3.10", "", { "dependencies": { "bun-types": "1.3.10" } }, "sha512-0+rlrUrOrTSskibryHbvQkDOWRJwJZqZlxrUs1u4oOoTln8+WIXBPmAuCF35SWB2z4Zl3E84Nl/D0P7803nigQ=="],
 
