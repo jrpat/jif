@@ -1,12 +1,13 @@
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { loadAppConfig } from "./config/index.ts";
+import { detectTerminalThemeMode, loadAppConfig } from "./config/index.ts";
 import { createJifApplication } from "./app.ts";
 import { materializeSampleRepo } from "./dev/sampleRepo.ts";
 
 export async function main(argv: readonly string[]) {
   const runSample = argv.includes("--sample");
-  const config = await loadAppConfig();
+  const detectedThemeMode = await detectTerminalThemeMode();
+  const config = await loadAppConfig({ detectedThemeMode });
 
   const repoPath = runSample
     ? (await materializeSampleRepo({

@@ -1,9 +1,11 @@
 import { defineConfig } from "./src/config/index.ts";
-import { dimmedTheme } from "@rezi-ui/core";
+import { darkTheme, lightTheme } from "@rezi-ui/core";
 
 export default defineConfig({
   colorScheme: {
-    theme: dimmedTheme,
+    mode: "auto",
+    lightTheme,
+    darkTheme,
     semanticColors: {
       chromeFillOne: undefined,
       chromeFillTwo: undefined,

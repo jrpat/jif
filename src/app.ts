@@ -38,6 +38,7 @@ export async function createJifApplication(
     theme: config.colorScheme.theme,
     config: {
       fpsCap: 30,
+      executionMode: "inline",
       themeTransitionFrames: 4,
       rootPadding: 0,
     },

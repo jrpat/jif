@@ -6,6 +6,7 @@
   "scripts": {
     "start": "bun run index.ts",
     "sample": "bun run index.ts --sample",
+    "build": "bun run build.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit"
   },

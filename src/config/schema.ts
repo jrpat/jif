@@ -1,11 +1,14 @@
 import {
-  dimmedTheme,
+  darkTheme,
+  lightTheme,
   resolveColorOrRgb,
   type ColorPath,
   type ThemeDefinition,
 } from "@rezi-ui/core";
 
 export type SemanticColorValue = ColorPath | number | undefined;
+export type ThemeMode = "auto" | "light" | "dark";
+export type ResolvedThemeMode = Exclude<ThemeMode, "auto">;
 
 export type SemanticColorScheme = Readonly<{
   chromeFillOne: SemanticColorValue;
@@ -37,13 +40,17 @@ export type SemanticColorScheme = Readonly<{
 
 export type AppConfig = Readonly<{
   colorScheme: Readonly<{
-    theme: ThemeDefinition;
+    mode?: ThemeMode;
+    theme?: ThemeDefinition;
+    lightTheme?: ThemeDefinition;
+    darkTheme?: ThemeDefinition;
     semanticColors: SemanticColorScheme;
   }>;
 }>;
 
 export type ResolvedAppConfig = Readonly<{
   colorScheme: Readonly<{
+    mode: ResolvedThemeMode;
     theme: ThemeDefinition;
     semanticColors: Readonly<{
       [K in keyof SemanticColorScheme]: number | undefined;
@@ -53,7 +60,9 @@ export type ResolvedAppConfig = Readonly<{
 
 export const defaultAppConfig: AppConfig = {
   colorScheme: {
-    theme: dimmedTheme,
+    mode: "auto",
+    lightTheme,
+    darkTheme,
     semanticColors: {
       chromeFillOne: undefined,
       chromeFillTwo: undefined,
@@ -88,8 +97,28 @@ export function defineConfig(config: AppConfig): AppConfig {
   return config;
 }
 
-export function resolveAppConfig(config: AppConfig): ResolvedAppConfig {
-  const theme = config.colorScheme.theme;
+export function resolveThemeMode(
+  requestedMode: ThemeMode | undefined,
+  detectedThemeMode: ResolvedThemeMode | null,
+): ResolvedThemeMode {
+  if (requestedMode === "light" || requestedMode === "dark") {
+    return requestedMode;
+  }
+
+  return detectedThemeMode ?? "dark";
+}
+
+export function resolveAppConfig(
+  config: AppConfig,
+  options: Readonly<{
+    detectedThemeMode?: ResolvedThemeMode | null;
+  }> = {},
+): ResolvedAppConfig {
+  const detectedThemeMode = options.detectedThemeMode ?? null;
+  const mode = resolveThemeMode(config.colorScheme.mode, detectedThemeMode);
+  const resolvedLightTheme = config.colorScheme.lightTheme ?? config.colorScheme.theme ?? lightTheme;
+  const resolvedDarkTheme = config.colorScheme.darkTheme ?? config.colorScheme.theme ?? darkTheme;
+  const theme = mode === "light" ? resolvedLightTheme : resolvedDarkTheme;
   const semanticColors = Object.fromEntries(
     Object.entries(config.colorScheme.semanticColors).map(([name, value]) => [
       name,
@@ -101,6 +130,7 @@ export function resolveAppConfig(config: AppConfig): ResolvedAppConfig {
 
   return {
     colorScheme: {
+      mode,
       theme,
       semanticColors,
     },
