@@ -1,0 +1,22 @@
+{
+  "name": "jif",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run index.ts",
+    "sample": "bun run index.ts --sample",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.10"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@rezi-ui/core": "^0.1.0-alpha.60",
+    "@rezi-ui/node": "^0.1.0-alpha.60"
+  }
+}

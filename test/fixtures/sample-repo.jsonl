@@ -1,0 +1,144 @@
+{"kind":"mkdir","path":"src"}
+{"kind":"mkdir","path":"test"}
+{"kind":"mkdir","path":"docs"}
+{"kind":"writeFile","path":"README.md","content":"# Sample Rezi JJ App\n\nThis repository exists to exercise Jujutsu graph behavior.\n"}
+{"kind":"writeFile","path":"src/app.ts","content":"export function startApp() {\n  return \"ready\";\n}\n"}
+{"kind":"writeFile","path":"src/repo.ts","content":"export function loadRepo() {\n  return [];\n}\n"}
+{"kind":"writeFile","path":"test/repo.test.ts","content":"export const repoTests = [];\n"}
+{"kind":"writeFile","path":"docs/architecture.md","content":"# Architecture\n\nInitial notes.\n"}
+{"kind":"jj","args":["describe","-m","init: scaffold tui repository"]}
+{"kind":"jj","args":["bookmark","create","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/repo.ts","content":"\nexport function detectRoot() {\n  return \".jj\";\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(repo): add repository root detection"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"test/repo.test.ts","content":"export const detectsRoot = true;\n"}
+{"kind":"jj","args":["describe","-m","test(repo): cover repository root detection"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"writeFile","path":"src/graph.ts","content":"export function renderGraph() {\n  return [\"@\"];\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(graph): add initial graph renderer"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/graph.ts","content":"\nexport function drawLane(count) {\n  return \"|\".repeat(count);\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(graph): draw lane continuations"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"writeFile","path":"src/commands.ts","content":"export const commands = [\"log\"];\n"}
+{"kind":"jj","args":["describe","-m","feat(commands): add command registry"]}
+{"kind":"jj","args":["bookmark","create","branch-point"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/commands.ts","content":"\nexport function registerCommand(name) {\n  commands.push(name);\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(commands): register command definitions"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"writeFile","path":"src/state.ts","content":"export function createState() {\n  return { selected: 0 };\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(state): add revision selection state"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/state.ts","content":"\nexport function setExpanded(state, expanded) {\n  return { ...state, expanded };\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(state): track expanded revision details"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"docs/architecture.md","content":"\n- Keep process execution isolated from UI state.\n"}
+{"kind":"jj","args":["describe","-m","docs: record state and process layering"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"writeFile","path":"src/theme.ts","content":"export const theme = {\n  accent: \"amber\",\n};\n"}
+{"kind":"jj","args":["describe","-m","style: add initial tui theme tokens"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"jj","args":["new","branch-point"]}
+{"kind":"writeFile","path":"src/rebase-flow.ts","content":"export function beginRebase(source) {\n  return `rebase -r ${source}`;\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(ui): start rebase flow composer"]}
+{"kind":"jj","args":["bookmark","create","feature/ui"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/rebase-flow.ts","content":"\nexport function setRebaseTarget(command, target) {\n  return `${command} -o ${target}`;\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(ui): add target selection for rebase composer"]}
+{"kind":"jj","args":["bookmark","set","feature/ui"]}
+{"kind":"jj","args":["new"]}
+{"kind":"writeFile","path":"src/help.ts","content":"export function helpRows() {\n  return [\"j/k move\", \"r rebase\"];\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(ui): add contextual help rows"]}
+{"kind":"jj","args":["bookmark","set","feature/ui"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/help.ts","content":"\nexport function modeRows(mode) {\n  return [`mode:${mode}`];\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(ui): vary help rows by command mode"]}
+{"kind":"jj","args":["bookmark","set","feature/ui"]}
+{"kind":"jj","args":["new"]}
+{"kind":"writeFile","path":"src/detail.ts","content":"export function renderFiles(files) {\n  return files.join(\"\\n\");\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(ui): add changed-file detail renderer"]}
+{"kind":"jj","args":["bookmark","set","feature/ui"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/detail.ts","content":"\nexport function focusFile(files, index) {\n  return files[index] ?? null;\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(ui): focus changed files inside detail mode"]}
+{"kind":"jj","args":["bookmark","set","feature/ui"]}
+{"kind":"jj","args":["new"]}
+{"kind":"writeFile","path":"test/ui.test.ts","content":"export const uiTests = [\"rebase preview\"];\n"}
+{"kind":"jj","args":["describe","-m","test(ui): add rebase preview coverage"]}
+{"kind":"jj","args":["bookmark","set","feature/ui"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"test/ui.test.ts","content":"uiTests.push(\"detail file focus\");\n"}
+{"kind":"jj","args":["describe","-m","test(ui): cover detail file focus behavior"]}
+{"kind":"jj","args":["bookmark","set","feature/ui"]}
+{"kind":"jj","args":["new"]}
+{"kind":"jj","args":["new","main"]}
+{"kind":"writeFile","path":"src/revset.ts","content":"export function parseRevset(input) {\n  return input.trim();\n}\n"}
+{"kind":"jj","args":["describe","-m","fix(parser): handle revset trimming"]}
+{"kind":"jj","args":["bookmark","create","hotfix/parser"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/revset.ts","content":"\nexport function parseQuotedRevset(input) {\n  return input.replaceAll('\"', \"\");\n}\n"}
+{"kind":"jj","args":["describe","-m","fix(parser): handle quoted revsets"]}
+{"kind":"jj","args":["bookmark","set","hotfix/parser"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"test/repo.test.ts","content":"export const quotedRevsets = true;\n"}
+{"kind":"jj","args":["describe","-m","test(parser): cover quoted revset parsing"]}
+{"kind":"jj","args":["bookmark","set","hotfix/parser"]}
+{"kind":"jj","args":["new"]}
+{"kind":"jj","args":["new","main"]}
+{"kind":"writeFile","path":"src/layout.ts","content":"export function compactRow(id, description) {\n  return `${id} ${description}`;\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(layout): compact revision rows"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/layout.ts","content":"\nexport function dimmedRow(text) {\n  return `[dim] ${text}`;\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(layout): dim non-focused rows during details"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"writeFile","path":"docs/keymap.md","content":"# Keymap\n\n- j/k move\n- h/l close/open\n"}
+{"kind":"jj","args":["describe","-m","docs: add keyboard navigation reference"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"docs/keymap.md","content":"- : command bar\n- r rebase\n"}
+{"kind":"jj","args":["describe","-m","docs: explain command bar and rebase shortcuts"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"jj","args":["new","main","feature/ui","-m","merge: integrate ui command building"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"jj","args":["new","main","hotfix/parser","-m","merge: pull parser fixes into main"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/theme.ts","content":"\ntheme.surface = \"slate\";\n"}
+{"kind":"jj","args":["describe","-m","style: dim non-focused revisions in detail mode"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"writeFile","path":"docs/debug.md","content":"# Debug Fixture\n\nUse a deterministic sample repo for UI work.\n"}
+{"kind":"jj","args":["describe","-m","docs: add sample repo debug workflow"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"writeFile","path":"test/integration.test.ts","content":"export const integrationTests = [\"materialize sample repo\"];\n"}
+{"kind":"jj","args":["describe","-m","test: materialize sample jj repo in integration"]}
+{"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"workspaceAdd","name":"review","destination":"review-workspace","revision":"main","message":"review workspace"}
+{"kind":"appendFile","workspace":"review","path":"docs/architecture.md","content":"\n- Review workspace checks command discoverability.\n"}
+{"kind":"jj","workspace":"review","args":["describe","-m","docs(review): annotate architecture tradeoffs"]}
+{"kind":"jj","workspace":"review","args":["bookmark","create","review/notes"]}
+{"kind":"jj","workspace":"review","args":["new"]}
+{"kind":"appendFile","workspace":"review","path":"docs/keymap.md","content":"- s toggle descendants\n"}
+{"kind":"jj","workspace":"review","args":["describe","-m","docs(review): clarify rebase shortcut flow"]}
+{"kind":"jj","workspace":"review","args":["bookmark","set","review/notes"]}
+{"kind":"jj","workspace":"review","args":["new"]}
+{"kind":"appendFile","workspace":"review","path":"docs/debug.md","content":"\nThe fixture should always produce the same graph.\n"}
+{"kind":"jj","workspace":"review","args":["describe","-m","docs(review): note deterministic fixture expectations"]}
+{"kind":"jj","workspace":"review","args":["bookmark","set","review/notes"]}
