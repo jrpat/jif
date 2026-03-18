@@ -116,6 +116,19 @@ export function createBindings(
   return Object.fromEntries(entries);
 }
 
+export function getTextCommand(
+  text: string,
+  state: AppState,
+): CommandDefinition | null {
+  return (
+    commandDefinitions.find(
+      (definition) =>
+        definition.keys.includes(text) &&
+        definition.when?.(state) !== false,
+    ) ?? null
+  );
+}
+
 export function getVisibleCommands(state: AppState): readonly CommandDefinition[] {
   return commandDefinitions.filter((definition) => definition.when?.(state) ?? true);
 }

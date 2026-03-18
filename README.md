@@ -65,6 +65,24 @@ Run the test suite:
 bun test
 ```
 
+Run the headless terminal-output suite:
+
+```bash
+bun run test:terminal
+```
+
+Inspect a terminal scenario headlessly and print the normalized captured screen:
+
+```bash
+bun run inspect:terminal --scenario startup_loaded --theme light
+```
+
+Inspect the built binary with the same harness:
+
+```bash
+bun run inspect:terminal:binary
+```
+
 Run typechecking:
 
 ```bash

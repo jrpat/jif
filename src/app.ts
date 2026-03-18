@@ -11,7 +11,7 @@ import {
 } from "@rezi-ui/core/keybindings";
 import { createNodeApp } from "@rezi-ui/node";
 import type { ResolvedAppConfig } from "./config/index.ts";
-import { createBindings } from "./commands/definitions.ts";
+import { createBindings, getTextCommand, type CommandController } from "./commands/definitions.ts";
 import type { AppState } from "./domain/types.ts";
 import { JjClient } from "./jj/client.ts";
 import { createAppStore, type AppStore } from "./state/appStore.ts";
@@ -117,7 +117,7 @@ export async function createJifApplication(
 
   app.keys(createBindings(controller));
   app.onEvent((event) => {
-    handleEvent(event, store);
+    handleEvent(event, store, controller);
   });
 
   async function refreshRepository() {
@@ -168,6 +168,7 @@ export async function createJifApplication(
 function handleEvent(
   event: UiEvent,
   store: AppStore,
+  controller: CommandController,
 ) {
   if (event.kind !== "engine") {
     return;
@@ -175,13 +176,21 @@ function handleEvent(
 
   if (event.event.kind === "text") {
     const text = String.fromCodePoint(event.event.codepoint);
-    if (!store.snapshot().commandBar.focus && text === ":") {
+    const state = store.snapshot();
+
+    if (!state.commandBar.focus && text === ":") {
       store.actions.focusCommandBar();
       return;
     }
 
-    if (store.snapshot().commandBar.focus) {
+    if (state.commandBar.focus) {
       store.actions.insertCommandText(text);
+      return;
+    }
+
+    const command = getTextCommand(text, state);
+    if (command !== null) {
+      command.run(controller);
     }
     return;
   }
