@@ -1,5 +1,7 @@
 export type RevisionMarker = "working-copy" | "bookmark" | "plain" | "immutable";
 
+export type FocusMode = "revisions" | "files" | "command";
+
 export type ChangedFile = Readonly<{
   path: string;
   status: string;
@@ -27,7 +29,7 @@ export type RebaseCommandDraft = Readonly<{
   kind: "rebase";
   sourceRevisionId: string;
   includeDescendants: boolean;
-  affectedRevisionIds: readonly string[];
+  descendantRevisionIds: readonly string[];
 }>;
 
 export type CommandDraft = RebaseCommandDraft;
@@ -48,16 +50,15 @@ export type EventLogEntry = Readonly<{
 }>;
 
 export type CommandBarState = Readonly<{
-  focus: boolean;
-  manual: boolean;
   text: string;
-  cursor: number;
+  manual: boolean;
 }>;
 
 export type AppState = Readonly<{
   repoPath: string;
   graphWidth: number;
   revisions: readonly RevisionSummary[];
+  focusMode: FocusMode;
   focusedRevisionIndex: number;
   expandedRevisionId: string | null;
   focusedFileIndex: number;

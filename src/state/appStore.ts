@@ -1,4 +1,5 @@
-import { createRoot, createStore, flush, snapshot } from "@solidjs/signals";
+import { createRoot } from "solid-js";
+import { createStore, unwrap } from "solid-js/store";
 import type {
   AppState,
   ChangedFile,
@@ -7,16 +8,14 @@ import type {
 } from "../domain/types.ts";
 import {
   applyRepositoryData,
-  backspaceCommandText,
   cancelCommandState,
+  closeFocusedRevision,
   createInitialState,
-  deleteCommandText,
   focusCommandBar,
-  insertCommandText,
-  moveCommandCursor,
   moveFocus,
   openFocusedRevision,
   pushEvent,
+  setCommandBarText,
   setError,
   setLoading,
   setRevisionFiles,
@@ -26,9 +25,9 @@ import {
 
 export type AppStore = ReturnType<typeof createAppStore>;
 
-export function createAppStore(repoPath: string, onCommit: () => void) {
+export function createAppStore(repoPath: string) {
   let state!: AppState;
-  let setState!: (recipe: (draft: AppState) => void) => void;
+  let setState!: ReturnType<typeof createStore<AppState>>[1];
 
   const dispose = createRoot((disposeStore) => {
     const [store, setStore] = createStore<AppState>(createInitialState(repoPath));
@@ -38,20 +37,20 @@ export function createAppStore(repoPath: string, onCommit: () => void) {
   });
 
   function replaceState(nextState: AppState) {
-    setState((draft) => {
-      Object.assign(draft, nextState);
-    });
-    flush();
-    onCommit();
+    setState(nextState as AppState);
   }
 
   function mutate(recipe: (currentState: AppState) => AppState) {
-    replaceState(recipe(snapshot(state) as AppState));
+    replaceState(recipe(snapshot()));
+  }
+
+  function snapshot(): AppState {
+    return structuredClone(unwrap(state));
   }
 
   return {
     state,
-    snapshot: () => snapshot(state) as AppState,
+    snapshot,
     dispose,
     actions: {
       setLoading(loading: boolean) {
@@ -76,33 +75,16 @@ export function createAppStore(repoPath: string, onCommit: () => void) {
         mutate((currentState) => openFocusedRevision(currentState));
       },
       closeFocusedRevision() {
-        mutate((currentState) => ({
-          ...currentState,
-          expandedRevisionId:
-            currentState.revisions[currentState.focusedRevisionIndex]?.changeId ===
-            currentState.expandedRevisionId
-              ? null
-              : currentState.expandedRevisionId,
-          focusedFileIndex: 0,
-        }));
+        mutate((currentState) => closeFocusedRevision(currentState));
       },
       focusCommandBar() {
         mutate((currentState) => focusCommandBar(currentState));
       },
+      setCommandBarText(text: string) {
+        mutate((currentState) => setCommandBarText(currentState, text));
+      },
       cancelCommand() {
         mutate((currentState) => cancelCommandState(currentState));
-      },
-      insertCommandText(text: string) {
-        mutate((currentState) => insertCommandText(currentState, text));
-      },
-      moveCommandCursor(delta: number) {
-        mutate((currentState) => moveCommandCursor(currentState, delta));
-      },
-      backspaceCommandText() {
-        mutate((currentState) => backspaceCommandText(currentState));
-      },
-      deleteCommandText() {
-        mutate((currentState) => deleteCommandText(currentState));
       },
       startRebaseCommand(descendantIds: readonly string[]) {
         mutate((currentState) => startRebaseCommand(currentState, descendantIds));

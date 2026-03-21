@@ -5,7 +5,7 @@ import {
   createInitialState,
   focusCommandBar,
   getDisplayedCommandText,
-  insertCommandText,
+  setCommandBarText,
   moveFocus,
   openFocusedRevision,
   setRevisionFiles,
@@ -62,11 +62,13 @@ test("moveFocus enters file navigation when details are open", () => {
 test("command bar editing is controlled by reducer state", () => {
   let state = createState();
   state = focusCommandBar(state);
-  state = insertCommandText(state, "log");
+  state = setCommandBarText(state, "log");
   expect(getDisplayedCommandText(state)).toBe("log");
+  expect(state.focusMode).toBe("command");
 
   state = cancelCommandState(state);
   expect(getDisplayedCommandText(state)).toBe("");
+  expect(state.focusMode).toBe("revisions");
 });
 
 test("rebase command text updates when descendants are toggled", () => {

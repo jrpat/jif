@@ -1,5 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
+import solidPlugin from "@opentui/solid/bun-plugin";
 
 const argv = process.argv.slice(2);
 const targetArg = readFlagValue(argv, "--target");
@@ -20,6 +21,7 @@ const result = await Bun.build({
   sourcemap: "linked",
   minify,
   bytecode,
+  plugins: [solidPlugin],
   compile: {
     target,
     outfile,

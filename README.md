@@ -65,24 +65,6 @@ Run the test suite:
 bun test
 ```
 
-Run the headless terminal-output suite:
-
-```bash
-bun run test:terminal
-```
-
-Inspect a terminal scenario headlessly and print the normalized captured screen:
-
-```bash
-bun run inspect:terminal --scenario startup_loaded --theme light
-```
-
-Inspect the built binary with the same harness:
-
-```bash
-bun run inspect:terminal:binary
-```
-
 Run typechecking:
 
 ```bash
@@ -94,7 +76,9 @@ bunx tsc --noEmit
 - This is a Jujutsu repository. Use `jj`, not Git.
 - Deterministic sample data lives in `test/fixtures/sample-repo.jsonl`.
 - Sample repo materialization logic lives under `src/dev/`.
-- Rezi docs checked into the repo live under `doc/rezi/`.
+- The UI runtime is OpenTUI + Solid.
+- `tsconfig.json` uses `jsxImportSource: "@opentui/solid"` and `bunfig.toml` preloads `@opentui/solid/preload`.
+- `build.ts` uses the OpenTUI Solid Bun plugin during `Bun.build`.
 
 ## Configuration
 

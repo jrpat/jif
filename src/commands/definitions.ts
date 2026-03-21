@@ -1,4 +1,3 @@
-import type { BindingMap, KeyContext } from "@rezi-ui/core";
 import type { AppState } from "../domain/types.ts";
 
 export type CommandController = Readonly<{
@@ -7,6 +6,7 @@ export type CommandController = Readonly<{
   closeFocusedRevision: () => void;
   cancelOrBlur: () => void;
   confirm: () => void;
+  focusCommandBar: () => void;
   startRebase: () => void;
   toggleRebaseDescendants: () => void;
 }>;
@@ -29,7 +29,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Move through revisions or files",
     canonicalKeys: ["j"],
     keys: ["j", "down"],
-    when: (state) => !state.commandBar.focus,
+    when: (state) => state.focusMode !== "command",
     run: (controller) => controller.moveFocus(1),
   },
   {
@@ -38,7 +38,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Move through revisions or files",
     canonicalKeys: ["k"],
     keys: ["k", "up"],
-    when: (state) => !state.commandBar.focus,
+    when: (state) => state.focusMode !== "command",
     run: (controller) => controller.moveFocus(-1),
   },
   {
@@ -47,7 +47,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Open changed files for the focused revision",
     canonicalKeys: ["l"],
     keys: ["l", "right"],
-    when: (state) => !state.commandBar.focus,
+    when: (state) => state.focusMode !== "command",
     run: (controller) => controller.openFocusedRevision(),
   },
   {
@@ -56,8 +56,18 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Close the focused detail view",
     canonicalKeys: ["h"],
     keys: ["h", "left"],
-    when: (state) => !state.commandBar.focus,
+    when: (state) => state.focusMode !== "command",
     run: (controller) => controller.closeFocusedRevision(),
+  },
+  {
+    id: "command-bar",
+    title: "Command Bar",
+    description: "Focus the command bar",
+    canonicalKeys: [":"],
+    keys: [":"],
+    when: (state) => state.focusMode !== "command",
+    run: (controller) => controller.focusCommandBar(),
+    group: "global",
   },
   {
     id: "confirm",
@@ -83,7 +93,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Start a rebase command from the focused revision",
     canonicalKeys: ["r"],
     keys: ["r"],
-    when: (state) => !state.commandBar.focus,
+    when: (state) => state.focusMode !== "command",
     run: (controller) => controller.startRebase(),
     group: "global",
   },
@@ -93,28 +103,11 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Include descendants in the rebase preview",
     canonicalKeys: ["s"],
     keys: ["s"],
-    when: (state) => state.commandDraft?.kind === "rebase" && !state.commandBar.focus,
+    when: (state) => state.commandDraft?.kind === "rebase" && state.focusMode !== "command",
     run: (controller) => controller.toggleRebaseDescendants(),
     group: "mode",
   },
 ];
-
-export function createBindings(
-  controller: CommandController,
-): BindingMap<KeyContext<AppState>> {
-  const entries = commandDefinitions.flatMap((definition) =>
-    definition.keys.map((key) => [
-      key,
-      {
-        description: `${definition.canonicalKeys.join("/")} ${definition.description}`,
-        when: (ctx: KeyContext<AppState>) => definition.when?.(ctx.state) ?? true,
-        handler: () => definition.run(controller),
-      },
-    ] as const),
-  );
-
-  return Object.fromEntries(entries);
-}
 
 export function getTextCommand(
   text: string,

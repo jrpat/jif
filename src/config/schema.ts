@@ -1,12 +1,4 @@
-import {
-  darkTheme,
-  lightTheme,
-  resolveColorOrRgb,
-  type ColorPath,
-  type ThemeDefinition,
-} from "@rezi-ui/core";
-
-export type SemanticColorValue = ColorPath | number | undefined;
+export type SemanticColorValue = string | undefined;
 export type ThemeMode = "auto" | "light" | "dark";
 export type ResolvedThemeMode = Exclude<ThemeMode, "auto">;
 
@@ -39,57 +31,79 @@ export type SemanticColorScheme = Readonly<{
 }>;
 
 export type AppConfig = Readonly<{
-  colorScheme: Readonly<{
+  colorScheme?: Readonly<{
     mode?: ThemeMode;
-    theme?: ThemeDefinition;
-    lightTheme?: ThemeDefinition;
-    darkTheme?: ThemeDefinition;
-    semanticColors: SemanticColorScheme;
+    semanticColors?: Partial<SemanticColorScheme>;
+    lightColors?: Partial<SemanticColorScheme>;
+    darkColors?: Partial<SemanticColorScheme>;
   }>;
 }>;
 
 export type ResolvedAppConfig = Readonly<{
   colorScheme: Readonly<{
     mode: ResolvedThemeMode;
-    theme: ThemeDefinition;
-    semanticColors: Readonly<{
-      [K in keyof SemanticColorScheme]: number | undefined;
-    }>;
+    semanticColors: SemanticColorScheme;
   }>;
 }>;
+
+const sharedDefaultColors: SemanticColorScheme = {
+  chromeFillOne: undefined,
+  chromeFillTwo: undefined,
+  chromeFillThree: undefined,
+  chromeBorderIdle: "#5b6773",
+  chromeBorderFocus: "#4f8cff",
+  rowFocusedFill: "#1f3a5f",
+  rowAffectedFill: "#294445",
+  rowCommandTargetBorder: "#d6842a",
+  graphWorkingCopy: "#4f8cff",
+  graphPlain: "#7f8a96",
+  graphImmutable: "#8a6fb4",
+  graphBookmark: "#d6842a",
+  bookmarkTagFill: "#4b3b24",
+  bookmarkTagText: "#f7d8a2",
+  workspaceTagFill: "#1f4d4f",
+  workspaceTagText: "#c7f0f2",
+  textPrimary: "#edf2f7",
+  textSecondary: "#b8c2cc",
+  textMuted: "#7f8a96",
+  fileFocusMarker: "#4f8cff",
+  fileStatusAccent: "#d6842a",
+  statusInfo: "#72b7ff",
+  statusSuccess: "#6ac48a",
+  statusWarning: "#f0c36a",
+  statusError: "#ff7a7a",
+};
+
+const lightDefaultColors: Partial<SemanticColorScheme> = {
+  chromeBorderIdle: "#9aa6b2",
+  chromeBorderFocus: "#0059d6",
+  rowFocusedFill: "#d7e6ff",
+  rowAffectedFill: "#d9ece1",
+  rowCommandTargetBorder: "#b56c00",
+  graphWorkingCopy: "#0059d6",
+  graphPlain: "#62707d",
+  graphImmutable: "#6a4fb5",
+  graphBookmark: "#b56c00",
+  bookmarkTagFill: "#f3dfbf",
+  bookmarkTagText: "#523300",
+  workspaceTagFill: "#cbe9eb",
+  workspaceTagText: "#12383a",
+  textPrimary: "#13202b",
+  textSecondary: "#42515d",
+  textMuted: "#62707d",
+  fileFocusMarker: "#0059d6",
+  fileStatusAccent: "#b56c00",
+  statusInfo: "#0059d6",
+  statusSuccess: "#1f8a4c",
+  statusWarning: "#a86400",
+  statusError: "#c93b3b",
+};
+
+const darkDefaultColors: Partial<SemanticColorScheme> = {};
 
 export const defaultAppConfig: AppConfig = {
   colorScheme: {
     mode: "auto",
-    lightTheme,
-    darkTheme,
-    semanticColors: {
-      chromeFillOne: undefined,
-      chromeFillTwo: undefined,
-      chromeFillThree: undefined,
-      chromeBorderIdle: "border.subtle",
-      chromeBorderFocus: "focus.ring",
-      rowFocusedFill: "focus.bg",
-      rowAffectedFill: "selected.bg",
-      rowCommandTargetBorder: "accent.secondary",
-      graphWorkingCopy: "accent.primary",
-      graphPlain: "fg.secondary",
-      graphImmutable: "disabled.fg",
-      graphBookmark: "accent.secondary",
-      bookmarkTagFill: "accent.secondary",
-      bookmarkTagText: "fg.inverse",
-      workspaceTagFill: "accent.tertiary",
-      workspaceTagText: "fg.inverse",
-      textPrimary: "fg.primary",
-      textSecondary: "fg.secondary",
-      textMuted: "fg.muted",
-      fileFocusMarker: "focus.ring",
-      fileStatusAccent: "accent.secondary",
-      statusInfo: "info",
-      statusSuccess: "success",
-      statusWarning: "warning",
-      statusError: "error",
-    },
   },
 };
 
@@ -115,23 +129,20 @@ export function resolveAppConfig(
   }> = {},
 ): ResolvedAppConfig {
   const detectedThemeMode = options.detectedThemeMode ?? null;
-  const mode = resolveThemeMode(config.colorScheme.mode, detectedThemeMode);
-  const resolvedLightTheme = config.colorScheme.lightTheme ?? config.colorScheme.theme ?? lightTheme;
-  const resolvedDarkTheme = config.colorScheme.darkTheme ?? config.colorScheme.theme ?? darkTheme;
-  const theme = mode === "light" ? resolvedLightTheme : resolvedDarkTheme;
-  const semanticColors = Object.fromEntries(
-    Object.entries(config.colorScheme.semanticColors).map(([name, value]) => [
-      name,
-      value === undefined
-        ? undefined
-        : resolveColorOrRgb(theme, value, resolveColorOrRgb(theme, "fg.primary", 0xffffff)),
-    ]),
-  ) as ResolvedAppConfig["colorScheme"]["semanticColors"];
+  const mode = resolveThemeMode(config.colorScheme?.mode, detectedThemeMode);
+  const defaults = mode === "light" ? lightDefaultColors : darkDefaultColors;
+  const semanticColors = {
+    ...sharedDefaultColors,
+    ...defaults,
+    ...config.colorScheme?.semanticColors,
+    ...(mode === "light"
+      ? config.colorScheme?.lightColors
+      : config.colorScheme?.darkColors),
+  };
 
   return {
     colorScheme: {
       mode,
-      theme,
       semanticColors,
     },
   };

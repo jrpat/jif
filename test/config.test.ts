@@ -1,4 +1,3 @@
-import { darkTheme, lightTheme } from "@rezi-ui/core";
 import { expect, test } from "bun:test";
 import {
   defaultAppConfig,
@@ -7,13 +6,13 @@ import {
   type AppConfig,
 } from "../src/config/index.ts";
 
-test("resolveAppConfig resolves semantic theme color references", () => {
+test("resolveAppConfig resolves semantic colors for the default dark mode", () => {
   const resolved = resolveAppConfig(defaultAppConfig);
 
   expect(resolved.colorScheme.mode).toBe("dark");
   expect(resolved.colorScheme.semanticColors.chromeFillOne).toBeUndefined();
-  expect(typeof resolved.colorScheme.semanticColors.graphWorkingCopy).toBe("number");
-  expect(typeof resolved.colorScheme.semanticColors.statusError).toBe("number");
+  expect(typeof resolved.colorScheme.semanticColors.graphWorkingCopy).toBe("string");
+  expect(typeof resolved.colorScheme.semanticColors.statusError).toBe("string");
 });
 
 test("resolveAppConfig uses detected light mode for auto themes", () => {
@@ -22,13 +21,12 @@ test("resolveAppConfig uses detected light mode for auto themes", () => {
   });
 
   expect(resolved.colorScheme.mode).toBe("light");
-  expect(resolved.colorScheme.theme.name).toBe(lightTheme.name);
+  expect(resolved.colorScheme.semanticColors.textPrimary).toBe("#13202b");
 });
 
 test("resolveAppConfig honors explicit dark mode over detection", () => {
   const config: AppConfig = {
     colorScheme: {
-      ...defaultAppConfig.colorScheme,
       mode: "dark",
     },
   };
@@ -38,7 +36,7 @@ test("resolveAppConfig honors explicit dark mode over detection", () => {
   });
 
   expect(resolved.colorScheme.mode).toBe("dark");
-  expect(resolved.colorScheme.theme.name).toBe(darkTheme.name);
+  expect(resolved.colorScheme.semanticColors.textPrimary).toBe("#edf2f7");
 });
 
 test("resolveThemeMode falls back to detected mode for auto", () => {

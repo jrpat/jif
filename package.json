@@ -8,22 +8,17 @@
     "sample": "bun run index.ts --sample",
     "build": "bun run build.ts",
     "test": "bun test",
-    "test:terminal": "bun test ./test/terminal.integration.ts",
-    "inspect:terminal": "bun run src/dev/inspectTerminal.ts",
-    "inspect:terminal:binary": "bun run build.ts && bun run src/dev/inspectTerminal.ts --built-default",
     "typecheck": "bunx tsc --noEmit"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.10",
-    "@xterm/headless": "^6.0.0"
+    "@types/bun": "^1.3.10"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@rezi-ui/core": "^0.1.0-alpha.60",
-    "@rezi-ui/jsx": "0.1.0-alpha.60",
-    "@rezi-ui/node": "^0.1.0-alpha.60",
-    "@solidjs/signals": "^0.12.0"
+    "@opentui/core": "^0.1.90",
+    "@opentui/solid": "^0.1.90",
+    "solid-js": "^1.9.11"
   }
 }

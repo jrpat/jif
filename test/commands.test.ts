@@ -35,9 +35,10 @@ test("getTextCommand resolves vim navigation when command bar is unfocused", () 
 test("getTextCommand respects command visibility state", () => {
   const focusedState = {
     ...createState(),
+    focusMode: "command" as const,
     commandBar: {
       ...createState().commandBar,
-      focus: true,
+      manual: true,
     },
   };
   expect(getTextCommand("j", focusedState)).toBeNull();

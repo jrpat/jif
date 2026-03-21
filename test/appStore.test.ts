@@ -1,18 +1,14 @@
 import { expect, test } from "bun:test";
 import { createAppStore } from "../src/state/appStore.ts";
 
-test("AppStore keeps all state in one reactive store and notifies on commit", () => {
-  let commits = 0;
-  const store = createAppStore("/tmp/repo", () => {
-    commits += 1;
-  });
+test("AppStore keeps all app state in one reactive store", () => {
+  const store = createAppStore("/tmp/repo");
 
   store.actions.focusCommandBar();
-  store.actions.insertCommandText("log");
+  store.actions.setCommandBarText("log");
 
-  expect(store.state.commandBar.focus).toBeTrue();
+  expect(store.state.focusMode).toBe("command");
   expect(store.state.commandBar.text).toBe("log");
-  expect(commits).toBe(2);
 
   store.dispose();
 });

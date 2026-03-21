@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { detectTerminalThemeMode, loadAppConfig } from "./config/index.ts";
-import { createJifApplication } from "./app.ts";
+import { runJifApplication } from "./app.ts";
 import { materializeSampleRepo } from "./dev/sampleRepo.ts";
 
 export async function main(argv: readonly string[]) {
@@ -18,9 +18,7 @@ export async function main(argv: readonly string[]) {
       })).repoPath
     : process.cwd();
 
-  const { app, refreshRepository } = await createJifApplication(repoPath, config);
-  void refreshRepository();
-  await app.run();
+  await runJifApplication(repoPath, config);
 }
 
 async function ensureRuntimeTempDir(): Promise<string> {

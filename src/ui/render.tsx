@@ -1,7 +1,9 @@
-import type { VNode } from "@rezi-ui/core";
-import { Box, Column, Row, Spacer, Text, VirtualList } from "@rezi-ui/jsx";
+import type { ScrollBoxRenderable } from "@opentui/core";
+import { For, createEffect, createMemo, onMount } from "solid-js";
+import { useKeyboard } from "@opentui/solid";
+import { getVisibleCommands, type CommandController } from "../commands/definitions.ts";
 import type { ResolvedAppConfig } from "../config/index.ts";
-import type { AppState, RevisionSummary, StatusLevel } from "../domain/types.ts";
+import type { AppStore } from "../state/appStore.ts";
 import {
   commandCanExecute,
   getCurrentRebaseTargetRevisionId,
@@ -10,119 +12,305 @@ import {
   getFocusedRevision,
   getOperationAffectedRevisionIds,
 } from "../state/store.ts";
-import { getVisibleCommands } from "../commands/definitions.ts";
+import type { JjClient } from "../jj/client.ts";
+import type { RevisionSummary } from "../domain/types.ts";
 
-export function renderApp(state: AppState, config: ResolvedAppConfig): VNode {
-  const focusedRevision = getFocusedRevision(state);
-  const expandedRevision = getExpandedRevision(state);
-  const commandText = getDisplayedCommandText(state);
-  const visibleCommands = getVisibleCommands(state);
-  const helpText = visibleCommands
-    .map((command) => `${command.canonicalKeys.join("/")} ${command.title.toLowerCase()}`)
-    .join("   ");
+export function JifView(props: {
+  store: AppStore;
+  client: JjClient;
+  config: ResolvedAppConfig;
+}) {
+  const { store, client, config } = props;
+  let logViewport: ScrollBoxRenderable | undefined;
+
+  const controller: CommandController = {
+    moveFocus(delta: number) {
+      store.actions.moveFocus(delta);
+    },
+    openFocusedRevision() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (!revision) {
+        return;
+      }
+
+      store.actions.openFocusedRevision();
+      if (revision.files.length > 0) {
+        return;
+      }
+
+      void (async () => {
+        try {
+          const files = await client.loadChangedFiles(revision.changeId);
+          store.actions.setRevisionFiles(revision.changeId, files);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          store.actions.pushEvent(message, "error");
+        }
+      })();
+    },
+    closeFocusedRevision() {
+      store.actions.closeFocusedRevision();
+    },
+    cancelOrBlur() {
+      store.actions.cancelCommand();
+    },
+    confirm() {
+      void executeCurrentCommand();
+    },
+    focusCommandBar() {
+      store.actions.focusCommandBar();
+    },
+    startRebase() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (!revision) {
+        return;
+      }
+
+      void (async () => {
+        try {
+          const descendants = await client.resolveDescendants(revision.changeId);
+          store.actions.startRebaseCommand(descendants);
+          store.actions.pushEvent(`Composing rebase for ${revision.changeId}`, "info");
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          store.actions.pushEvent(message, "error");
+        }
+      })();
+    },
+    toggleRebaseDescendants() {
+      const draft = store.snapshot().commandDraft;
+      if (draft?.kind !== "rebase") {
+        return;
+      }
+
+      void (async () => {
+        try {
+          const descendants = await client.resolveDescendants(draft.sourceRevisionId);
+          store.actions.toggleRebaseDescendants(descendants);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          store.actions.pushEvent(message, "error");
+        }
+      })();
+    },
+  };
+
+  const commandText = createMemo(() => getDisplayedCommandText(store.state));
+  const visibleCommands = createMemo(() => getVisibleCommands(store.state));
+  const visibleEvents = createMemo(() => store.state.eventLog.slice(-3).reverse());
+
+  useKeyboard((event) => {
+    if (event.eventType === "release" || event.ctrl || event.meta || event.option) {
+      return;
+    }
+
+    const state = store.snapshot();
+    const normalizedKey = normalizeKey(event);
+    if (normalizedKey === null) {
+      return;
+    }
+
+    if (normalizedKey === "escape") {
+      event.preventDefault();
+      controller.cancelOrBlur();
+      return;
+    }
+
+    if (state.focusMode === "command") {
+      return;
+    }
+
+    if (normalizedKey === "enter") {
+      event.preventDefault();
+      controller.confirm();
+      return;
+    }
+
+    const command = visibleCommands().find((definition) => definition.keys.includes(normalizedKey));
+    if (!command) {
+      return;
+    }
+
+    event.preventDefault();
+    command.run(controller);
+  }, { release: true });
+
+  createEffect(() => {
+    const focusedRevision = getFocusedRevision(store.state);
+    if (!focusedRevision || !logViewport) {
+      return;
+    }
+
+    queueMicrotask(() => {
+      logViewport?.scrollChildIntoView(`revision-${focusedRevision.changeId}`);
+    });
+  });
+
+  onMount(() => {
+    void refreshRepository();
+  });
 
   return (
-    <Box width="full" height="full" p={1} style={{ fg: config.colorScheme.semanticColors.textPrimary }}>
-      <CommandBar state={state} commandText={commandText} config={config} />
-      <Spacer size={1} />
-      <VirtualList
-        id="revision-list"
-        focusable
-        keyboardNavigation={false}
-        width="full"
-        height="full"
-        items={state.revisions}
-        itemHeight={(revision) => computeRevisionHeight(revision, state)}
-        estimateItemHeight={(revision) => computeRevisionHeight(revision, state)}
-        renderItem={(revision, index) => (
-          <RevisionItem
-            state={state}
-            revision={revision}
-            index={index}
-            config={config}
-            focusedRevisionId={focusedRevision?.changeId ?? null}
-            expandedRevisionId={expandedRevision?.changeId ?? null}
-            commandTargetId={getCurrentRebaseTargetRevisionId(state)}
-          />
-        )}
-        onSelect={(_revision, index) => {
-          void index;
+    <box
+      width="100%"
+      height="100%"
+      padding={1}
+      flexDirection="column"
+      gap={1}
+      backgroundColor={config.colorScheme.mode === "light" ? "#f5f7fa" : "#0f1419"}
+    >
+      <CommandBar
+        store={store}
+        config={config}
+        commandText={commandText()}
+        onSubmit={(value) => {
+          store.actions.setCommandBarText(value);
+          void executeCurrentCommand(value);
         }}
       />
-      <Spacer size={1} />
-      <StatusArea state={state} helpText={helpText} config={config} />
-    </Box>
+      <scrollbox
+        ref={logViewport}
+        width="100%"
+        flexGrow={1}
+        border
+        borderStyle="single"
+        borderColor={config.colorScheme.semanticColors.chromeBorderIdle}
+        padding={1}
+        scrollY
+        scrollbarOptions={{
+          trackOptions: {
+            backgroundColor: config.colorScheme.mode === "light" ? "#d5dde5" : "#1b2430",
+            foregroundColor: config.colorScheme.semanticColors.chromeBorderFocus,
+          },
+        }}
+      >
+        <box width="100%" flexDirection="column" gap={1}>
+          <For each={store.state.revisions}>
+            {(revision, index) => (
+              <RevisionItem
+                state={store.state}
+                revision={revision}
+                index={index()}
+                config={config}
+                focusedRevisionId={getFocusedRevision(store.state)?.changeId ?? null}
+                expandedRevisionId={getExpandedRevision(store.state)?.changeId ?? null}
+                commandTargetId={getCurrentRebaseTargetRevisionId(store.state)}
+              />
+            )}
+          </For>
+        </box>
+      </scrollbox>
+      <StatusArea
+        state={store.state}
+        events={visibleEvents()}
+        helpText={visibleCommands()
+          .map((command) => `${command.canonicalKeys.join("/")} ${command.title.toLowerCase()}`)
+          .join("   ")}
+        config={config}
+      />
+    </box>
   );
+
+  async function executeCurrentCommand(commandOverride?: string) {
+    const state = store.snapshot();
+    const commandTextValue = (commandOverride ?? getDisplayedCommandText(state)).trim();
+    if (!commandCanExecute(state) || commandTextValue.length === 0) {
+      return;
+    }
+
+    store.actions.setLoading(true);
+
+    try {
+      const resultMessage = await client.executeCommand(commandTextValue);
+      store.actions.cancelCommand();
+      store.actions.pushEvent(resultMessage, "success");
+      await refreshRepository();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      store.actions.pushEvent(message, "error");
+      store.actions.setLoading(false);
+    }
+  }
+
+  async function refreshRepository() {
+    store.actions.setLoading(true);
+    try {
+      await client.verifyRepository();
+      const repositoryData = await client.loadRepository();
+      store.actions.applyRepositoryData(repositoryData);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      store.actions.setError(message);
+      store.actions.pushEvent(message, "error");
+    }
+  }
 }
 
 function CommandBar(props: {
-  state: AppState;
-  commandText: string;
+  store: AppStore;
   config: ResolvedAppConfig;
-}): VNode {
-  const { state, commandText, config } = props;
+  commandText: string;
+  onSubmit: (value: string) => void;
+}) {
+  const { store, config } = props;
   const colors = config.colorScheme.semanticColors;
-  const canExecute = commandCanExecute(state);
-  const renderedText = renderCursor(
-    commandText,
-    state.commandBar.focus ? state.commandBar.cursor : null,
-  );
 
   return (
-    <Box
-      width="full"
-      border="single"
-      p={1}
-      style={{
-        ...(state.commandBar.focus
-          ? colors.chromeFillTwo !== undefined
-            ? { bg: colors.chromeFillTwo }
-            : {}
-          : colors.chromeFillOne !== undefined
-            ? { bg: colors.chromeFillOne }
-            : {}),
-        fg: colors.textPrimary,
-      }}
-      borderStyle={{
-        fg: state.commandBar.focus ? colors.chromeBorderFocus : colors.chromeBorderIdle,
-      }}
+    <box
+      width="100%"
+      border
+      borderStyle="single"
+      borderColor={
+        store.state.focusMode === "command"
+          ? colors.chromeBorderFocus
+          : colors.chromeBorderIdle
+      }
+      backgroundColor={
+        store.state.focusMode === "command"
+          ? colors.chromeFillTwo
+          : colors.chromeFillOne
+      }
+      padding={1}
+      flexDirection="column"
     >
-      <Row width="full" gap={1}>
-        <Text style={{ fg: colors.textSecondary, bold: true }}>command</Text>
-        <Text
-          style={{
-            fg: commandText.length > 0 ? colors.textPrimary : colors.textMuted,
-            bold: canExecute,
+      <box width="100%" flexDirection="row" gap={1}>
+        <text fg={colors.textMuted}>jj</text>
+        <input
+          width="100%"
+          value={props.commandText}
+          placeholder="Type a jj subcommand"
+          focused={store.state.focusMode === "command"}
+          backgroundColor={colors.chromeFillTwo}
+          focusedBackgroundColor={colors.chromeFillThree}
+          textColor={props.commandText.length > 0 ? colors.textPrimary : colors.textMuted}
+          cursorColor={colors.chromeBorderFocus}
+          onInput={(value) => {
+            store.actions.setCommandBarText(value);
           }}
-          wrap={false}
-          textOverflow="ellipsis"
-          maxWidth="full"
-        >
-          {renderedText}
-        </Text>
-      </Row>
-    </Box>
+          onSubmit={props.onSubmit as any}
+        />
+      </box>
+      <text fg={colors.textMuted} truncate>
+        {props.commandText.length === 0
+          ? "Press : to compose a command"
+          : commandCanExecute(store.state)
+            ? "Enter to run"
+            : "Select an onto target or keep typing"}
+      </text>
+    </box>
   );
 }
 
 function RevisionItem(props: {
-  state: AppState;
+  state: AppStore["state"];
   revision: RevisionSummary;
   index: number;
   config: ResolvedAppConfig;
   focusedRevisionId: string | null;
   expandedRevisionId: string | null;
   commandTargetId: string | null;
-}): VNode {
-  const {
-    state,
-    revision,
-    index,
-    config,
-    focusedRevisionId,
-    expandedRevisionId,
-    commandTargetId,
-  } = props;
+}) {
+  const { state, revision, config, focusedRevisionId, expandedRevisionId, commandTargetId } = props;
   const colors = config.colorScheme.semanticColors;
   const affectedIds = getOperationAffectedRevisionIds(state);
   const isFocused = revision.changeId === focusedRevisionId;
@@ -131,290 +319,200 @@ function RevisionItem(props: {
   const isAffected = affectedIds.has(revision.changeId);
   const isCommandTarget = commandTargetId === revision.changeId;
 
-  const surface = isFocused
-    ? colors.rowFocusedFill
-    : isAffected
-      ? colors.rowAffectedFill
-      : undefined;
-
-  const borderColor = isFocused
-    ? colors.chromeBorderFocus
-    : isCommandTarget
-      ? colors.rowCommandTargetBorder
-      : undefined;
-
   return (
-    <Box
-      width="full"
-      px={1}
-      py={0}
-      opacity={anyExpanded && !isExpanded ? 0.55 : 1}
-      transition={{ duration: 140, properties: ["opacity"] }}
-      style={{
-        ...(surface !== undefined ? { bg: surface } : {}),
-        fg: colors.textPrimary,
-      }}
-      borderStyle={borderColor !== undefined ? { fg: borderColor } : undefined}
+    <box
+      id={`revision-${revision.changeId}`}
+      width="100%"
+      flexDirection="column"
+      paddingX={1}
+      opacity={anyExpanded && !isExpanded ? 0.6 : 1}
+      backgroundColor={
+        isFocused
+          ? colors.rowFocusedFill
+          : isAffected
+            ? colors.rowAffectedFill
+            : undefined
+      }
+      border={isFocused || isCommandTarget}
+      borderStyle="single"
+      borderColor={isCommandTarget ? colors.rowCommandTargetBorder : colors.chromeBorderFocus}
     >
-      <Column width="full">
-        <RevisionHeader
+      <box width="100%" flexDirection="row" gap={1}>
+        <text fg={markerColor(revision, colors)}>
+          {padRight(revision.graphHead, state.graphWidth)}
+        </text>
+        <text fg={isFocused ? colors.chromeBorderFocus : colors.textPrimary}>
+          {revision.changeId}
+        </text>
+        <For each={revision.bookmarks}>
+          {(bookmark) => (
+            <text fg={colors.bookmarkTagText} bg={colors.bookmarkTagFill}>
+              {` ${bookmark} `}
+            </text>
+          )}
+        </For>
+        <For each={revision.workspaces}>
+          {(workspace) => (
+            <text fg={colors.workspaceTagText} bg={colors.workspaceTagFill}>
+              {` ${workspace} `}
+            </text>
+          )}
+        </For>
+        {isCommandTarget ? (
+          <text fg={colors.bookmarkTagText} bg={colors.rowCommandTargetBorder}>
+            {" onto "}
+          </text>
+        ) : null}
+      </box>
+      <box width="100%" flexDirection="row" gap={1}>
+        <text fg={colors.textMuted}>{padRight("", state.graphWidth)}</text>
+        <text fg={isFocused ? colors.textPrimary : colors.textSecondary} truncate>
+          {revision.description}
+        </text>
+      </box>
+      <For each={revision.graphTail}>
+        {(graphLine) => (
+          <box width="100%" flexDirection="row" gap={1}>
+            <text fg={colors.textMuted}>{padRight(graphLine, state.graphWidth)}</text>
+            <text fg={colors.textMuted}> </text>
+          </box>
+        )}
+      </For>
+      {isExpanded ? (
+        <ChangedFiles
+          state={state}
           revision={revision}
-          isFocused={isFocused}
-          isAffected={isAffected}
-          isCommandTarget={isCommandTarget}
-          graphWidth={state.graphWidth}
           config={config}
         />
-        <Row width="full" gap={1}>
-          <Text style={{ fg: colors.textMuted }}>{padRight("", state.graphWidth)}</Text>
-          <Text
-            style={{
-              fg: isFocused ? colors.textPrimary : colors.textSecondary,
-              bold: isFocused,
-            }}
-            wrap={false}
-            textOverflow="ellipsis"
-            maxWidth="full"
-          >
-            {revision.description}
-          </Text>
-        </Row>
-        {revision.graphTail.map((graphLine) => (
-          <Row width="full" gap={1}>
-            <Text style={{ fg: colors.textMuted }}>{padRight(graphLine, state.graphWidth)}</Text>
-            <Text style={{ fg: colors.textMuted }}> </Text>
-          </Row>
-        ))}
-        {isExpanded ? <>{renderChangedFiles(state, revision, config)}</> : null}
-        {index < state.revisions.length - 1 ? <Spacer size={1} /> : null}
-      </Column>
-    </Box>
+      ) : null}
+    </box>
   );
 }
 
-function RevisionHeader(props: {
+function ChangedFiles(props: {
+  state: AppStore["state"];
   revision: RevisionSummary;
-  isFocused: boolean;
-  isAffected: boolean;
-  isCommandTarget: boolean;
-  graphWidth: number;
   config: ResolvedAppConfig;
-}): VNode {
-  const { revision, isFocused, isAffected, isCommandTarget, graphWidth, config } = props;
+}) {
+  const { state, revision, config } = props;
   const colors = config.colorScheme.semanticColors;
 
   return (
-    <Row width="full" gap={1}>
-      <Text
-        style={{
-          fg: markerColor(revision.marker, isAffected, config),
-          bold: isFocused || isCommandTarget,
-        }}
-      >
-        {padRight(revision.graphHead, graphWidth)}
-      </Text>
-      <Row width="full" gap={1}>
-        <Text
-          style={{
-            fg: isFocused ? colors.chromeBorderFocus : colors.textPrimary,
-            bold: true,
+    <box width="100%" flexDirection="column" paddingLeft={state.graphWidth + 1}>
+      {revision.files.length === 0 ? (
+        <text fg={colors.textMuted}>Loading changed files...</text>
+      ) : (
+        <For each={revision.files}>
+          {(file, index) => {
+            const focused =
+              state.focusMode === "files" &&
+              state.expandedRevisionId === revision.changeId &&
+              state.focusedFileIndex === index();
+
+            return (
+              <box
+                width="100%"
+                flexDirection="row"
+                gap={1}
+                backgroundColor={focused ? colors.rowFocusedFill : undefined}
+              >
+                <text fg={focused ? colors.fileFocusMarker : colors.textMuted}>
+                  {focused ? ">" : " "}
+                </text>
+                <text fg={colors.fileStatusAccent}>{file.status}</text>
+                <text fg={focused ? colors.textPrimary : colors.textSecondary} truncate>
+                  {file.path}
+                </text>
+              </box>
+            );
           }}
-        >
-          {revision.changeId}
-        </Text>
-        {revision.bookmarks.map((bookmark) => (
-          <SemanticPill
-            text={bookmark}
-            fill={firstDefinedColor(
-              colors.bookmarkTagFill,
-              colors.statusInfo,
-              colors.textSecondary,
-              config.colorScheme.theme.colors.fg.secondary,
-            )}
-            foreground={firstDefinedColor(
-              colors.bookmarkTagText,
-              colors.textPrimary,
-              config.colorScheme.theme.colors.fg.primary,
-            )}
-          />
-        ))}
-        {revision.workspaces.map((workspace) => (
-          <SemanticPill
-            text={workspace}
-            fill={firstDefinedColor(
-              colors.workspaceTagFill,
-              colors.graphWorkingCopy,
-              colors.textSecondary,
-              config.colorScheme.theme.colors.fg.secondary,
-            )}
-            foreground={firstDefinedColor(
-              colors.workspaceTagText,
-              colors.textPrimary,
-              config.colorScheme.theme.colors.fg.primary,
-            )}
-          />
-        ))}
-      </Row>
-    </Row>
+        </For>
+      )}
+    </box>
   );
-}
-
-function SemanticPill(props: {
-  text: string;
-  fill: number;
-  foreground: number;
-}): VNode {
-  return (
-    <Box
-      px={1}
-      border="rounded"
-      style={{ bg: props.fill }}
-      borderStyle={{ fg: props.fill }}
-    >
-      <Text style={{ fg: props.foreground }}>{props.text}</Text>
-    </Box>
-  );
-}
-
-function renderChangedFiles(
-  state: AppState,
-  revision: RevisionSummary,
-  config: ResolvedAppConfig,
-): readonly VNode[] {
-  const colors = config.colorScheme.semanticColors;
-
-  if (revision.files.length === 0) {
-    return [
-      <Row width="full" gap={1}>
-        <Text style={{ fg: colors.textMuted }}>{padRight("", state.graphWidth)}</Text>
-        <Text style={{ fg: colors.textMuted }}>No changed files</Text>
-      </Row>,
-    ];
-  }
-
-  return revision.files.map((file, index) => {
-    const isFocused =
-      revision.changeId === state.expandedRevisionId && index === state.focusedFileIndex;
-
-    return (
-      <Row width="full" gap={1}>
-        <Text style={{ fg: colors.textMuted }}>{padRight("", state.graphWidth)}</Text>
-        <Text
-          style={{
-            fg: isFocused ? colors.fileFocusMarker : colors.textMuted,
-            bold: isFocused,
-          }}
-        >
-          {isFocused ? ">" : " "}
-        </Text>
-        <Text style={{ fg: colors.fileStatusAccent, bold: true }}>{file.status}</Text>
-        <Text
-          style={{
-            fg: isFocused ? colors.textPrimary : colors.textSecondary,
-            bold: isFocused,
-          }}
-        >
-          {file.path}
-        </Text>
-      </Row>
-    );
-  });
 }
 
 function StatusArea(props: {
-  state: AppState;
+  state: AppStore["state"];
+  events: readonly AppStore["state"]["eventLog"][number][];
   helpText: string;
   config: ResolvedAppConfig;
-}): VNode {
-  const { state, helpText, config } = props;
+}) {
+  const { state, events, helpText, config } = props;
   const colors = config.colorScheme.semanticColors;
-  const entries = state.eventLog.slice(-4);
 
   return (
-    <Box
-      width="full"
-      border="single"
-      p={1}
-      style={{
-        ...(colors.chromeFillOne !== undefined ? { bg: colors.chromeFillOne } : {}),
-        fg: colors.textPrimary,
-      }}
-      borderStyle={{ fg: colors.chromeBorderIdle }}
+    <box
+      width="100%"
+      border
+      borderStyle="single"
+      borderColor={colors.chromeBorderIdle}
+      padding={1}
+      flexDirection="column"
     >
-      <Text
-        style={{ fg: colors.textSecondary }}
-        wrap={false}
-        textOverflow="ellipsis"
-        maxWidth="full"
+      <text
+        fg={statusColor(
+          state.error ? "error" : state.statusMessage?.level ?? "info",
+          colors,
+        )}
+        truncate
       >
-        {helpText || ": command bar   j/k move   h/l close/open"}
-      </Text>
-      <Spacer size={1} />
-      {state.statusMessage ? (
-        <Row width="full" gap={1}>
-          <Text style={{ fg: levelColor(state.statusMessage.level, config), bold: true }}>
-            {levelLabel(state.statusMessage.level)}
-          </Text>
-          <Text
-            style={{ fg: colors.textPrimary }}
-            wrap={false}
-            textOverflow="ellipsis"
-            maxWidth="full"
-          >
-            {state.statusMessage.text}
-          </Text>
-        </Row>
-      ) : (
-        <Text style={{ fg: colors.textMuted }}>No commands executed yet</Text>
-      )}
-      {entries.length > 0 ? <Spacer size={1} /> : null}
-      {entries.map((entry) => (
-        <Row width="full" gap={1}>
-          <Text style={{ fg: levelColor(entry.level, config), bold: true }}>
-            {levelLabel(entry.level)}
-          </Text>
-          <Text style={{ fg: colors.textSecondary }} textOverflow="ellipsis" maxWidth="full">
-            {entry.text}
-          </Text>
-        </Row>
-      ))}
-    </Box>
+        {state.error
+          ? state.error
+          : state.loading
+            ? "Refreshing repository state..."
+            : state.statusMessage?.text ?? "No commands executed yet"}
+      </text>
+      <For each={events}>
+        {(event) => (
+          <text fg={statusColor(event.level, colors)} truncate>
+            {`${new Date(event.createdAt).toLocaleTimeString()} ${event.text}`}
+          </text>
+        )}
+      </For>
+      <text fg={colors.textMuted} truncate>
+        {helpText}
+      </text>
+    </box>
   );
 }
 
-function computeRevisionHeight(revision: RevisionSummary, state: AppState): number {
-  let height = 2 + revision.graphTail.length;
-  if (state.expandedRevisionId === revision.changeId) {
-    height += Math.max(revision.files.length, 1);
+function normalizeKey(event: { name: string; sequence: string }): string | null {
+  if (event.sequence === ":") {
+    return ":";
   }
-  height += 1;
-  return height;
+
+  if (event.name === "return") {
+    return "enter";
+  }
+
+  if (event.name.length === 1) {
+    return event.name.toLowerCase();
+  }
+
+  return event.name || null;
 }
 
 function markerColor(
-  marker: RevisionSummary["marker"],
-  isAffected: boolean,
-  config: ResolvedAppConfig,
-) {
-  const colors = config.colorScheme.semanticColors;
-  if (isAffected) {
-    return colors.statusSuccess;
-  }
-
-  switch (marker) {
+  revision: RevisionSummary,
+  colors: ResolvedAppConfig["colorScheme"]["semanticColors"],
+): string | undefined {
+  switch (revision.marker) {
     case "working-copy":
       return colors.graphWorkingCopy;
-    case "immutable":
-      return colors.graphImmutable;
     case "bookmark":
       return colors.graphBookmark;
-    case "plain":
+    case "immutable":
+      return colors.graphImmutable;
+    default:
       return colors.graphPlain;
   }
 }
 
-function levelColor(level: StatusLevel, config: ResolvedAppConfig) {
-  const colors = config.colorScheme.semanticColors;
+function statusColor(
+  level: "info" | "success" | "warning" | "error",
+  colors: ResolvedAppConfig["colorScheme"]["semanticColors"],
+): string | undefined {
   switch (level) {
     case "success":
       return colors.statusSuccess;
@@ -422,43 +520,15 @@ function levelColor(level: StatusLevel, config: ResolvedAppConfig) {
       return colors.statusWarning;
     case "error":
       return colors.statusError;
-    case "info":
+    default:
       return colors.statusInfo;
   }
 }
 
-function levelLabel(level: StatusLevel): string {
-  switch (level) {
-    case "success":
-      return "OK";
-    case "warning":
-      return "WARN";
-    case "error":
-      return "ERR";
-    case "info":
-      return "INFO";
-  }
-}
-
-function renderCursor(text: string, cursor: number | null): string {
-  if (cursor === null) {
-    return text || "<empty>";
+function padRight(value: string, length: number): string {
+  if (value.length >= length) {
+    return value;
   }
 
-  const safeCursor = Math.min(Math.max(cursor, 0), text.length);
-  return `${text.slice(0, safeCursor)}|${text.slice(safeCursor)}` || "|";
-}
-
-function padRight(value: string, width: number): string {
-  return value.padEnd(width, " ");
-}
-
-function firstDefinedColor(...values: Array<number | undefined>): number {
-  for (const value of values) {
-    if (value !== undefined) {
-      return value;
-    }
-  }
-
-  return 0xffffff;
+  return `${value}${" ".repeat(length - value.length)}`;
 }

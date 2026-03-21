@@ -13,6 +13,7 @@ export function createInitialState(repoPath: string): AppState {
     repoPath,
     graphWidth: 4,
     revisions: [],
+    focusMode: "revisions",
     focusedRevisionIndex: 0,
     expandedRevisionId: null,
     focusedFileIndex: 0,
@@ -27,10 +28,8 @@ export function createInitialState(repoPath: string): AppState {
 
 export function createEmptyCommandBar(): CommandBarState {
   return {
-    focus: false,
-    manual: false,
     text: "",
-    cursor: 0,
+    manual: false,
   };
 }
 
@@ -57,15 +56,20 @@ export function applyRepositoryData(
     revisions.some((revision) => revision.changeId === state.expandedRevisionId)
       ? state.expandedRevisionId
       : null;
+  const nextFocusMode =
+    state.focusMode === "files" && expandedRevisionId === null
+      ? "revisions"
+      : state.focusMode;
 
   return {
     ...state,
     graphWidth: repositoryData.graphWidth,
     repoPath: repositoryData.repoPath,
     revisions,
+    focusMode: nextFocusMode,
     focusedRevisionIndex,
     expandedRevisionId,
-    focusedFileIndex: 0,
+    focusedFileIndex: clampIndex(state.focusedFileIndex, getExpandedFilesCount(revisions, expandedRevisionId)),
     loading: false,
     error: null,
   };
@@ -76,28 +80,30 @@ export function setRevisionFiles(
   revisionId: string,
   files: readonly ChangedFile[],
 ): AppState {
+  const revisions = state.revisions.map((revision) =>
+    revision.changeId === revisionId ? { ...revision, files } : revision,
+  );
+
   return {
     ...state,
-    revisions: state.revisions.map((revision) =>
-      revision.changeId === revisionId ? { ...revision, files } : revision,
-    ),
+    revisions,
+    focusedFileIndex:
+      state.expandedRevisionId === revisionId
+        ? clampIndex(state.focusedFileIndex, files.length)
+        : state.focusedFileIndex,
   };
 }
 
 export function moveFocus(state: AppState, delta: number): AppState {
-  if (state.commandBar.focus) {
+  if (state.focusMode === "command") {
     return state;
   }
 
-  if (isFileNavigationActive(state)) {
-    const revision = getFocusedRevision(state);
-    const nextFileIndex = clampIndex(
-      state.focusedFileIndex + delta,
-      revision?.files.length ?? 0,
-    );
+  if (state.focusMode === "files" && state.expandedRevisionId !== null) {
+    const revision = getExpandedRevision(state);
     return {
       ...state,
-      focusedFileIndex: nextFileIndex,
+      focusedFileIndex: clampIndex(state.focusedFileIndex + delta, revision?.files.length ?? 0),
     };
   }
 
@@ -119,6 +125,7 @@ export function openFocusedRevision(state: AppState): AppState {
 
   return {
     ...state,
+    focusMode: "files",
     expandedRevisionId: revision.changeId,
     focusedFileIndex: 0,
   };
@@ -132,20 +139,36 @@ export function closeFocusedRevision(state: AppState): AppState {
 
   return {
     ...state,
+    focusMode: "revisions",
     expandedRevisionId: null,
     focusedFileIndex: 0,
   };
 }
 
 export function focusCommandBar(state: AppState): AppState {
-  const currentText = getDisplayedCommandText(state);
+  return {
+    ...state,
+    focusMode: "command",
+    commandBar: {
+      text: getDisplayedCommandText(state),
+      manual: true,
+    },
+  };
+}
+
+export function blurCommandBar(state: AppState): AppState {
+  return {
+    ...state,
+    focusMode: "revisions",
+  };
+}
+
+export function setCommandBarText(state: AppState, text: string): AppState {
   return {
     ...state,
     commandBar: {
-      focus: true,
+      text,
       manual: true,
-      text: currentText,
-      cursor: currentText.length,
     },
   };
 }
@@ -153,89 +176,9 @@ export function focusCommandBar(state: AppState): AppState {
 export function cancelCommandState(state: AppState): AppState {
   return {
     ...state,
+    focusMode: "revisions",
     commandBar: createEmptyCommandBar(),
     commandDraft: null,
-  };
-}
-
-export function blurCommandBar(state: AppState): AppState {
-  return {
-    ...state,
-    commandBar: {
-      ...state.commandBar,
-      focus: false,
-      manual: state.commandDraft === null ? false : state.commandBar.manual,
-    },
-  };
-}
-
-export function insertCommandText(state: AppState, text: string): AppState {
-  if (!state.commandBar.focus) {
-    return state;
-  }
-
-  const { cursor, text: currentText } = state.commandBar;
-  const nextText = `${currentText.slice(0, cursor)}${text}${currentText.slice(cursor)}`;
-  return {
-    ...state,
-    commandBar: {
-      ...state.commandBar,
-      manual: true,
-      text: nextText,
-      cursor: cursor + text.length,
-    },
-  };
-}
-
-export function moveCommandCursor(state: AppState, delta: number): AppState {
-  if (!state.commandBar.focus) {
-    return state;
-  }
-
-  return {
-    ...state,
-    commandBar: {
-      ...state.commandBar,
-      cursor: clampNumber(
-        state.commandBar.cursor + delta,
-        0,
-        state.commandBar.text.length,
-      ),
-    },
-  };
-}
-
-export function backspaceCommandText(state: AppState): AppState {
-  if (!state.commandBar.focus || state.commandBar.cursor === 0) {
-    return state;
-  }
-
-  const { cursor, text } = state.commandBar;
-  return {
-    ...state,
-    commandBar: {
-      ...state.commandBar,
-      manual: true,
-      text: `${text.slice(0, cursor - 1)}${text.slice(cursor)}`,
-      cursor: cursor - 1,
-    },
-  };
-}
-
-export function deleteCommandText(state: AppState): AppState {
-  if (!state.commandBar.focus || state.commandBar.cursor >= state.commandBar.text.length) {
-    return state;
-  }
-
-  const { cursor, text } = state.commandBar;
-  return {
-    ...state,
-    commandBar: {
-      ...state.commandBar,
-      manual: true,
-      text: `${text.slice(0, cursor)}${text.slice(cursor + 1)}`,
-      cursor,
-    },
   };
 }
 
@@ -255,7 +198,7 @@ export function startRebaseCommand(
       kind: "rebase",
       sourceRevisionId: revision.changeId,
       includeDescendants: false,
-      affectedRevisionIds: descendantIds,
+      descendantRevisionIds: descendantIds,
     },
   };
 }
@@ -273,7 +216,7 @@ export function toggleRebaseDescendants(
     commandDraft: {
       ...state.commandDraft,
       includeDescendants: !state.commandDraft.includeDescendants,
-      affectedRevisionIds: descendantIds,
+      descendantRevisionIds: descendantIds,
     },
   };
 }
@@ -321,18 +264,14 @@ export function getExpandedRevision(state: AppState): RevisionSummary | null {
   if (!state.expandedRevisionId) {
     return null;
   }
+
   return (
     state.revisions.find((revision) => revision.changeId === state.expandedRevisionId) ?? null
   );
 }
 
 export function isFileNavigationActive(state: AppState): boolean {
-  const focusedRevision = getFocusedRevision(state);
-  return (
-    focusedRevision !== null &&
-    state.expandedRevisionId === focusedRevision.changeId &&
-    focusedRevision.files.length > 0
-  );
+  return state.focusMode === "files" && state.expandedRevisionId !== null;
 }
 
 export function getCurrentRebaseTargetRevisionId(state: AppState): string | null {
@@ -371,7 +310,7 @@ export function getOperationAffectedRevisionIds(state: AppState): ReadonlySet<st
   if (state.commandDraft.kind === "rebase") {
     return new Set(
       state.commandDraft.includeDescendants
-        ? state.commandDraft.affectedRevisionIds
+        ? state.commandDraft.descendantRevisionIds
         : [state.commandDraft.sourceRevisionId],
     );
   }
@@ -391,14 +330,21 @@ export function commandCanExecute(state: AppState): boolean {
   return false;
 }
 
+function getExpandedFilesCount(
+  revisions: readonly RevisionSummary[],
+  expandedRevisionId: string | null,
+): number {
+  if (!expandedRevisionId) {
+    return 0;
+  }
+
+  return revisions.find((revision) => revision.changeId === expandedRevisionId)?.files.length ?? 0;
+}
+
 function clampIndex(value: number, size: number): number {
   if (size <= 0) {
     return 0;
   }
 
-  return clampNumber(value, 0, size - 1);
-}
-
-function clampNumber(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
+  return Math.min(Math.max(value, 0), size - 1);
 }
