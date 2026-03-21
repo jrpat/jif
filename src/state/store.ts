@@ -263,11 +263,16 @@ export function dismissOldestError(state: AppState): AppState {
 
   const oldestErrorIndex = state.eventLog.findIndex((entry) => entry.level === "error");
   if (oldestErrorIndex === -1) {
+    if (state.statusMessage?.level === "error") {
+      return { ...state, statusMessage: null };
+    }
     return state;
   }
 
   const eventLog = state.eventLog.filter((_, index) => index !== oldestErrorIndex);
-  return { ...state, eventLog };
+  const statusMessage =
+    state.statusMessage?.level === "error" ? null : state.statusMessage;
+  return { ...state, eventLog, statusMessage };
 }
 
 export function getFocusedRevision(state: AppState): RevisionSummary | null {

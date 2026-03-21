@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "clean": "rm -rf dist .tmp",
     "start": "bun run index.ts",
     "dev": "bun --watch ./index.ts --sample",
     "sample": "bun run index.ts --sample",

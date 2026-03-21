@@ -95,7 +95,7 @@ test("dismissOldestError clears state.error first", () => {
   expect(state.eventLog.length).toBe(1);
 });
 
-test("dismissOldestError removes oldest error event from log", () => {
+test("dismissOldestError removes oldest error event and clears error statusMessage", () => {
   let state = createState();
   state = pushEvent(state, "first error", "error");
   state = pushEvent(state, "info message", "info");
@@ -105,6 +105,16 @@ test("dismissOldestError removes oldest error event from log", () => {
   expect(state.eventLog.length).toBe(2);
   expect(state.eventLog[0]?.text).toBe("info message");
   expect(state.eventLog[1]?.text).toBe("second error");
+  expect(state.statusMessage).toBeNull();
+});
+
+test("dismissOldestError clears error statusMessage even with no error events", () => {
+  let state = createState();
+  state = pushEvent(state, "command failed", "error");
+  state = { ...state, eventLog: [] };
+
+  state = dismissOldestError(state);
+  expect(state.statusMessage).toBeNull();
 });
 
 test("dismissOldestError is a no-op when no errors exist", () => {

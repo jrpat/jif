@@ -23,6 +23,8 @@ export type SemanticColorScheme = Readonly<{
   workspaceTagText: SemanticColorValue;
   textPrimary: SemanticColorValue;
   textSecondary: SemanticColorValue;
+  textTertiary: SemanticColorValue;
+  textQuaternary: SemanticColorValue;
   textMuted: SemanticColorValue;
   fileFocusMarker: SemanticColorValue;
   fileStatusAccent: SemanticColorValue;
@@ -75,6 +77,8 @@ const sharedDefaultColors: SemanticColorScheme = {
   workspaceTagText: "#c7f0f2",
   textPrimary: "#edf2f7",
   textSecondary: "#b8c2cc",
+  textTertiary: "#96a1ad",
+  textQuaternary: "#7f8a96",
   textMuted: "#7f8a96",
   fileFocusMarker: "#4f8cff",
   fileStatusAccent: "#d6842a",
@@ -102,6 +106,8 @@ const lightDefaultColors: Partial<SemanticColorScheme> = {
   workspaceTagText: "#12383a",
   textPrimary: "#13202b",
   textSecondary: "#42515d",
+  textTertiary: "#52606c",
+  textQuaternary: "#62707d",
   textMuted: "#62707d",
   fileFocusMarker: "#0059d6",
   fileStatusAccent: "#b56c00",

@@ -67,12 +67,8 @@ export function JifView(props: {
       renderer.destroy();
     },
     cancelOrBlur() {
-      const state = store.snapshot();
-      if (state.focusMode === "command" || state.commandDraft !== null) {
-        store.actions.cancelCommand();
-      } else {
-        store.actions.dismissOldestError();
-      }
+      store.actions.dismissOldestError();
+      store.actions.cancelCommand();
     },
     confirm() {
       void executeCurrentCommand();
@@ -286,13 +282,14 @@ function CommandBar(props: {
 }) {
   const { store, config } = props;
   const colors = config.colorScheme.semanticColors;
+  const commandBarFocused = createMemo(() => store.state.focusMode === "command");
 
   return (
     <box
       width="100%"
       height={2}
       backgroundColor={
-        store.state.focusMode === "command"
+        commandBarFocused()
           ? colors.chromeFillTwo
           : colors.chromeFillOne
       }
@@ -302,25 +299,26 @@ function CommandBar(props: {
       <box
         width="100%"
         flexDirection="row"
+        gap={1}
         backgroundColor={
-          store.state.focusMode === "command"
+          commandBarFocused()
             ? colors.chromeFillTwo
             : colors.chromeFillOne
         }
       >
         <box width={3} flexDirection="row" paddingLeft={1}>
-          <text fg={colors.textMuted}>jj</text>
+          <text fg={colors.textSecondary}>jj</text>
         </box>
         <input
           flexGrow={1}
           value={props.commandText}
-          placeholder="Type a jj subcommand"
-          focused={store.state.focusMode === "command"}
+          placeholder="subcommand (':' to type)"
+          focused={commandBarFocused()}
           backgroundColor={colors.chromeFillTwo}
           focusedBackgroundColor={colors.chromeFillThree}
           textColor={colors.textPrimary}
           focusedTextColor={colors.textPrimary}
-          placeholderColor={colors.textMuted}
+          placeholderColor={commandBarFocused() ? colors.textQuaternary : colors.textTertiary}
           cursorColor={colors.chromeBorderFocus}
           onInput={(value) => {
             store.actions.setCommandBarText(value);
@@ -567,32 +565,40 @@ function StatusArea(props: {
       borderStyle="single"
       borderColor={colors.chromeBorderIdle}
       backgroundColor={colors.chromeFillOne}
-      padding={1}
+      paddingX={1}
       flexDirection="column"
-    >
-      <text
-        fg={statusColor(
-          state.error ? "error" : state.statusMessage?.level ?? "info",
-          colors,
-        )}
-        truncate
       >
-        {state.error
-          ? state.error
-          : state.loading
-            ? "Refreshing repository state..."
-            : state.statusMessage?.text ?? "No commands executed yet"}
-      </text>
+      {(state.error || state.loading || state.statusMessage) ? (
+        <box width="100%" backgroundColor={colors.chromeFillOne}>
+          <text
+            fg={statusColor(
+              state.error ? "error" : state.statusMessage?.level ?? "info",
+              colors,
+            )}
+            truncate
+          >
+            {state.error
+              ? state.error
+              : state.loading
+                ? "Refreshing repository state..."
+                : state.statusMessage!.text}
+          </text>
+        </box>
+      ) : null}
       <For each={events}>
         {(event) => (
-          <text fg={statusColor(event.level, colors)} truncate>
-            {`${new Date(event.createdAt).toLocaleTimeString()} ${event.text}`}
-          </text>
+          <box width="100%" backgroundColor={colors.chromeFillOne}>
+            <text fg={statusColor(event.level, colors)} truncate>
+              {`${new Date(event.createdAt).toLocaleTimeString()} ${event.text}`}
+            </text>
+          </box>
         )}
       </For>
-      <text fg={colors.textMuted} truncate>
-        {helpText}
-      </text>
+      <box width="100%" backgroundColor={colors.chromeFillOne}>
+        <text fg={colors.textMuted} truncate>
+          {helpText}
+        </text>
+      </box>
     </box>
   );
 }
