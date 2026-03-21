@@ -478,7 +478,7 @@ function RevisionItem(props: {
             {revision.description}
           </text>
         </box>
-        <For each={revision.graphTail}>
+        <For each={gutterPlan.tail}>
           {() => <box width="100%" height={1} />}
         </For>
         {isExpanded ? (

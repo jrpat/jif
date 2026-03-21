@@ -13,7 +13,7 @@ test("deriveGraphContinuationLine turns node markers into continuations", () => 
   expect(deriveGraphContinuationLine("╭─╮")).toBe("│ │");
 });
 
-test("buildRevisionGutterPlan keeps subtitle, details, and shared dividers continuous", () => {
+test("buildRevisionGutterPlan promotes the first crossover row into the subtitle line", () => {
   const plan = buildRevisionGutterPlan({
     graphHead: "│ ○  ",
     graphTail: ["├─╯"],
@@ -26,8 +26,8 @@ test("buildRevisionGutterPlan keeps subtitle, details, and shared dividers conti
 
   expect(plan.topDivider).toBe("│ │");
   expect(plan.title).toBe("│ ○");
-  expect(plan.subtitle).toBe("│ │");
-  expect(plan.tail).toEqual(["├─╯"]);
+  expect(plan.subtitle).toBe("├─╯");
+  expect(plan.tail).toEqual([]);
   expect(plan.detail).toEqual(["│", "│"]);
   expect(plan.bottomDivider).toBe("│");
 });

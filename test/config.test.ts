@@ -41,6 +41,12 @@ test("resolveAppConfig honors explicit dark mode over detection", () => {
   expect(resolved.colorScheme.semanticColors.textPrimary).toBe("#edf2f7");
 });
 
+test("resolveAppConfig defaults log.scrollMargin to 1", () => {
+  const resolved = resolveAppConfig(defaultAppConfig);
+
+  expect(resolved.log.scrollMargin).toBe(1);
+});
+
 test("resolveThemeMode falls back to detected mode for auto", () => {
   expect(resolveThemeMode("auto", "light")).toBe("light");
   expect(resolveThemeMode(undefined, "dark")).toBe("dark");

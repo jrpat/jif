@@ -56,15 +56,17 @@ export function buildRevisionGutterPlan(options: Readonly<{
   nextGraphHead: string | null;
 }>): RevisionGutterPlan {
   const title = normalizeGraphLine(options.graphHead);
-  const subtitle = deriveGraphContinuationLine(title);
-  const tail = options.graphTail.map(normalizeGraphLine);
-  const detailContinuation = deriveGraphContinuationLine(tail.at(-1) ?? title);
+  const titleContinuation = deriveGraphContinuationLine(title);
+  const graphTail = options.graphTail.map(normalizeGraphLine);
+  const subtitle = graphTail[0] ?? titleContinuation;
+  const tail = graphTail.slice(1);
+  const detailContinuation = deriveGraphContinuationLine(graphTail.at(-1) ?? title);
   const bottomDivider = options.nextGraphHead === null
     ? ""
     : deriveGraphContinuationLine(options.nextGraphHead);
 
   return {
-    topDivider: options.ownsTop ? (options.previousGraphHead !== null ? subtitle : "") : null,
+    topDivider: options.ownsTop ? (options.previousGraphHead !== null ? titleContinuation : "") : null,
     title,
     subtitle,
     tail,

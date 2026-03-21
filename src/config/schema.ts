@@ -39,12 +39,18 @@ export type AppConfig = Readonly<{
     lightColors?: Partial<SemanticColorScheme>;
     darkColors?: Partial<SemanticColorScheme>;
   }>;
+  log?: Readonly<{
+    scrollMargin?: number;
+  }>;
 }>;
 
 export type ResolvedAppConfig = Readonly<{
   colorScheme: Readonly<{
     mode: ResolvedThemeMode;
     semanticColors: SemanticColorScheme;
+  }>;
+  log: Readonly<{
+    scrollMargin: number;
   }>;
 }>;
 
@@ -150,6 +156,9 @@ export function resolveAppConfig(
     colorScheme: {
       mode,
       semanticColors,
+    },
+    log: {
+      scrollMargin: config.log?.scrollMargin ?? 1,
     },
   };
 }
