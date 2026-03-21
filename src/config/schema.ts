@@ -9,6 +9,8 @@ export type SemanticColorScheme = Readonly<{
   chromeBorderIdle: SemanticColorValue;
   chromeBorderFocus: SemanticColorValue;
   rowFocusedFill: SemanticColorValue;
+  rowSelectedFill: SemanticColorValue;
+  rowSelectedAccent: SemanticColorValue;
   rowAffectedFill: SemanticColorValue;
   rowCommandTargetBorder: SemanticColorValue;
   graphWorkingCopy: SemanticColorValue;
@@ -53,6 +55,8 @@ const sharedDefaultColors: SemanticColorScheme = {
   chromeBorderIdle: "#5b6773",
   chromeBorderFocus: "#4f8cff",
   rowFocusedFill: "#1f3a5f",
+  rowSelectedFill: "#294445",
+  rowSelectedAccent: "#6ac48a",
   rowAffectedFill: "#294445",
   rowCommandTargetBorder: "#d6842a",
   graphWorkingCopy: "#4f8cff",
@@ -78,6 +82,8 @@ const lightDefaultColors: Partial<SemanticColorScheme> = {
   chromeBorderIdle: "#9aa6b2",
   chromeBorderFocus: "#0059d6",
   rowFocusedFill: "#d7e6ff",
+  rowSelectedFill: "#d9ece1",
+  rowSelectedAccent: "#1f8a4c",
   rowAffectedFill: "#d9ece1",
   rowCommandTargetBorder: "#b56c00",
   graphWorkingCopy: "#0059d6",

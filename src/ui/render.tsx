@@ -344,7 +344,7 @@ function RevisionItem(props: {
     nextRowState,
   });
   const borderColor = rowState === "selected"
-    ? colors.chromeBorderFocus
+    ? colors.rowSelectedAccent
     : rowState === "focused"
       ? colors.chromeBorderFocus
       : isCommandTarget
@@ -359,7 +359,9 @@ function RevisionItem(props: {
       paddingX={1}
       opacity={anyExpanded && !isExpanded ? 0.6 : 1}
       backgroundColor={
-        isFocused
+        isSelected
+          ? colors.rowSelectedFill
+          : isFocused
           ? colors.rowFocusedFill
           : isAffected
             ? colors.rowAffectedFill
@@ -371,12 +373,17 @@ function RevisionItem(props: {
       customBorderChars={borderPolicy.borderChars}
     >
       <box width="100%" flexDirection="row" gap={1}>
-        <text fg={markerColor(revision, colors)}>
+        <text fg={isSelected ? colors.rowSelectedAccent : isFocused ? colors.chromeBorderFocus : markerColor(revision, colors)}>
           {padRight(revision.graphHead, state.graphWidth)}
         </text>
-        <text fg={isFocused || isSelected ? colors.chromeBorderFocus : colors.textPrimary}>
+        <text fg={isSelected ? colors.rowSelectedAccent : isFocused ? colors.chromeBorderFocus : colors.textPrimary}>
           {revision.changeId}
         </text>
+        {isCommandTarget ? (
+          <text fg={colors.bookmarkTagText} bg={colors.rowCommandTargetBorder}>
+            {" onto "}
+          </text>
+        ) : null}
         <For each={revision.bookmarks}>
           {(bookmark) => (
             <text fg={colors.bookmarkTagText} bg={colors.bookmarkTagFill}>
@@ -391,15 +398,10 @@ function RevisionItem(props: {
             </text>
           )}
         </For>
-        {isCommandTarget ? (
-          <text fg={colors.bookmarkTagText} bg={colors.rowCommandTargetBorder}>
-            {" onto "}
-          </text>
-        ) : null}
       </box>
       <box width="100%" flexDirection="row" gap={1}>
         <text fg={colors.textMuted}>{padRight("", state.graphWidth)}</text>
-        <text fg={isFocused ? colors.textPrimary : colors.textSecondary} truncate>
+        <text fg={isSelected || isFocused ? colors.textPrimary : colors.textSecondary} truncate>
           {revision.description}
         </text>
       </box>

@@ -5,6 +5,7 @@ import {
   createInitialState,
   focusCommandBar,
   getDisplayedCommandText,
+  getSelectedRevisionId,
   setCommandBarText,
   moveFocus,
   openFocusedRevision,
@@ -79,4 +80,12 @@ test("rebase command text updates when descendants are toggled", () => {
 
   state = toggleRebaseDescendants(state, ["aaaaaaaa", "bbbbbbbb"]);
   expect(getDisplayedCommandText(state)).toBe("rebase -s aaaaaaaa -o bbbbbbbb");
+});
+
+test("selected revision id comes from the active command draft source", () => {
+  let state = createState();
+  expect(getSelectedRevisionId(state)).toBeNull();
+
+  state = startRebaseCommand(state, ["aaaaaaaa", "bbbbbbbb"]);
+  expect(getSelectedRevisionId(state)).toBe("aaaaaaaa");
 });
