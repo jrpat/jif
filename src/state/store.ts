@@ -256,6 +256,20 @@ export function pushEvent(
   };
 }
 
+export function dismissOldestError(state: AppState): AppState {
+  if (state.error !== null) {
+    return { ...state, error: null };
+  }
+
+  const oldestErrorIndex = state.eventLog.findIndex((entry) => entry.level === "error");
+  if (oldestErrorIndex === -1) {
+    return state;
+  }
+
+  const eventLog = state.eventLog.filter((_, index) => index !== oldestErrorIndex);
+  return { ...state, eventLog };
+}
+
 export function getFocusedRevision(state: AppState): RevisionSummary | null {
   return state.revisions[state.focusedRevisionIndex] ?? null;
 }

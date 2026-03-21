@@ -10,6 +10,7 @@ import {
   applyRepositoryData,
   cancelCommandState,
   closeFocusedRevision,
+  dismissOldestError,
   createInitialState,
   focusCommandBar,
   moveFocus,
@@ -85,6 +86,9 @@ export function createAppStore(repoPath: string) {
       },
       cancelCommand() {
         mutate((currentState) => cancelCommandState(currentState));
+      },
+      dismissOldestError() {
+        mutate((currentState) => dismissOldestError(currentState));
       },
       startRebaseCommand(descendantIds: readonly string[]) {
         mutate((currentState) => startRebaseCommand(currentState, descendantIds));

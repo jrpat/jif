@@ -67,7 +67,12 @@ export function JifView(props: {
       renderer.destroy();
     },
     cancelOrBlur() {
-      store.actions.cancelCommand();
+      const state = store.snapshot();
+      if (state.focusMode === "command" || state.commandDraft !== null) {
+        store.actions.cancelCommand();
+      } else {
+        store.actions.dismissOldestError();
+      }
     },
     confirm() {
       void executeCurrentCommand();
@@ -294,10 +299,20 @@ function CommandBar(props: {
       flexDirection="column"
     >
       <box width="100%" height={1} />
-      <box width="100%" flexDirection="row" gap={1} paddingLeft={1}>
-        <text fg={colors.textMuted}>jj</text>
+      <box
+        width="100%"
+        flexDirection="row"
+        backgroundColor={
+          store.state.focusMode === "command"
+            ? colors.chromeFillTwo
+            : colors.chromeFillOne
+        }
+      >
+        <box width={3} flexDirection="row" paddingLeft={1}>
+          <text fg={colors.textMuted}>jj</text>
+        </box>
         <input
-          width="100%"
+          flexGrow={1}
           value={props.commandText}
           placeholder="Type a jj subcommand"
           focused={store.state.focusMode === "command"}
@@ -551,6 +566,7 @@ function StatusArea(props: {
       border
       borderStyle="single"
       borderColor={colors.chromeBorderIdle}
+      backgroundColor={colors.chromeFillOne}
       padding={1}
       flexDirection="column"
     >
