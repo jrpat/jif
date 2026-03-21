@@ -1,6 +1,6 @@
 import type { ScrollBoxRenderable } from "@opentui/core";
 import { For, createEffect, createMemo, onMount } from "solid-js";
-import { useKeyboard } from "@opentui/solid";
+import { useKeyboard, useRenderer } from "@opentui/solid";
 import { getVisibleCommands, type CommandController } from "../commands/definitions.ts";
 import type { ResolvedAppConfig } from "../config/index.ts";
 import type { AppStore } from "../state/appStore.ts";
@@ -11,9 +11,14 @@ import {
   getExpandedRevision,
   getFocusedRevision,
   getOperationAffectedRevisionIds,
+  getSelectedRevisionId,
 } from "../state/store.ts";
 import type { JjClient } from "../jj/client.ts";
 import type { RevisionSummary } from "../domain/types.ts";
+import {
+  getRevisionBorderPolicy,
+  type RevisionRowState,
+} from "./revisionBorders.ts";
 
 export function JifView(props: {
   store: AppStore;
@@ -21,6 +26,9 @@ export function JifView(props: {
   config: ResolvedAppConfig;
 }) {
   const { store, client, config } = props;
+  const appBackground =
+    config.colorScheme.mode === "light" ? "#f5f7fa" : "#0f1419";
+  const renderer = useRenderer();
   let logViewport: ScrollBoxRenderable | undefined;
 
   const controller: CommandController = {
@@ -50,6 +58,9 @@ export function JifView(props: {
     },
     closeFocusedRevision() {
       store.actions.closeFocusedRevision();
+    },
+    quit() {
+      renderer.destroy();
     },
     cancelOrBlur() {
       store.actions.cancelCommand();
@@ -154,10 +165,8 @@ export function JifView(props: {
     <box
       width="100%"
       height="100%"
-      padding={1}
       flexDirection="column"
-      gap={1}
-      backgroundColor={config.colorScheme.mode === "light" ? "#f5f7fa" : "#0f1419"}
+      backgroundColor={appBackground}
     >
       <CommandBar
         store={store}
@@ -168,14 +177,11 @@ export function JifView(props: {
           void executeCurrentCommand(value);
         }}
       />
+      <box width="100%" height={1} backgroundColor={appBackground} />
       <scrollbox
         ref={logViewport}
         width="100%"
         flexGrow={1}
-        border
-        borderStyle="single"
-        borderColor={config.colorScheme.semanticColors.chromeBorderIdle}
-        padding={1}
         scrollY
         scrollbarOptions={{
           trackOptions: {
@@ -184,15 +190,18 @@ export function JifView(props: {
           },
         }}
       >
-        <box width="100%" flexDirection="column" gap={1}>
+        <box width="100%" flexDirection="column">
           <For each={store.state.revisions}>
             {(revision, index) => (
               <RevisionItem
                 state={store.state}
                 revision={revision}
                 index={index()}
+                previousRevisionId={store.state.revisions[index() - 1]?.changeId ?? null}
+                nextRevisionId={store.state.revisions[index() + 1]?.changeId ?? null}
                 config={config}
                 focusedRevisionId={getFocusedRevision(store.state)?.changeId ?? null}
+                selectedRevisionId={getSelectedRevisionId(store.state)}
                 expandedRevisionId={getExpandedRevision(store.state)?.changeId ?? null}
                 commandTargetId={getCurrentRebaseTargetRevisionId(store.state)}
               />
@@ -258,21 +267,15 @@ function CommandBar(props: {
   return (
     <box
       width="100%"
-      border
-      borderStyle="single"
-      borderColor={
-        store.state.focusMode === "command"
-          ? colors.chromeBorderFocus
-          : colors.chromeBorderIdle
-      }
+      height={2}
       backgroundColor={
         store.state.focusMode === "command"
           ? colors.chromeFillTwo
           : colors.chromeFillOne
       }
-      padding={1}
       flexDirection="column"
     >
+      <box width="100%" height={1} />
       <box width="100%" flexDirection="row" gap={1}>
         <text fg={colors.textMuted}>jj</text>
         <input
@@ -290,13 +293,6 @@ function CommandBar(props: {
           onSubmit={props.onSubmit as any}
         />
       </box>
-      <text fg={colors.textMuted} truncate>
-        {props.commandText.length === 0
-          ? "Press : to compose a command"
-          : commandCanExecute(store.state)
-            ? "Enter to run"
-            : "Select an onto target or keep typing"}
-      </text>
     </box>
   );
 }
@@ -305,19 +301,55 @@ function RevisionItem(props: {
   state: AppStore["state"];
   revision: RevisionSummary;
   index: number;
+  previousRevisionId: string | null;
+  nextRevisionId: string | null;
   config: ResolvedAppConfig;
   focusedRevisionId: string | null;
+  selectedRevisionId: string | null;
   expandedRevisionId: string | null;
   commandTargetId: string | null;
 }) {
-  const { state, revision, config, focusedRevisionId, expandedRevisionId, commandTargetId } = props;
+  const {
+    state,
+    revision,
+    config,
+    focusedRevisionId,
+    selectedRevisionId,
+    expandedRevisionId,
+    commandTargetId,
+  } = props;
   const colors = config.colorScheme.semanticColors;
   const affectedIds = getOperationAffectedRevisionIds(state);
   const isFocused = revision.changeId === focusedRevisionId;
+  const isSelected = revision.changeId === selectedRevisionId;
   const isExpanded = revision.changeId === expandedRevisionId;
   const anyExpanded = expandedRevisionId !== null;
   const isAffected = affectedIds.has(revision.changeId);
   const isCommandTarget = commandTargetId === revision.changeId;
+  const rowState =
+    getRevisionRowState(revision.changeId, focusedRevisionId, selectedRevisionId) ?? "default";
+  const previousRowState = getRevisionRowState(
+    props.previousRevisionId,
+    focusedRevisionId,
+    selectedRevisionId,
+  );
+  const nextRowState = getRevisionRowState(
+    props.nextRevisionId,
+    focusedRevisionId,
+    selectedRevisionId,
+  );
+  const borderPolicy = getRevisionBorderPolicy({
+    rowState,
+    previousRowState,
+    nextRowState,
+  });
+  const borderColor = rowState === "selected"
+    ? colors.chromeBorderFocus
+    : rowState === "focused"
+      ? colors.chromeBorderFocus
+      : isCommandTarget
+      ? colors.rowCommandTargetBorder
+      : colors.chromeBorderIdle;
 
   return (
     <box
@@ -333,15 +365,16 @@ function RevisionItem(props: {
             ? colors.rowAffectedFill
             : undefined
       }
-      border={isFocused || isCommandTarget}
+      border={borderPolicy.borderSides}
       borderStyle="single"
-      borderColor={isCommandTarget ? colors.rowCommandTargetBorder : colors.chromeBorderFocus}
+      borderColor={borderColor}
+      customBorderChars={borderPolicy.borderChars}
     >
       <box width="100%" flexDirection="row" gap={1}>
         <text fg={markerColor(revision, colors)}>
           {padRight(revision.graphHead, state.graphWidth)}
         </text>
-        <text fg={isFocused ? colors.chromeBorderFocus : colors.textPrimary}>
+        <text fg={isFocused || isSelected ? colors.chromeBorderFocus : colors.textPrimary}>
           {revision.changeId}
         </text>
         <For each={revision.bookmarks}>
@@ -507,6 +540,26 @@ function markerColor(
     default:
       return colors.graphPlain;
   }
+}
+
+function getRevisionRowState(
+  revisionId: string | null,
+  focusedRevisionId: string | null,
+  selectedRevisionId: string | null,
+): RevisionRowState | null {
+  if (revisionId === null) {
+    return null;
+  }
+
+  if (revisionId === selectedRevisionId) {
+    return "selected";
+  }
+
+  if (revisionId === focusedRevisionId) {
+    return "focused";
+  }
+
+  return "default";
 }
 
 function statusColor(

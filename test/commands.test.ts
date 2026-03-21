@@ -30,6 +30,7 @@ test("getTextCommand resolves vim navigation when command bar is unfocused", () 
   expect(getTextCommand("k", state)?.id).toBe("move-up");
   expect(getTextCommand("h", state)?.id).toBe("collapse");
   expect(getTextCommand("l", state)?.id).toBe("expand");
+  expect(getTextCommand("q", state)?.id).toBe("quit");
 });
 
 test("getTextCommand respects command visibility state", () => {

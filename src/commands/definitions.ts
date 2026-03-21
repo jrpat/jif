@@ -4,6 +4,7 @@ export type CommandController = Readonly<{
   moveFocus: (delta: number) => void;
   openFocusedRevision: () => void;
   closeFocusedRevision: () => void;
+  quit: () => void;
   cancelOrBlur: () => void;
   confirm: () => void;
   focusCommandBar: () => void;
@@ -67,6 +68,16 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     keys: [":"],
     when: (state) => state.focusMode !== "command",
     run: (controller) => controller.focusCommandBar(),
+    group: "global",
+  },
+  {
+    id: "quit",
+    title: "Quit",
+    description: "Exit the application",
+    canonicalKeys: ["q"],
+    keys: ["q"],
+    when: (state) => state.focusMode !== "command",
+    run: (controller) => controller.quit(),
     group: "global",
   },
   {

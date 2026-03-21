@@ -31,6 +31,12 @@ Run against a freshly materialized deterministic sample repo:
 bun run sample
 ```
 
+Run in watch mode against a freshly materialized sample repo:
+
+```bash
+bun run dev
+```
+
 You can also run the entrypoint directly:
 
 ```bash

@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "start": "bun run index.ts",
+    "dev": "bun --watch ./index.ts --sample",
     "sample": "bun run index.ts --sample",
     "build": "bun run build.ts",
     "test": "bun test",

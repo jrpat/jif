@@ -287,6 +287,14 @@ export function getCurrentRebaseTargetRevisionId(state: AppState): string | null
   return focusedRevision.changeId;
 }
 
+export function getSelectedRevisionId(state: AppState): string | null {
+  if (state.commandDraft?.kind === "rebase") {
+    return state.commandDraft.sourceRevisionId;
+  }
+
+  return null;
+}
+
 export function getDisplayedCommandText(state: AppState): string {
   if (state.commandBar.manual) {
     return state.commandBar.text;
