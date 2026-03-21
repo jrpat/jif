@@ -276,7 +276,7 @@ function CommandBar(props: {
       flexDirection="column"
     >
       <box width="100%" height={1} />
-      <box width="100%" flexDirection="row" gap={1}>
+      <box width="100%" flexDirection="row" gap={1} paddingLeft={1}>
         <text fg={colors.textMuted}>jj</text>
         <input
           width="100%"
@@ -285,7 +285,9 @@ function CommandBar(props: {
           focused={store.state.focusMode === "command"}
           backgroundColor={colors.chromeFillTwo}
           focusedBackgroundColor={colors.chromeFillThree}
-          textColor={props.commandText.length > 0 ? colors.textPrimary : colors.textMuted}
+          textColor={colors.textPrimary}
+          focusedTextColor={colors.textPrimary}
+          placeholderColor={colors.textMuted}
           cursorColor={colors.chromeBorderFocus}
           onInput={(value) => {
             store.actions.setCommandBarText(value);
