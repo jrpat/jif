@@ -19,6 +19,10 @@ import {
   getRevisionBorderPolicy,
   type RevisionRowState,
 } from "./revisionBorders.ts";
+import {
+  buildRevisionGutterPlan,
+  measureGraphLineWidth,
+} from "./revisionGutter.ts";
 
 export function JifView(props: {
   store: AppStore;
@@ -109,6 +113,15 @@ export function JifView(props: {
   const commandText = createMemo(() => getDisplayedCommandText(store.state));
   const visibleCommands = createMemo(() => getVisibleCommands(store.state));
   const visibleEvents = createMemo(() => store.state.eventLog.slice(-3).reverse());
+  const graphWidth = createMemo(() =>
+    store.state.revisions.reduce((maxWidth, revision) => {
+      const widths = [
+        measureGraphLineWidth(revision.graphHead),
+        ...revision.graphTail.map(measureGraphLineWidth),
+      ];
+      return Math.max(maxWidth, ...widths);
+    }, 1)
+  );
 
   useKeyboard((event) => {
     if (event.eventType === "release" || event.ctrl || event.meta || event.option) {
@@ -152,8 +165,12 @@ export function JifView(props: {
       return;
     }
 
+    const focusedIndex = store.state.focusedRevisionIndex;
+    const targetIndex = Math.min(focusedIndex + config.log.scrollMargin, store.state.revisions.length - 1);
+    const targetRevision = store.state.revisions[targetIndex];
+
     queueMicrotask(() => {
-      logViewport?.scrollChildIntoView(`revision-${focusedRevision.changeId}`);
+      logViewport?.scrollChildIntoView(`revision-${(targetRevision ?? focusedRevision).changeId}`);
     });
   });
 
@@ -199,6 +216,7 @@ export function JifView(props: {
                 index={index()}
                 previousRevisionId={store.state.revisions[index() - 1]?.changeId ?? null}
                 nextRevisionId={store.state.revisions[index() + 1]?.changeId ?? null}
+                graphWidth={graphWidth()}
                 config={config}
                 focusedRevisionId={getFocusedRevision(store.state)?.changeId ?? null}
                 selectedRevisionId={getSelectedRevisionId(store.state)}
@@ -305,6 +323,7 @@ function RevisionItem(props: {
   index: number;
   previousRevisionId: string | null;
   nextRevisionId: string | null;
+  graphWidth: number;
   config: ResolvedAppConfig;
   focusedRevisionId: string | null;
   selectedRevisionId: string | null;
@@ -314,6 +333,7 @@ function RevisionItem(props: {
   const {
     state,
     revision,
+    graphWidth,
     config,
     focusedRevisionId,
     selectedRevisionId,
@@ -345,6 +365,16 @@ function RevisionItem(props: {
     previousRowState,
     nextRowState,
   });
+  const detailRowCount = isExpanded ? Math.max(revision.files.length, 1) : 0;
+  const gutterPlan = buildRevisionGutterPlan({
+    graphHead: revision.graphHead,
+    graphTail: revision.graphTail,
+    detailRowCount,
+    ownsTop: borderPolicy.ownsTop,
+    ownsBottom: borderPolicy.ownsBottom,
+    previousGraphHead: props.index > 0 ? state.revisions[props.index - 1]?.graphHead ?? null : null,
+    nextGraphHead: state.revisions[props.index + 1]?.graphHead ?? null,
+  });
   const borderColor = rowState === "selected"
     ? colors.rowSelectedAccent
     : rowState === "focused"
@@ -352,76 +382,113 @@ function RevisionItem(props: {
       : isCommandTarget
       ? colors.rowCommandTargetBorder
       : colors.chromeBorderIdle;
+  const titleGraphColor = isSelected
+    ? colors.rowSelectedAccent
+    : isFocused
+      ? colors.chromeBorderFocus
+      : markerColor(revision, colors);
+  const continuationGraphColor = isSelected
+    ? colors.rowSelectedAccent
+    : isFocused
+      ? colors.chromeBorderFocus
+      : colors.textMuted;
 
   return (
     <box
       id={`revision-${revision.changeId}`}
       width="100%"
-      flexDirection="column"
-      paddingX={1}
+      flexDirection="row"
       opacity={anyExpanded && !isExpanded ? 0.6 : 1}
-      backgroundColor={
-        isSelected
-          ? colors.rowSelectedFill
-          : isFocused
-          ? colors.rowFocusedFill
-          : isAffected
-            ? colors.rowAffectedFill
-            : undefined
-      }
-      border={borderPolicy.borderSides}
-      borderStyle="single"
-      borderColor={borderColor}
-      customBorderChars={borderPolicy.borderChars}
     >
-      <box width="100%" flexDirection="row" gap={1}>
-        <text fg={isSelected ? colors.rowSelectedAccent : isFocused ? colors.chromeBorderFocus : markerColor(revision, colors)}>
-          {padRight(revision.graphHead, state.graphWidth)}
-        </text>
-        <text fg={isSelected ? colors.rowSelectedAccent : isFocused ? colors.chromeBorderFocus : colors.textPrimary}>
-          {revision.changeId}
-        </text>
-        {isCommandTarget ? (
-          <text fg={colors.bookmarkTagText} bg={colors.rowCommandTargetBorder}>
-            {" onto "}
+      <box width={graphWidth} flexDirection="column">
+        {gutterPlan.topDivider !== null ? (
+          <text fg={continuationGraphColor}>
+            {padRight(gutterPlan.topDivider, graphWidth)}
           </text>
         ) : null}
-        <For each={revision.bookmarks}>
-          {(bookmark) => (
-            <text fg={colors.bookmarkTagText} bg={colors.bookmarkTagFill}>
-              {` ${bookmark} `}
-            </text>
-          )}
-        </For>
-        <For each={revision.workspaces}>
-          {(workspace) => (
-            <text fg={colors.workspaceTagText} bg={colors.workspaceTagFill}>
-              {` ${workspace} `}
-            </text>
-          )}
-        </For>
-      </box>
-      <box width="100%" flexDirection="row" gap={1}>
-        <text fg={colors.textMuted}>{padRight("", state.graphWidth)}</text>
-        <text fg={isSelected || isFocused ? colors.textPrimary : colors.textSecondary} truncate>
-          {revision.description}
+        <text fg={titleGraphColor}>{padRight(gutterPlan.title, graphWidth)}</text>
+        <text fg={continuationGraphColor}>
+          {padRight(gutterPlan.subtitle, graphWidth)}
         </text>
+        <For each={gutterPlan.tail}>
+          {(graphLine) => (
+            <text fg={continuationGraphColor}>
+              {padRight(graphLine, graphWidth)}
+            </text>
+          )}
+        </For>
+        <For each={gutterPlan.detail}>
+          {(graphLine) => (
+            <text fg={continuationGraphColor}>
+              {padRight(graphLine, graphWidth)}
+            </text>
+          )}
+        </For>
+        {gutterPlan.bottomDivider !== null ? (
+          <text fg={continuationGraphColor}>
+            {padRight(gutterPlan.bottomDivider, graphWidth)}
+          </text>
+        ) : null}
       </box>
-      <For each={revision.graphTail}>
-        {(graphLine) => (
-          <box width="100%" flexDirection="row" gap={1}>
-            <text fg={colors.textMuted}>{padRight(graphLine, state.graphWidth)}</text>
-            <text fg={colors.textMuted}> </text>
-          </box>
-        )}
-      </For>
-      {isExpanded ? (
-        <ChangedFiles
-          state={state}
-          revision={revision}
-          config={config}
-        />
-      ) : null}
+      <box width={1} />
+      <box
+        flexGrow={1}
+        flexDirection="column"
+        paddingRight={1}
+        backgroundColor={
+          isSelected
+            ? colors.rowSelectedFill
+            : isFocused
+            ? colors.rowFocusedFill
+            : isAffected
+              ? colors.rowAffectedFill
+              : undefined
+        }
+        border={borderPolicy.borderSides}
+        borderStyle="single"
+        borderColor={borderColor}
+        customBorderChars={borderPolicy.borderChars}
+      >
+        <box width="100%" flexDirection="row" gap={1}>
+          <text fg={isSelected ? colors.rowSelectedAccent : isFocused ? colors.chromeBorderFocus : colors.textPrimary}>
+            {revision.changeId}
+          </text>
+          {isCommandTarget ? (
+            <text fg={colors.bookmarkTagText} bg={colors.rowCommandTargetBorder}>
+              {" onto "}
+            </text>
+          ) : null}
+          <For each={revision.bookmarks}>
+            {(bookmark) => (
+              <text fg={colors.bookmarkTagText} bg={colors.bookmarkTagFill}>
+                {` ${bookmark} `}
+              </text>
+            )}
+          </For>
+          <For each={revision.workspaces}>
+            {(workspace) => (
+              <text fg={colors.workspaceTagText} bg={colors.workspaceTagFill}>
+                {` ${workspace} `}
+              </text>
+            )}
+          </For>
+        </box>
+        <box width="100%" flexDirection="row">
+          <text fg={isSelected || isFocused ? colors.textPrimary : colors.textSecondary} truncate>
+            {revision.description}
+          </text>
+        </box>
+        <For each={revision.graphTail}>
+          {() => <box width="100%" height={1} />}
+        </For>
+        {isExpanded ? (
+          <ChangedFiles
+            state={state}
+            revision={revision}
+            config={config}
+          />
+        ) : null}
+      </box>
     </box>
   );
 }
@@ -435,7 +502,7 @@ function ChangedFiles(props: {
   const colors = config.colorScheme.semanticColors;
 
   return (
-    <box width="100%" flexDirection="column" paddingLeft={state.graphWidth + 1}>
+    <box width="100%" flexDirection="column">
       {revision.files.length === 0 ? (
         <text fg={colors.textMuted}>Loading changed files...</text>
       ) : (
