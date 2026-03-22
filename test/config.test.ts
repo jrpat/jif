@@ -10,7 +10,7 @@ test("resolveAppConfig resolves semantic colors for the default dark mode", () =
   const resolved = resolveAppConfig(defaultAppConfig);
 
   expect(resolved.colorScheme.mode).toBe("dark");
-  expect(resolved.colorScheme.semanticColors.chromeFillOne).toBeUndefined();
+  expect(resolved.colorScheme.semanticColors.chromeFillOne).toBe("#0f1419");
   expect(typeof resolved.colorScheme.semanticColors.graphWorkingCopy).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.rowSelectedFill).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.rowSelectedAccent).toBe("string");

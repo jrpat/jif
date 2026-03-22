@@ -7,6 +7,7 @@ import type { AppStore } from "../state/appStore.ts";
 import {
   commandCanExecute,
   getCurrentRebaseTargetRevisionId,
+  getCurrentSquashTargetRevisionId,
   getDisplayedCommandText,
   getExpandedRevision,
   getFocusedRevision,
@@ -75,6 +76,15 @@ export function JifView(props: {
     },
     focusCommandBar() {
       store.actions.focusCommandBar();
+    },
+    startSquash() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (!revision) {
+        return;
+      }
+
+      store.actions.startSquashCommand();
+      store.actions.pushEvent(`Composing squash for ${revision.changeId}`, "info");
     },
     startRebase() {
       const revision = getFocusedRevision(store.snapshot());
@@ -229,7 +239,7 @@ export function JifView(props: {
                 focusedRevisionId={getFocusedRevision(store.state)?.changeId ?? null}
                 selectedRevisionId={getSelectedRevisionId(store.state)}
                 expandedRevisionId={getExpandedRevision(store.state)?.changeId ?? null}
-                commandTargetId={getCurrentRebaseTargetRevisionId(store.state)}
+                commandTargetId={getCurrentRebaseTargetRevisionId(store.state) ?? getCurrentSquashTargetRevisionId(store.state)}
               />
             )}
           </For>
@@ -481,7 +491,7 @@ function RevisionItem(props: {
           </box>
           {isCommandTarget ? (
             <text fg={colors.bookmarkTagText} bg={colors.rowCommandTargetBorder}>
-              {" onto "}
+              {state.commandDraft?.kind === "squash" ? " into " : " onto "}
             </text>
           ) : null}
           <box flexGrow={1} />
@@ -618,16 +628,12 @@ function StatusArea(props: {
 }
 
 function normalizeKey(event: { name: string; sequence: string }): string | null {
-  if (event.sequence === ":") {
-    return ":";
-  }
-
   if (event.name === "return") {
     return "enter";
   }
 
-  if (event.name.length === 1) {
-    return event.name.toLowerCase();
+  if (event.sequence.length === 1 && event.sequence >= " ") {
+    return event.sequence;
   }
 
   return event.name || null;

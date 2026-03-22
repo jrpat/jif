@@ -222,6 +222,35 @@ export function toggleRebaseDescendants(
   };
 }
 
+export function startSquashCommand(state: AppState): AppState {
+  const revision = getFocusedRevision(state);
+  if (!revision) {
+    return state;
+  }
+
+  return {
+    ...state,
+    commandBar: createEmptyCommandBar(),
+    commandDraft: {
+      kind: "squash",
+      sourceRevisionId: revision.changeId,
+    },
+  };
+}
+
+export function getCurrentSquashTargetRevisionId(state: AppState): string | null {
+  if (state.commandDraft?.kind !== "squash") {
+    return null;
+  }
+
+  const focusedRevision = getFocusedRevision(state);
+  if (!focusedRevision || focusedRevision.changeId === state.commandDraft.sourceRevisionId) {
+    return null;
+  }
+
+  return focusedRevision.changeId;
+}
+
 export function setLoading(state: AppState, loading: boolean): AppState {
   return {
     ...state,
@@ -312,7 +341,7 @@ export function getCurrentRebaseTargetRevisionId(state: AppState): string | null
 }
 
 export function getSelectedRevisionId(state: AppState): string | null {
-  if (state.commandDraft?.kind === "rebase") {
+  if (state.commandDraft?.kind === "rebase" || state.commandDraft?.kind === "squash") {
     return state.commandDraft.sourceRevisionId;
   }
 
@@ -331,6 +360,12 @@ export function getDisplayedCommandText(state: AppState): string {
     return `rebase ${scopeFlag} ${state.commandDraft.sourceRevisionId}${targetPart}`;
   }
 
+  if (state.commandDraft?.kind === "squash") {
+    const target = getCurrentSquashTargetRevisionId(state);
+    const targetPart = target ? ` --into ${target}` : "";
+    return `squash --from ${state.commandDraft.sourceRevisionId}${targetPart}`;
+  }
+
   return "";
 }
 
@@ -347,6 +382,10 @@ export function getOperationAffectedRevisionIds(state: AppState): ReadonlySet<st
     );
   }
 
+  if (state.commandDraft.kind === "squash") {
+    return new Set([state.commandDraft.sourceRevisionId]);
+  }
+
   return new Set();
 }
 
@@ -357,6 +396,10 @@ export function commandCanExecute(state: AppState): boolean {
 
   if (state.commandDraft?.kind === "rebase") {
     return getCurrentRebaseTargetRevisionId(state) !== null;
+  }
+
+  if (state.commandDraft?.kind === "squash") {
+    return getCurrentSquashTargetRevisionId(state) !== null;
   }
 
   return false;

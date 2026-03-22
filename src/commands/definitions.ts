@@ -9,6 +9,7 @@ export type CommandController = Readonly<{
   confirm: () => void;
   focusCommandBar: () => void;
   startRebase: () => void;
+  startSquash: () => void;
   toggleRebaseDescendants: () => void;
 }>;
 
@@ -106,6 +107,16 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     keys: ["r"],
     when: (state) => state.focusMode !== "command",
     run: (controller) => controller.startRebase(),
+    group: "global",
+  },
+  {
+    id: "squash",
+    title: "Squash",
+    description: "Squash the focused revision into another",
+    canonicalKeys: ["S"],
+    keys: ["S"],
+    when: (state) => state.focusMode !== "command" && state.commandDraft?.kind !== "rebase",
+    run: (controller) => controller.startSquash(),
     group: "global",
   },
   {

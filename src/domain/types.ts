@@ -33,7 +33,12 @@ export type RebaseCommandDraft = Readonly<{
   descendantRevisionIds: readonly string[];
 }>;
 
-export type CommandDraft = RebaseCommandDraft;
+export type SquashCommandDraft = Readonly<{
+  kind: "squash";
+  sourceRevisionId: string;
+}>;
+
+export type CommandDraft = RebaseCommandDraft | SquashCommandDraft;
 
 export type StatusLevel = "info" | "success" | "warning" | "error";
 

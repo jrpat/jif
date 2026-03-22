@@ -12,6 +12,7 @@ import {
   clearStatusMessage,
   closeFocusedRevision,
   dismissOldestError,
+  startSquashCommand,
   createInitialState,
   focusCommandBar,
   moveFocus,
@@ -96,6 +97,9 @@ export function createAppStore(repoPath: string) {
       },
       startRebaseCommand(descendantIds: readonly string[]) {
         mutate((currentState) => startRebaseCommand(currentState, descendantIds));
+      },
+      startSquashCommand() {
+        mutate((currentState) => startSquashCommand(currentState));
       },
       toggleRebaseDescendants(descendantIds: readonly string[]) {
         mutate((currentState) => toggleRebaseDescendants(currentState, descendantIds));

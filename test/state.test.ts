@@ -14,6 +14,7 @@ import {
   openFocusedRevision,
   setRevisionFiles,
   startRebaseCommand,
+  startSquashCommand,
   toggleRebaseDescendants,
 } from "../src/state/store.ts";
 
@@ -133,4 +134,14 @@ test("selected revision id comes from the active command draft source", () => {
 
   state = startRebaseCommand(state, ["aaaaaaaa", "bbbbbbbb"]);
   expect(getSelectedRevisionId(state)).toBe("aaaaaaaa");
+});
+
+test("squash command text updates when target is selected", () => {
+  let state = createState();
+  state = startSquashCommand(state);
+  expect(getDisplayedCommandText(state)).toBe("squash --from aaaaaaaa");
+  expect(getSelectedRevisionId(state)).toBe("aaaaaaaa");
+
+  state = moveFocus(state, 1);
+  expect(getDisplayedCommandText(state)).toBe("squash --from aaaaaaaa --into bbbbbbbb");
 });
