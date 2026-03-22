@@ -4,17 +4,17 @@ import {
   cancelCommandState,
   createInitialState,
   dismissOldestError,
+  draftConfigs,
   focusCommandBar,
   getDisplayedCommandText,
-  getSelectedRevisionId,
+  getSelectedRevisionIds,
   pushEvent,
   setCommandBarText,
   setError,
   moveFocus,
   openFocusedRevision,
   setRevisionFiles,
-  startRebaseCommand,
-  startSquashCommand,
+  startCommandDraft,
   toggleRebaseDescendants,
 } from "../src/state/store.ts";
 
@@ -80,7 +80,7 @@ test("command bar editing is controlled by reducer state", () => {
 
 test("rebase command text updates when descendants are toggled", () => {
   let state = createState();
-  state = startRebaseCommand(state, ["aaaaaaaa", "bbbbbbbb"]);
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
   state = moveFocus(state, 1);
   expect(getDisplayedCommandText(state)).toBe("rebase -r aaaaaaaa -o bbbbbbbb");
 
@@ -128,19 +128,19 @@ test("dismissOldestError is a no-op when no errors exist", () => {
   expect(next).toBe(state);
 });
 
-test("selected revision id comes from the active command draft source", () => {
+test("selected revision ids come from the active command draft", () => {
   let state = createState();
-  expect(getSelectedRevisionId(state)).toBeNull();
+  expect(getSelectedRevisionIds(state).size).toBe(0);
 
-  state = startRebaseCommand(state, ["aaaaaaaa", "bbbbbbbb"]);
-  expect(getSelectedRevisionId(state)).toBe("aaaaaaaa");
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
+  expect(getSelectedRevisionIds(state).has("aaaaaaaa")).toBeTrue();
 });
 
 test("squash command text updates when target is selected", () => {
   let state = createState();
-  state = startSquashCommand(state);
+  state = startCommandDraft(state, draftConfigs.squash);
   expect(getDisplayedCommandText(state)).toBe("squash --from aaaaaaaa");
-  expect(getSelectedRevisionId(state)).toBe("aaaaaaaa");
+  expect(getSelectedRevisionIds(state).has("aaaaaaaa")).toBeTrue();
 
   state = moveFocus(state, 1);
   expect(getDisplayedCommandText(state)).toBe("squash --from aaaaaaaa --into bbbbbbbb");

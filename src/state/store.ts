@@ -2,11 +2,41 @@ import type {
   AppState,
   ChangedFile,
   CommandBarState,
+  CommandDraftConfig,
   EventLogEntry,
   RepositoryData,
   RevisionSummary,
   StatusLevel,
 } from "../domain/types.ts";
+
+export const draftConfigs = {
+  rebase: {
+    kind: "rebase" as const,
+    template: "rebase -r ${selected} -o ${target}",
+    badgeText: "onto",
+  },
+  squash: {
+    kind: "squash" as const,
+    template: "squash --from ${selected} --into ${target}",
+    badgeText: "into",
+  },
+} satisfies Record<string, CommandDraftConfig>;
+
+export function interpolateTemplate(
+  template: string,
+  vars: Record<string, string>,
+): string {
+  return template
+    .replace(/(?:\S+\s+)?\$\{(\w+)\}/g, (match, key) => {
+      const value = vars[key] ?? "";
+      if (value === "") {
+        return "";
+      }
+      return match.replace(`\${${key}}`, value);
+    })
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 export function createInitialState(repoPath: string): AppState {
   return {
@@ -183,9 +213,10 @@ export function cancelCommandState(state: AppState): AppState {
   };
 }
 
-export function startRebaseCommand(
+export function startCommandDraft(
   state: AppState,
-  descendantIds: readonly string[],
+  config: CommandDraftConfig,
+  options?: { descendantRevisionIds?: readonly string[] },
 ): AppState {
   const revision = getFocusedRevision(state);
   if (!revision) {
@@ -196,10 +227,10 @@ export function startRebaseCommand(
     ...state,
     commandBar: createEmptyCommandBar(),
     commandDraft: {
-      kind: "rebase",
-      sourceRevisionId: revision.changeId,
+      config,
+      selectedRevisionIds: [revision.changeId],
       includeDescendants: false,
-      descendantRevisionIds: descendantIds,
+      descendantRevisionIds: options?.descendantRevisionIds,
     },
   };
 }
@@ -208,7 +239,7 @@ export function toggleRebaseDescendants(
   state: AppState,
   descendantIds: readonly string[],
 ): AppState {
-  if (state.commandDraft?.kind !== "rebase") {
+  if (state.commandDraft?.config.kind !== "rebase") {
     return state;
   }
 
@@ -222,33 +253,32 @@ export function toggleRebaseDescendants(
   };
 }
 
-export function startSquashCommand(state: AppState): AppState {
-  const revision = getFocusedRevision(state);
-  if (!revision) {
+export function toggleRevisionSelection(state: AppState): AppState {
+  if (!state.commandDraft) {
+    return state;
+  }
+
+  const focusedRevision = getFocusedRevision(state);
+  if (!focusedRevision) {
+    return state;
+  }
+
+  const ids = state.commandDraft.selectedRevisionIds;
+  const isSelected = ids.includes(focusedRevision.changeId);
+
+  if (isSelected && ids.length === 1) {
     return state;
   }
 
   return {
     ...state,
-    commandBar: createEmptyCommandBar(),
     commandDraft: {
-      kind: "squash",
-      sourceRevisionId: revision.changeId,
+      ...state.commandDraft,
+      selectedRevisionIds: isSelected
+        ? ids.filter((id) => id !== focusedRevision.changeId)
+        : [...ids, focusedRevision.changeId],
     },
   };
-}
-
-export function getCurrentSquashTargetRevisionId(state: AppState): string | null {
-  if (state.commandDraft?.kind !== "squash") {
-    return null;
-  }
-
-  const focusedRevision = getFocusedRevision(state);
-  if (!focusedRevision || focusedRevision.changeId === state.commandDraft.sourceRevisionId) {
-    return null;
-  }
-
-  return focusedRevision.changeId;
 }
 
 export function setLoading(state: AppState, loading: boolean): AppState {
@@ -327,25 +357,25 @@ export function isFileNavigationActive(state: AppState): boolean {
   return state.focusMode === "files" && state.expandedRevisionId !== null;
 }
 
-export function getCurrentRebaseTargetRevisionId(state: AppState): string | null {
-  if (state.commandDraft?.kind !== "rebase") {
+export function getCommandTargetRevisionId(state: AppState): string | null {
+  if (!state.commandDraft) {
     return null;
   }
 
   const focusedRevision = getFocusedRevision(state);
-  if (!focusedRevision || focusedRevision.changeId === state.commandDraft.sourceRevisionId) {
+  if (!focusedRevision || state.commandDraft.selectedRevisionIds.includes(focusedRevision.changeId)) {
     return null;
   }
 
   return focusedRevision.changeId;
 }
 
-export function getSelectedRevisionId(state: AppState): string | null {
-  if (state.commandDraft?.kind === "rebase" || state.commandDraft?.kind === "squash") {
-    return state.commandDraft.sourceRevisionId;
+export function getSelectedRevisionIds(state: AppState): ReadonlySet<string> {
+  if (!state.commandDraft) {
+    return new Set();
   }
 
-  return null;
+  return new Set(state.commandDraft.selectedRevisionIds);
 }
 
 export function getDisplayedCommandText(state: AppState): string {
@@ -353,20 +383,21 @@ export function getDisplayedCommandText(state: AppState): string {
     return state.commandBar.text;
   }
 
-  if (state.commandDraft?.kind === "rebase") {
-    const target = getCurrentRebaseTargetRevisionId(state);
-    const scopeFlag = state.commandDraft.includeDescendants ? "-s" : "-r";
-    const targetPart = target ? ` -o ${target}` : "";
-    return `rebase ${scopeFlag} ${state.commandDraft.sourceRevisionId}${targetPart}`;
+  if (!state.commandDraft) {
+    return "";
   }
 
-  if (state.commandDraft?.kind === "squash") {
-    const target = getCurrentSquashTargetRevisionId(state);
-    const targetPart = target ? ` --into ${target}` : "";
-    return `squash --from ${state.commandDraft.sourceRevisionId}${targetPart}`;
+  const draft = state.commandDraft;
+  let template = draft.config.template;
+
+  if (draft.config.kind === "rebase" && draft.includeDescendants) {
+    template = template.replace("-r", "-s");
   }
 
-  return "";
+  return interpolateTemplate(template, {
+    selected: draft.selectedRevisionIds.join(" "),
+    target: getCommandTargetRevisionId(state) ?? "",
+  });
 }
 
 export function getOperationAffectedRevisionIds(state: AppState): ReadonlySet<string> {
@@ -374,19 +405,11 @@ export function getOperationAffectedRevisionIds(state: AppState): ReadonlySet<st
     return new Set();
   }
 
-  if (state.commandDraft.kind === "rebase") {
-    return new Set(
-      state.commandDraft.includeDescendants
-        ? state.commandDraft.descendantRevisionIds
-        : [state.commandDraft.sourceRevisionId],
-    );
+  if (state.commandDraft.config.kind === "rebase" && state.commandDraft.includeDescendants && state.commandDraft.descendantRevisionIds) {
+    return new Set(state.commandDraft.descendantRevisionIds);
   }
 
-  if (state.commandDraft.kind === "squash") {
-    return new Set([state.commandDraft.sourceRevisionId]);
-  }
-
-  return new Set();
+  return new Set(state.commandDraft.selectedRevisionIds);
 }
 
 export function commandCanExecute(state: AppState): boolean {
@@ -394,15 +417,15 @@ export function commandCanExecute(state: AppState): boolean {
     return state.commandBar.text.trim().length > 0;
   }
 
-  if (state.commandDraft?.kind === "rebase") {
-    return getCurrentRebaseTargetRevisionId(state) !== null;
+  if (!state.commandDraft) {
+    return false;
   }
 
-  if (state.commandDraft?.kind === "squash") {
-    return getCurrentSquashTargetRevisionId(state) !== null;
+  if (state.commandDraft.config.template.includes("${target}")) {
+    return getCommandTargetRevisionId(state) !== null;
   }
 
-  return false;
+  return state.commandDraft.selectedRevisionIds.length > 0;
 }
 
 function getExpandedFilesCount(

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { getTextCommand } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
-import { createInitialState, startRebaseCommand } from "../src/state/store.ts";
+import { createInitialState, draftConfigs, startCommandDraft } from "../src/state/store.ts";
 
 function createState(): AppState {
   return {
@@ -45,7 +45,7 @@ test("getTextCommand respects command visibility state", () => {
   };
   expect(getTextCommand("j", focusedState)).toBeNull();
 
-  const rebaseState = startRebaseCommand(createState(), ["aaaaaaaa"]);
+  const rebaseState = startCommandDraft(createState(), draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
   expect(getTextCommand("s", createState())).toBeNull();
   expect(getTextCommand("s", rebaseState)?.id).toBe("rebase-descendants");
 });

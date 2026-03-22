@@ -6,13 +6,13 @@ import type { ResolvedAppConfig } from "../config/index.ts";
 import type { AppStore } from "../state/appStore.ts";
 import {
   commandCanExecute,
-  getCurrentRebaseTargetRevisionId,
-  getCurrentSquashTargetRevisionId,
+  draftConfigs,
+  getCommandTargetRevisionId,
   getDisplayedCommandText,
   getExpandedRevision,
   getFocusedRevision,
   getOperationAffectedRevisionIds,
-  getSelectedRevisionId,
+  getSelectedRevisionIds,
 } from "../state/store.ts";
 import type { JjClient } from "../jj/client.ts";
 import type { RevisionSummary } from "../domain/types.ts";
@@ -83,7 +83,7 @@ export function JifView(props: {
         return;
       }
 
-      store.actions.startSquashCommand();
+      store.actions.startCommandDraft(draftConfigs.squash);
       store.actions.pushEvent(`Composing squash for ${revision.changeId}`, "info");
     },
     startRebase() {
@@ -95,7 +95,7 @@ export function JifView(props: {
       void (async () => {
         try {
           const descendants = await client.resolveDescendants(revision.changeId);
-          store.actions.startRebaseCommand(descendants);
+          store.actions.startCommandDraft(draftConfigs.rebase, { descendantRevisionIds: descendants });
           store.actions.pushEvent(`Composing rebase for ${revision.changeId}`, "info");
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
@@ -103,15 +103,18 @@ export function JifView(props: {
         }
       })();
     },
+    toggleSelection() {
+      store.actions.toggleRevisionSelection();
+    },
     toggleRebaseDescendants() {
       const draft = store.snapshot().commandDraft;
-      if (draft?.kind !== "rebase") {
+      if (draft?.config.kind !== "rebase") {
         return;
       }
 
       void (async () => {
         try {
-          const descendants = await client.resolveDescendants(draft.sourceRevisionId);
+          const descendants = await client.resolveDescendants(draft.selectedRevisionIds[0] ?? "");
           store.actions.toggleRebaseDescendants(descendants);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
@@ -237,9 +240,9 @@ export function JifView(props: {
                 graphWidth={graphWidth()}
                 config={config}
                 focusedRevisionId={getFocusedRevision(store.state)?.changeId ?? null}
-                selectedRevisionId={getSelectedRevisionId(store.state)}
+                selectedRevisionIds={getSelectedRevisionIds(store.state)}
                 expandedRevisionId={getExpandedRevision(store.state)?.changeId ?? null}
-                commandTargetId={getCurrentRebaseTargetRevisionId(store.state) ?? getCurrentSquashTargetRevisionId(store.state)}
+                commandTargetId={getCommandTargetRevisionId(store.state)}
               />
             )}
           </For>
@@ -357,7 +360,7 @@ function RevisionItem(props: {
   graphWidth: number;
   config: ResolvedAppConfig;
   focusedRevisionId: string | null;
-  selectedRevisionId: string | null;
+  selectedRevisionIds: ReadonlySet<string>;
   expandedRevisionId: string | null;
   commandTargetId: string | null;
 }) {
@@ -367,29 +370,29 @@ function RevisionItem(props: {
     graphWidth,
     config,
     focusedRevisionId,
-    selectedRevisionId,
+    selectedRevisionIds,
     expandedRevisionId,
     commandTargetId,
   } = props;
   const colors = config.colorScheme.semanticColors;
   const affectedIds = getOperationAffectedRevisionIds(state);
   const isFocused = revision.changeId === focusedRevisionId;
-  const isSelected = revision.changeId === selectedRevisionId;
+  const isSelected = selectedRevisionIds.has(revision.changeId);
   const isExpanded = revision.changeId === expandedRevisionId;
   const anyExpanded = expandedRevisionId !== null;
   const isAffected = affectedIds.has(revision.changeId);
   const isCommandTarget = commandTargetId === revision.changeId;
   const rowState =
-    getRevisionRowState(revision.changeId, focusedRevisionId, selectedRevisionId) ?? "default";
+    getRevisionRowState(revision.changeId, focusedRevisionId, selectedRevisionIds) ?? "default";
   const previousRowState = getRevisionRowState(
     props.previousRevisionId,
     focusedRevisionId,
-    selectedRevisionId,
+    selectedRevisionIds,
   );
   const nextRowState = getRevisionRowState(
     props.nextRevisionId,
     focusedRevisionId,
-    selectedRevisionId,
+    selectedRevisionIds,
   );
   const borderPolicy = getRevisionBorderPolicy({
     rowState,
@@ -491,7 +494,7 @@ function RevisionItem(props: {
           </box>
           {isCommandTarget ? (
             <text fg={colors.bookmarkTagText} bg={colors.rowCommandTargetBorder}>
-              {state.commandDraft?.kind === "squash" ? " into " : " onto "}
+              {` ${state.commandDraft?.config.badgeText ?? "onto"} `}
             </text>
           ) : null}
           <box flexGrow={1} />
@@ -658,13 +661,13 @@ function markerColor(
 function getRevisionRowState(
   revisionId: string | null,
   focusedRevisionId: string | null,
-  selectedRevisionId: string | null,
+  selectedRevisionIds: ReadonlySet<string>,
 ): RevisionRowState | null {
   if (revisionId === null) {
     return null;
   }
 
-  if (revisionId === selectedRevisionId) {
+  if (selectedRevisionIds.has(revisionId)) {
     return "selected";
   }
 

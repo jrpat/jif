@@ -26,19 +26,20 @@ export type RepositoryData = Readonly<{
   graphWidth: number;
 }>;
 
-export type RebaseCommandDraft = Readonly<{
-  kind: "rebase";
-  sourceRevisionId: string;
-  includeDescendants: boolean;
-  descendantRevisionIds: readonly string[];
+export type CommandDraftKind = "rebase" | "squash";
+
+export type CommandDraftConfig = Readonly<{
+  kind: CommandDraftKind;
+  template: string;
+  badgeText: string;
 }>;
 
-export type SquashCommandDraft = Readonly<{
-  kind: "squash";
-  sourceRevisionId: string;
+export type CommandDraft = Readonly<{
+  config: CommandDraftConfig;
+  selectedRevisionIds: readonly string[];
+  includeDescendants?: boolean;
+  descendantRevisionIds?: readonly string[];
 }>;
-
-export type CommandDraft = RebaseCommandDraft | SquashCommandDraft;
 
 export type StatusLevel = "info" | "success" | "warning" | "error";
 

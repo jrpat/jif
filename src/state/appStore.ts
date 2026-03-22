@@ -3,6 +3,7 @@ import { createStore, unwrap } from "solid-js/store";
 import type {
   AppState,
   ChangedFile,
+  CommandDraftConfig,
   RepositoryData,
   StatusLevel,
 } from "../domain/types.ts";
@@ -12,7 +13,7 @@ import {
   clearStatusMessage,
   closeFocusedRevision,
   dismissOldestError,
-  startSquashCommand,
+  startCommandDraft,
   createInitialState,
   focusCommandBar,
   moveFocus,
@@ -22,8 +23,8 @@ import {
   setError,
   setLoading,
   setRevisionFiles,
-  startRebaseCommand,
   toggleRebaseDescendants,
+  toggleRevisionSelection,
 } from "./store.ts";
 
 export type AppStore = ReturnType<typeof createAppStore>;
@@ -95,11 +96,11 @@ export function createAppStore(repoPath: string) {
       dismissOldestError() {
         mutate((currentState) => dismissOldestError(currentState));
       },
-      startRebaseCommand(descendantIds: readonly string[]) {
-        mutate((currentState) => startRebaseCommand(currentState, descendantIds));
+      startCommandDraft(config: CommandDraftConfig, options?: { descendantRevisionIds?: readonly string[] }) {
+        mutate((currentState) => startCommandDraft(currentState, config, options));
       },
-      startSquashCommand() {
-        mutate((currentState) => startSquashCommand(currentState));
+      toggleRevisionSelection() {
+        mutate((currentState) => toggleRevisionSelection(currentState));
       },
       toggleRebaseDescendants(descendantIds: readonly string[]) {
         mutate((currentState) => toggleRebaseDescendants(currentState, descendantIds));

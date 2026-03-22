@@ -10,6 +10,7 @@ export type CommandController = Readonly<{
   focusCommandBar: () => void;
   startRebase: () => void;
   startSquash: () => void;
+  toggleSelection: () => void;
   toggleRebaseDescendants: () => void;
 }>;
 
@@ -115,9 +116,19 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Squash the focused revision into another",
     canonicalKeys: ["S"],
     keys: ["S"],
-    when: (state) => state.focusMode !== "command" && state.commandDraft?.kind !== "rebase",
+    when: (state) => state.focusMode !== "command" && state.commandDraft?.config.kind !== "rebase",
     run: (controller) => controller.startSquash(),
     group: "global",
+  },
+  {
+    id: "toggle-selection",
+    title: "Select",
+    description: "Add or remove the focused revision from the selection",
+    canonicalKeys: ["space"],
+    keys: [" "],
+    when: (state) => state.commandDraft !== null && state.focusMode !== "command",
+    run: (controller) => controller.toggleSelection(),
+    group: "mode",
   },
   {
     id: "rebase-descendants",
@@ -125,7 +136,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Include descendants in the rebase preview",
     canonicalKeys: ["s"],
     keys: ["s"],
-    when: (state) => state.commandDraft?.kind === "rebase" && state.focusMode !== "command",
+    when: (state) => state.commandDraft?.config.kind === "rebase" && state.focusMode !== "command",
     run: (controller) => controller.toggleRebaseDescendants(),
     group: "mode",
   },
