@@ -8,7 +8,9 @@ export async function runJifApplication(
   repoPath: string,
   config: ResolvedAppConfig,
 ): Promise<void> {
-  const store = createAppStore(repoPath);
+  const store = createAppStore(repoPath, {
+    useShortFlags: config.commands.shortFlags,
+  });
   const client = new JjClient(repoPath);
 
   await render(

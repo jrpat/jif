@@ -45,6 +45,9 @@ export type AppConfig = Readonly<{
   log?: Readonly<{
     scrollMargin?: number;
   }>;
+  commands?: Readonly<{
+    shortFlags?: boolean;
+  }>;
 }>;
 
 export type ResolvedAppConfig = Readonly<{
@@ -54,6 +57,9 @@ export type ResolvedAppConfig = Readonly<{
   }>;
   log: Readonly<{
     scrollMargin: number;
+  }>;
+  commands: Readonly<{
+    shortFlags: boolean;
   }>;
 }>;
 
@@ -171,6 +177,9 @@ export function resolveAppConfig(
     },
     log: {
       scrollMargin: config.log?.scrollMargin ?? 1,
+    },
+    commands: {
+      shortFlags: config.commands?.shortFlags ?? true,
     },
   };
 }

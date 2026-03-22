@@ -107,6 +107,9 @@ export function JifView(props: {
     toggleSelection() {
       store.actions.toggleRevisionSelection();
     },
+    toggleShortFlags() {
+      store.actions.toggleShortFlags();
+    },
     toggleRebaseDescendants() {
       const draft = store.snapshot().commandDraft;
       if (draft?.config.kind !== "rebase") {
@@ -129,12 +132,14 @@ export function JifView(props: {
     store.state.focusedRevisionIndex;
     store.state.commandDraft;
     store.state.commandBar;
+    store.state.useShortFlags;
     return getDisplayedCommandText(store.state);
   });
   const commandSegments = createMemo((): readonly CommandSegment[] | null => {
     store.state.focusedRevisionIndex;
     store.state.commandDraft;
     store.state.commandBar;
+    store.state.useShortFlags;
     return getDisplayedCommandSegments(store.state);
   });
   const visibleCommands = createMemo(() => getVisibleCommands(store.state));
@@ -334,15 +339,14 @@ function CommandBar(props: {
       <box
         width="100%"
         flexDirection="row"
-        gap={1}
         backgroundColor={
           commandBarFocused()
             ? colors.chromeFillTwo
             : colors.chromeFillOne
         }
       >
-        <box width={3} flexDirection="row" paddingLeft={1}>
-          <text fg={colors.textTertiary}>jj</text>
+        <box width={4} flexDirection="row" paddingLeft={1}>
+          <text fg={colors.textTertiary}>jj </text>
         </box>
         {showSegments() ? (
           <box flexGrow={1} flexDirection="row">

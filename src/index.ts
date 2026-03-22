@@ -6,9 +6,13 @@ import { materializeSampleRepo } from "./dev/sampleRepo.ts";
 
 export async function main(argv: readonly string[]) {
   const runSample = argv.includes("--sample");
+  const useLongFlags = argv.includes("--long-flags");
   const explicitRepoPath = readFlagValue(argv, "--repo");
   const detectedThemeMode = await detectTerminalThemeMode();
-  const config = await loadAppConfig({ detectedThemeMode });
+  const loaded = await loadAppConfig({ detectedThemeMode });
+  const config = useLongFlags
+    ? { ...loaded, commands: { ...loaded.commands, shortFlags: false } }
+    : loaded;
 
   const repoPath = explicitRepoPath
     ? resolve(explicitRepoPath)

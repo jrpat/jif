@@ -30,7 +30,8 @@ export type CommandDraftKind = "rebase" | "squash";
 
 export type CommandDraftConfig = Readonly<{
   kind: CommandDraftKind;
-  template: string;
+  shortTemplate: string;
+  longTemplate: string;
   badgeText: string;
 }>;
 
@@ -75,6 +76,7 @@ export type AppState = Readonly<{
   eventLog: readonly EventLogEntry[];
   loading: boolean;
   error: string | null;
+  useShortFlags: boolean;
 }>;
 
 export type SampleRepoMaterialization = Readonly<{

@@ -11,6 +11,7 @@ export type CommandController = Readonly<{
   startRebase: () => void;
   startSquash: () => void;
   toggleSelection: () => void;
+  toggleShortFlags: () => void;
   toggleRebaseDescendants: () => void;
 }>;
 
@@ -129,6 +130,16 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     when: (state) => state.commandDraft !== null && state.focusMode !== "command",
     run: (controller) => controller.toggleSelection(),
     group: "mode",
+  },
+  {
+    id: "toggle-flags",
+    title: "Short Flags",
+    description: "Toggle between short and long flag names",
+    canonicalKeys: ["_"],
+    keys: ["_"],
+    when: (state) => state.focusMode !== "command",
+    run: (controller) => controller.toggleShortFlags(),
+    group: "global",
   },
   {
     id: "rebase-descendants",

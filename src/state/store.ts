@@ -14,12 +14,14 @@ export const DRAFT_PLACEHOLDER = "░░░░";
 export const draftConfigs = {
   rebase: {
     kind: "rebase" as const,
-    template: "rebase -r ${selected} -d ${target}",
+    shortTemplate: "rebase -r ${selected} -d ${target}",
+    longTemplate: "rebase --revisions ${selected} --destination ${target}",
     badgeText: "onto",
   },
   squash: {
     kind: "squash" as const,
-    template: "squash -f ${selected} -t ${target}",
+    shortTemplate: "squash -f ${selected} -t ${target}",
+    longTemplate: "squash --from ${selected} --into ${target}",
     badgeText: "into",
   },
 } satisfies Record<string, CommandDraftConfig>;
@@ -73,7 +75,7 @@ export function buildCommandSegments(
   return segments;
 }
 
-export function createInitialState(repoPath: string): AppState {
+export function createInitialState(repoPath: string, options?: { useShortFlags?: boolean }): AppState {
   return {
     repoPath,
     graphWidth: 4,
@@ -88,7 +90,12 @@ export function createInitialState(repoPath: string): AppState {
     eventLog: [],
     loading: true,
     error: null,
+    useShortFlags: options?.useShortFlags ?? true,
   };
+}
+
+export function toggleShortFlags(state: AppState): AppState {
+  return { ...state, useShortFlags: !state.useShortFlags };
 }
 
 export function createEmptyCommandBar(): CommandBarState {
@@ -414,46 +421,53 @@ export function getSelectedRevisionIds(state: AppState): ReadonlySet<string> {
   return new Set(state.commandDraft.selectedRevisionIds);
 }
 
+function resolveTemplate(state: AppState): { template: string; vars: Record<string, string> } | null {
+  if (!state.commandDraft) {
+    return null;
+  }
+
+  const draft = state.commandDraft;
+  let template = state.useShortFlags ? draft.config.shortTemplate : draft.config.longTemplate;
+
+  if (draft.config.kind === "rebase" && draft.includeDescendants) {
+    template = state.useShortFlags
+      ? template.replace("-r", "-s")
+      : template.replace("--revisions", "--source");
+  }
+
+  return {
+    template,
+    vars: {
+      selected: draft.selectedRevisionIds.map((id) => revisionPrefix(state, id)).join(" "),
+      target: revisionPrefix(state, getCommandTargetRevisionId(state) ?? ""),
+    },
+  };
+}
+
 export function getDisplayedCommandText(state: AppState): string {
   if (state.commandBar.manual) {
     return state.commandBar.text;
   }
 
-  if (!state.commandDraft) {
+  const resolved = resolveTemplate(state);
+  if (!resolved) {
     return "";
   }
 
-  const draft = state.commandDraft;
-  let template = draft.config.template;
-
-  if (draft.config.kind === "rebase" && draft.includeDescendants) {
-    template = template.replace("-r", "-s");
-  }
-
-  const vars = {
-    selected: draft.selectedRevisionIds.map((id) => revisionPrefix(state, id)).join(" "),
-    target: revisionPrefix(state, getCommandTargetRevisionId(state) ?? ""),
-  };
-
-  return interpolateTemplate(template, vars);
+  return interpolateTemplate(resolved.template, resolved.vars);
 }
 
 export function getDisplayedCommandSegments(state: AppState): readonly CommandSegment[] | null {
-  if (state.commandBar.manual || !state.commandDraft) {
+  if (state.commandBar.manual) {
     return null;
   }
 
-  const draft = state.commandDraft;
-  let template = draft.config.template;
-
-  if (draft.config.kind === "rebase" && draft.includeDescendants) {
-    template = template.replace("-r", "-s");
+  const resolved = resolveTemplate(state);
+  if (!resolved) {
+    return null;
   }
 
-  return buildCommandSegments(template, {
-    selected: draft.selectedRevisionIds.map((id) => revisionPrefix(state, id)).join(" "),
-    target: revisionPrefix(state, getCommandTargetRevisionId(state) ?? ""),
-  });
+  return buildCommandSegments(resolved.template, resolved.vars);
 }
 
 function revisionPrefix(state: AppState, changeId: string): string {
@@ -486,7 +500,7 @@ export function commandCanExecute(state: AppState): boolean {
     return false;
   }
 
-  if (state.commandDraft.config.template.includes("${target}")) {
+  if (state.commandDraft.config.shortTemplate.includes("${target}")) {
     return getCommandTargetRevisionId(state) !== null;
   }
 

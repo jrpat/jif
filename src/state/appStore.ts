@@ -14,6 +14,7 @@ import {
   closeFocusedRevision,
   dismissOldestError,
   startCommandDraft,
+  toggleShortFlags,
   createInitialState,
   focusCommandBar,
   moveFocus,
@@ -29,12 +30,12 @@ import {
 
 export type AppStore = ReturnType<typeof createAppStore>;
 
-export function createAppStore(repoPath: string) {
+export function createAppStore(repoPath: string, options?: { useShortFlags?: boolean }) {
   let state!: AppState;
   let setState!: ReturnType<typeof createStore<AppState>>[1];
 
   const dispose = createRoot((disposeStore) => {
-    const [store, setStore] = createStore<AppState>(createInitialState(repoPath));
+    const [store, setStore] = createStore<AppState>(createInitialState(repoPath, options));
     state = store;
     setState = setStore;
     return disposeStore;
@@ -101,6 +102,9 @@ export function createAppStore(repoPath: string) {
       },
       toggleRevisionSelection() {
         mutate((currentState) => toggleRevisionSelection(currentState));
+      },
+      toggleShortFlags() {
+        mutate((currentState) => toggleShortFlags(currentState));
       },
       toggleRebaseDescendants(descendantIds: readonly string[]) {
         mutate((currentState) => toggleRebaseDescendants(currentState, descendantIds));
