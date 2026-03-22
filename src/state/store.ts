@@ -146,11 +146,12 @@ export function closeFocusedRevision(state: AppState): AppState {
 }
 
 export function focusCommandBar(state: AppState): AppState {
+  const text = getDisplayedCommandText(state);
   return {
     ...state,
     focusMode: "command",
     commandBar: {
-      text: getDisplayedCommandText(state),
+      text: text.length > 0 && !text.endsWith(" ") ? `${text} ` : text,
       manual: true,
     },
   };
@@ -273,6 +274,10 @@ export function dismissOldestError(state: AppState): AppState {
   const statusMessage =
     state.statusMessage?.level === "error" ? null : state.statusMessage;
   return { ...state, eventLog, statusMessage };
+}
+
+export function clearStatusMessage(state: AppState): AppState {
+  return { ...state, statusMessage: null };
 }
 
 export function getFocusedRevision(state: AppState): RevisionSummary | null {

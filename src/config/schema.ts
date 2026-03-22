@@ -26,6 +26,7 @@ export type SemanticColorScheme = Readonly<{
   textTertiary: SemanticColorValue;
   textQuaternary: SemanticColorValue;
   textMuted: SemanticColorValue;
+  revsetPrefix: SemanticColorValue;
   fileFocusMarker: SemanticColorValue;
   fileStatusAccent: SemanticColorValue;
   statusInfo: SemanticColorValue;
@@ -57,9 +58,9 @@ export type ResolvedAppConfig = Readonly<{
 }>;
 
 const sharedDefaultColors: SemanticColorScheme = {
-  chromeFillOne: undefined,
-  chromeFillTwo: undefined,
-  chromeFillThree: undefined,
+  chromeFillOne: "#0f1419",
+  chromeFillTwo: "#1a2330",
+  chromeFillThree: "#243040",
   chromeBorderIdle: "#5b6773",
   chromeBorderFocus: "#4f8cff",
   rowFocusedFill: "#1f3a5f",
@@ -76,10 +77,11 @@ const sharedDefaultColors: SemanticColorScheme = {
   workspaceTagFill: "#1f4d4f",
   workspaceTagText: "#c7f0f2",
   textPrimary: "#edf2f7",
-  textSecondary: "#b8c2cc",
-  textTertiary: "#96a1ad",
-  textQuaternary: "#7f8a96",
+  textSecondary: "#c8d2dc",
+  textTertiary: "#6e7a86",
+  textQuaternary: "#5a6570",
   textMuted: "#7f8a96",
+  revsetPrefix: "#d78af5",
   fileFocusMarker: "#4f8cff",
   fileStatusAccent: "#d6842a",
   statusInfo: "#72b7ff",
@@ -89,6 +91,9 @@ const sharedDefaultColors: SemanticColorScheme = {
 };
 
 const lightDefaultColors: Partial<SemanticColorScheme> = {
+  chromeFillOne: "#f5f7fa",
+  chromeFillTwo: "#e8ecf0",
+  chromeFillThree: "#dce2e8",
   chromeBorderIdle: "#9aa6b2",
   chromeBorderFocus: "#0059d6",
   rowFocusedFill: "#d7e6ff",
@@ -105,10 +110,11 @@ const lightDefaultColors: Partial<SemanticColorScheme> = {
   workspaceTagFill: "#cbe9eb",
   workspaceTagText: "#12383a",
   textPrimary: "#13202b",
-  textSecondary: "#42515d",
-  textTertiary: "#52606c",
+  textSecondary: "#34424e",
+  textTertiary: "#72808c",
   textQuaternary: "#62707d",
   textMuted: "#62707d",
+  revsetPrefix: "#8b2fb8",
   fileFocusMarker: "#0059d6",
   fileStatusAccent: "#b56c00",
   statusInfo: "#0059d6",

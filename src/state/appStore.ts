@@ -9,6 +9,7 @@ import type {
 import {
   applyRepositoryData,
   cancelCommandState,
+  clearStatusMessage,
   closeFocusedRevision,
   dismissOldestError,
   createInitialState,
@@ -86,6 +87,9 @@ export function createAppStore(repoPath: string) {
       },
       cancelCommand() {
         mutate((currentState) => cancelCommandState(currentState));
+      },
+      clearStatusMessage() {
+        mutate((currentState) => clearStatusMessage(currentState));
       },
       dismissOldestError() {
         mutate((currentState) => dismissOldestError(currentState));

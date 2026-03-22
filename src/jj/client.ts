@@ -20,7 +20,7 @@ export class JjClient {
       "--color",
       "never",
       "--template",
-      `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
+      `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
     ]);
 
     const revisions = parseLogOutput(logOutput.stdout, workspaceNamesByChangeId);
@@ -155,6 +155,7 @@ export function parseLogOutput(
       commitId = "",
       rawDescription = "",
       rawBookmarks = "",
+      rawChangeIdPrefix = "",
     ] = rawLine.split(FIELD_SEPARATOR);
     const graphMatch = /^(?<graph>.*?)(?<change>[a-z0-9]+)$/.exec(graphAndChangeId);
     if (!graphMatch?.groups) {
@@ -169,6 +170,7 @@ export function parseLogOutput(
 
     revisions.push({
       changeId,
+      changeIdPrefixLength: rawChangeIdPrefix.trim().length || changeId.length,
       commitId: commitId.trim(),
       description: rawDescription.trim() || "(no description)",
       bookmarks: splitWords(rawBookmarks),

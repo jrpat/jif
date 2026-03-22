@@ -15,15 +15,17 @@ test("tokenizeCommandText keeps quoted segments together", () => {
 
 test("parseLogOutput groups graph continuation lines", () => {
   const output = [
-    "@  abcdefgh\u001f11111111\u001ffirst\u001fmain\u001f",
+    "@  abcdefgh\u001f11111111\u001ffirst\u001fmain\u001fabc\u001f",
     "|",
-    "○  bcdefghi\u001f22222222\u001fsecond\u001f\u001f",
+    "○  bcdefghi\u001f22222222\u001fsecond\u001f\u001fbcd\u001f",
   ].join("\n");
 
   const revisions = parseLogOutput(output, new Map());
   expect(revisions).toHaveLength(2);
   expect(revisions[0]?.graphTail).toEqual(["|"]);
   expect(revisions[0]?.bookmarks).toEqual(["main"]);
+  expect(revisions[0]?.changeIdPrefixLength).toBe(3);
+  expect(revisions[1]?.changeIdPrefixLength).toBe(3);
 });
 
 test("JjClient loads a real sample repository", async () => {

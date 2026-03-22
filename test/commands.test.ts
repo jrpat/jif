@@ -10,6 +10,7 @@ function createState(): AppState {
     revisions: [
       {
         changeId: "aaaaaaaa",
+        changeIdPrefixLength: 1,
         commitId: "11111111",
         description: "first",
         bookmarks: [],

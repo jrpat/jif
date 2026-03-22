@@ -24,6 +24,7 @@ function createState(): AppState {
     revisions: [
       {
         changeId: "aaaaaaaa",
+        changeIdPrefixLength: 1,
         commitId: "11111111",
         description: "first",
         bookmarks: ["main"],
@@ -35,6 +36,7 @@ function createState(): AppState {
       },
       {
         changeId: "bbbbbbbb",
+        changeIdPrefixLength: 1,
         commitId: "22222222",
         description: "second",
         bookmarks: [],

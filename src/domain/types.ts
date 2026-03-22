@@ -9,6 +9,7 @@ export type ChangedFile = Readonly<{
 
 export type RevisionSummary = Readonly<{
   changeId: string;
+  changeIdPrefixLength: number;
   commitId: string;
   description: string;
   bookmarks: readonly string[];

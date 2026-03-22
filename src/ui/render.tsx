@@ -1,5 +1,5 @@
-import type { ScrollBoxRenderable } from "@opentui/core";
-import { For, createEffect, createMemo, onMount } from "solid-js";
+import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core";
+import { For, createEffect, createMemo, onCleanup, onMount } from "solid-js";
 import { useKeyboard, useRenderer } from "@opentui/solid";
 import { getVisibleCommands, type CommandController } from "../commands/definitions.ts";
 import type { ResolvedAppConfig } from "../config/index.ts";
@@ -175,6 +175,14 @@ export function JifView(props: {
     });
   });
 
+  createEffect(() => {
+    const message = store.state.statusMessage;
+    if (message?.level === "success") {
+      const timer = setTimeout(() => store.actions.clearStatusMessage(), 5000);
+      onCleanup(() => clearTimeout(timer));
+    }
+  });
+
   onMount(() => {
     void refreshRepository();
   });
@@ -195,7 +203,6 @@ export function JifView(props: {
           void executeCurrentCommand(value);
         }}
       />
-      <box width="100%" height={1} backgroundColor={appBackground} />
       <scrollbox
         ref={logViewport}
         width="100%"
@@ -287,7 +294,7 @@ function CommandBar(props: {
   return (
     <box
       width="100%"
-      height={2}
+      height={3}
       backgroundColor={
         commandBarFocused()
           ? colors.chromeFillTwo
@@ -307,7 +314,7 @@ function CommandBar(props: {
         }
       >
         <box width={3} flexDirection="row" paddingLeft={1}>
-          <text fg={colors.textSecondary}>jj</text>
+          <text fg={colors.textTertiary}>jj</text>
         </box>
         <input
           flexGrow={1}
@@ -326,6 +333,7 @@ function CommandBar(props: {
           onSubmit={props.onSubmit as any}
         />
       </box>
+      <box width="100%" height={1} />
     </box>
   );
 }
@@ -463,24 +471,30 @@ function RevisionItem(props: {
         customBorderChars={borderPolicy.borderChars}
       >
         <box width="100%" flexDirection="row" gap={1}>
-          <text fg={isSelected ? colors.rowSelectedAccent : isFocused ? colors.chromeBorderFocus : colors.textPrimary}>
-            {revision.changeId}
-          </text>
+          <box flexDirection="row">
+            <text fg={isSelected ? colors.rowSelectedAccent : isFocused ? colors.chromeBorderFocus : colors.revsetPrefix} attributes={TextAttributes.BOLD}>
+              {revision.changeId.slice(0, revision.changeIdPrefixLength)}
+            </text>
+            <text fg={isSelected ? colors.rowSelectedAccent : isFocused ? colors.chromeBorderFocus : colors.textTertiary}>
+              {revision.changeId.slice(revision.changeIdPrefixLength)}
+            </text>
+          </box>
           {isCommandTarget ? (
             <text fg={colors.bookmarkTagText} bg={colors.rowCommandTargetBorder}>
               {" onto "}
             </text>
           ) : null}
+          <box flexGrow={1} />
           <For each={revision.bookmarks}>
             {(bookmark) => (
-              <text fg={colors.bookmarkTagText} bg={colors.bookmarkTagFill}>
+              <text fg={colors.workspaceTagText} bg={colors.workspaceTagFill}>
                 {` ${bookmark} `}
               </text>
             )}
           </For>
           <For each={revision.workspaces}>
             {(workspace) => (
-              <text fg={colors.workspaceTagText} bg={colors.workspaceTagFill}>
+              <text fg={colors.bookmarkTagText} bg={colors.bookmarkTagFill}>
                 {` ${workspace} `}
               </text>
             )}
@@ -587,7 +601,7 @@ function StatusArea(props: {
       ) : null}
       <For each={events}>
         {(event) => (
-          <box width="100%" backgroundColor={colors.chromeFillOne}>
+          <box width="100%">
             <text fg={statusColor(event.level, colors)} truncate>
               {`${new Date(event.createdAt).toLocaleTimeString()} ${event.text}`}
             </text>

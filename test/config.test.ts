@@ -15,8 +15,8 @@ test("resolveAppConfig resolves semantic colors for the default dark mode", () =
   expect(typeof resolved.colorScheme.semanticColors.rowSelectedFill).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.rowSelectedAccent).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.statusError).toBe("string");
-  expect(resolved.colorScheme.semanticColors.textTertiary).toBe("#96a1ad");
-  expect(resolved.colorScheme.semanticColors.textQuaternary).toBe("#7f8a96");
+  expect(resolved.colorScheme.semanticColors.textTertiary).toBe("#6e7a86");
+  expect(resolved.colorScheme.semanticColors.textQuaternary).toBe("#5a6570");
 });
 
 test("resolveAppConfig uses detected light mode for auto themes", () => {
@@ -26,7 +26,7 @@ test("resolveAppConfig uses detected light mode for auto themes", () => {
 
   expect(resolved.colorScheme.mode).toBe("light");
   expect(resolved.colorScheme.semanticColors.textPrimary).toBe("#13202b");
-  expect(resolved.colorScheme.semanticColors.textTertiary).toBe("#52606c");
+  expect(resolved.colorScheme.semanticColors.textTertiary).toBe("#72808c");
   expect(resolved.colorScheme.semanticColors.textQuaternary).toBe("#62707d");
 });
 
