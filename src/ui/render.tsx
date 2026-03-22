@@ -369,6 +369,7 @@ function CommandBar(props: {
           </box>
         ) : (
           <input
+            ref={(el: any) => el.editorView.setScrollMargin(0)}
             flexGrow={1}
             value={props.commandText}
             placeholder="subcommand (':' to type)"

@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Read(//private/tmp/**)",
-      "Bash(jj log:*)"
+      "Bash(jj log:*)",
+      "WebSearch",
+      "WebFetch(domain:opentui.com)",
+      "WebFetch(domain:deepwiki.com)"
     ]
   }
 }
