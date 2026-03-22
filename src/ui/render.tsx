@@ -6,13 +6,16 @@ import type { ResolvedAppConfig } from "../config/index.ts";
 import type { AppStore } from "../state/appStore.ts";
 import {
   commandCanExecute,
+  DRAFT_PLACEHOLDER,
   draftConfigs,
   getCommandTargetRevisionId,
+  getDisplayedCommandSegments,
   getDisplayedCommandText,
   getExpandedRevision,
   getFocusedRevision,
   getOperationAffectedRevisionIds,
   getSelectedRevisionIds,
+  type CommandSegment,
 } from "../state/store.ts";
 import type { JjClient } from "../jj/client.ts";
 import type { RevisionSummary } from "../domain/types.ts";
@@ -84,7 +87,6 @@ export function JifView(props: {
       }
 
       store.actions.startCommandDraft(draftConfigs.squash);
-      store.actions.pushEvent(`Composing squash for ${revision.changeId}`, "info");
     },
     startRebase() {
       const revision = getFocusedRevision(store.snapshot());
@@ -96,7 +98,6 @@ export function JifView(props: {
         try {
           const descendants = await client.resolveDescendants(revision.changeId);
           store.actions.startCommandDraft(draftConfigs.rebase, { descendantRevisionIds: descendants });
-          store.actions.pushEvent(`Composing rebase for ${revision.changeId}`, "info");
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           store.actions.pushEvent(message, "error");
@@ -124,7 +125,18 @@ export function JifView(props: {
     },
   };
 
-  const commandText = createMemo(() => getDisplayedCommandText(store.state));
+  const commandText = createMemo(() => {
+    store.state.focusedRevisionIndex;
+    store.state.commandDraft;
+    store.state.commandBar;
+    return getDisplayedCommandText(store.state);
+  });
+  const commandSegments = createMemo((): readonly CommandSegment[] | null => {
+    store.state.focusedRevisionIndex;
+    store.state.commandDraft;
+    store.state.commandBar;
+    return getDisplayedCommandSegments(store.state);
+  });
   const visibleCommands = createMemo(() => getVisibleCommands(store.state));
   const visibleEvents = createMemo(() => store.state.eventLog.slice(-3).reverse());
   const graphWidth = createMemo(() =>
@@ -211,6 +223,7 @@ export function JifView(props: {
         store={store}
         config={config}
         commandText={commandText()}
+        commandSegments={commandSegments()}
         onSubmit={(value) => {
           store.actions.setCommandBarText(value);
           void executeCurrentCommand(value);
@@ -298,11 +311,13 @@ function CommandBar(props: {
   store: AppStore;
   config: ResolvedAppConfig;
   commandText: string;
+  commandSegments: readonly CommandSegment[] | null;
   onSubmit: (value: string) => void;
 }) {
   const { store, config } = props;
   const colors = config.colorScheme.semanticColors;
   const commandBarFocused = createMemo(() => store.state.focusMode === "command");
+  const showSegments = () => props.commandSegments !== null && !commandBarFocused();
 
   return (
     <box
@@ -329,22 +344,41 @@ function CommandBar(props: {
         <box width={3} flexDirection="row" paddingLeft={1}>
           <text fg={colors.textTertiary}>jj</text>
         </box>
-        <input
-          flexGrow={1}
-          value={props.commandText}
-          placeholder="subcommand (':' to type)"
-          focused={commandBarFocused()}
-          backgroundColor={colors.chromeFillTwo}
-          focusedBackgroundColor={colors.chromeFillThree}
-          textColor={colors.textPrimary}
-          focusedTextColor={colors.textPrimary}
-          placeholderColor={commandBarFocused() ? colors.textQuaternary : colors.textTertiary}
-          cursorColor={colors.chromeBorderFocus}
-          onInput={(value) => {
-            store.actions.setCommandBarText(value);
-          }}
-          onSubmit={props.onSubmit as any}
-        />
+        {showSegments() ? (
+          <box flexGrow={1} flexDirection="row">
+            <For each={props.commandSegments!}>
+              {(segment) => (
+                <text
+                  fg={segment.style === "selected"
+                    ? colors.rowSelectedAccent
+                    : segment.style === "target"
+                      ? colors.chromeBorderFocus
+                      : segment.style === "placeholder"
+                        ? colors.chromeBorderFocus
+                        : colors.textPrimary}
+                  attributes={segment.style !== "command" ? TextAttributes.BOLD : undefined}
+                >
+                  {segment.text}
+                </text>
+              )}
+            </For>
+          </box>
+        ) : (
+          <input
+            flexGrow={1}
+            value={props.commandText}
+            placeholder="subcommand (':' to type)"
+            focused={commandBarFocused()}
+            textColor={colors.textPrimary}
+            focusedTextColor={colors.textPrimary}
+            placeholderColor={commandBarFocused() ? colors.textQuaternary : colors.textTertiary}
+            cursorColor={colors.chromeBorderFocus}
+            onInput={(value) => {
+              store.actions.setCommandBarText(value);
+            }}
+            onSubmit={props.onSubmit as any}
+          />
+        )}
       </box>
       <box width="100%" height={1} />
     </box>

@@ -9,15 +9,17 @@ import type {
   StatusLevel,
 } from "../domain/types.ts";
 
+export const DRAFT_PLACEHOLDER = "░░░░";
+
 export const draftConfigs = {
   rebase: {
     kind: "rebase" as const,
-    template: "rebase -r ${selected} -o ${target}",
+    template: "rebase -r ${selected} -d ${target}",
     badgeText: "onto",
   },
   squash: {
     kind: "squash" as const,
-    template: "squash --from ${selected} --into ${target}",
+    template: "squash -f ${selected} -t ${target}",
     badgeText: "into",
   },
 } satisfies Record<string, CommandDraftConfig>;
@@ -27,15 +29,48 @@ export function interpolateTemplate(
   vars: Record<string, string>,
 ): string {
   return template
-    .replace(/(?:\S+\s+)?\$\{(\w+)\}/g, (match, key) => {
-      const value = vars[key] ?? "";
-      if (value === "") {
-        return "";
-      }
-      return match.replace(`\${${key}}`, value);
-    })
+    .replace(/\$\{(\w+)\}/g, (_, key) => vars[key] || DRAFT_PLACEHOLDER)
     .replace(/\s+/g, " ")
     .trim();
+}
+
+export type CommandSegmentStyle = "command" | "selected" | "target" | "placeholder";
+
+export type CommandSegment = Readonly<{
+  text: string;
+  style: CommandSegmentStyle;
+}>;
+
+export function buildCommandSegments(
+  template: string,
+  vars: Record<string, string>,
+): readonly CommandSegment[] {
+  const segments: CommandSegment[] = [];
+  let lastIndex = 0;
+
+  for (const match of template.matchAll(/\$\{(\w+)\}/g)) {
+    const before = template.slice(lastIndex, match.index);
+    if (before) {
+      segments.push({ text: before, style: "command" });
+    }
+
+    const key = match[1]!;
+    const value = vars[key] ?? "";
+    if (value) {
+      segments.push({ text: value, style: key === "target" ? "target" : "selected" });
+    } else {
+      segments.push({ text: DRAFT_PLACEHOLDER, style: "placeholder" });
+    }
+
+    lastIndex = match.index! + match[0].length;
+  }
+
+  const after = template.slice(lastIndex);
+  if (after) {
+    segments.push({ text: after, style: "command" });
+  }
+
+  return segments;
 }
 
 export function createInitialState(repoPath: string): AppState {
@@ -210,6 +245,7 @@ export function cancelCommandState(state: AppState): AppState {
     focusMode: "revisions",
     commandBar: createEmptyCommandBar(),
     commandDraft: null,
+    statusMessage: state.commandDraft ? null : state.statusMessage,
   };
 }
 
@@ -394,10 +430,39 @@ export function getDisplayedCommandText(state: AppState): string {
     template = template.replace("-r", "-s");
   }
 
-  return interpolateTemplate(template, {
-    selected: draft.selectedRevisionIds.join(" "),
-    target: getCommandTargetRevisionId(state) ?? "",
+  const vars = {
+    selected: draft.selectedRevisionIds.map((id) => revisionPrefix(state, id)).join(" "),
+    target: revisionPrefix(state, getCommandTargetRevisionId(state) ?? ""),
+  };
+
+  return interpolateTemplate(template, vars);
+}
+
+export function getDisplayedCommandSegments(state: AppState): readonly CommandSegment[] | null {
+  if (state.commandBar.manual || !state.commandDraft) {
+    return null;
+  }
+
+  const draft = state.commandDraft;
+  let template = draft.config.template;
+
+  if (draft.config.kind === "rebase" && draft.includeDescendants) {
+    template = template.replace("-r", "-s");
+  }
+
+  return buildCommandSegments(template, {
+    selected: draft.selectedRevisionIds.map((id) => revisionPrefix(state, id)).join(" "),
+    target: revisionPrefix(state, getCommandTargetRevisionId(state) ?? ""),
   });
+}
+
+function revisionPrefix(state: AppState, changeId: string): string {
+  if (!changeId) {
+    return "";
+  }
+
+  const rev = state.revisions.find((r) => r.changeId === changeId);
+  return rev ? changeId.slice(0, rev.changeIdPrefixLength) : changeId;
 }
 
 export function getOperationAffectedRevisionIds(state: AppState): ReadonlySet<string> {

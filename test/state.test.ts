@@ -82,10 +82,10 @@ test("rebase command text updates when descendants are toggled", () => {
   let state = createState();
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
   state = moveFocus(state, 1);
-  expect(getDisplayedCommandText(state)).toBe("rebase -r aaaaaaaa -o bbbbbbbb");
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
 
   state = toggleRebaseDescendants(state, ["aaaaaaaa", "bbbbbbbb"]);
-  expect(getDisplayedCommandText(state)).toBe("rebase -s aaaaaaaa -o bbbbbbbb");
+  expect(getDisplayedCommandText(state)).toBe("rebase -s a -d b");
 });
 
 test("dismissOldestError clears state.error first", () => {
@@ -139,9 +139,9 @@ test("selected revision ids come from the active command draft", () => {
 test("squash command text updates when target is selected", () => {
   let state = createState();
   state = startCommandDraft(state, draftConfigs.squash);
-  expect(getDisplayedCommandText(state)).toBe("squash --from aaaaaaaa");
+  expect(getDisplayedCommandText(state)).toBe("squash -f a -t ░░░░");
   expect(getSelectedRevisionIds(state).has("aaaaaaaa")).toBeTrue();
 
   state = moveFocus(state, 1);
-  expect(getDisplayedCommandText(state)).toBe("squash --from aaaaaaaa --into bbbbbbbb");
+  expect(getDisplayedCommandText(state)).toBe("squash -f a -t b");
 });
