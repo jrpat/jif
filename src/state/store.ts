@@ -269,6 +269,10 @@ export function startCommandDraft(
   return {
     ...state,
     commandBar: createEmptyCommandBar(),
+    focusedRevisionIndex: clampIndex(
+      state.focusedRevisionIndex + 1,
+      state.revisions.length,
+    ),
     commandDraft: {
       config,
       selectedRevisionIds: [revision.changeId],
@@ -366,7 +370,7 @@ export function dismissOldestError(state: AppState): AppState {
 
   const oldestErrorIndex = state.eventLog.findIndex((entry) => entry.level === "error");
   if (oldestErrorIndex === -1) {
-    if (state.statusMessage?.level === "error") {
+    if (state.statusMessage !== null) {
       return { ...state, statusMessage: null };
     }
     return state;

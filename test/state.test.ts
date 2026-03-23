@@ -78,10 +78,17 @@ test("command bar editing is controlled by reducer state", () => {
   expect(state.focusMode).toBe("revisions");
 });
 
+test("startCommandDraft advances focus to parent revision", () => {
+  let state = createState();
+  expect(state.focusedRevisionIndex).toBe(0);
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
+  expect(state.focusedRevisionIndex).toBe(1);
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+});
+
 test("rebase command text updates when descendants are toggled", () => {
   let state = createState();
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
-  state = moveFocus(state, 1);
   expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
 
   state = toggleRebaseDescendants(state, ["aaaaaaaa", "bbbbbbbb"]);
@@ -120,10 +127,17 @@ test("dismissOldestError clears error statusMessage even with no error events", 
   expect(state.statusMessage).toBeNull();
 });
 
-test("dismissOldestError is a no-op when no errors exist", () => {
+test("dismissOldestError clears success statusMessage when no errors exist", () => {
   let state = createState();
   state = pushEvent(state, "all good", "success");
+  expect(state.statusMessage?.level).toBe("success");
 
+  state = dismissOldestError(state);
+  expect(state.statusMessage).toBeNull();
+});
+
+test("dismissOldestError is a no-op when no status message exists", () => {
+  const state = createState();
   const next = dismissOldestError(state);
   expect(next).toBe(state);
 });
@@ -139,9 +153,6 @@ test("selected revision ids come from the active command draft", () => {
 test("squash command text updates when target is selected", () => {
   let state = createState();
   state = startCommandDraft(state, draftConfigs.squash);
-  expect(getDisplayedCommandText(state)).toBe("squash -f a -t ░░░░");
-  expect(getSelectedRevisionIds(state).has("aaaaaaaa")).toBeTrue();
-
-  state = moveFocus(state, 1);
   expect(getDisplayedCommandText(state)).toBe("squash -f a -t b");
+  expect(getSelectedRevisionIds(state).has("aaaaaaaa")).toBeTrue();
 });

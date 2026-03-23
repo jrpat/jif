@@ -13,6 +13,8 @@ export type CommandController = Readonly<{
   toggleSelection: () => void;
   toggleShortFlags: () => void;
   toggleRebaseDescendants: () => void;
+  undo: () => void;
+  redo: () => void;
 }>;
 
 export type CommandDefinition = Readonly<{
@@ -139,6 +141,26 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     keys: ["_"],
     when: (state) => state.focusMode !== "command",
     run: (controller) => controller.toggleShortFlags(),
+    group: "global",
+  },
+  {
+    id: "undo",
+    title: "Undo",
+    description: "Undo the last operation",
+    canonicalKeys: ["u"],
+    keys: ["u"],
+    when: (state) => state.focusMode !== "command",
+    run: (controller) => controller.undo(),
+    group: "global",
+  },
+  {
+    id: "redo",
+    title: "Redo",
+    description: "Redo the last undone operation",
+    canonicalKeys: ["U"],
+    keys: ["U"],
+    when: (state) => state.focusMode !== "command",
+    run: (controller) => controller.redo(),
     group: "global",
   },
   {

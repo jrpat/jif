@@ -120,6 +120,12 @@ export function JifView(props: {
     toggleShortFlags() {
       store.actions.toggleShortFlags();
     },
+    undo() {
+      void runJjCommand("undo");
+    },
+    redo() {
+      void runJjCommand("redo");
+    },
     toggleRebaseDescendants() {
       const draft = store.snapshot().commandDraft;
       if (draft?.config.kind !== "rebase") {
@@ -316,6 +322,20 @@ export function JifView(props: {
     }
   }
 
+  async function runJjCommand(commandText: string) {
+    store.actions.setLoading(true);
+    try {
+      const resultMessage = await client.executeCommand(commandText);
+      store.actions.cancelCommand();
+      store.actions.pushEvent(resultMessage, "success");
+      await refreshRepository();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      store.actions.pushEvent(message, "error");
+      store.actions.setLoading(false);
+    }
+  }
+
   async function refreshRepository() {
     store.actions.setLoading(true);
     try {
@@ -451,8 +471,12 @@ function RevisionItem(props: {
     detailRowCount: detailRowCount(),
     ownsTop: borderPolicy().ownsTop,
     ownsBottom: borderPolicy().ownsBottom,
-    previousGraphHead: props.index > 0 ? state.revisions[props.index - 1]?.graphHead ?? null : null,
-    nextGraphHead: state.revisions[props.index + 1]?.graphHead ?? null,
+    previousGraphBottom: (() => {
+      const prev = props.index > 0 ? state.revisions[props.index - 1] : null;
+      if (!prev) return null;
+      return prev.graphTail.at(-1) ?? prev.graphHead;
+    })(),
+    hasNextRevision: props.index + 1 < state.revisions.length,
   }));
   const borderColor = createMemo(() =>
     rowState() === "selected"
@@ -544,7 +568,7 @@ function RevisionItem(props: {
             </text>
           </box>
           {isCommandTarget() ? (
-            <text fg={colors().bookmarkTagText} bg={colors().rowCommandTargetBorder}>
+            <text fg={colors().chromeFillOne} bg={colors().chromeBorderFocus}>
               {` ${state.commandDraft?.config.badgeText ?? "onto"} `}
             </text>
           ) : null}

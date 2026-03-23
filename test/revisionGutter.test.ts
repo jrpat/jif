@@ -9,6 +9,7 @@ test("deriveGraphContinuationLine turns node markers into continuations", () => 
   expect(deriveGraphContinuationLine("| ○")).toBe("│ │");
   expect(deriveGraphContinuationLine("│ ◆")).toBe("│ │");
   expect(deriveGraphContinuationLine("  *")).toBe("  │");
+  expect(deriveGraphContinuationLine("×  ")).toBe("│");
   expect(deriveGraphContinuationLine("├─╯")).toBe("│");
   expect(deriveGraphContinuationLine("╭─╮")).toBe("│ │");
 });
@@ -20,11 +21,11 @@ test("buildRevisionGutterPlan promotes the first crossover row into the subtitle
     detailRowCount: 2,
     ownsTop: true,
     ownsBottom: true,
-    previousGraphHead: "○  ",
-    nextGraphHead: "○  ",
+    previousGraphBottom: "○  ",
+    hasNextRevision: true,
   });
 
-  expect(plan.topDivider).toBe("│ │");
+  expect(plan.topDivider).toBe("│");
   expect(plan.title).toBe("│ ○");
   expect(plan.subtitle).toBe("├─╯");
   expect(plan.tail).toEqual([]);
@@ -39,8 +40,8 @@ test("buildRevisionGutterPlan keeps a vertical directly above a node on divider 
     detailRowCount: 0,
     ownsTop: true,
     ownsBottom: true,
-    previousGraphHead: "○  ",
-    nextGraphHead: "○  ",
+    previousGraphBottom: "○  ",
+    hasNextRevision: true,
   });
   const currentRowPlan = buildRevisionGutterPlan({
     graphHead: "○  ",
@@ -48,8 +49,8 @@ test("buildRevisionGutterPlan keeps a vertical directly above a node on divider 
     detailRowCount: 0,
     ownsTop: false,
     ownsBottom: false,
-    previousGraphHead: "│ ○  ",
-    nextGraphHead: "○  ",
+    previousGraphBottom: "├─╯",
+    hasNextRevision: true,
   });
 
   expect(previousRowPlan.bottomDivider).toBe("│");
@@ -65,12 +66,45 @@ test("buildRevisionGutterPlan leaves edge dividers blank at the list boundaries"
     detailRowCount: 0,
     ownsTop: true,
     ownsBottom: true,
-    previousGraphHead: null,
-    nextGraphHead: null,
+    previousGraphBottom: null,
+    hasNextRevision: false,
   });
 
   expect(plan.topDivider).toBe("");
   expect(plan.title).toBe("@");
   expect(plan.subtitle).toBe("│");
   expect(plan.bottomDivider).toBe("");
+});
+
+test("topDivider uses previous revision graph topology, not current graphHead", () => {
+  // When the current revision merges a branch (graphHead = "○─╯"),
+  // the topDivider should still show both branches from the previous revision
+  const plan = buildRevisionGutterPlan({
+    graphHead: "○─╯",
+    graphTail: [],
+    detailRowCount: 0,
+    ownsTop: true,
+    ownsBottom: true,
+    previousGraphBottom: "│ │",
+    hasNextRevision: true,
+  });
+
+  expect(plan.topDivider).toBe("│ │");
+  expect(plan.bottomDivider).toBe("│");
+});
+
+test("bottomDivider uses current tail continuation, not next graphHead", () => {
+  // When the next revision merges a branch, the bottomDivider should still
+  // show the branch as it exists at the current revision's level
+  const plan = buildRevisionGutterPlan({
+    graphHead: "○ │",
+    graphTail: ["│ │"],
+    detailRowCount: 0,
+    ownsTop: false,
+    ownsBottom: true,
+    previousGraphBottom: null,
+    hasNextRevision: true,
+  });
+
+  expect(plan.bottomDivider).toBe("│ │");
 });

@@ -49,3 +49,17 @@ test("getTextCommand respects command visibility state", () => {
   expect(getTextCommand("s", createState())).toBeNull();
   expect(getTextCommand("s", rebaseState)?.id).toBe("rebase-descendants");
 });
+
+test("undo and redo commands resolve in normal mode but not command mode", () => {
+  const state = createState();
+  expect(getTextCommand("u", state)?.id).toBe("undo");
+  expect(getTextCommand("U", state)?.id).toBe("redo");
+
+  const commandState: AppState = {
+    ...state,
+    focusMode: "command",
+    commandBar: { ...state.commandBar, manual: true },
+  };
+  expect(getTextCommand("u", commandState)).toBeNull();
+  expect(getTextCommand("U", commandState)).toBeNull();
+});

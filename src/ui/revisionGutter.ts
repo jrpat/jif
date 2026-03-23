@@ -8,7 +8,7 @@ export type RevisionGutterPlan = Readonly<{
 }>;
 
 const GRAPH_VERTICAL = "│";
-const NODE_MARKERS = new Set(["@", "○", "◆", "*"]);
+const NODE_MARKERS = new Set(["@", "○", "◆", "*", "×"]);
 const DOWNWARD_CONTINUATION_CHARS = new Set([
   "|",
   "│",
@@ -52,8 +52,8 @@ export function buildRevisionGutterPlan(options: Readonly<{
   detailRowCount: number;
   ownsTop: boolean;
   ownsBottom: boolean;
-  previousGraphHead: string | null;
-  nextGraphHead: string | null;
+  previousGraphBottom: string | null;
+  hasNextRevision: boolean;
 }>): RevisionGutterPlan {
   const title = normalizeGraphLine(options.graphHead);
   const titleContinuation = deriveGraphContinuationLine(title);
@@ -61,16 +61,13 @@ export function buildRevisionGutterPlan(options: Readonly<{
   const subtitle = graphTail[0] ?? titleContinuation;
   const tail = graphTail.slice(1);
   const detailContinuation = deriveGraphContinuationLine(graphTail.at(-1) ?? title);
-  const bottomDivider = options.nextGraphHead === null
-    ? ""
-    : deriveGraphContinuationLine(options.nextGraphHead);
 
   return {
-    topDivider: options.ownsTop ? (options.previousGraphHead !== null ? titleContinuation : "") : null,
+    topDivider: options.ownsTop ? (options.previousGraphBottom !== null ? deriveGraphContinuationLine(options.previousGraphBottom) : "") : null,
     title,
     subtitle,
     tail,
     detail: Array.from({ length: options.detailRowCount }, () => detailContinuation),
-    bottomDivider: options.ownsBottom ? bottomDivider : null,
+    bottomDivider: options.ownsBottom ? (options.hasNextRevision ? detailContinuation : "") : null,
   };
 }
