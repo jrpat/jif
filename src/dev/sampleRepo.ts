@@ -1,9 +1,11 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import type { SampleRepoMaterialization } from "../domain/types.ts";
 import { runCommand } from "../jj/process.ts";
+import { copyDir, resolveFixtureCache } from "./fixtureCache.ts";
 
 const DEFAULT_FIXTURE = resolve("test/fixtures/sample-repo.jsonl");
+const DEFAULT_CACHE_ROOT = resolve(".tmp/cache");
 
 type JsonlOperation =
   | Readonly<{
@@ -111,6 +113,44 @@ export async function materializeSampleRepo(options?: {
   return {
     repoPath,
     workspacePaths: Object.freeze(Object.fromEntries(workspacePaths)),
+  };
+}
+
+export async function materializeSampleRepoCached(options?: {
+  baseDir?: string;
+  fixturePath?: string;
+  cacheRoot?: string;
+}): Promise<SampleRepoMaterialization> {
+  const fixturePath = options?.fixturePath ?? DEFAULT_FIXTURE;
+  const cacheRoot = options?.cacheRoot ?? DEFAULT_CACHE_ROOT;
+  const baseDir =
+    options?.baseDir ?? (await mktempDir(join(process.cwd(), ".tmp"), "sample-repo-"));
+
+  const { cacheDir, isHit } = await resolveFixtureCache({ fixturePath, cacheRoot });
+
+  if (isHit) {
+    await copyDir(cacheDir, baseDir);
+  } else {
+    await materializeSampleRepo({ baseDir, fixturePath });
+    await mkdir(cacheRoot, { recursive: true });
+    await copyDir(baseDir, cacheDir);
+  }
+
+  const workspacePaths: Record<string, string> = { default: join(baseDir, "repo") };
+  try {
+    const entries = await readdir(baseDir);
+    for (const entry of entries) {
+      if (entry !== "repo") {
+        workspacePaths[entry.replace(/-workspace$/, "")] = join(baseDir, entry);
+      }
+    }
+  } catch {
+    // Only the default workspace
+  }
+
+  return {
+    repoPath: join(baseDir, "repo"),
+    workspacePaths: Object.freeze(workspacePaths),
   };
 }
 
