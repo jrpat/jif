@@ -28,6 +28,7 @@ import {
   buildRevisionGutterPlan,
   measureGraphLineWidth,
 } from "./revisionGutter.ts";
+import { scrollToKeepChildVisible } from "./scroll.ts";
 
 export function JifView(props: {
   store: AppStore;
@@ -199,6 +200,9 @@ export function JifView(props: {
     command.run(controller);
   }, { release: true });
 
+  let prevFocusedIndex = store.state.focusedRevisionIndex;
+  let scrollVersion = 0;
+
   createEffect(() => {
     const focusedRevision = getFocusedRevision(store.state);
     if (!focusedRevision || !logViewport) {
@@ -206,11 +210,21 @@ export function JifView(props: {
     }
 
     const focusedIndex = store.state.focusedRevisionIndex;
-    const targetIndex = Math.min(focusedIndex + config.log.scrollMargin, store.state.revisions.length - 1);
-    const targetRevision = store.state.revisions[targetIndex];
+    const direction = focusedIndex >= prevFocusedIndex ? "down" : "up";
+    prevFocusedIndex = focusedIndex;
 
-    queueMicrotask(() => {
-      logViewport?.scrollChildIntoView(`revision-${(targetRevision ?? focusedRevision).changeId}`);
+    const marginRevisionId = (() => {
+      const margin = config.log.scrollMargin;
+      const idx = direction === "down"
+        ? Math.min(focusedIndex + margin, store.state.revisions.length - 1)
+        : Math.max(focusedIndex - margin, 0);
+      return (store.state.revisions[idx] ?? focusedRevision).changeId;
+    })();
+
+    const version = ++scrollVersion;
+    renderer.idle().then(() => {
+      if (version !== scrollVersion || !logViewport) return;
+      scrollToKeepChildVisible(logViewport, `revision-${marginRevisionId}`, direction);
     });
   });
 
@@ -755,3 +769,4 @@ function padRight(value: string, length: number): string {
 
   return `${value}${" ".repeat(length - value.length)}`;
 }
+
