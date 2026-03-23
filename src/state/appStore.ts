@@ -1,5 +1,5 @@
 import { createRoot } from "solid-js";
-import { createStore, unwrap } from "solid-js/store";
+import { createStore, reconcile, unwrap } from "solid-js/store";
 import type {
   AppState,
   ChangedFile,
@@ -42,7 +42,7 @@ export function createAppStore(repoPath: string, options?: { useShortFlags?: boo
   });
 
   function replaceState(nextState: AppState) {
-    setState(nextState as AppState);
+    setState(reconcile(nextState, { key: "changeId" }));
   }
 
   function mutate(recipe: (currentState: AppState) => AppState) {
