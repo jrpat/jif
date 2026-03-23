@@ -1,8 +1,9 @@
-import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core";
+import { TextAttributes, CliRenderEvents, type ScrollBoxRenderable } from "@opentui/core";
 import { For, createEffect, createMemo, onCleanup, onMount } from "solid-js";
+import { createStore, reconcile } from "solid-js/store";
 import { useKeyboard, useRenderer } from "@opentui/solid";
 import { getVisibleCommands, type CommandController } from "../commands/definitions.ts";
-import type { ResolvedAppConfig } from "../config/index.ts";
+import { resolveAppConfig, type AppConfig, type ResolvedAppConfig, type ResolvedThemeMode } from "../config/index.ts";
 import type { AppStore } from "../state/appStore.ts";
 import {
   commandCanExecute,
@@ -32,12 +33,20 @@ export function JifView(props: {
   store: AppStore;
   client: JjClient;
   config: ResolvedAppConfig;
+  rawConfig: AppConfig;
 }) {
-  const { store, client, config } = props;
-  const appBackground =
-    config.colorScheme.mode === "light" ? "#f5f7fa" : "#0f1419";
+  const { store, client, rawConfig } = props;
+  const [config, setConfig] = createStore<ResolvedAppConfig>(props.config);
   const renderer = useRenderer();
   let logViewport: ScrollBoxRenderable | undefined;
+
+  onMount(() => {
+    const handleThemeMode = (mode: ResolvedThemeMode) => {
+      setConfig(reconcile(resolveAppConfig(rawConfig, { detectedThemeMode: mode })));
+    };
+    renderer.on(CliRenderEvents.THEME_MODE, handleThemeMode);
+    onCleanup(() => renderer.off(CliRenderEvents.THEME_MODE, handleThemeMode));
+  });
 
   const controller: CommandController = {
     moveFocus(delta: number) {
@@ -222,7 +231,7 @@ export function JifView(props: {
       width="100%"
       height="100%"
       flexDirection="column"
-      backgroundColor={appBackground}
+      backgroundColor={config.colorScheme.mode === "light" ? "#f5f7fa" : "#0f1419"}
     >
       <CommandBar
         store={store}
@@ -448,23 +457,29 @@ function RevisionItem(props: {
     previousGraphHead: props.index > 0 ? state.revisions[props.index - 1]?.graphHead ?? null : null,
     nextGraphHead: state.revisions[props.index + 1]?.graphHead ?? null,
   });
-  const borderColor = rowState === "selected"
-    ? colors.rowSelectedAccent
-    : rowState === "focused"
-      ? colors.chromeBorderFocus
-      : isCommandTarget
-      ? colors.rowCommandTargetBorder
-      : colors.chromeBorderIdle;
-  const titleGraphColor = isSelected
-    ? colors.rowSelectedAccent
-    : isFocused
-      ? colors.chromeBorderFocus
-      : markerColor(revision, colors);
-  const continuationGraphColor = isSelected
-    ? colors.rowSelectedAccent
-    : isFocused
-      ? colors.chromeBorderFocus
-      : colors.textMuted;
+  const borderColor = createMemo(() =>
+    rowState === "selected"
+      ? colors.rowSelectedAccent
+      : rowState === "focused"
+        ? colors.chromeBorderFocus
+        : isCommandTarget
+        ? colors.rowCommandTargetBorder
+        : colors.chromeBorderIdle
+  );
+  const titleGraphColor = createMemo(() =>
+    isSelected
+      ? colors.rowSelectedAccent
+      : isFocused
+        ? colors.chromeBorderFocus
+        : markerColor(revision, colors)
+  );
+  const continuationGraphColor = createMemo(() =>
+    isSelected
+      ? colors.rowSelectedAccent
+      : isFocused
+        ? colors.chromeBorderFocus
+        : colors.textMuted
+  );
 
   return (
     <box
@@ -475,30 +490,30 @@ function RevisionItem(props: {
     >
       <box width={graphWidth} flexDirection="column">
         {gutterPlan.topDivider !== null ? (
-          <text fg={continuationGraphColor}>
+          <text fg={continuationGraphColor()}>
             {padRight(gutterPlan.topDivider, graphWidth)}
           </text>
         ) : null}
-        <text fg={titleGraphColor}>{padRight(gutterPlan.title, graphWidth)}</text>
-        <text fg={continuationGraphColor}>
+        <text fg={titleGraphColor()}>{padRight(gutterPlan.title, graphWidth)}</text>
+        <text fg={continuationGraphColor()}>
           {padRight(gutterPlan.subtitle, graphWidth)}
         </text>
         <For each={gutterPlan.tail}>
           {(graphLine) => (
-            <text fg={continuationGraphColor}>
+            <text fg={continuationGraphColor()}>
               {padRight(graphLine, graphWidth)}
             </text>
           )}
         </For>
         <For each={gutterPlan.detail}>
           {(graphLine) => (
-            <text fg={continuationGraphColor}>
+            <text fg={continuationGraphColor()}>
               {padRight(graphLine, graphWidth)}
             </text>
           )}
         </For>
         {gutterPlan.bottomDivider !== null ? (
-          <text fg={continuationGraphColor}>
+          <text fg={continuationGraphColor()}>
             {padRight(gutterPlan.bottomDivider, graphWidth)}
           </text>
         ) : null}
@@ -519,7 +534,7 @@ function RevisionItem(props: {
         }
         border={borderPolicy.borderSides}
         borderStyle="single"
-        borderColor={borderColor}
+        borderColor={borderColor()}
         customBorderChars={borderPolicy.borderChars}
       >
         <box width="100%" flexDirection="row" gap={1}>

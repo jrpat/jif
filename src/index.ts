@@ -9,10 +9,10 @@ export async function main(argv: readonly string[]) {
   const useLongFlags = argv.includes("--long-flags");
   const explicitRepoPath = readFlagValue(argv, "--repo");
   const detectedThemeMode = await detectTerminalThemeMode();
-  const loaded = await loadAppConfig({ detectedThemeMode });
+  const { raw: rawConfig, resolved: loadedConfig } = await loadAppConfig({ detectedThemeMode });
   const config = useLongFlags
-    ? { ...loaded, commands: { ...loaded.commands, shortFlags: false } }
-    : loaded;
+    ? { ...loadedConfig, commands: { ...loadedConfig.commands, shortFlags: false } }
+    : loadedConfig;
 
   const repoPath = explicitRepoPath
     ? resolve(explicitRepoPath)
@@ -22,7 +22,7 @@ export async function main(argv: readonly string[]) {
       })).repoPath
     : process.cwd();
 
-  await runJifApplication(repoPath, config);
+  await runJifApplication(repoPath, config, rawConfig);
 }
 
 async function ensureRuntimeTempDir(): Promise<string> {

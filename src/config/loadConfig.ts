@@ -19,7 +19,7 @@ const CONFIG_CANDIDATES = [
 export async function loadAppConfig(options: Readonly<{
   projectRoot?: string;
   detectedThemeMode?: ResolvedThemeMode | null;
-}> = {}): Promise<ResolvedAppConfig> {
+}> = {}): Promise<{ raw: AppConfig; resolved: ResolvedAppConfig }> {
   const projectRoot = options.projectRoot ?? resolve(import.meta.dir, "../..");
   const detectedThemeMode = options.detectedThemeMode ?? null;
 
@@ -30,11 +30,11 @@ export async function loadAppConfig(options: Readonly<{
     }
 
     const module = await import(`${pathToFileURL(configPath).href}?t=${Date.now()}`);
-    const config = (module.default ?? module.config ?? defaultAppConfig) as AppConfig;
-    return resolveAppConfig(config, { detectedThemeMode });
+    const raw = (module.default ?? module.config ?? defaultAppConfig) as AppConfig;
+    return { raw, resolved: resolveAppConfig(raw, { detectedThemeMode }) };
   }
 
-  return resolveAppConfig(defaultAppConfig, { detectedThemeMode });
+  return { raw: defaultAppConfig, resolved: resolveAppConfig(defaultAppConfig, { detectedThemeMode }) };
 }
 
 async function fileExists(path: string): Promise<boolean> {
