@@ -2,47 +2,86 @@ import { expect, test } from "bun:test";
 import {
   defaultAppConfig,
   resolveAppConfig,
-  resolveThemeMode,
+  FALLBACK_PALETTE_DARK,
+  FALLBACK_PALETTE_LIGHT,
   type AppConfig,
 } from "../src/config/index.ts";
 
-test("resolveAppConfig resolves semantic colors for the default dark mode", () => {
-  const resolved = resolveAppConfig(defaultAppConfig);
+test("resolveAppConfig resolves semantic colors from dark fallback palette", () => {
+  const resolved = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
 
-  expect(resolved.colorScheme.mode).toBe("dark");
-  expect(resolved.colorScheme.semanticColors.chromeFillOne).toBe("#0f1419");
+  expect(typeof resolved.colorScheme.semanticColors.chromeFillOne).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.graphWorkingCopy).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.rowSelectedFill).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.rowSelectedAccent).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.statusError).toBe("string");
-  expect(resolved.colorScheme.semanticColors.textTertiary).toBe("#6e7a86");
-  expect(resolved.colorScheme.semanticColors.textQuaternary).toBe("#5a6570");
 });
 
-test("resolveAppConfig uses detected light mode for auto themes", () => {
-  const resolved = resolveAppConfig(defaultAppConfig, {
-    detectedThemeMode: "light",
+test("resolveAppConfig produces different colors for light vs dark palettes", () => {
+  const dark = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
+  const light = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_LIGHT,
   });
 
-  expect(resolved.colorScheme.mode).toBe("light");
-  expect(resolved.colorScheme.semanticColors.textPrimary).toBe("#13202b");
-  expect(resolved.colorScheme.semanticColors.textTertiary).toBe("#72808c");
-  expect(resolved.colorScheme.semanticColors.textQuaternary).toBe("#62707d");
+  expect(dark.colorScheme.semanticColors.chromeFillOne).not.toBe(
+    light.colorScheme.semanticColors.chromeFillOne,
+  );
+  expect(dark.colorScheme.semanticColors.textPrimary).not.toBe(
+    light.colorScheme.semanticColors.textPrimary,
+  );
 });
 
-test("resolveAppConfig honors explicit dark mode over detection", () => {
+test("resolveAppConfig applies user hex overrides", () => {
   const config: AppConfig = {
     colorScheme: {
-      mode: "dark",
+      colors: {
+        statusError: "#ff0000",
+      },
     },
   };
 
   const resolved = resolveAppConfig(config, {
-    detectedThemeMode: "light",
+    palette: FALLBACK_PALETTE_DARK,
   });
 
-  expect(resolved.colorScheme.mode).toBe("dark");
-  expect(resolved.colorScheme.semanticColors.textPrimary).toBe("#edf2f7");
+  expect(resolved.colorScheme.semanticColors.statusError).toBe("#ff0000");
+});
+
+test("resolveAppConfig applies user palette ref overrides", () => {
+  const config: AppConfig = {
+    colorScheme: {
+      colors: {
+        chromeBorderFocus: { source: "cyan", opacity: 1.0 },
+      },
+    },
+  };
+
+  const resolved = resolveAppConfig(config, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
+
+  // Cyan in the dark fallback palette is #00cdcd
+  expect(resolved.colorScheme.semanticColors.chromeBorderFocus).toBe("#00cdcd");
+});
+
+test("resolveAppConfig blends colors at sub-1.0 opacity against background", () => {
+  const resolved = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
+
+  // chromeFillOne is background @ 1.0 → should be the background color directly
+  expect(resolved.colorScheme.semanticColors.chromeFillOne).toBe("#000000");
+
+  // chromeFillTwo is foreground @ 0.08 → should be very close to background
+  const fillTwo = resolved.colorScheme.semanticColors.chromeFillTwo!;
+  expect(fillTwo).not.toBe("#000000");
+  expect(fillTwo).not.toBe("#e5e5e5");
+  // Should be a very dark gray (foreground #e5e5e5 at 8% over #000000)
+  expect(fillTwo.startsWith("#")).toBe(true);
 });
 
 test("resolveAppConfig defaults log.scrollMargin to 1", () => {
@@ -51,8 +90,18 @@ test("resolveAppConfig defaults log.scrollMargin to 1", () => {
   expect(resolved.log.scrollMargin).toBe(1);
 });
 
-test("resolveThemeMode falls back to detected mode for auto", () => {
-  expect(resolveThemeMode("auto", "light")).toBe("light");
-  expect(resolveThemeMode(undefined, "dark")).toBe("dark");
-  expect(resolveThemeMode("auto", null)).toBe("dark");
+test("resolveAppConfig without palette falls back to dark xterm defaults", () => {
+  const resolved = resolveAppConfig(defaultAppConfig);
+
+  // Should produce the same result as explicitly passing the dark fallback
+  const withExplicit = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
+
+  expect(resolved.colorScheme.semanticColors.chromeFillOne).toBe(
+    withExplicit.colorScheme.semanticColors.chromeFillOne,
+  );
+  expect(resolved.colorScheme.semanticColors.textPrimary).toBe(
+    withExplicit.colorScheme.semanticColors.textPrimary,
+  );
 });

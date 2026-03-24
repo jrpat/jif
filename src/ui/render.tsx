@@ -1,9 +1,9 @@
 import { TextAttributes, CliRenderEvents, type ScrollBoxRenderable } from "@opentui/core";
-import { For, createEffect, createMemo, createRenderEffect, onCleanup, onMount } from "solid-js";
+import { For, Show, createEffect, createMemo, createRenderEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { useKeyboard, useRenderer } from "@opentui/solid";
 import { getVisibleCommands, type CommandController } from "../commands/definitions.ts";
-import { resolveAppConfig, type AppConfig, type ResolvedAppConfig, type ResolvedThemeMode } from "../config/index.ts";
+import { resolveAppConfig, type AppConfig, type ResolvedAppConfig } from "../config/index.ts";
 import type { AppStore } from "../state/appStore.ts";
 import {
   commandCanExecute,
@@ -38,12 +38,25 @@ export function JifView(props: {
 }) {
   const { store, client, rawConfig } = props;
   const [config, setConfig] = createStore<ResolvedAppConfig>(props.config);
+  const [ready, setReady] = createSignal(false);
   const renderer = useRenderer();
   let logViewport: ScrollBoxRenderable | undefined;
 
+  async function detectAndApplyPalette() {
+    try {
+      const palette = await renderer.getPalette({ size: 16 });
+      setConfig(reconcile(resolveAppConfig(rawConfig, { palette })));
+    } catch {
+      // Keep current (fallback) colors
+    }
+  }
+
   onMount(() => {
-    const handleThemeMode = (mode: ResolvedThemeMode) => {
-      setConfig(reconcile(resolveAppConfig(rawConfig, { detectedThemeMode: mode })));
+    void detectAndApplyPalette().then(() => setReady(true));
+
+    const handleThemeMode = () => {
+      renderer.clearPaletteCache();
+      void detectAndApplyPalette();
     };
     renderer.on(CliRenderEvents.THEME_MODE, handleThemeMode);
     onCleanup(() => renderer.off(CliRenderEvents.THEME_MODE, handleThemeMode));
@@ -242,11 +255,12 @@ export function JifView(props: {
   });
 
   return (
+    <Show when={ready()}>
     <box
       width="100%"
       height="100%"
       flexDirection="column"
-      backgroundColor={config.colorScheme.mode === "light" ? "#f5f7fa" : "#0f1419"}
+      backgroundColor={config.colorScheme.semanticColors.chromeFillOne}
     >
       <CommandBar
         store={store}
@@ -265,7 +279,7 @@ export function JifView(props: {
         scrollY
         scrollbarOptions={{
           trackOptions: {
-            backgroundColor: config.colorScheme.mode === "light" ? "#d5dde5" : "#1b2430",
+            backgroundColor: config.colorScheme.semanticColors.chromeFillThree,
             foregroundColor: config.colorScheme.semanticColors.chromeBorderFocus,
           },
         }}
@@ -299,6 +313,7 @@ export function JifView(props: {
         config={config}
       />
     </box>
+    </Show>
   );
 
   async function executeCurrentCommand(commandOverride?: string) {
@@ -499,7 +514,7 @@ function RevisionItem(props: {
       ? colors().rowSelectedAccent
       : isFocused()
         ? colors().chromeBorderFocus
-        : colors().textMuted
+        : colors().textTertiary
   );
 
   return (
@@ -619,7 +634,7 @@ function ChangedFiles(props: {
   return (
     <box width="100%" flexDirection="column">
       {revision.files.length === 0 ? (
-        <text fg={colors.textMuted}>Loading changed files...</text>
+        <text fg={colors.textTertiary}>Loading changed files...</text>
       ) : (
         <For each={revision.files}>
           {(file, index) => {
@@ -635,7 +650,7 @@ function ChangedFiles(props: {
                 gap={1}
                 backgroundColor={focused ? colors.rowFocusedFill : undefined}
               >
-                <text fg={focused ? colors.fileFocusMarker : colors.textMuted}>
+                <text fg={focused ? colors.fileFocusMarker : colors.textTertiary}>
                   {focused ? ">" : " "}
                 </text>
                 <text fg={colors.fileStatusAccent}>{file.status}</text>
@@ -697,7 +712,7 @@ function StatusArea(props: {
         )}
       </For>
       <box width="100%" backgroundColor={colors.chromeFillOne}>
-        <text fg={colors.textMuted} truncate>
+        <text fg={colors.textTertiary} truncate>
           {helpText}
         </text>
       </box>

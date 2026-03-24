@@ -1,4 +1,4 @@
-import type { ResolvedThemeMode } from "./schema.ts";
+export type ResolvedThemeMode = "light" | "dark";
 
 type ReadableTtyLike = NodeJS.ReadableStream & {
   isTTY?: boolean;

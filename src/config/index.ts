@@ -2,13 +2,15 @@ export {
   defaultAppConfig,
   defineConfig,
   resolveAppConfig,
-  resolveThemeMode,
+  resolveSemanticColors,
+  FALLBACK_PALETTE_DARK,
+  FALLBACK_PALETTE_LIGHT,
   type AppConfig,
-  type ResolvedThemeMode,
+  type PaletteColorDef,
+  type PaletteSource,
   type ResolvedAppConfig,
   type SemanticColorScheme,
   type SemanticColorValue,
-  type ThemeMode,
 } from "./schema.ts";
 export { loadAppConfig } from "./loadConfig.ts";
 export {

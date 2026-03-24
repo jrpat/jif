@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { detectTerminalThemeMode, loadAppConfig } from "./config/index.ts";
+import { loadAppConfig } from "./config/index.ts";
 import { runJifApplication } from "./app.ts";
 import { materializeSampleRepoCached } from "./dev/sampleRepo.ts";
 
@@ -8,8 +8,7 @@ export async function main(argv: readonly string[]) {
   const sampleName = readOptionalFlag(argv, "--sample");
   const useLongFlags = argv.includes("--long-flags");
   const explicitRepoPath = readFlagValue(argv, "--repo");
-  const detectedThemeMode = await detectTerminalThemeMode();
-  const { raw: rawConfig, resolved: loadedConfig } = await loadAppConfig({ detectedThemeMode });
+  const { raw: rawConfig, resolved: loadedConfig } = await loadAppConfig();
   const config = useLongFlags
     ? { ...loadedConfig, commands: { ...loadedConfig.commands, shortFlags: false } }
     : loadedConfig;

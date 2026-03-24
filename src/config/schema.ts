@@ -1,6 +1,17 @@
+import type { TerminalColors } from "@opentui/core";
+
 export type SemanticColorValue = string | undefined;
-export type ThemeMode = "auto" | "light" | "dark";
-export type ResolvedThemeMode = Exclude<ThemeMode, "auto">;
+
+export type PaletteSource =
+  | "foreground" | "background"
+  | "black" | "red" | "green" | "yellow"
+  | "blue" | "magenta" | "cyan" | "white"
+  | "brightBlack" | "brightRed" | "brightGreen" | "brightYellow"
+  | "brightBlue" | "brightMagenta" | "brightCyan" | "brightWhite";
+
+export type PaletteColorDef = Readonly<{ source: PaletteSource; opacity: number }>;
+
+export type SemanticColorOverride = string | PaletteColorDef;
 
 export type SemanticColorScheme = Readonly<{
   chromeFillOne: SemanticColorValue;
@@ -25,7 +36,6 @@ export type SemanticColorScheme = Readonly<{
   textSecondary: SemanticColorValue;
   textTertiary: SemanticColorValue;
   textQuaternary: SemanticColorValue;
-  textMuted: SemanticColorValue;
   revsetPrefix: SemanticColorValue;
   fileFocusMarker: SemanticColorValue;
   fileStatusAccent: SemanticColorValue;
@@ -35,12 +45,11 @@ export type SemanticColorScheme = Readonly<{
   statusError: SemanticColorValue;
 }>;
 
+type SemanticColorKey = keyof SemanticColorScheme;
+
 export type AppConfig = Readonly<{
   colorScheme?: Readonly<{
-    mode?: ThemeMode;
-    semanticColors?: Partial<SemanticColorScheme>;
-    lightColors?: Partial<SemanticColorScheme>;
-    darkColors?: Partial<SemanticColorScheme>;
+    colors?: Partial<Record<SemanticColorKey, SemanticColorOverride>>;
   }>;
   log?: Readonly<{
     scrollMargin?: number;
@@ -52,7 +61,6 @@ export type AppConfig = Readonly<{
 
 export type ResolvedAppConfig = Readonly<{
   colorScheme: Readonly<{
-    mode: ResolvedThemeMode;
     semanticColors: SemanticColorScheme;
   }>;
   log: Readonly<{
@@ -63,116 +71,159 @@ export type ResolvedAppConfig = Readonly<{
   }>;
 }>;
 
-const sharedDefaultColors: SemanticColorScheme = {
-  chromeFillOne: "#0f1419",
-  chromeFillTwo: "#1a2330",
-  chromeFillThree: "#243040",
-  chromeBorderIdle: "#5b6773",
-  chromeBorderFocus: "#4f8cff",
-  rowFocusedFill: "#1f3a5f",
-  rowSelectedFill: "#294445",
-  rowSelectedAccent: "#6ac48a",
-  rowAffectedFill: "#294445",
-  rowCommandTargetBorder: "#d6842a",
-  graphWorkingCopy: "#4f8cff",
-  graphPlain: "#7f8a96",
-  graphImmutable: "#8a6fb4",
-  graphBookmark: "#d6842a",
-  bookmarkTagFill: "#4b3b24",
-  bookmarkTagText: "#f7d8a2",
-  workspaceTagFill: "#1f4d4f",
-  workspaceTagText: "#c7f0f2",
-  textPrimary: "#edf2f7",
-  textSecondary: "#c8d2dc",
-  textTertiary: "#6e7a86",
-  textQuaternary: "#5a6570",
-  textMuted: "#7f8a96",
-  revsetPrefix: "#d78af5",
-  fileFocusMarker: "#4f8cff",
-  fileStatusAccent: "#d6842a",
-  statusInfo: "#72b7ff",
-  statusSuccess: "#6ac48a",
-  statusWarning: "#f0c36a",
-  statusError: "#ff7a7a",
+// ---------- Default color definitions ----------
+
+const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
+  // Chrome / containers
+  chromeFillOne:          { source: "background",  opacity: 1.0  },
+  chromeFillTwo:          { source: "foreground",  opacity: 0.08 },
+  chromeFillThree:        { source: "foreground",  opacity: 0.12 },
+  chromeBorderIdle:       { source: "foreground",  opacity: 0.35 },
+  chromeBorderFocus:      { source: "blue",        opacity: 1.0  },
+
+  // Row states
+  rowFocusedFill:         { source: "blue",        opacity: 0.15 },
+  rowSelectedFill:        { source: "green",       opacity: 0.12 },
+  rowSelectedAccent:      { source: "green",       opacity: 1.0  },
+  rowAffectedFill:        { source: "green",       opacity: 0.12 },
+  rowCommandTargetBorder: { source: "yellow",      opacity: 1.0  },
+
+  // Graph markers
+  graphWorkingCopy:       { source: "blue",        opacity: 1.0  },
+  graphPlain:             { source: "foreground",  opacity: 0.45 },
+  graphImmutable:         { source: "magenta",     opacity: 0.8  },
+  graphBookmark:          { source: "yellow",      opacity: 1.0  },
+
+  // Tags
+  bookmarkTagFill:        { source: "yellow",      opacity: 0.15 },
+  bookmarkTagText:        { source: "yellow",      opacity: 1.0  },
+  workspaceTagFill:       { source: "cyan",        opacity: 0.15 },
+  workspaceTagText:       { source: "cyan",        opacity: 1.0  },
+
+  // Text hierarchy
+  textPrimary:            { source: "foreground",  opacity: 0.93 },
+  textSecondary:          { source: "foreground",  opacity: 0.70 },
+  textTertiary:           { source: "foreground",  opacity: 0.48 },
+  textQuaternary:         { source: "foreground",  opacity: 0.36 },
+
+  // Accents
+  revsetPrefix:           { source: "magenta",     opacity: 1.0  },
+  fileFocusMarker:        { source: "blue",        opacity: 1.0  },
+  fileStatusAccent:       { source: "yellow",      opacity: 1.0  },
+
+  // Status
+  statusInfo:             { source: "blue",        opacity: 1.0  },
+  statusSuccess:          { source: "green",       opacity: 1.0  },
+  statusWarning:          { source: "yellow",      opacity: 1.0  },
+  statusError:            { source: "red",         opacity: 1.0  },
 };
 
-const lightDefaultColors: Partial<SemanticColorScheme> = {
-  chromeFillOne: "#f5f7fa",
-  chromeFillTwo: "#e8ecf0",
-  chromeFillThree: "#dce2e8",
-  chromeBorderIdle: "#9aa6b2",
-  chromeBorderFocus: "#0059d6",
-  rowFocusedFill: "#d7e6ff",
-  rowSelectedFill: "#d9ece1",
-  rowSelectedAccent: "#1f8a4c",
-  rowAffectedFill: "#d9ece1",
-  rowCommandTargetBorder: "#b56c00",
-  graphWorkingCopy: "#0059d6",
-  graphPlain: "#62707d",
-  graphImmutable: "#6a4fb5",
-  graphBookmark: "#b56c00",
-  bookmarkTagFill: "#f3dfbf",
-  bookmarkTagText: "#523300",
-  workspaceTagFill: "#cbe9eb",
-  workspaceTagText: "#12383a",
-  textPrimary: "#13202b",
-  textSecondary: "#34424e",
-  textTertiary: "#72808c",
-  textQuaternary: "#62707d",
-  textMuted: "#62707d",
-  revsetPrefix: "#8b2fb8",
-  fileFocusMarker: "#0059d6",
-  fileStatusAccent: "#b56c00",
-  statusInfo: "#0059d6",
-  statusSuccess: "#1f8a4c",
-  statusWarning: "#a86400",
-  statusError: "#c93b3b",
+// ---------- Palette source → TerminalColors lookup ----------
+
+const paletteIndexMap: Record<string, number> = {
+  black: 0, red: 1, green: 2, yellow: 3,
+  blue: 4, magenta: 5, cyan: 6, white: 7,
+  brightBlack: 8, brightRed: 9, brightGreen: 10, brightYellow: 11,
+  brightBlue: 12, brightMagenta: 13, brightCyan: 14, brightWhite: 15,
 };
 
-const darkDefaultColors: Partial<SemanticColorScheme> = {};
+function lookupPaletteColor(source: PaletteSource, palette: TerminalColors): string | null {
+  if (source === "foreground") return palette.defaultForeground;
+  if (source === "background") return palette.defaultBackground;
+  const index = paletteIndexMap[source];
+  if (index !== undefined && index < palette.palette.length) {
+    return palette.palette[index] ?? null;
+  }
+  return null;
+}
 
-export const defaultAppConfig: AppConfig = {
-  colorScheme: {
-    mode: "auto",
-  },
-};
+// ---------- Color blending ----------
+
+function parseHex(hex: string): [number, number, number] | null {
+  const stripped = hex.startsWith("#") ? hex.slice(1) : hex;
+  if (stripped.length === 3) {
+    const r = Number.parseInt(stripped[0]! + stripped[0]!, 16);
+    const g = Number.parseInt(stripped[1]! + stripped[1]!, 16);
+    const b = Number.parseInt(stripped[2]! + stripped[2]!, 16);
+    return [r, g, b];
+  }
+  if (stripped.length === 6) {
+    const r = Number.parseInt(stripped.slice(0, 2), 16);
+    const g = Number.parseInt(stripped.slice(2, 4), 16);
+    const b = Number.parseInt(stripped.slice(4, 6), 16);
+    return [r, g, b];
+  }
+  return null;
+}
+
+function toHex(r: number, g: number, b: number): string {
+  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+  return `#${clamp(r).toString(16).padStart(2, "0")}${clamp(g).toString(16).padStart(2, "0")}${clamp(b).toString(16).padStart(2, "0")}`;
+}
+
+function blendColor(fgHex: string, bgHex: string, opacity: number): string {
+  const fg = parseHex(fgHex);
+  const bg = parseHex(bgHex);
+  if (!fg || !bg) return fgHex;
+  if (opacity >= 1.0) return fgHex;
+  if (opacity <= 0.0) return bgHex;
+  return toHex(
+    fg[0] * opacity + bg[0] * (1 - opacity),
+    fg[1] * opacity + bg[1] * (1 - opacity),
+    fg[2] * opacity + bg[2] * (1 - opacity),
+  );
+}
+
+// ---------- Resolution ----------
+
+function resolveColorDef(
+  def: PaletteColorDef,
+  palette: TerminalColors,
+): string | undefined {
+  const color = lookupPaletteColor(def.source, palette);
+  const bg = palette.defaultBackground;
+  if (!color || !bg) return undefined;
+  return blendColor(color, bg, def.opacity);
+}
+
+export function resolveSemanticColors(
+  palette: TerminalColors,
+  overrides?: Partial<Record<SemanticColorKey, SemanticColorOverride>>,
+): SemanticColorScheme {
+  const result: Record<string, string | undefined> = {};
+
+  for (const key of Object.keys(defaultColorDefs) as SemanticColorKey[]) {
+    const override = overrides?.[key];
+    if (typeof override === "string") {
+      result[key] = override;
+    } else {
+      const def = (override as PaletteColorDef | undefined) ?? defaultColorDefs[key];
+      result[key] = resolveColorDef(def, palette);
+    }
+  }
+
+  return result as SemanticColorScheme;
+}
+
+export const defaultAppConfig: AppConfig = {};
 
 export function defineConfig(config: AppConfig): AppConfig {
   return config;
 }
 
-export function resolveThemeMode(
-  requestedMode: ThemeMode | undefined,
-  detectedThemeMode: ResolvedThemeMode | null,
-): ResolvedThemeMode {
-  if (requestedMode === "light" || requestedMode === "dark") {
-    return requestedMode;
-  }
-
-  return detectedThemeMode ?? "dark";
-}
-
 export function resolveAppConfig(
   config: AppConfig,
   options: Readonly<{
-    detectedThemeMode?: ResolvedThemeMode | null;
+    palette?: TerminalColors | null;
   }> = {},
 ): ResolvedAppConfig {
-  const detectedThemeMode = options.detectedThemeMode ?? null;
-  const mode = resolveThemeMode(config.colorScheme?.mode, detectedThemeMode);
-  const defaults = mode === "light" ? lightDefaultColors : darkDefaultColors;
-  const semanticColors = {
-    ...sharedDefaultColors,
-    ...defaults,
-    ...config.colorScheme?.semanticColors,
-    ...(mode === "light"
-      ? config.colorScheme?.lightColors
-      : config.colorScheme?.darkColors),
-  };
+  const palette = options.palette ?? null;
+  const semanticColors = palette
+    ? resolveSemanticColors(palette, config.colorScheme?.colors)
+    : fallbackSemanticColors(config.colorScheme?.colors);
 
   return {
     colorScheme: {
-      mode,
       semanticColors,
     },
     log: {
@@ -183,3 +234,48 @@ export function resolveAppConfig(
     },
   };
 }
+
+// Pre-palette fallback: resolve against the dark xterm fallback palette
+function fallbackSemanticColors(
+  overrides?: Partial<Record<SemanticColorKey, SemanticColorOverride>>,
+): SemanticColorScheme {
+  return resolveSemanticColors(FALLBACK_PALETTE_DARK, overrides);
+}
+
+// ---------- Fallback palettes ----------
+
+export const FALLBACK_PALETTE_DARK: TerminalColors = {
+  palette: [
+    "#000000", "#cd0000", "#00cd00", "#cdcd00",
+    "#0000ee", "#cd00cd", "#00cdcd", "#e5e5e5",
+    "#7f7f7f", "#ff0000", "#00ff00", "#ffff00",
+    "#5c5cff", "#ff00ff", "#00ffff", "#ffffff",
+  ],
+  defaultForeground: "#e5e5e5",
+  defaultBackground: "#000000",
+  cursorColor: null,
+  mouseForeground: null,
+  mouseBackground: null,
+  tekForeground: null,
+  tekBackground: null,
+  highlightBackground: null,
+  highlightForeground: null,
+};
+
+export const FALLBACK_PALETTE_LIGHT: TerminalColors = {
+  palette: [
+    "#000000", "#cd0000", "#00cd00", "#cdcd00",
+    "#0000ee", "#cd00cd", "#00cdcd", "#e5e5e5",
+    "#7f7f7f", "#ff0000", "#00ff00", "#ffff00",
+    "#5c5cff", "#ff00ff", "#00ffff", "#ffffff",
+  ],
+  defaultForeground: "#000000",
+  defaultBackground: "#ffffff",
+  cursorColor: null,
+  mouseForeground: null,
+  mouseBackground: null,
+  tekForeground: null,
+  tekBackground: null,
+  highlightBackground: null,
+  highlightForeground: null,
+};
