@@ -37,7 +37,6 @@ export type CommandDraftConfig = Readonly<{
 
 export type CommandDraft = Readonly<{
   config: CommandDraftConfig;
-  selectedRevisionIds: readonly string[];
   includeDescendants?: boolean;
   descendantRevisionIds?: readonly string[];
 }>;
@@ -70,6 +69,8 @@ export type AppState = Readonly<{
   focusedRevisionIndex: number;
   expandedRevisionId: string | null;
   focusedFileIndex: number;
+  selectedRevisionIds: readonly string[];
+  selectedFilePaths: readonly string[];
   commandBar: CommandBarState;
   commandDraft: CommandDraft | null;
   statusMessage: StatusMessage | null;

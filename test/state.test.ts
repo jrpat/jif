@@ -1,7 +1,10 @@
 import { expect, test } from "bun:test";
 import type { AppState } from "../src/domain/types.ts";
 import {
+  cancelCommandDraft,
   cancelCommandState,
+  clearRevisionSelection,
+  closeFocusedRevision,
   createInitialState,
   dismissOldestError,
   draftConfigs,
@@ -15,7 +18,9 @@ import {
   openFocusedRevision,
   setRevisionFiles,
   startCommandDraft,
+  toggleFileSelection,
   toggleRebaseDescendants,
+  toggleRevisionSelection,
 } from "../src/state/store.ts";
 
 function createState(): AppState {
@@ -142,7 +147,7 @@ test("dismissOldestError is a no-op when no status message exists", () => {
   expect(next).toBe(state);
 });
 
-test("selected revision ids come from the active command draft", () => {
+test("selected revision ids are populated when starting a command draft", () => {
   let state = createState();
   expect(getSelectedRevisionIds(state).size).toBe(0);
 
@@ -155,4 +160,79 @@ test("squash command text updates when target is selected", () => {
   state = startCommandDraft(state, draftConfigs.squash);
   expect(getDisplayedCommandText(state)).toBe("squash -f a -t b");
   expect(getSelectedRevisionIds(state).has("aaaaaaaa")).toBeTrue();
+});
+
+test("toggleRevisionSelection works without a command draft", () => {
+  let state = createState();
+  expect(state.selectedRevisionIds).toEqual([]);
+
+  state = toggleRevisionSelection(state);
+  expect(state.selectedRevisionIds).toEqual(["aaaaaaaa"]);
+
+  state = toggleRevisionSelection(state);
+  expect(state.selectedRevisionIds).toEqual([]);
+});
+
+test("toggleFileSelection adds and removes file paths", () => {
+  let state = createState();
+  state = openFocusedRevision(state);
+  state = setRevisionFiles(state, "aaaaaaaa", [
+    { status: "M", path: "src/a.ts" },
+    { status: "A", path: "src/b.ts" },
+  ]);
+  expect(state.selectedFilePaths).toEqual([]);
+
+  state = toggleFileSelection(state);
+  expect(state.selectedFilePaths).toEqual(["src/a.ts"]);
+
+  state = moveFocus(state, 1);
+  state = toggleFileSelection(state);
+  expect(state.selectedFilePaths).toEqual(["src/a.ts", "src/b.ts"]);
+
+  state = toggleFileSelection(state);
+  expect(state.selectedFilePaths).toEqual(["src/a.ts"]);
+});
+
+test("closeFocusedRevision clears file selections", () => {
+  let state = createState();
+  state = openFocusedRevision(state);
+  state = toggleFileSelection(state);
+  expect(state.selectedFilePaths.length).toBe(1);
+
+  state = closeFocusedRevision(state);
+  expect(state.selectedFilePaths).toEqual([]);
+  expect(state.focusMode).toBe("revisions");
+});
+
+test("clearRevisionSelection clears only revision selections", () => {
+  let state = createState();
+  state = toggleRevisionSelection(state);
+  expect(state.selectedRevisionIds).toEqual(["aaaaaaaa"]);
+
+  state = clearRevisionSelection(state);
+  expect(state.selectedRevisionIds).toEqual([]);
+});
+
+test("cancelCommandDraft clears draft and selections but keeps focus mode", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+  expect(state.commandDraft).not.toBeNull();
+  expect(state.selectedRevisionIds.length).toBeGreaterThan(0);
+
+  state = cancelCommandDraft(state);
+  expect(state.commandDraft).toBeNull();
+  expect(state.selectedRevisionIds).toEqual([]);
+});
+
+test("startCommandDraft uses pre-selected revisions and does not advance focus", () => {
+  let state = createState();
+  state = toggleRevisionSelection(state);
+  state = moveFocus(state, 1);
+  state = toggleRevisionSelection(state);
+  expect(state.selectedRevisionIds).toEqual(["aaaaaaaa", "bbbbbbbb"]);
+
+  const prevFocusIndex = state.focusedRevisionIndex;
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
+  expect(state.focusedRevisionIndex).toBe(prevFocusIndex);
+  expect(state.selectedRevisionIds).toEqual(["aaaaaaaa", "bbbbbbbb"]);
 });

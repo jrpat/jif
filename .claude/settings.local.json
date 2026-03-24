@@ -5,7 +5,10 @@
       "Bash(jj log:*)",
       "WebSearch",
       "WebFetch(domain:opentui.com)",
-      "WebFetch(domain:deepwiki.com)"
+      "WebFetch(domain:deepwiki.com)",
+      "Bash(jj restore:*)",
+      "Bash(bun test:*)",
+      "Bash(bunx tsc:*)"
     ]
   }
 }

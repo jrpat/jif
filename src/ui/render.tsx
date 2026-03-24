@@ -94,8 +94,32 @@ export function JifView(props: {
       renderer.destroy();
     },
     cancelOrBlur() {
-      store.actions.dismissOldestError();
-      store.actions.cancelCommand();
+      const state = store.snapshot();
+
+      if (state.error !== null || state.eventLog.some((e) => e.level === "error")) {
+        store.actions.dismissOldestError();
+        return;
+      }
+
+      if (state.focusMode === "command") {
+        store.actions.cancelCommand();
+        return;
+      }
+
+      if (state.commandDraft !== null) {
+        store.actions.cancelCommandDraft();
+        return;
+      }
+
+      if (state.selectedRevisionIds.length > 0) {
+        store.actions.clearRevisionSelection();
+        return;
+      }
+
+      if (state.focusMode === "files") {
+        store.actions.closeFocusedRevision();
+        return;
+      }
     },
     confirm() {
       void executeCurrentCommand();
@@ -130,6 +154,32 @@ export function JifView(props: {
     toggleSelection() {
       store.actions.toggleRevisionSelection();
     },
+    toggleFileSelection() {
+      store.actions.toggleFileSelection();
+    },
+    restoreFiles() {
+      const state = store.snapshot();
+      if (state.focusMode !== "files" || !state.expandedRevisionId) {
+        return;
+      }
+
+      const revision = getExpandedRevision(state);
+      if (!revision) {
+        return;
+      }
+
+      const changePrefix = revision.changeId.slice(0, revision.changeIdPrefixLength);
+      const filePaths = state.selectedFilePaths.length > 0
+        ? state.selectedFilePaths
+        : [revision.files[state.focusedFileIndex]?.path].filter(Boolean);
+
+      if (filePaths.length === 0) {
+        return;
+      }
+
+      const commandText = `restore -c ${changePrefix} ${filePaths.join(" ")}`;
+      void runJjCommand(commandText);
+    },
     toggleShortFlags() {
       store.actions.toggleShortFlags();
     },
@@ -140,14 +190,14 @@ export function JifView(props: {
       void runJjCommand("redo");
     },
     toggleRebaseDescendants() {
-      const draft = store.snapshot().commandDraft;
-      if (draft?.config.kind !== "rebase") {
+      const state = store.snapshot();
+      if (state.commandDraft?.config.kind !== "rebase") {
         return;
       }
 
       void (async () => {
         try {
-          const descendants = await client.resolveDescendants(draft.selectedRevisionIds[0] ?? "");
+          const descendants = await client.resolveDescendants(state.selectedRevisionIds[0] ?? "");
           store.actions.toggleRebaseDescendants(descendants);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
@@ -162,6 +212,7 @@ export function JifView(props: {
     store.state.commandDraft;
     store.state.commandBar;
     store.state.useShortFlags;
+    store.state.selectedRevisionIds;
     return getDisplayedCommandText(store.state);
   });
   const commandSegments = createMemo((): readonly CommandSegment[] | null => {
@@ -169,6 +220,7 @@ export function JifView(props: {
     store.state.commandDraft;
     store.state.commandBar;
     store.state.useShortFlags;
+    store.state.selectedRevisionIds;
     return getDisplayedCommandSegments(store.state);
   });
   const visibleCommands = createMemo(() => getVisibleCommands(store.state));
@@ -240,6 +292,28 @@ export function JifView(props: {
     })();
 
     scrollToKeepChildVisible(logViewport, `revision-${marginRevisionId}`, direction);
+  });
+
+  createRenderEffect(() => {
+    const expandedId = store.state.expandedRevisionId;
+    if (!expandedId || !logViewport) {
+      return;
+    }
+
+    const child = logViewport.findDescendantById(`revision-${expandedId}`);
+    if (!child) {
+      return;
+    }
+
+    const vpTop = logViewport.viewport.y;
+    const vpHeight = logViewport.viewport.height;
+    const vpBottom = vpTop + vpHeight;
+
+    if (child.height > vpHeight) {
+      logViewport.scrollBy(child.y - vpTop);
+    } else if (child.y + child.height > vpBottom) {
+      logViewport.scrollBy(child.y + child.height - vpBottom);
+    }
   });
 
   createEffect(() => {
@@ -642,19 +716,26 @@ function ChangedFiles(props: {
               state.focusMode === "files" &&
               state.expandedRevisionId === revision.changeId &&
               state.focusedFileIndex === index();
+            const selected = state.selectedFilePaths.includes(file.path);
 
             return (
               <box
                 width="100%"
                 flexDirection="row"
                 gap={1}
-                backgroundColor={focused ? colors.rowFocusedFill : undefined}
+                backgroundColor={
+                  selected
+                    ? colors.rowSelectedFill
+                    : focused
+                      ? colors.rowFocusedFill
+                      : undefined
+                }
               >
-                <text fg={focused ? colors.fileFocusMarker : colors.textTertiary}>
-                  {focused ? ">" : " "}
+                <text fg={selected ? colors.rowSelectedAccent : focused ? colors.fileFocusMarker : colors.textTertiary}>
+                  {selected ? "*" : focused ? ">" : " "}
                 </text>
                 <text fg={colors.fileStatusAccent}>{file.status}</text>
-                <text fg={focused ? colors.textPrimary : colors.textSecondary} truncate>
+                <text fg={selected || focused ? colors.textPrimary : colors.textSecondary} truncate>
                   {file.path}
                 </text>
               </box>

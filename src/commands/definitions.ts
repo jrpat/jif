@@ -11,6 +11,8 @@ export type CommandController = Readonly<{
   startRebase: () => void;
   startSquash: () => void;
   toggleSelection: () => void;
+  toggleFileSelection: () => void;
+  restoreFiles: () => void;
   toggleShortFlags: () => void;
   toggleRebaseDescendants: () => void;
   undo: () => void;
@@ -109,9 +111,19 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Start a rebase command from the focused revision",
     canonicalKeys: ["r"],
     keys: ["r"],
-    when: (state) => state.focusMode !== "command",
+    when: (state) => state.focusMode === "revisions",
     run: (controller) => controller.startRebase(),
     group: "global",
+  },
+  {
+    id: "restore",
+    title: "Restore",
+    description: "Restore selected files to their state before this change",
+    canonicalKeys: ["r"],
+    keys: ["r"],
+    when: (state) => state.focusMode === "files",
+    run: (controller) => controller.restoreFiles(),
+    group: "mode",
   },
   {
     id: "squash",
@@ -119,18 +131,28 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Squash the focused revision into another",
     canonicalKeys: ["S"],
     keys: ["S"],
-    when: (state) => state.focusMode !== "command" && state.commandDraft?.config.kind !== "rebase",
+    when: (state) => state.focusMode === "revisions" && state.commandDraft?.config.kind !== "rebase",
     run: (controller) => controller.startSquash(),
     group: "global",
   },
   {
-    id: "toggle-selection",
+    id: "toggle-revision-selection",
     title: "Select",
     description: "Add or remove the focused revision from the selection",
     canonicalKeys: ["space"],
     keys: [" "],
-    when: (state) => state.commandDraft !== null && state.focusMode !== "command",
+    when: (state) => state.focusMode === "revisions",
     run: (controller) => controller.toggleSelection(),
+    group: "mode",
+  },
+  {
+    id: "toggle-file-selection",
+    title: "Select File",
+    description: "Add or remove the focused file from the selection",
+    canonicalKeys: ["space"],
+    keys: [" "],
+    when: (state) => state.focusMode === "files",
+    run: (controller) => controller.toggleFileSelection(),
     group: "mode",
   },
   {
@@ -169,7 +191,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Include descendants in the rebase preview",
     canonicalKeys: ["s"],
     keys: ["s"],
-    when: (state) => state.commandDraft?.config.kind === "rebase" && state.focusMode !== "command",
+    when: (state) => state.commandDraft?.config.kind === "rebase" && state.focusMode === "revisions",
     run: (controller) => controller.toggleRebaseDescendants(),
     group: "mode",
   },

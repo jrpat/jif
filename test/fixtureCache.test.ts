@@ -146,6 +146,6 @@ describe("materializeSampleRepoCached", () => {
 
     // Both should produce valid jj repos
     const log = await runCommand(second.repoPath, ["jj", "log", "--no-pager", "--limit", "3"]);
-    expect(log.stdout).toContain("sample");
+    expect(log.stdout).toContain("docs(review)");
   }, 30_000);
 });

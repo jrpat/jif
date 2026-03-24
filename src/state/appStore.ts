@@ -9,11 +9,14 @@ import type {
 } from "../domain/types.ts";
 import {
   applyRepositoryData,
+  cancelCommandDraft,
   cancelCommandState,
+  clearRevisionSelection,
   clearStatusMessage,
   closeFocusedRevision,
   dismissOldestError,
   startCommandDraft,
+  toggleFileSelection,
   toggleShortFlags,
   createInitialState,
   focusCommandBar,
@@ -102,6 +105,15 @@ export function createAppStore(repoPath: string, options?: { useShortFlags?: boo
       },
       toggleRevisionSelection() {
         mutate((currentState) => toggleRevisionSelection(currentState));
+      },
+      toggleFileSelection() {
+        mutate((currentState) => toggleFileSelection(currentState));
+      },
+      cancelCommandDraft() {
+        mutate((currentState) => cancelCommandDraft(currentState));
+      },
+      clearRevisionSelection() {
+        mutate((currentState) => clearRevisionSelection(currentState));
       },
       toggleShortFlags() {
         mutate((currentState) => toggleShortFlags(currentState));
