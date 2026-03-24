@@ -240,7 +240,7 @@ export function setCommandBarText(state: AppState, text: string): AppState {
   return {
     ...state,
     commandBar: {
-      text,
+      text: text.startsWith("jj ") ? text.slice(3) : text,
       manual: true,
     },
   };

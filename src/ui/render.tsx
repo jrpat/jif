@@ -384,7 +384,7 @@ function CommandBar(props: {
         }
       >
         <box width={4} flexDirection="row" paddingLeft={1}>
-          <text fg={colors.textTertiary}>jj </text>
+          <text fg={commandBarFocused() ? colors.textPrimary : colors.textTertiary}>jj </text>
         </box>
         {showSegments() ? (
           <box flexGrow={1} flexDirection="row">
