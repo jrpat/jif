@@ -2,6 +2,8 @@ import { expect, test } from "bun:test";
 import {
   buildRevisionGutterPlan,
   deriveGraphContinuationLine,
+  measureCoreGraphWidth,
+  measureGutterPlanWidth,
 } from "../src/ui/revisionGutter.ts";
 
 test("deriveGraphContinuationLine turns node markers into continuations", () => {
@@ -107,4 +109,43 @@ test("bottomDivider uses current tail continuation, not next graphHead", () => {
   });
 
   expect(plan.bottomDivider).toBe("│ │");
+});
+
+test("measureCoreGraphWidth returns the max width of graphHead and graphTail", () => {
+  expect(measureCoreGraphWidth("@  ", [])).toBe(1);
+  expect(measureCoreGraphWidth("│ ○  ", ["├─╯"])).toBe(3);
+  expect(measureCoreGraphWidth("○ │", ["│ │"])).toBe(3);
+  expect(measureCoreGraphWidth("│ │ ○  ", ["│ ├─╯"])).toBe(5);
+  expect(measureCoreGraphWidth("○  ", [])).toBe(1);
+});
+
+test("measureGutterPlanWidth includes divider widths from neighbors", () => {
+  // Core graph is width 1, but topDivider from wider previous is width 3
+  const plan = buildRevisionGutterPlan({
+    graphHead: "○  ",
+    graphTail: [],
+    detailRowCount: 0,
+    ownsTop: true,
+    ownsBottom: true,
+    previousGraphBottom: "│ │",
+    hasNextRevision: true,
+  });
+
+  expect(measureCoreGraphWidth("○  ", [])).toBe(1);
+  expect(measureGutterPlanWidth(plan)).toBe(3);
+});
+
+test("measureGutterPlanWidth matches core width when no wider neighbors", () => {
+  const plan = buildRevisionGutterPlan({
+    graphHead: "│ ○  ",
+    graphTail: ["├─╯"],
+    detailRowCount: 0,
+    ownsTop: true,
+    ownsBottom: true,
+    previousGraphBottom: "○  ",
+    hasNextRevision: true,
+  });
+
+  expect(measureCoreGraphWidth("│ ○  ", ["├─╯"])).toBe(3);
+  expect(measureGutterPlanWidth(plan)).toBe(3);
 });

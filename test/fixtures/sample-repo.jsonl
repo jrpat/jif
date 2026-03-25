@@ -1,7 +1,7 @@
 {"kind":"mkdir","path":"src"}
 {"kind":"mkdir","path":"test"}
 {"kind":"mkdir","path":"docs"}
-{"kind":"writeFile","path":"README.md","content":"# Sample Rezi JJ App\n\nThis repository exists to exercise Jujutsu graph behavior.\n"}
+{"kind":"writeFile","path":"README.md","content":"# Sample JIF App\n\nThis repository exists to exercise Jujutsu graph behavior.\n"}
 {"kind":"writeFile","path":"src/app.ts","content":"export function startApp() {\n  return \"ready\";\n}\n"}
 {"kind":"writeFile","path":"src/repo.ts","content":"export function loadRepo() {\n  return [];\n}\n"}
 {"kind":"writeFile","path":"test/repo.test.ts","content":"export const repoTests = [];\n"}

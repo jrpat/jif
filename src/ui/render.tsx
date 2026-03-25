@@ -26,7 +26,8 @@ import {
 } from "./revisionBorders.ts";
 import {
   buildRevisionGutterPlan,
-  measureGraphLineWidth,
+  measureCoreGraphWidth,
+  measureGutterPlanWidth,
 } from "./revisionGutter.ts";
 import { scrollToKeepChildVisible } from "./scroll.ts";
 
@@ -225,15 +226,6 @@ export function JifView(props: {
   });
   const visibleCommands = createMemo(() => getVisibleCommands(store.state));
   const visibleEvents = createMemo(() => store.state.eventLog.slice(-3).reverse());
-  const graphWidth = createMemo(() =>
-    store.state.revisions.reduce((maxWidth, revision) => {
-      const widths = [
-        measureGraphLineWidth(revision.graphHead),
-        ...revision.graphTail.map(measureGraphLineWidth),
-      ];
-      return Math.max(maxWidth, ...widths);
-    }, 1)
-  );
 
   useKeyboard((event) => {
     if (event.eventType === "release" || event.ctrl || event.meta || event.option) {
@@ -367,7 +359,6 @@ export function JifView(props: {
                 index={index()}
                 previousRevisionId={store.state.revisions[index() - 1]?.changeId ?? null}
                 nextRevisionId={store.state.revisions[index() + 1]?.changeId ?? null}
-                graphWidth={graphWidth()}
                 config={config}
                 focusedRevisionId={getFocusedRevision(store.state)?.changeId ?? null}
                 selectedRevisionIds={getSelectedRevisionIds(store.state)}
@@ -523,7 +514,6 @@ function RevisionItem(props: {
   index: number;
   previousRevisionId: string | null;
   nextRevisionId: string | null;
-  graphWidth: number;
   config: ResolvedAppConfig;
   focusedRevisionId: string | null;
   selectedRevisionIds: ReadonlySet<string>;
@@ -548,10 +538,24 @@ function RevisionItem(props: {
   const nextRowState = createMemo(() =>
     getRevisionRowState(props.nextRevisionId, props.focusedRevisionId, props.selectedRevisionIds),
   );
+  const coreGraphWidth = createMemo(() =>
+    measureCoreGraphWidth(revision.graphHead, revision.graphTail)
+  );
+  const previousCoreGraphWidth = createMemo(() => {
+    const prev = props.index > 0 ? state.revisions[props.index - 1] : null;
+    return prev ? measureCoreGraphWidth(prev.graphHead, prev.graphTail) : null;
+  });
+  const nextCoreGraphWidth = createMemo(() => {
+    const next = state.revisions[props.index + 1] ?? null;
+    return next ? measureCoreGraphWidth(next.graphHead, next.graphTail) : null;
+  });
   const borderPolicy = createMemo(() => getRevisionBorderPolicy({
     rowState: rowState(),
     previousRowState: previousRowState(),
     nextRowState: nextRowState(),
+    currentGraphWidth: coreGraphWidth(),
+    previousGraphWidth: previousCoreGraphWidth(),
+    nextGraphWidth: nextCoreGraphWidth(),
   }));
   const detailRowCount = () => isExpanded() ? Math.max(revision.files.length, 1) : 0;
   const gutterPlan = createMemo(() => buildRevisionGutterPlan({
@@ -567,6 +571,10 @@ function RevisionItem(props: {
     })(),
     hasNextRevision: props.index + 1 < state.revisions.length,
   }));
+  const effectiveGraphWidth = createMemo(() => measureGutterPlanWidth(gutterPlan()));
+  const currentLeftCol = () => coreGraphWidth() + 1;
+  const prevLeftCol = () => previousCoreGraphWidth() !== null ? previousCoreGraphWidth()! + 1 : null;
+  const nextLeftCol = () => nextCoreGraphWidth() !== null ? nextCoreGraphWidth()! + 1 : null;
   const borderColor = createMemo(() =>
     rowState() === "selected"
       ? colors().rowSelectedAccent
@@ -598,33 +606,33 @@ function RevisionItem(props: {
       flexDirection="row"
       opacity={anyExpanded() && !isExpanded() ? 0.6 : 1}
     >
-      <box width={props.graphWidth} flexDirection="column">
+      <box width={effectiveGraphWidth()} flexDirection="column">
         {gutterPlan().topDivider !== null ? (
           <text fg={continuationGraphColor()}>
-            {padRight(gutterPlan().topDivider!, props.graphWidth)}
+            {padRight(gutterPlan().topDivider!, effectiveGraphWidth())}
           </text>
         ) : null}
-        <text fg={titleGraphColor()}>{padRight(gutterPlan().title, props.graphWidth)}</text>
+        <text fg={titleGraphColor()}>{padRight(gutterPlan().title, effectiveGraphWidth())}</text>
         <text fg={continuationGraphColor()}>
-          {padRight(gutterPlan().subtitle, props.graphWidth)}
+          {padRight(gutterPlan().subtitle, effectiveGraphWidth())}
         </text>
         <For each={gutterPlan().tail}>
           {(graphLine) => (
             <text fg={continuationGraphColor()}>
-              {padRight(graphLine, props.graphWidth)}
+              {padRight(graphLine, effectiveGraphWidth())}
             </text>
           )}
         </For>
         <For each={gutterPlan().detail}>
           {(graphLine) => (
             <text fg={continuationGraphColor()}>
-              {padRight(graphLine, props.graphWidth)}
+              {padRight(graphLine, effectiveGraphWidth())}
             </text>
           )}
         </For>
         {gutterPlan().bottomDivider !== null ? (
           <text fg={continuationGraphColor()}>
-            {padRight(gutterPlan().bottomDivider!, props.graphWidth)}
+            {padRight(gutterPlan().bottomDivider!, effectiveGraphWidth())}
           </text>
         ) : null}
       </box>
@@ -693,6 +701,22 @@ function RevisionItem(props: {
           />
         ) : null}
       </box>
+      {borderPolicy().ownsTop && prevLeftCol() !== null && currentLeftCol() < prevLeftCol()! ? (
+        <text position="absolute" left={prevLeftCol()!} top={0} zIndex={1} fg={borderColor()}>┴</text>
+      ) : null}
+      {borderPolicy().ownsTop && prevLeftCol() !== null && currentLeftCol() > prevLeftCol()! ? (
+        <text position="absolute" left={prevLeftCol()!} top={0} zIndex={1} fg={borderColor()}>
+          {"└" + "─".repeat(currentLeftCol() - prevLeftCol()! - 1)}
+        </text>
+      ) : null}
+      {borderPolicy().ownsBottom && nextLeftCol() !== null && currentLeftCol() < nextLeftCol()! ? (
+        <text position="absolute" left={nextLeftCol()!} bottom={0} zIndex={1} fg={borderColor()}>┬</text>
+      ) : null}
+      {borderPolicy().ownsBottom && nextLeftCol() !== null && currentLeftCol() > nextLeftCol()! ? (
+        <text position="absolute" left={nextLeftCol()!} bottom={0} zIndex={1} fg={borderColor()}>
+          {"┌" + "─".repeat(currentLeftCol() - nextLeftCol()! - 1)}
+        </text>
+      ) : null}
     </box>
   );
 }

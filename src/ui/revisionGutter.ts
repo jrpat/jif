@@ -32,6 +32,22 @@ export function measureGraphLineWidth(graphLine: string): number {
   return normalizeGraphLine(graphLine).length;
 }
 
+export function measureCoreGraphWidth(graphHead: string, graphTail: readonly string[]): number {
+  return Math.max(measureGraphLineWidth(graphHead), ...graphTail.map(measureGraphLineWidth), 1);
+}
+
+export function measureGutterPlanWidth(plan: RevisionGutterPlan): number {
+  return Math.max(
+    plan.topDivider !== null ? measureGraphLineWidth(plan.topDivider) : 0,
+    measureGraphLineWidth(plan.title),
+    measureGraphLineWidth(plan.subtitle),
+    ...plan.tail.map(measureGraphLineWidth),
+    ...plan.detail.map(measureGraphLineWidth),
+    plan.bottomDivider !== null ? measureGraphLineWidth(plan.bottomDivider) : 0,
+    1,
+  );
+}
+
 export function deriveGraphContinuationLine(graphHead: string): string {
   return normalizeGraphLine(
     [...normalizeGraphLine(graphHead)]

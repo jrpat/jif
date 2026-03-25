@@ -78,7 +78,6 @@ export function buildCommandSegments(
 export function createInitialState(repoPath: string, options?: { useShortFlags?: boolean }): AppState {
   return {
     repoPath,
-    graphWidth: 4,
     revisions: [],
     focusMode: "revisions",
     focusedRevisionIndex: 0,
@@ -144,7 +143,6 @@ export function applyRepositoryData(
 
   return {
     ...state,
-    graphWidth: repositoryData.graphWidth,
     repoPath: repositoryData.repoPath,
     revisions,
     focusMode: nextFocusMode,

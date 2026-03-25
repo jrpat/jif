@@ -2,7 +2,7 @@
 
 Build a keyboard-first terminal UI application for navigating and operating on a Jujutsu (`jj`) repository.
 
-Use TypeScript and the Rezi terminal UI library. Use Rezi idiomatically, but do not invent APIs. If any Rezi behavior is uncertain, inspect its real docs/source first and then implement against the actual library.
+Use TypeScript and the OpenTUI terminal UI library. Use OpenTUI idiomatically, but do not invent APIs. If any OpenTUI behavior is uncertain, inspect its real docs/source first and then implement against the actual library.
 
 ## Product Goal
 
@@ -155,7 +155,7 @@ Keep the code cleanly separated:
 - repository/domain models
 - command/mode configuration
 - application state/store
-- Rezi rendering components
+- OpenTUI rendering components
 - test helpers/sample repo materialization
 
 Avoid duplicating business logic between UI and command execution paths. Prefer explicit state transitions and testable pure logic where possible.

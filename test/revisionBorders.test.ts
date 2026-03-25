@@ -9,11 +9,15 @@ function getPolicy(
   rowState: RevisionRowState,
   previousRowState: RevisionRowState | null,
   nextRowState: RevisionRowState | null,
+  widths?: { current: number; previous?: number; next?: number },
 ) {
   return getRevisionBorderPolicy({
     rowState,
     previousRowState,
     nextRowState,
+    currentGraphWidth: widths?.current ?? 1,
+    previousGraphWidth: previousRowState !== null ? (widths?.previous ?? 1) : null,
+    nextGraphWidth: nextRowState !== null ? (widths?.next ?? 1) : null,
   });
 }
 
@@ -79,4 +83,65 @@ test("selected row wins shared separator ownership over a focused neighbor", () 
   expect(selectedRow.ownsTop).toBeTrue();
   expect(selectedRow.borderChars?.topLeft).toBe(BorderChars.single.topLeft);
   expect(selectedRow.borderChars?.topRight).toBe(BorderChars.single.topRight);
+});
+
+test("left corners use T-junction when neighbor has same graph width", () => {
+  const sameWidth = getPolicy("focused", "default", "default", {
+    current: 3, previous: 3, next: 3,
+  });
+  expect(sameWidth.borderChars?.topLeft).toBe(BorderChars.single.leftT);
+  expect(sameWidth.borderChars?.bottomLeft).toBe(BorderChars.single.leftT);
+});
+
+test("left corners use topT/bottomT when neighbor is wider (smaller graphWidth)", () => {
+  // Wider neighbor: connector path arrives from the left
+  const neighborWider = getPolicy("focused", "default", "default", {
+    current: 3, previous: 1, next: 1,
+  });
+  expect(neighborWider.borderChars?.topLeft).toBe(BorderChars.single.topT);
+  expect(neighborWider.borderChars?.bottomLeft).toBe(BorderChars.single.bottomT);
+});
+
+test("left corners use true corners when neighbor has larger graph width", () => {
+  const neighborNarrower = getPolicy("focused", "default", "default", {
+    current: 1, previous: 3, next: 3,
+  });
+  expect(neighborNarrower.borderChars?.topLeft).toBe(BorderChars.single.topLeft);
+  expect(neighborNarrower.borderChars?.bottomLeft).toBe(BorderChars.single.bottomLeft);
+});
+
+test("left corners use true corners for mixed neighbor widths", () => {
+  const mixedWidths = getPolicy("focused", "default", "default", {
+    current: 3, previous: 1, next: 5,
+  });
+  // previous (width 1) < current (width 3): topT (connector from wider neighbor)
+  expect(mixedWidths.borderChars?.topLeft).toBe(BorderChars.single.topT);
+  // next (width 5) > current (width 3): true corner
+  expect(mixedWidths.borderChars?.bottomLeft).toBe(BorderChars.single.bottomLeft);
+});
+
+test("selected row always uses true corners regardless of graph width", () => {
+  const selectedSameWidth = getPolicy("selected", "default", "default", {
+    current: 1, previous: 1, next: 1,
+  });
+  expect(selectedSameWidth.borderChars?.topLeft).toBe(BorderChars.single.topLeft);
+  expect(selectedSameWidth.borderChars?.bottomLeft).toBe(BorderChars.single.bottomLeft);
+});
+
+test("wider default row wins border ownership over narrower default neighbor", () => {
+  // vskromux (graphWidth 1) below uqukuxsv (graphWidth 3): wider row should own top
+  const narrowerAbove = getPolicy("default", null, "default", {
+    current: 3, next: 1,
+  });
+  const widerBelow = getPolicy("default", "default", "default", {
+    current: 1, previous: 3, next: 1,
+  });
+
+  // Narrower row loses bottom ownership to wider neighbor below
+  expect(narrowerAbove.ownsBottom).toBeFalse();
+  expect(narrowerAbove.borderSides).toEqual(["top", "right", "left"]);
+
+  // Wider row wins top ownership so it can draw T-junctions
+  expect(widerBelow.ownsTop).toBeTrue();
+  expect(widerBelow.ownsBottom).toBeTrue();
 });

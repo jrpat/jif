@@ -24,15 +24,10 @@ export class JjClient {
     ]);
 
     const revisions = parseLogOutput(logOutput.stdout, workspaceNamesByChangeId);
-    const graphWidth = revisions.reduce((maxWidth, revision) => {
-      const widths = [revision.graphHead.length, ...revision.graphTail.map((line) => line.length)];
-      return Math.max(maxWidth, ...widths);
-    }, 4);
 
     return {
       repoPath: this.repoPath,
       revisions,
-      graphWidth,
     };
   }
 

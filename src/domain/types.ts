@@ -23,7 +23,6 @@ export type RevisionSummary = Readonly<{
 export type RepositoryData = Readonly<{
   repoPath: string;
   revisions: readonly RevisionSummary[];
-  graphWidth: number;
 }>;
 
 export type CommandDraftKind = "rebase" | "squash";
@@ -63,7 +62,6 @@ export type CommandBarState = Readonly<{
 
 export type AppState = Readonly<{
   repoPath: string;
-  graphWidth: number;
   revisions: readonly RevisionSummary[];
   focusMode: FocusMode;
   focusedRevisionIndex: number;

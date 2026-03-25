@@ -10,7 +10,7 @@
 
 - `jif` is a keyboard-first terminal UI for browsing and operating on Jujutsu history.
 - UX should mirror JJUI mental models: log-first navigation, in-place details, and progressive command composition.
-- Rezi APIs should be used idiomatically and verified against the installed package/docs instead of guessed.
+- OpenTUI APIs should be used idiomatically and verified against the installed package/docs instead of guessed.
 
 
 # Repository And Tooling

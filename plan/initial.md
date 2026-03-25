@@ -2,12 +2,12 @@
 
 ## Goal
 
-Build a keyboard-first terminal UI for navigating and operating on a real Jujutsu repository, using TypeScript and Rezi, with real `jj` integration and a test-first workflow.
+Build a keyboard-first terminal UI for navigating and operating on a real Jujutsu repository, using TypeScript and OpenTUI, with real `jj` integration and a test-first workflow.
 
 ## Planning Assumptions
 
 - The repository is currently a blank slate aside from the product spec.
-- Rezi APIs must be validated against real documentation/source before implementation choices are locked in.
+- OpenTUI APIs must be validated against real documentation/source before implementation choices are locked in.
 - The first milestone is a usable vertical slice, not a fully polished clone of JJUI.
 - Real `jj` behavior is the source of truth for log shape, descendants, changed files, and command execution.
 
@@ -30,7 +30,7 @@ Organize the app into clear layers so UI behavior stays testable and `jj` semant
    - Declarative command tree/configuration
    - Multi-step command definitions, labels, cancel actions, contextual availability
 5. `src/ui/`
-   - Rezi app bootstrap
+   - OpenTUI app bootstrap
    - Layout components: command bar, revision list, graph gutter, detail list, status area/help
    - Styling/highlight rules and any supported animations
 6. `src/dev/`
@@ -49,7 +49,7 @@ Organize the app into clear layers so UI behavior stays testable and `jj` semant
 - Add linting/formatting early so the repo has a stable baseline.
 - Add a small abstraction around process execution from day one so `jj` access is easy to stub in unit tests and easy to run for integration tests.
 - Add a startup-time dependency check for `jj`.
-- First validation step: confirm the actual Rezi app lifecycle, input handling, rendering primitives, focus model, and animation support.
+- First validation step: confirm the actual OpenTUI app lifecycle, input handling, rendering primitives, focus model, and animation support.
 
 ### Phase 1: `jj` Integration and Domain Model
 
@@ -110,7 +110,7 @@ Organize the app into clear layers so UI behavior stays testable and `jj` semant
 
 ### Phase 5: First Usable UI Shell
 
-- Build the top-level Rezi layout:
+- Build the top-level OpenTUI layout:
   - command bar at top
   - revision log below
   - compact status/help area if needed
@@ -156,7 +156,7 @@ Organize the app into clear layers so UI behavior stays testable and `jj` semant
 ### Phase 9: Polish and Acceptance Pass
 
 - Improve graph readability in denser histories.
-- Add dimming of non-focused revisions when details are open, with animation only if Rezi supports it cleanly.
+- Add dimming of non-focused revisions when details are open, with animation only if OpenTUI supports it cleanly.
 - Add contextual command/help rendering driven from the command-definition system.
 - Tighten integration tests around command execution and post-command refresh.
 - Verify the implemented behavior against each acceptance criterion in the spec.
@@ -176,7 +176,7 @@ Use TDD per feature phase:
    - file-detail loading
    - descendant resolution
    - rebase execution and refresh behavior
-3. Minimal UI behavior tests where Rezi tooling allows them
+3. Minimal UI behavior tests where OpenTUI tooling allows them
    - only for behavior that cannot be confidently covered at the state layer
 
 Prefer testing pure logic over snapshotting terminal output. Snapshot tests may still be useful for graph-row formatting if kept narrow and intentional.
@@ -201,7 +201,7 @@ Status/event logging, contextual help, highlight polish, and acceptance-criteria
 
 ## Early Risks and Mitigations
 
-- Rezi API uncertainty
+- OpenTUI API uncertainty
   - Mitigation: validate actual APIs in Phase 0 before locking the component structure.
 - Parsing `jj` output too loosely
   - Mitigation: prefer structured templates/output where available and freeze representative fixtures in tests.
@@ -214,8 +214,8 @@ Status/event logging, contextual help, highlight polish, and acceptance-criteria
 
 ## Suggested First Implementation Order
 
-1. Bootstrap TypeScript, test runner, lint/format, and Rezi dependency.
-2. Validate real Rezi APIs and document the constraints that affect architecture.
+1. Bootstrap TypeScript, test runner, lint/format, and OpenTUI dependency.
+2. Validate real OpenTUI APIs and document the constraints that affect architecture.
 3. Build `JjClient` plus parsing tests.
 4. Build JSONL sample repo materializer and integration harness.
 5. Build app state/store and keyboard transition tests.
