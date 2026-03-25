@@ -5,7 +5,7 @@ import {
   type BorderSides,
 } from "@opentui/core";
 
-export type RevisionRowState = "default" | "focused" | "selected";
+export type RevisionRowState = "default" | "affected" | "focused" | "selected";
 
 export function getRevisionBorderPolicy(options: Readonly<{
   rowState: RevisionRowState;
@@ -107,8 +107,10 @@ function getBorderChars(options: Readonly<{
 function getRowStatePriority(rowState: RevisionRowState): number {
   switch (rowState) {
     case "selected":
-      return 2;
+      return 3;
     case "focused":
+      return 2;
+    case "affected":
       return 1;
     default:
       return 0;

@@ -552,10 +552,25 @@ function RevisionItem(props: {
     const next = state.revisions[props.index + 1] ?? null;
     return next ? measureCoreGraphWidth(next.graphHead, next.graphTail) : null;
   });
+  const effectiveRowState = createMemo((): RevisionRowState => {
+    const rs = rowState();
+    if (rs === "default" && isAffected()) return "affected";
+    return rs;
+  });
+  const previousEffectiveRowState = createMemo((): RevisionRowState | null => {
+    const rs = previousRowState();
+    if (rs === "default" && props.previousRevisionId !== null && affectedIds().has(props.previousRevisionId)) return "affected";
+    return rs;
+  });
+  const nextEffectiveRowState = createMemo((): RevisionRowState | null => {
+    const rs = nextRowState();
+    if (rs === "default" && props.nextRevisionId !== null && affectedIds().has(props.nextRevisionId)) return "affected";
+    return rs;
+  });
   const borderPolicy = createMemo(() => getRevisionBorderPolicy({
-    rowState: rowState(),
-    previousRowState: previousRowState(),
-    nextRowState: nextRowState(),
+    rowState: effectiveRowState(),
+    previousRowState: previousEffectiveRowState(),
+    nextRowState: nextEffectiveRowState(),
     currentGraphWidth: coreGraphWidth(),
     previousGraphWidth: previousCoreGraphWidth(),
     nextGraphWidth: nextCoreGraphWidth(),

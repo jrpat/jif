@@ -128,6 +128,49 @@ test("selected row always uses true corners regardless of graph width", () => {
   expect(selectedSameWidth.borderChars?.bottomLeft).toBe(BorderChars.single.bottomLeft);
 });
 
+test("affected row owns top border over default neighbor above", () => {
+  const defaultAbove = getPolicy("default", null, "affected");
+  const affectedRow = getPolicy("affected", "default", "default");
+
+  expect(defaultAbove.ownsBottom).toBeFalse();
+  expect(defaultAbove.borderSides).toEqual(["top", "right", "left"]);
+
+  expect(affectedRow.ownsTop).toBeTrue();
+  expect(affectedRow.ownsBottom).toBeTrue();
+});
+
+test("affected row owns bottom border over default neighbor below", () => {
+  const affectedRow = getPolicy("affected", "default", "default");
+  const defaultBelow = getPolicy("default", "affected", null);
+
+  expect(affectedRow.ownsBottom).toBeTrue();
+  expect(defaultBelow.ownsTop).toBeFalse();
+});
+
+test("focused row wins over affected row", () => {
+  const affectedRow = getPolicy("affected", null, "focused");
+  const focusedRow = getPolicy("focused", "affected", null);
+
+  expect(affectedRow.ownsBottom).toBeFalse();
+  expect(focusedRow.ownsTop).toBeTrue();
+});
+
+test("selected row wins over affected row", () => {
+  const affectedRow = getPolicy("affected", null, "selected");
+  const selectedRow = getPolicy("selected", "affected", null);
+
+  expect(affectedRow.ownsBottom).toBeFalse();
+  expect(selectedRow.ownsTop).toBeTrue();
+});
+
+test("adjacent affected rows share borders like default rows", () => {
+  const row = getPolicy("affected", "affected", "affected");
+
+  expect(row.ownsTop).toBeFalse();
+  expect(row.ownsBottom).toBeTrue();
+  expect(row.borderSides).toEqual(["right", "bottom", "left"]);
+});
+
 test("wider default row wins border ownership over narrower default neighbor", () => {
   // vskromux (graphWidth 1) below uqukuxsv (graphWidth 3): wider row should own top
   const narrowerAbove = getPolicy("default", null, "default", {
