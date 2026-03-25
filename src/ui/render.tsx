@@ -587,20 +587,8 @@ function RevisionItem(props: {
         ? colors().rowBorderCommandTarget
         : colors().rowBorderIdle
   );
-  const titleGraphColor = createMemo(() =>
-    isSelected()
-      ? colors().rowBorderSelected
-      : isFocused()
-        ? colors().rowBorderFocus
-        : markerColor(revision, colors())
-  );
-  const continuationGraphColor = createMemo(() =>
-    isSelected()
-      ? colors().rowBorderSelected
-      : isFocused()
-        ? colors().rowBorderFocus
-        : colors().textTertiary
-  );
+  const titleGraphColor = createMemo(() => markerColor(revision, colors()));
+  const continuationGraphColor = createMemo(() => colors().textTertiary);
 
   return (
     <box
