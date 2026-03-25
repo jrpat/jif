@@ -10,6 +10,7 @@ import {
   draftConfigs,
   focusCommandBar,
   focusWorkingCopy,
+  getDisplayedCommandSegments,
   getDisplayedCommandText,
   getSelectedRevisionIds,
   pushEvent,
@@ -259,4 +260,56 @@ test("startCommandDraft uses pre-selected revisions and does not advance focus",
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
   expect(state.focusedRevisionIndex).toBe(prevFocusIndex);
   expect(state.selectedRevisionIds).toEqual(["aaaaaaaa", "bbbbbbbb"]);
+});
+
+test("multiple selected revisions produce repeated flags", () => {
+  let state = createState();
+  state = toggleRevisionSelection(state);
+  state = moveFocus(state, 1);
+  state = toggleRevisionSelection(state);
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -r b -d ░░░░");
+});
+
+test("multiple selections with descendants produce repeated -s flags", () => {
+  let state = createState();
+  state = toggleRevisionSelection(state);
+  state = moveFocus(state, 1);
+  state = toggleRevisionSelection(state);
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
+  state = toggleRebaseDescendants(state, []);
+  expect(getDisplayedCommandText(state)).toBe("rebase -s a -s b -d ░░░░");
+});
+
+test("multiple selections in squash produce repeated -f flags", () => {
+  let state = createState();
+  state = toggleRevisionSelection(state);
+  state = moveFocus(state, 1);
+  state = toggleRevisionSelection(state);
+  state = startCommandDraft(state, draftConfigs.squash);
+  expect(getDisplayedCommandText(state)).toBe("squash -f a -f b -t ░░░░");
+});
+
+test("arg helper selects long flags when useShortFlags is false", () => {
+  let state = { ...createState(), useShortFlags: false };
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
+  expect(getDisplayedCommandText(state)).toBe("rebase --revisions a --destination b");
+});
+
+test("segment highlighting styles flags as command and values as selected/target", () => {
+  let state = createState();
+  state = toggleRevisionSelection(state);
+  state = moveFocus(state, 1);
+  state = toggleRevisionSelection(state);
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
+  // Target not yet chosen, so placeholder
+  const segments = getDisplayedCommandSegments(state)!;
+  expect(segments).toEqual([
+    { text: "rebase -r ", style: "command" },
+    { text: "a", style: "selected" },
+    { text: " -r ", style: "command" },
+    { text: "b", style: "selected" },
+    { text: " -d ", style: "command" },
+    { text: "░░░░", style: "placeholder" },
+  ]);
 });

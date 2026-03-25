@@ -29,8 +29,7 @@ export type CommandDraftKind = "rebase" | "squash";
 
 export type CommandDraftConfig = Readonly<{
   kind: CommandDraftKind;
-  shortTemplate: string;
-  longTemplate: string;
+  template: string;
   badgeText: string;
 }>;
 

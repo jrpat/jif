@@ -14,27 +14,22 @@ export const DRAFT_PLACEHOLDER = "░░░░";
 export const draftConfigs = {
   rebase: {
     kind: "rebase" as const,
-    shortTemplate: "rebase -r ${selected} -d ${target}",
-    longTemplate: "rebase --revisions ${selected} --destination ${target}",
+    template: "rebase ${selected.map(s => `${arg(descendants ? '-s --source' : '-r --revisions')} ${s}`).join(' ')} ${arg('-d --destination')} ${target}",
     badgeText: "onto",
   },
   squash: {
     kind: "squash" as const,
-    shortTemplate: "squash -f ${selected} -t ${target}",
-    longTemplate: "squash --from ${selected} --into ${target}",
+    template: "squash ${selected.map(s => `${arg('-f --from')} ${s}`).join(' ')} ${arg('-t --into')} ${target}",
     badgeText: "into",
   },
 } satisfies Record<string, CommandDraftConfig>;
 
-export function interpolateTemplate(
-  template: string,
-  vars: Record<string, string>,
-): string {
-  return template
-    .replace(/\$\{(\w+)\}/g, (_, key) => vars[key] || DRAFT_PLACEHOLDER)
-    .replace(/\s+/g, " ")
-    .trim();
-}
+export type TemplateContext = Readonly<{
+  selected: readonly (string | Tagged)[];
+  target: string | Tagged;
+  descendants: boolean;
+  arg: (pair: string) => string;
+}>;
 
 export type CommandSegmentStyle = "command" | "selected" | "target" | "placeholder";
 
@@ -43,33 +38,48 @@ export type CommandSegment = Readonly<{
   style: CommandSegmentStyle;
 }>;
 
+const MARKER_START = "\x02";
+const MARKER_SEP = "\x03";
+
+export class Tagged {
+  constructor(public value: string, public style: CommandSegmentStyle) {}
+  toString() {
+    if (!this.value) {
+      return `${MARKER_START}placeholder${MARKER_SEP}${DRAFT_PLACEHOLDER}${MARKER_START}`;
+    }
+    return `${MARKER_START}${this.style}${MARKER_SEP}${this.value}${MARKER_START}`;
+  }
+}
+
+export function evaluateTemplate(template: string, context: TemplateContext): string {
+  const keys = Object.keys(context);
+  const fn = new Function(...keys, `return \`${template}\``);
+  return (fn(...Object.values(context)) as string).replace(/\s+/g, " ").trim();
+}
+
 export function buildCommandSegments(
   template: string,
-  vars: Record<string, string>,
+  context: TemplateContext,
 ): readonly CommandSegment[] {
+  const raw = evaluateTemplate(template, context);
   const segments: CommandSegment[] = [];
-  let lastIndex = 0;
+  let pos = 0;
 
-  for (const match of template.matchAll(/\$\{(\w+)\}/g)) {
-    const before = template.slice(lastIndex, match.index);
-    if (before) {
-      segments.push({ text: before, style: "command" });
+  while (pos < raw.length) {
+    const markerStart = raw.indexOf(MARKER_START, pos);
+    if (markerStart === -1) {
+      segments.push({ text: raw.slice(pos), style: "command" });
+      break;
     }
-
-    const key = match[1]!;
-    const value = vars[key] ?? "";
-    if (value) {
-      segments.push({ text: value, style: key === "target" ? "target" : "selected" });
-    } else {
-      segments.push({ text: DRAFT_PLACEHOLDER, style: "placeholder" });
+    if (markerStart > pos) {
+      segments.push({ text: raw.slice(pos, markerStart), style: "command" });
     }
-
-    lastIndex = match.index! + match[0].length;
-  }
-
-  const after = template.slice(lastIndex);
-  if (after) {
-    segments.push({ text: after, style: "command" });
+    const sepIndex = raw.indexOf(MARKER_SEP, markerStart + 1);
+    const markerEnd = raw.indexOf(MARKER_START, sepIndex + 1);
+    const style = raw.slice(markerStart + 1, sepIndex) as CommandSegmentStyle;
+    const value = raw.slice(sepIndex + 1, markerEnd);
+    segments.push({ text: value, style });
+    pos = markerEnd + 1;
   }
 
   return segments;
@@ -486,25 +496,40 @@ export function getSelectedRevisionIds(state: AppState): ReadonlySet<string> {
   return new Set(state.selectedRevisionIds);
 }
 
-function resolveTemplate(state: AppState): { template: string; vars: Record<string, string> } | null {
+function buildContext(state: AppState): { template: string; context: TemplateContext } | null {
   if (!state.commandDraft) {
     return null;
   }
 
   const draft = state.commandDraft;
-  let template = state.useShortFlags ? draft.config.shortTemplate : draft.config.longTemplate;
-
-  if (draft.config.kind === "rebase" && draft.includeDescendants) {
-    template = state.useShortFlags
-      ? template.replace("-r", "-s")
-      : template.replace("--revisions", "--source");
-  }
+  const useShort = state.useShortFlags;
 
   return {
-    template,
-    vars: {
-      selected: state.selectedRevisionIds.map((id) => revisionPrefix(state, id)).join(" "),
-      target: revisionPrefix(state, getCommandTargetRevisionId(state) ?? ""),
+    template: draft.config.template,
+    context: {
+      selected: state.selectedRevisionIds.map((id) => revisionPrefix(state, id)),
+      target: revisionPrefix(state, getCommandTargetRevisionId(state) ?? "") || DRAFT_PLACEHOLDER,
+      descendants: draft.config.kind === "rebase" && (draft.includeDescendants ?? false),
+      arg: (pair: string) => {
+        const [s, l] = pair.split(" ");
+        return useShort ? s! : l!;
+      },
+    },
+  };
+}
+
+function buildTaggedContext(state: AppState): { template: string; context: TemplateContext } | null {
+  const resolved = buildContext(state);
+  if (!resolved) return null;
+
+  const { context } = resolved;
+  const targetRaw = context.target as string;
+  return {
+    template: resolved.template,
+    context: {
+      ...context,
+      selected: (context.selected as string[]).map((s) => new Tagged(s, "selected")),
+      target: new Tagged(targetRaw === DRAFT_PLACEHOLDER ? "" : targetRaw, "target"),
     },
   };
 }
@@ -514,12 +539,12 @@ export function getDisplayedCommandText(state: AppState): string {
     return state.commandBar.text;
   }
 
-  const resolved = resolveTemplate(state);
+  const resolved = buildContext(state);
   if (!resolved) {
     return "";
   }
 
-  return interpolateTemplate(resolved.template, resolved.vars);
+  return evaluateTemplate(resolved.template, resolved.context);
 }
 
 export function getDisplayedCommandSegments(state: AppState): readonly CommandSegment[] | null {
@@ -527,12 +552,12 @@ export function getDisplayedCommandSegments(state: AppState): readonly CommandSe
     return null;
   }
 
-  const resolved = resolveTemplate(state);
+  const resolved = buildTaggedContext(state);
   if (!resolved) {
     return null;
   }
 
-  return buildCommandSegments(resolved.template, resolved.vars);
+  return buildCommandSegments(resolved.template, resolved.context);
 }
 
 function revisionPrefix(state: AppState, changeId: string): string {
@@ -565,7 +590,7 @@ export function commandCanExecute(state: AppState): boolean {
     return false;
   }
 
-  if (state.commandDraft.config.shortTemplate.includes("${target}")) {
+  if (state.commandDraft.config.template.includes("${target}")) {
     return getCommandTargetRevisionId(state) !== null;
   }
 
