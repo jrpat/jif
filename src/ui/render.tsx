@@ -493,7 +493,7 @@ function CommandBar(props: {
             ref={(el: any) => el.editorView.setScrollMargin(0)}
             flexGrow={1}
             value={props.commandText}
-            placeholder="subcommand (':' to type)"
+            placeholder={commandBarFocused() ? "subcommand" : "subcommand (':' to type)"}
             focused={commandBarFocused()}
             textColor={colors.textPrimary}
             focusedTextColor={colors.textPrimary}
