@@ -18,6 +18,7 @@ export type CommandController = Readonly<{
   undo: () => void;
   redo: () => void;
   focusWorkingCopy: () => void;
+  openRevsetInput: () => void;
 }>;
 
 export type CommandDefinition = Readonly<{
@@ -204,6 +205,15 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     when: (state) => state.commandDraft?.config.kind === "rebase" && state.focusMode === "revisions",
     run: (controller) => controller.toggleRebaseDescendants(),
     group: "mode",
+  },
+  {
+    id: "edit-revset",
+    title: "Edit Revset",
+    description: "Change which revisions are displayed",
+    canonicalKeys: ["L"],
+    keys: ["L"],
+    when: (state) => state.focusMode !== "command" && state.focusMode !== "revset",
+    run: (controller) => controller.openRevsetInput(),
   },
 ];
 

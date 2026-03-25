@@ -11,9 +11,9 @@ const FIELD_SEPARATOR = "\u001f";
 export class JjClient {
   constructor(readonly repoPath: string) {}
 
-  async loadRepository(limit = 80): Promise<RepositoryData> {
+  async loadRepository(limit = 80, revset?: string): Promise<RepositoryData> {
     const workspaceNamesByChangeId = await this.loadWorkspaceNamesByChangeId();
-    const logOutput = await this.runJj([
+    const args = [
       "log",
       "--limit",
       String(limit),
@@ -21,7 +21,11 @@ export class JjClient {
       "never",
       "--template",
       `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
-    ]);
+    ];
+    if (revset) {
+      args.push("-r", revset);
+    }
+    const logOutput = await this.runJj(args);
 
     const revisions = parseLogOutput(logOutput.stdout, workspaceNamesByChangeId);
 
@@ -80,6 +84,61 @@ export class JjClient {
 
   async verifyRepository(): Promise<void> {
     await this.runJj(["root"]);
+  }
+
+  async loadWorkspaceRoot(): Promise<string> {
+    const result = await this.runJj(["workspace", "root"]);
+    return result.stdout.trim();
+  }
+
+  async loadDefaultRevset(): Promise<string> {
+    try {
+      const result = await this.runJj(["config", "get", "revsets.log"]);
+      return result.stdout.trim();
+    } catch {
+      return "";
+    }
+  }
+
+  async loadBookmarks(): Promise<string[]> {
+    try {
+      const result = await this.runJj(["bookmark", "list", "--color", "never"]);
+      return result.stdout
+        .split("\n")
+        .map((line) => line.match(/^(\S+)/)?.[1])
+        .filter((name): name is string => !!name);
+    } catch {
+      return [];
+    }
+  }
+
+  async loadTags(): Promise<string[]> {
+    try {
+      const result = await this.runJj(["tag", "list", "--color", "never"]);
+      return result.stdout
+        .split("\n")
+        .map((line) => line.match(/^(\S+)/)?.[1])
+        .filter((name): name is string => !!name);
+    } catch {
+      return [];
+    }
+  }
+
+  async loadAliases(): Promise<Record<string, string>> {
+    try {
+      const result = await this.runJj(["config", "list", "revset-aliases", "--color", "never"]);
+      const aliases: Record<string, string> = {};
+      for (const line of result.stdout.split("\n")) {
+        const match = line.match(/^revset-aliases\.([^=]+)=(.*)$/);
+        if (match) {
+          const name = match[1]!.replace(/^"(.*)"$/, "$1");
+          aliases[name] = match[2]!.trim().replace(/^"(.*)"$/, "$1");
+        }
+      }
+      return aliases;
+    } catch {
+      return {};
+    }
   }
 
   private async loadWorkspaceNamesByChangeId(): Promise<ReadonlyMap<string, readonly string[]>> {

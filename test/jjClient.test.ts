@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { join } from "node:path";
 import { materializeSampleRepo } from "../src/dev/sampleRepo.ts";
 import { JjClient, parseLogOutput, tokenizeCommandText } from "../src/jj/client.ts";
 import { createTempDir } from "./helpers/tempRepo.ts";
@@ -42,4 +43,13 @@ test("JjClient loads a real sample repository", async () => {
 
   const firstFiles = await client.loadChangedFiles(repository.revisions[0]!.changeId);
   expect(firstFiles.length).toBeGreaterThan(0);
+}, 20000);
+
+test("JjClient resolves the actual workspace root from nested paths", async () => {
+  const repo = await materializeSampleRepo({
+    baseDir: await createTempDir("client-workspace-root"),
+  });
+  const client = new JjClient(join(repo.repoPath, "src"));
+
+  expect(await client.loadWorkspaceRoot()).toBe(repo.repoPath);
 }, 20000);

@@ -102,11 +102,24 @@ export function createInitialState(repoPath: string, options?: { useShortFlags?:
     loading: true,
     error: null,
     useShortFlags: options?.useShortFlags ?? true,
+    revsetQuery: "",
   };
 }
 
 export function toggleShortFlags(state: AppState): AppState {
   return { ...state, useShortFlags: !state.useShortFlags };
+}
+
+export function openRevsetInput(state: AppState): AppState {
+  return { ...state, focusMode: "revset" };
+}
+
+export function closeRevsetInput(state: AppState): AppState {
+  return { ...state, focusMode: "revisions" };
+}
+
+export function setRevsetQuery(state: AppState, query: string): AppState {
+  return { ...state, revsetQuery: query };
 }
 
 export function createEmptyCommandBar(): CommandBarState {

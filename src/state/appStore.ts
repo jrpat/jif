@@ -15,6 +15,9 @@ import {
   clearStatusMessage,
   closeFocusedRevision,
   focusWorkingCopy,
+  openRevsetInput,
+  closeRevsetInput,
+  setRevsetQuery,
   dismissOldestError,
   startCommandDraft,
   toggleFileSelection,
@@ -124,6 +127,15 @@ export function createAppStore(repoPath: string, options?: { useShortFlags?: boo
       },
       focusWorkingCopy() {
         mutate((currentState) => focusWorkingCopy(currentState));
+      },
+      openRevsetInput() {
+        mutate((currentState) => openRevsetInput(currentState));
+      },
+      closeRevsetInput() {
+        mutate((currentState) => closeRevsetInput(currentState));
+      },
+      setRevsetQuery(query: string) {
+        mutate((currentState) => setRevsetQuery(currentState, query));
       },
     },
   };

@@ -21,6 +21,7 @@
   "dependencies": {
     "@opentui/core": "^0.1.90",
     "@opentui/solid": "^0.1.90",
+    "fzy.js": "^0.4.1",
     "solid-js": "^1.9.11"
   }
 }

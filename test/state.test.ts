@@ -23,6 +23,9 @@ import {
   toggleFileSelection,
   toggleRebaseDescendants,
   toggleRevisionSelection,
+  openRevsetInput,
+  closeRevsetInput,
+  setRevsetQuery,
 } from "../src/state/store.ts";
 
 function createState(): AppState {
@@ -312,4 +315,25 @@ test("segment highlighting styles flags as command and values as selected/target
     { text: " -d ", style: "command" },
     { text: "░░░░", style: "placeholder" },
   ]);
+});
+
+test("openRevsetInput sets focusMode to revset", () => {
+  let state = createState();
+  expect(state.focusMode).toBe("revisions");
+  state = openRevsetInput(state);
+  expect(state.focusMode).toBe("revset");
+});
+
+test("closeRevsetInput restores focusMode to revisions", () => {
+  let state = createState();
+  state = openRevsetInput(state);
+  state = closeRevsetInput(state);
+  expect(state.focusMode).toBe("revisions");
+});
+
+test("setRevsetQuery updates the query", () => {
+  let state = createState();
+  expect(state.revsetQuery).toBe("");
+  state = setRevsetQuery(state, "ancestors(trunk(), 10)");
+  expect(state.revsetQuery).toBe("ancestors(trunk(), 10)");
 });

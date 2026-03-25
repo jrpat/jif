@@ -4,6 +4,7 @@ import { createStore, reconcile } from "solid-js/store";
 import { useKeyboard, useRenderer } from "@opentui/solid";
 import { getVisibleCommands, type CommandController } from "../commands/definitions.ts";
 import { resolveAppConfig, type AppConfig, type ResolvedAppConfig } from "../config/index.ts";
+import { HistoryStore, matchHistoryEntries } from "../history/store.ts";
 import type { AppStore } from "../state/appStore.ts";
 import {
   commandCanExecute,
@@ -19,7 +20,14 @@ import {
   type CommandSegment,
 } from "../state/store.ts";
 import type { JjClient } from "../jj/client.ts";
+import { buildCompletionItems, extractLastToken, matchCompletions, type CompletionItem } from "../revset/completions.ts";
 import type { RevisionSummary } from "../domain/types.ts";
+import { AutocompleteList, type AutocompleteListItem } from "./AutocompleteList.tsx";
+import {
+  getAutocompleteAction,
+  moveAutocompleteSelection,
+  type AutocompleteFlow,
+} from "./autocomplete.ts";
 import {
   getRevisionBorderPolicy,
   type RevisionRowState,
@@ -40,6 +48,7 @@ export function JifView(props: {
   const { store, client, rawConfig } = props;
   const [config, setConfig] = createStore<ResolvedAppConfig>(props.config);
   const [ready, setReady] = createSignal(false);
+  const [workspaceRoot, setWorkspaceRoot] = createSignal<string | null>(null);
   const renderer = useRenderer();
   let logViewport: ScrollBoxRenderable | undefined;
 
@@ -193,6 +202,9 @@ export function JifView(props: {
     focusWorkingCopy() {
       store.actions.focusWorkingCopy();
     },
+    openRevsetInput() {
+      store.actions.openRevsetInput();
+    },
     toggleRebaseDescendants() {
       const state = store.snapshot();
       if (state.commandDraft?.config.kind !== "rebase") {
@@ -247,7 +259,7 @@ export function JifView(props: {
       return;
     }
 
-    if (state.focusMode === "command") {
+    if (state.focusMode === "command" || state.focusMode === "revset") {
       return;
     }
 
@@ -320,7 +332,17 @@ export function JifView(props: {
   });
 
   onMount(() => {
-    void refreshRepository();
+    void (async () => {
+      const [resolvedWorkspaceRoot, defaultRevset] = await Promise.all([
+        client.loadWorkspaceRoot().catch(() => null),
+        client.loadDefaultRevset(),
+      ]);
+      setWorkspaceRoot(resolvedWorkspaceRoot);
+      if (defaultRevset) {
+        store.actions.setRevsetQuery(defaultRevset);
+      }
+      await refreshRepository(defaultRevset || undefined);
+    })();
   });
 
   return (
@@ -334,11 +356,12 @@ export function JifView(props: {
       <CommandBar
         store={store}
         config={config}
+        workspaceRoot={workspaceRoot()}
         commandText={commandText()}
         commandSegments={commandSegments()}
         onSubmit={(value) => {
           store.actions.setCommandBarText(value);
-          void executeCurrentCommand(value);
+          void executeCurrentCommand(value, { recordHistory: true });
         }}
       />
       <scrollbox
@@ -372,19 +395,43 @@ export function JifView(props: {
           </For>
         </box>
       </scrollbox>
-      <StatusArea
-        state={store.state}
-        events={visibleEvents()}
-        helpText={visibleCommands()
-          .map((command) => `${command.canonicalKeys.join("/")} ${command.title.toLowerCase()}`)
-          .join("   ")}
-        config={config}
-      />
+      <Show when={store.state.focusMode !== "revset"}>
+        <StatusArea
+          state={store.state}
+          events={visibleEvents()}
+          helpText={visibleCommands()
+            .map((command) => `${command.canonicalKeys.join("/")} ${command.title.toLowerCase()}`)
+            .join("   ")}
+          config={config}
+        />
+      </Show>
+      <Show when={store.state.focusMode === "revset"}>
+        <RevsetInput
+          revsetQuery={store.state.revsetQuery}
+          client={client}
+          config={config}
+          workspaceRoot={workspaceRoot()}
+          onApply={async (query) => {
+            if (workspaceRoot()) {
+              await new HistoryStore(workspaceRoot()!).record("revset-history", query);
+            }
+            store.actions.setRevsetQuery(query);
+            store.actions.closeRevsetInput();
+            void refreshRepository(query || undefined);
+          }}
+          onCancel={() => {
+            store.actions.closeRevsetInput();
+          }}
+        />
+      </Show>
     </box>
     </Show>
   );
 
-  async function executeCurrentCommand(commandOverride?: string) {
+  async function executeCurrentCommand(
+    commandOverride?: string,
+    options?: { recordHistory?: boolean },
+  ) {
     const state = store.snapshot();
     const commandTextValue = (commandOverride ?? getDisplayedCommandText(state)).trim();
     if (!commandCanExecute(state) || commandTextValue.length === 0) {
@@ -394,6 +441,9 @@ export function JifView(props: {
     store.actions.setLoading(true);
 
     try {
+      if (options?.recordHistory && workspaceRoot()) {
+        await new HistoryStore(workspaceRoot()!).record("command-history", commandTextValue);
+      }
       const resultMessage = await client.executeCommand(commandTextValue);
       store.actions.cancelCommand();
       store.actions.pushEvent(resultMessage, "success");
@@ -419,11 +469,11 @@ export function JifView(props: {
     }
   }
 
-  async function refreshRepository() {
+  async function refreshRepository(revset?: string) {
     store.actions.setLoading(true);
     try {
       await client.verifyRepository();
-      const repositoryData = await client.loadRepository();
+      const repositoryData = await client.loadRepository(undefined, revset || store.state.revsetQuery || undefined);
       store.actions.applyRepositoryData(repositoryData);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -436,6 +486,7 @@ export function JifView(props: {
 function CommandBar(props: {
   store: AppStore;
   config: ResolvedAppConfig;
+  workspaceRoot: string | null;
   commandText: string;
   commandSegments: readonly CommandSegment[] | null;
   onSubmit: (value: string) => void;
@@ -444,69 +495,152 @@ function CommandBar(props: {
   const colors = config.colorScheme.semanticColors;
   const commandBarFocused = createMemo(() => store.state.focusMode === "command");
   const showSegments = () => props.commandSegments !== null && !commandBarFocused();
+  const flow: AutocompleteFlow = "top-to-bottom";
+  const [historyEntries, setHistoryEntries] = createSignal<string[]>([]);
+  const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null);
+
+  createEffect(() => {
+    const focused = commandBarFocused();
+    const workspaceRoot = props.workspaceRoot;
+
+    if (!focused || !workspaceRoot) {
+      setSelectedIndex(null);
+      return;
+    }
+
+    void new HistoryStore(workspaceRoot).load("command-history").then(setHistoryEntries);
+  });
+
+  createEffect(() => {
+    props.commandText;
+    setSelectedIndex(null);
+  });
+
+  const filteredHistory = createMemo(() => {
+    if (!commandBarFocused() || props.commandSegments !== null) {
+      return [];
+    }
+
+    return matchHistoryEntries(props.commandText, historyEntries());
+  });
+
+  const autocompleteItems = createMemo<AutocompleteListItem[]>(() =>
+    filteredHistory().map((entry) => ({
+      id: entry,
+      text: entry,
+    }))
+  );
+  const autocompleteHeight = createMemo(() => Math.min(autocompleteItems().length, 10));
+
+  useKeyboard((event) => {
+    if (event.eventType === "release" || !commandBarFocused() || props.commandSegments !== null) {
+      return;
+    }
+
+    const action = getAutocompleteAction(event, flow);
+    if (action !== null) {
+      event.preventDefault();
+      setSelectedIndex((currentIndex) =>
+        moveAutocompleteSelection(currentIndex, filteredHistory().length, action)
+      );
+      return;
+    }
+
+    if (event.name !== "return") {
+      return;
+    }
+
+    const index = selectedIndex();
+    if (index === null) {
+      return;
+    }
+
+    const entry = filteredHistory()[index];
+    if (!entry) {
+      return;
+    }
+
+    event.preventDefault();
+    store.actions.setCommandBarText(entry);
+    setSelectedIndex(null);
+  }, { release: true });
 
   return (
     <box
       width="100%"
-      height={3}
-      backgroundColor={
-        commandBarFocused()
-          ? colors.chromeFillTwo
-          : colors.chromeFillOne
-      }
+      height={3 + autocompleteHeight()}
       flexDirection="column"
     >
-      <box width="100%" height={1} />
       <box
         width="100%"
-        flexDirection="row"
+        height={3}
         backgroundColor={
           commandBarFocused()
             ? colors.chromeFillTwo
             : colors.chromeFillOne
         }
+        flexDirection="column"
       >
-        <box width={4} flexDirection="row" paddingLeft={1}>
-          <text fg={commandBarFocused() ? colors.textPrimary : colors.textTertiary}>jj </text>
-        </box>
-        {showSegments() ? (
-          <box flexGrow={1} flexDirection="row">
-            <For each={props.commandSegments!}>
-              {(segment) => (
-                <text
-                  fg={segment.style === "selected"
-                    ? colors.rowSelectedAccent
-                    : segment.style === "target"
-                      ? colors.chromeBorderFocus
-                      : segment.style === "placeholder"
-                        ? colors.chromeBorderFocus
-                        : colors.textPrimary}
-                  attributes={segment.style !== "command" ? TextAttributes.BOLD : undefined}
-                >
-                  {segment.text}
-                </text>
-              )}
-            </For>
+        <box width="100%" height={1} />
+        <box
+          width="100%"
+          flexDirection="row"
+          backgroundColor={
+            commandBarFocused()
+              ? colors.chromeFillTwo
+              : colors.chromeFillOne
+          }
+        >
+          <box width={4} flexDirection="row" paddingLeft={1}>
+            <text fg={commandBarFocused() ? colors.textPrimary : colors.textTertiary}>jj </text>
           </box>
-        ) : (
-          <input
-            ref={(el: any) => el.editorView.setScrollMargin(0)}
-            flexGrow={1}
-            value={props.commandText}
-            placeholder={commandBarFocused() ? "subcommand" : "subcommand (':' to type)"}
-            focused={commandBarFocused()}
-            textColor={colors.textPrimary}
-            focusedTextColor={colors.textPrimary}
-            placeholderColor={commandBarFocused() ? colors.textQuaternary : colors.textTertiary}
-            cursorColor={colors.chromeBorderFocus}
-            onInput={(value) => {
-              store.actions.setCommandBarText(value);
-            }}
-            onSubmit={props.onSubmit as any}
-          />
-        )}
+          {showSegments() ? (
+            <box flexGrow={1} flexDirection="row">
+              <For each={props.commandSegments!}>
+                {(segment) => (
+                  <text
+                    fg={segment.style === "selected"
+                      ? colors.rowSelectedAccent
+                      : segment.style === "target"
+                        ? colors.chromeBorderFocus
+                        : segment.style === "placeholder"
+                          ? colors.chromeBorderFocus
+                          : colors.textPrimary}
+                    attributes={segment.style !== "command" ? TextAttributes.BOLD : undefined}
+                  >
+                    {segment.text}
+                  </text>
+                )}
+              </For>
+            </box>
+          ) : (
+            <input
+              ref={(el: any) => el.editorView.setScrollMargin(0)}
+              flexGrow={1}
+              value={props.commandText}
+              placeholder={commandBarFocused() ? "subcommand" : "subcommand (':' to type)"}
+              focused={commandBarFocused()}
+              textColor={colors.textPrimary}
+              focusedTextColor={colors.textPrimary}
+              placeholderColor={commandBarFocused() ? colors.textQuaternary : colors.textTertiary}
+              cursorColor={colors.chromeBorderFocus}
+              onInput={(value) => {
+                store.actions.setCommandBarText(value);
+              }}
+              onSubmit={props.onSubmit as any}
+            />
+          )}
+        </box>
+        <box width="100%" height={1} />
       </box>
-      <box width="100%" height={1} />
+      <Show when={autocompleteItems().length > 0}>
+        <AutocompleteList
+          items={autocompleteItems()}
+          selectedIndex={selectedIndex()}
+          flow={flow}
+          config={config}
+        />
+      </Show>
     </box>
   );
 }
@@ -831,6 +965,151 @@ function StatusArea(props: {
   );
 }
 
+function RevsetInput(props: {
+  revsetQuery: string;
+  client: JjClient;
+  config: ResolvedAppConfig;
+  workspaceRoot: string | null;
+  onApply: (query: string) => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  const colors = props.config.colorScheme.semanticColors;
+  const flow: AutocompleteFlow = "bottom-to-top";
+  const [text, setText] = createSignal(props.revsetQuery);
+  const [completionItems, setCompletionItems] = createSignal<CompletionItem[]>([]);
+  const [historyEntries, setHistoryEntries] = createSignal<string[]>([]);
+  const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null);
+
+  const suggestions = createMemo<AutocompleteListItem[]>(() => {
+    if (text().trim().length === 0) {
+      return historyEntries().map((entry) => ({
+        id: `history:${entry}`,
+        tag: "hs",
+        text: entry,
+      }));
+    }
+
+    const { token } = extractLastToken(text());
+    return matchCompletions(token, completionItems()).map((item) => ({
+      id: `completion:${item.kind}:${item.name}`,
+      tag: completionKindLabel(item.kind),
+      text: item.name,
+      detail: item.detail,
+    }));
+  });
+  const autocompleteHeight = createMemo(() => Math.min(suggestions().length, 10));
+
+  onMount(() => {
+    void (async () => {
+      const [bookmarks, tags, aliases, history] = await Promise.all([
+        props.client.loadBookmarks(),
+        props.client.loadTags(),
+        props.client.loadAliases(),
+        props.workspaceRoot
+          ? new HistoryStore(props.workspaceRoot).load("revset-history")
+          : Promise.resolve([]),
+      ]);
+      setCompletionItems(buildCompletionItems(bookmarks, tags, aliases));
+      setHistoryEntries(history);
+    })();
+  });
+
+  const applySuggestion = (item: AutocompleteListItem) => {
+    if (item.tag === "hs") {
+      setText(item.text);
+      setSelectedIndex(null);
+      return;
+    }
+
+    const completion = completionItems().find((candidate) => candidate.name === item.text);
+    if (!completion) {
+      return;
+    }
+
+    const current = text();
+    const { start } = extractLastToken(current);
+    let nextValue = completion.name;
+    if (completion.kind === "function") {
+      nextValue += completion.hasParameters ? "(" : "()";
+    }
+    setText(current.slice(0, start) + nextValue);
+    setSelectedIndex(null);
+  };
+
+  useKeyboard((event) => {
+    if (event.eventType === "release" || event.meta || event.option) {
+      return;
+    }
+
+    const action = getAutocompleteAction(event, flow);
+    if (action !== null) {
+      event.preventDefault();
+      setSelectedIndex((currentIndex) =>
+        moveAutocompleteSelection(currentIndex, suggestions().length, action)
+      );
+      return;
+    }
+
+    if (event.name === "return") {
+      event.preventDefault();
+      const idx = selectedIndex();
+      const items = suggestions();
+      if (idx !== null && idx < items.length) {
+        applySuggestion(items[idx]!);
+      } else {
+        void props.onApply(text());
+      }
+      return;
+    }
+
+    if (event.name === "escape") {
+      event.preventDefault();
+      props.onCancel();
+      return;
+    }
+  }, { release: true });
+
+  return (
+    <box
+      width="100%"
+      height={3 + autocompleteHeight()}
+      flexDirection="column"
+    >
+      <Show when={suggestions().length > 0}>
+        <AutocompleteList
+          items={suggestions()}
+          selectedIndex={selectedIndex()}
+          flow={flow}
+          config={props.config}
+        />
+      </Show>
+      <box
+        width="100%"
+        height={3}
+        paddingX={1}
+        border
+        borderStyle="single"
+        borderColor={colors.chromeBorderFocus}
+        backgroundColor={colors.chromeFillTwo}
+      >
+        <text fg={colors.textTertiary}>Revset: </text>
+        <input
+          flexGrow={1}
+          value={text()}
+          focused
+          textColor={colors.textPrimary}
+          focusedTextColor={colors.textPrimary}
+          cursorColor={colors.chromeBorderFocus}
+          onInput={(value) => {
+            setText(value);
+            setSelectedIndex(null);
+          }}
+        />
+      </box>
+    </box>
+  );
+}
+
 function normalizeKey(event: { name: string; sequence: string }): string | null {
   if (event.name === "return") {
     return "enter";
@@ -841,6 +1120,15 @@ function normalizeKey(event: { name: string; sequence: string }): string | null 
   }
 
   return event.name || null;
+}
+
+function completionKindLabel(kind: CompletionItem["kind"]): string {
+  switch (kind) {
+    case "function": return "fn";
+    case "bookmark": return "bm";
+    case "tag": return "tg";
+    case "alias": return "al";
+  }
 }
 
 function markerColor(
@@ -902,4 +1190,3 @@ function padRight(value: string, length: number): string {
 
   return `${value}${" ".repeat(length - value.length)}`;
 }
-

@@ -9,7 +9,8 @@
       "Bash(jj restore:*)",
       "Bash(bun test:*)",
       "Bash(bunx tsc:*)",
-      "Skill(commit)"
+      "Skill(commit)",
+      "Bash(bun add:*)"
     ]
   }
 }
