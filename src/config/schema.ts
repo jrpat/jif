@@ -24,6 +24,10 @@ export type SemanticColorScheme = Readonly<{
   rowSelectedAccent: SemanticColorValue;
   rowAffectedFill: SemanticColorValue;
   rowCommandTargetBorder: SemanticColorValue;
+  rowBorderIdle: SemanticColorValue;
+  rowBorderFocus: SemanticColorValue;
+  rowBorderSelected: SemanticColorValue;
+  rowBorderCommandTarget: SemanticColorValue;
   graphWorkingCopy: SemanticColorValue;
   graphPlain: SemanticColorValue;
   graphImmutable: SemanticColorValue;
@@ -87,6 +91,10 @@ const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   rowSelectedAccent:      { source: "green",       opacity: 1.0  },
   rowAffectedFill:        { source: "green",       opacity: 0.12 },
   rowCommandTargetBorder: { source: "yellow",      opacity: 1.0  },
+  rowBorderIdle:          { source: "foreground",  opacity: 0.20 },
+  rowBorderFocus:         { source: "blue",        opacity: 0.50 },
+  rowBorderSelected:      { source: "green",       opacity: 0.50 },
+  rowBorderCommandTarget: { source: "yellow",      opacity: 0.50 },
 
   // Graph markers
   graphWorkingCopy:       { source: "blue",        opacity: 1.0  },

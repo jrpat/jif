@@ -580,25 +580,25 @@ function RevisionItem(props: {
   const nextLeftCol = () => nextCoreGraphWidth() !== null ? nextCoreGraphWidth()! + 1 : null;
   const borderColor = createMemo(() =>
     rowState() === "selected"
-      ? colors().rowSelectedAccent
+      ? colors().rowBorderSelected
       : rowState() === "focused"
-        ? colors().chromeBorderFocus
+        ? colors().rowBorderFocus
         : isCommandTarget()
-        ? colors().rowCommandTargetBorder
-        : colors().chromeBorderIdle
+        ? colors().rowBorderCommandTarget
+        : colors().rowBorderIdle
   );
   const titleGraphColor = createMemo(() =>
     isSelected()
-      ? colors().rowSelectedAccent
+      ? colors().rowBorderSelected
       : isFocused()
-        ? colors().chromeBorderFocus
+        ? colors().rowBorderFocus
         : markerColor(revision, colors())
   );
   const continuationGraphColor = createMemo(() =>
     isSelected()
-      ? colors().rowSelectedAccent
+      ? colors().rowBorderSelected
       : isFocused()
-        ? colors().chromeBorderFocus
+        ? colors().rowBorderFocus
         : colors().textTertiary
   );
 
