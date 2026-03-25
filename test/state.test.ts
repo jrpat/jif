@@ -9,6 +9,7 @@ import {
   dismissOldestError,
   draftConfigs,
   focusCommandBar,
+  focusWorkingCopy,
   getDisplayedCommandText,
   getSelectedRevisionIds,
   pushEvent,
@@ -222,6 +223,29 @@ test("cancelCommandDraft clears draft and selections but keeps focus mode", () =
   state = cancelCommandDraft(state);
   expect(state.commandDraft).toBeNull();
   expect(state.selectedRevisionIds).toEqual([]);
+});
+
+test("focusWorkingCopy jumps to the working-copy revision", () => {
+  let state = createState();
+  state = moveFocus(state, 1);
+  expect(state.focusedRevisionIndex).toBe(1);
+
+  state = focusWorkingCopy(state);
+  expect(state.focusedRevisionIndex).toBe(0);
+  expect(state.focusedFileIndex).toBe(0);
+});
+
+test("focusWorkingCopy is a no-op when no working copy exists", () => {
+  let state = createState();
+  state = {
+    ...state,
+    revisions: state.revisions.map((r) => ({ ...r, marker: "plain" as const })),
+  };
+  state = moveFocus(state, 1);
+  const before = state.focusedRevisionIndex;
+
+  state = focusWorkingCopy(state);
+  expect(state.focusedRevisionIndex).toBe(before);
 });
 
 test("startCommandDraft uses pre-selected revisions and does not advance focus", () => {

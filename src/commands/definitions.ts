@@ -17,6 +17,7 @@ export type CommandController = Readonly<{
   toggleRebaseDescendants: () => void;
   undo: () => void;
   redo: () => void;
+  focusWorkingCopy: () => void;
 }>;
 
 export type CommandDefinition = Readonly<{
@@ -184,6 +185,15 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     when: (state) => state.focusMode !== "command",
     run: (controller) => controller.redo(),
     group: "global",
+  },
+  {
+    id: "jump-to-working-copy",
+    title: "Jump to @",
+    description: "Jump to the working-copy revision",
+    canonicalKeys: ["@"],
+    keys: ["@"],
+    when: (state) => state.focusMode === "revisions",
+    run: (controller) => controller.focusWorkingCopy(),
   },
   {
     id: "rebase-descendants",

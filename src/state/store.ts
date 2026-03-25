@@ -205,6 +205,18 @@ export function moveFocus(state: AppState, delta: number): AppState {
   };
 }
 
+export function focusWorkingCopy(state: AppState): AppState {
+  const index = state.revisions.findIndex((r) => r.marker === "working-copy");
+  if (index === -1) {
+    return state;
+  }
+  return {
+    ...state,
+    focusedRevisionIndex: index,
+    focusedFileIndex: 0,
+  };
+}
+
 export function openFocusedRevision(state: AppState): AppState {
   const revision = getFocusedRevision(state);
   if (!revision) {

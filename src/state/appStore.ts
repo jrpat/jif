@@ -14,6 +14,7 @@ import {
   clearRevisionSelection,
   clearStatusMessage,
   closeFocusedRevision,
+  focusWorkingCopy,
   dismissOldestError,
   startCommandDraft,
   toggleFileSelection,
@@ -120,6 +121,9 @@ export function createAppStore(repoPath: string, options?: { useShortFlags?: boo
       },
       toggleRebaseDescendants(descendantIds: readonly string[]) {
         mutate((currentState) => toggleRebaseDescendants(currentState, descendantIds));
+      },
+      focusWorkingCopy() {
+        mutate((currentState) => focusWorkingCopy(currentState));
       },
     },
   };

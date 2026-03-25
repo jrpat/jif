@@ -190,6 +190,9 @@ export function JifView(props: {
     redo() {
       void runJjCommand("redo");
     },
+    focusWorkingCopy() {
+      store.actions.focusWorkingCopy();
+    },
     toggleRebaseDescendants() {
       const state = store.snapshot();
       if (state.commandDraft?.config.kind !== "rebase") {
