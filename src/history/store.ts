@@ -27,6 +27,21 @@ export class HistoryStore {
     }
   }
 
+  async loadSetting(key: string): Promise<string> {
+    const path = join(this.workspaceRoot, ".jj", "jif", key);
+    try {
+      return (await readFile(path, "utf8")).trim();
+    } catch {
+      return "";
+    }
+  }
+
+  async saveSetting(key: string, value: string): Promise<void> {
+    const path = join(this.workspaceRoot, ".jj", "jif", key);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, value, "utf8");
+  }
+
   async record(kind: HistoryKind, value: string): Promise<string[]> {
     const trimmed = value.trim();
     if (trimmed.length === 0) {

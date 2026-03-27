@@ -86,6 +86,24 @@ describe("HistoryStore", () => {
 
     expect(history).toEqual(["log"]);
   });
+
+  test("saveSetting writes and loadSetting reads a single value", async () => {
+    const { store } = await createStore();
+    await store.saveSetting("active-revset", "trunk()..");
+    expect(await store.loadSetting("active-revset")).toBe("trunk()..");
+  });
+
+  test("loadSetting returns empty string when file does not exist", async () => {
+    const { store } = await createStore();
+    expect(await store.loadSetting("nonexistent")).toBe("");
+  });
+
+  test("saveSetting overwrites previous value", async () => {
+    const { store } = await createStore();
+    await store.saveSetting("active-revset", "trunk()..");
+    await store.saveSetting("active-revset", "main..");
+    expect(await store.loadSetting("active-revset")).toBe("main..");
+  });
 });
 
 describe("matchHistoryEntries", () => {

@@ -335,10 +335,14 @@ export function JifView(props: {
         client.loadDefaultRevset(),
       ]);
       setWorkspaceRoot(resolvedWorkspaceRoot);
-      if (defaultRevset) {
-        store.actions.setRevsetQuery(defaultRevset);
+      const savedRevset = resolvedWorkspaceRoot
+        ? await new HistoryStore(resolvedWorkspaceRoot).loadSetting("active-revset")
+        : "";
+      const initialRevset = savedRevset || defaultRevset;
+      if (initialRevset) {
+        store.actions.setRevsetQuery(initialRevset);
       }
-      await refreshRepository(defaultRevset || undefined);
+      await refreshRepository(initialRevset || undefined);
     })();
   });
 
@@ -410,6 +414,7 @@ export function JifView(props: {
           onApply={async (query) => {
             if (workspaceRoot()) {
               await new HistoryStore(workspaceRoot()!).record("revset-history", query);
+              await new HistoryStore(workspaceRoot()!).saveSetting("active-revset", query);
             }
             store.actions.setRevsetQuery(query);
             store.actions.closeRevsetInput();
