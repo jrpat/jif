@@ -5,10 +5,11 @@
   "private": true,
   "scripts": {
     "clean": "rm -rf dist .tmp",
+    "install": "bun run scripts/install.ts",
     "start": "bun run index.ts",
     "dev": "bun --watch ./index.ts --sample",
     "sample": "bun run index.ts --sample",
-    "build": "bun run build.ts",
+    "build": "bun run scripts/build.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit"
   },

@@ -17,6 +17,14 @@ This README is for humans working in this repository.
 bun install
 ```
 
+This compiles a single `jif` executable into `${XDG_BIN_HOME:-$HOME/.local/bin}`.
+
+To install into a different location for one run:
+
+```bash
+XDG_BIN_HOME=/some/bin bun install
+```
+
 ## Run
 
 Run against the current working directory:
@@ -84,7 +92,7 @@ bunx tsc --noEmit
 - Sample repo materialization logic lives under `src/dev/`.
 - The UI runtime is OpenTUI + Solid.
 - `tsconfig.json` uses `jsxImportSource: "@opentui/solid"` and `bunfig.toml` preloads `@opentui/solid/preload`.
-- `build.ts` uses the OpenTUI Solid Bun plugin during `Bun.build`.
+- `scripts/build.ts` uses the OpenTUI Solid Bun plugin during `Bun.build`.
 
 ## Configuration
 
