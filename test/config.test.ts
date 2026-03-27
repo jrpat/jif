@@ -90,6 +90,24 @@ test("resolveAppConfig defaults log.scrollMargin to 1", () => {
   expect(resolved.log.scrollMargin).toBe(1);
 });
 
+test("resolveAppConfig defaults condensed layout to false", () => {
+  const resolved = resolveAppConfig(defaultAppConfig);
+
+  expect(resolved.commands.condensedLayout).toBeFalse();
+});
+
+test("resolveAppConfig applies commands.condensedLayout", () => {
+  const config: AppConfig = {
+    commands: {
+      condensedLayout: true,
+    },
+  };
+
+  const resolved = resolveAppConfig(config);
+
+  expect(resolved.commands.condensedLayout).toBeTrue();
+});
+
 test("resolveAppConfig without palette falls back to dark xterm defaults", () => {
   const resolved = resolveAppConfig(defaultAppConfig);
 

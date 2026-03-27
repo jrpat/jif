@@ -85,7 +85,10 @@ export function buildCommandSegments(
   return segments;
 }
 
-export function createInitialState(repoPath: string, options?: { useShortFlags?: boolean }): AppState {
+export function createInitialState(
+  repoPath: string,
+  options?: { useShortFlags?: boolean; condensedLayout?: boolean },
+): AppState {
   return {
     repoPath,
     revisions: [],
@@ -102,12 +105,17 @@ export function createInitialState(repoPath: string, options?: { useShortFlags?:
     loading: true,
     error: null,
     useShortFlags: options?.useShortFlags ?? true,
+    condensedLayout: options?.condensedLayout ?? false,
     revsetQuery: "",
   };
 }
 
 export function toggleShortFlags(state: AppState): AppState {
   return { ...state, useShortFlags: !state.useShortFlags };
+}
+
+export function toggleCondensedLayout(state: AppState): AppState {
+  return { ...state, condensedLayout: !state.condensedLayout };
 }
 
 export function openRevsetInput(state: AppState): AppState {

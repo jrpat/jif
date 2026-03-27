@@ -22,6 +22,7 @@ import {
   startCommandDraft,
   toggleFileSelection,
   toggleShortFlags,
+  toggleCondensedLayout,
   createInitialState,
   focusCommandBar,
   moveFocus,
@@ -37,7 +38,10 @@ import {
 
 export type AppStore = ReturnType<typeof createAppStore>;
 
-export function createAppStore(repoPath: string, options?: { useShortFlags?: boolean }) {
+export function createAppStore(
+  repoPath: string,
+  options?: { useShortFlags?: boolean; condensedLayout?: boolean },
+) {
   let state!: AppState;
   let setState!: ReturnType<typeof createStore<AppState>>[1];
 
@@ -121,6 +125,9 @@ export function createAppStore(repoPath: string, options?: { useShortFlags?: boo
       },
       toggleShortFlags() {
         mutate((currentState) => toggleShortFlags(currentState));
+      },
+      toggleCondensedLayout() {
+        mutate((currentState) => toggleCondensedLayout(currentState));
       },
       toggleRebaseDescendants(descendantIds: readonly string[]) {
         mutate((currentState) => toggleRebaseDescendants(currentState, descendantIds));

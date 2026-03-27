@@ -37,6 +37,7 @@ import {
   measureCoreGraphWidth,
   measureGutterPlanWidth,
 } from "./revisionGutter.ts";
+import { buildRevisionHeaderLayout, type RevisionSideChip } from "./revisionLayout.ts";
 import { scrollToKeepChildVisible } from "./scroll.ts";
 
 export function JifView(props: {
@@ -192,6 +193,9 @@ export function JifView(props: {
     },
     toggleShortFlags() {
       store.actions.toggleShortFlags();
+    },
+    toggleCondensedLayout() {
+      store.actions.toggleCondensedLayout();
     },
     undo() {
       void runJjCommand("undo");
@@ -645,7 +649,7 @@ function CommandBar(props: {
   );
 }
 
-function RevisionItem(props: {
+export function RevisionItem(props: {
   state: AppStore["state"];
   revision: RevisionSummary;
   index: number;
@@ -710,6 +714,14 @@ function RevisionItem(props: {
     nextGraphWidth: nextCoreGraphWidth(),
   }));
   const detailRowCount = () => isExpanded() ? Math.max(revision.files.length, 1) : 0;
+  const headerLayout = createMemo(() =>
+    buildRevisionHeaderLayout(revision, {
+      condensed: state.condensedLayout,
+      isCommandTarget: isCommandTarget(),
+      badgeText: state.commandDraft?.config.badgeText ?? "onto",
+    }),
+  );
+  const showCondensedHeader = () => headerLayout().headerRowCount === 1;
   const gutterPlan = createMemo(() => buildRevisionGutterPlan({
     graphHead: revision.graphHead,
     graphTail: revision.graphTail,
@@ -723,6 +735,7 @@ function RevisionItem(props: {
     })(),
     hasNextRevision: props.index + 1 < state.revisions.length,
   }));
+  const visibleGutterTail = createMemo(() => showCondensedHeader() ? [] : gutterPlan().tail);
   const effectiveGraphWidth = createMemo(() => measureGutterPlanWidth(gutterPlan()));
   const currentLeftCol = () => coreGraphWidth() + 1;
   const prevLeftCol = () => previousCoreGraphWidth() !== null ? previousCoreGraphWidth()! + 1 : null;
@@ -753,10 +766,12 @@ function RevisionItem(props: {
           </text>
         ) : null}
         <text fg={titleGraphColor()}>{padRight(gutterPlan().title, effectiveGraphWidth())}</text>
-        <text fg={continuationGraphColor()}>
-          {padRight(gutterPlan().subtitle, effectiveGraphWidth())}
-        </text>
-        <For each={gutterPlan().tail}>
+        <Show when={headerLayout().headerRowCount === 2}>
+          <text fg={continuationGraphColor()}>
+            {padRight(gutterPlan().subtitle, effectiveGraphWidth())}
+          </text>
+        </Show>
+        <For each={visibleGutterTail()}>
           {(graphLine) => (
             <text fg={continuationGraphColor()}>
               {padRight(graphLine, effectiveGraphWidth())}
@@ -795,42 +810,77 @@ function RevisionItem(props: {
         borderColor={borderColor()}
         customBorderChars={borderPolicy().borderChars}
       >
-        <box width="100%" flexDirection="row" gap={1}>
-          <box flexDirection="row">
-            <text fg={isSelected() ? colors().rowSelectedAccent : isFocused() ? colors().chromeBorderFocus : colors().revsetPrefix} attributes={TextAttributes.BOLD}>
-              {revision.changeId.slice(0, revision.changeIdPrefixLength)}
-            </text>
-            <text fg={isSelected() ? colors().rowSelectedAccent : isFocused() ? colors().chromeBorderFocus : colors().textTertiary}>
-              {revision.changeId.slice(revision.changeIdPrefixLength)}
-            </text>
+        <Show
+          when={showCondensedHeader()}
+          fallback={
+            <>
+              <box width="100%" flexDirection="row" gap={1}>
+                <RevisionChangeId
+                  revision={revision}
+                  focused={isFocused()}
+                  selected={isSelected()}
+                  colors={colors()}
+                />
+                {headerLayout().commandTarget ? (
+                  <CommandTargetChip
+                    text={headerLayout().commandTarget!.text}
+                    colors={colors()}
+                  />
+                ) : null}
+                <box flexGrow={1} />
+                <RevisionSideChips chips={headerLayout().sideChips} colors={colors()} />
+              </box>
+              <box width="100%" flexDirection="row">
+                <text fg={isSelected() || isFocused() ? colors().textPrimary : colors().textSecondary} truncate>
+                  {revision.description}
+                </text>
+              </box>
+            </>
+          }
+        >
+          <box
+            width="100%"
+            height={headerLayout().contentHeight}
+            overflow={headerLayout().clipOverflow ? "hidden" : undefined}
+            position="relative"
+          >
+            <box width="100%" height={1} flexDirection="row">
+              <RevisionChangeId
+                revision={revision}
+                focused={isFocused()}
+                selected={isSelected()}
+                colors={colors()}
+              />
+              <box width={1} />
+              <box flexGrow={1} minWidth={0} height={1} overflow="hidden">
+                <text
+                  fg={isSelected() || isFocused() ? colors().textPrimary : colors().textSecondary}
+                  wrapMode="none"
+                  truncate
+                >
+                  {revision.description}
+                </text>
+              </box>
+              <Show when={headerLayout().sideChips.length > 0}>
+                <box width={1} />
+              </Show>
+              <RevisionSideChips chips={headerLayout().sideChips} colors={colors()} />
+            </box>
+            {headerLayout().commandTarget?.placement === "overlay" ? (
+              <text
+                position="absolute"
+                left={headerLayout().commandTarget!.leftOffset}
+                top={0}
+                zIndex={1}
+                fg={colors().chromeFillOne}
+                bg={colors().chromeBorderFocus}
+              >
+                {` ${headerLayout().commandTarget!.text} `}
+              </text>
+            ) : null}
           </box>
-          {isCommandTarget() ? (
-            <text fg={colors().chromeFillOne} bg={colors().chromeBorderFocus}>
-              {` ${state.commandDraft?.config.badgeText ?? "onto"} `}
-            </text>
-          ) : null}
-          <box flexGrow={1} />
-          <For each={revision.bookmarks}>
-            {(bookmark) => (
-              <text fg={colors().workspaceTagText} bg={colors().workspaceTagFill}>
-                {` ${bookmark} `}
-              </text>
-            )}
-          </For>
-          <For each={revision.workspaces}>
-            {(workspace) => (
-              <text fg={colors().bookmarkTagText} bg={colors().bookmarkTagFill}>
-                {` ${workspace} `}
-              </text>
-            )}
-          </For>
-        </box>
-        <box width="100%" flexDirection="row">
-          <text fg={isSelected() || isFocused() ? colors().textPrimary : colors().textSecondary} truncate>
-            {revision.description}
-          </text>
-        </box>
-        <For each={gutterPlan().tail}>
+        </Show>
+        <For each={visibleGutterTail()}>
           {() => <box width="100%" height={1} />}
         </For>
         {isExpanded() ? (
@@ -857,6 +907,58 @@ function RevisionItem(props: {
           {"┌" + "─".repeat(currentLeftCol() - nextLeftCol()! - 1)}
         </text>
       ) : null}
+    </box>
+  );
+}
+
+function RevisionChangeId(props: {
+  revision: Pick<RevisionSummary, "changeId" | "changeIdPrefixLength">;
+  focused: boolean;
+  selected: boolean;
+  colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
+}) {
+  return (
+    <box flexDirection="row" flexShrink={0}>
+      <text
+        fg={props.selected ? props.colors.rowSelectedAccent : props.focused ? props.colors.chromeBorderFocus : props.colors.revsetPrefix}
+        attributes={TextAttributes.BOLD}
+      >
+        {props.revision.changeId.slice(0, props.revision.changeIdPrefixLength)}
+      </text>
+      <text fg={props.selected ? props.colors.rowSelectedAccent : props.focused ? props.colors.chromeBorderFocus : props.colors.textTertiary}>
+        {props.revision.changeId.slice(props.revision.changeIdPrefixLength)}
+      </text>
+    </box>
+  );
+}
+
+function CommandTargetChip(props: {
+  text: string;
+  colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
+}) {
+  return (
+    <text fg={props.colors.chromeFillOne} bg={props.colors.chromeBorderFocus}>
+      {` ${props.text} `}
+    </text>
+  );
+}
+
+function RevisionSideChips(props: {
+  chips: readonly RevisionSideChip[];
+  colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
+}) {
+  return (
+    <box flexDirection="row" flexShrink={0} gap={1}>
+      <For each={props.chips}>
+        {(chip) => (
+          <text
+            fg={chip.kind === "bookmark" ? props.colors.workspaceTagText : props.colors.bookmarkTagText}
+            bg={chip.kind === "bookmark" ? props.colors.workspaceTagFill : props.colors.bookmarkTagFill}
+          >
+            {` ${chip.text} `}
+          </text>
+        )}
+      </For>
     </box>
   );
 }
@@ -1092,7 +1194,9 @@ function RevsetInput(props: {
         borderColor={colors.chromeBorderFocus}
         backgroundColor={colors.chromeFillTwo}
       >
-        <text fg={colors.textTertiary}>Revset: </text>
+        <Show when={text().length === 0}>
+          <text fg={colors.textTertiary}>Revset: </text>
+        </Show>
         <input
           flexGrow={1}
           value={text()}

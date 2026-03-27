@@ -75,6 +75,7 @@ export type AppState = Readonly<{
   loading: boolean;
   error: string | null;
   useShortFlags: boolean;
+  condensedLayout: boolean;
   revsetQuery: string;
 }>;
 

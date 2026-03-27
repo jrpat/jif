@@ -18,6 +18,7 @@ import {
   setError,
   moveFocus,
   openFocusedRevision,
+  toggleCondensedLayout,
   setRevisionFiles,
   startCommandDraft,
   toggleFileSelection,
@@ -297,6 +298,16 @@ test("arg helper selects long flags when useShortFlags is false", () => {
   let state = { ...createState(), useShortFlags: false };
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
   expect(getDisplayedCommandText(state)).toBe("rebase --revisions a --destination b");
+});
+
+test("toggleCondensedLayout flips only condensed layout", () => {
+  const state = createState();
+  const next = toggleCondensedLayout(state);
+
+  expect(state.condensedLayout).toBeFalse();
+  expect(next.condensedLayout).toBeTrue();
+  expect(next.useShortFlags).toBe(state.useShortFlags);
+  expect(next.focusedRevisionIndex).toBe(state.focusedRevisionIndex);
 });
 
 test("segment highlighting styles flags as command and values as selected/target", () => {

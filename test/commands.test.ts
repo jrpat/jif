@@ -63,3 +63,18 @@ test("undo and redo commands resolve in normal mode but not command mode", () =>
   expect(getTextCommand("u", commandState)).toBeNull();
   expect(getTextCommand("U", commandState)).toBeNull();
 });
+
+test("short flags and condensed layout use - and _ respectively", () => {
+  const state = createState();
+
+  expect(getTextCommand("-", state)?.id).toBe("toggle-flags");
+  expect(getTextCommand("_", state)?.id).toBe("toggle-condensed-layout");
+
+  const commandState: AppState = {
+    ...state,
+    focusMode: "command",
+    commandBar: { ...state.commandBar, manual: true },
+  };
+  expect(getTextCommand("-", commandState)).toBeNull();
+  expect(getTextCommand("_", commandState)).toBeNull();
+});

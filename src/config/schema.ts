@@ -60,6 +60,7 @@ export type AppConfig = Readonly<{
   }>;
   commands?: Readonly<{
     shortFlags?: boolean;
+    condensedLayout?: boolean;
   }>;
 }>;
 
@@ -72,6 +73,7 @@ export type ResolvedAppConfig = Readonly<{
   }>;
   commands: Readonly<{
     shortFlags: boolean;
+    condensedLayout: boolean;
   }>;
 }>;
 
@@ -239,6 +241,7 @@ export function resolveAppConfig(
     },
     commands: {
       shortFlags: config.commands?.shortFlags ?? true,
+      condensedLayout: config.commands?.condensedLayout ?? false,
     },
   };
 }

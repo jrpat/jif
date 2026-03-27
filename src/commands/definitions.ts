@@ -14,6 +14,7 @@ export type CommandController = Readonly<{
   toggleFileSelection: () => void;
   restoreFiles: () => void;
   toggleShortFlags: () => void;
+  toggleCondensedLayout: () => void;
   toggleRebaseDescendants: () => void;
   undo: () => void;
   redo: () => void;
@@ -161,10 +162,20 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     id: "toggle-flags",
     title: "Short Flags",
     description: "Toggle between short and long flag names",
+    canonicalKeys: ["-"],
+    keys: ["-"],
+    when: (state) => state.focusMode !== "command",
+    run: (controller) => controller.toggleShortFlags(),
+    group: "global",
+  },
+  {
+    id: "toggle-condensed-layout",
+    title: "Condensed Layout",
+    description: "Toggle single-line revision rows",
     canonicalKeys: ["_"],
     keys: ["_"],
     when: (state) => state.focusMode !== "command",
-    run: (controller) => controller.toggleShortFlags(),
+    run: (controller) => controller.toggleCondensedLayout(),
     group: "global",
   },
   {

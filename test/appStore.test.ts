@@ -12,3 +12,14 @@ test("AppStore keeps all app state in one reactive store", () => {
 
   store.dispose();
 });
+
+test("AppStore seeds condensed layout from config options", () => {
+  const store = createAppStore("/tmp/repo", { condensedLayout: true });
+
+  expect(store.state.condensedLayout).toBeTrue();
+
+  store.actions.toggleCondensedLayout();
+  expect(store.state.condensedLayout).toBeFalse();
+
+  store.dispose();
+});

@@ -11,6 +11,7 @@ export async function runJifApplication(
 ): Promise<void> {
   const store = createAppStore(repoPath, {
     useShortFlags: config.commands.shortFlags,
+    condensedLayout: config.commands.condensedLayout,
   });
   const client = new JjClient(repoPath);
 
