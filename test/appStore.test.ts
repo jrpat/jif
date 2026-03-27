@@ -23,3 +23,15 @@ test("AppStore seeds condensed layout from config options", () => {
 
   store.dispose();
 });
+
+test("AppStore exposes shortcut panel actions", () => {
+  const store = createAppStore("/tmp/repo");
+
+  store.actions.openShortcutPanel();
+  expect(store.state.shortcutPanelExpanded).toBeTrue();
+
+  store.actions.toggleShortcutPanel();
+  expect(store.state.shortcutPanelExpanded).toBeFalse();
+
+  store.dispose();
+});

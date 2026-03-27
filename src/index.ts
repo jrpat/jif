@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { loadAppConfig } from "./config/index.ts";
+import { logShortcutDebug } from "./debug.ts";
 import { runJifApplication } from "./app.ts";
 import { materializeSampleRepoCached } from "./dev/sampleRepo.ts";
 
@@ -25,6 +26,12 @@ export async function main(argv: readonly string[]) {
         fixturePath,
       })).repoPath
     : process.cwd();
+
+  logShortcutDebug("startup", {
+    argv: [...argv],
+    repoPath,
+    sample: fixturePath ?? null,
+  });
 
   await runJifApplication(repoPath, config, rawConfig);
 }

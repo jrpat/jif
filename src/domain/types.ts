@@ -63,6 +63,7 @@ export type AppState = Readonly<{
   repoPath: string;
   revisions: readonly RevisionSummary[];
   focusMode: FocusMode;
+  shortcutPanelExpanded: boolean;
   focusedRevisionIndex: number;
   expandedRevisionId: string | null;
   focusedFileIndex: number;

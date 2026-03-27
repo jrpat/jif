@@ -93,6 +93,7 @@ export function createInitialState(
     repoPath,
     revisions: [],
     focusMode: "revisions",
+    shortcutPanelExpanded: false,
     focusedRevisionIndex: 0,
     expandedRevisionId: null,
     focusedFileIndex: 0,
@@ -115,6 +116,28 @@ export function toggleShortFlags(state: AppState): AppState {
 
 export function toggleCondensedLayout(state: AppState): AppState {
   return { ...state, condensedLayout: !state.condensedLayout };
+}
+
+export function openShortcutPanel(state: AppState): AppState {
+  if (state.shortcutPanelExpanded) {
+    return state;
+  }
+
+  return { ...state, shortcutPanelExpanded: true };
+}
+
+export function closeShortcutPanel(state: AppState): AppState {
+  if (!state.shortcutPanelExpanded) {
+    return state;
+  }
+
+  return { ...state, shortcutPanelExpanded: false };
+}
+
+export function toggleShortcutPanel(state: AppState): AppState {
+  return state.shortcutPanelExpanded
+    ? closeShortcutPanel(state)
+    : openShortcutPanel(state);
 }
 
 export function openRevsetInput(state: AppState): AppState {

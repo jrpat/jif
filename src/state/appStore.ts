@@ -17,15 +17,18 @@ import {
   focusWorkingCopy,
   openRevsetInput,
   closeRevsetInput,
+  closeShortcutPanel,
   setRevsetQuery,
   dismissStatusMessage,
   startCommandDraft,
   toggleFileSelection,
   toggleShortFlags,
   toggleCondensedLayout,
+  toggleShortcutPanel,
   createInitialState,
   focusCommandBar,
   moveFocus,
+  openShortcutPanel,
   openFocusedRevision,
   pushEvent,
   setCommandBarText,
@@ -124,6 +127,15 @@ export function createAppStore(
       },
       toggleCondensedLayout() {
         mutate((currentState) => toggleCondensedLayout(currentState));
+      },
+      openShortcutPanel() {
+        mutate((currentState) => openShortcutPanel(currentState));
+      },
+      closeShortcutPanel() {
+        mutate((currentState) => closeShortcutPanel(currentState));
+      },
+      toggleShortcutPanel() {
+        mutate((currentState) => toggleShortcutPanel(currentState));
       },
       toggleRebaseDescendants(descendantIds: readonly string[]) {
         mutate((currentState) => toggleRebaseDescendants(currentState, descendantIds));

@@ -32,6 +32,7 @@ test("getTextCommand resolves vim navigation when command bar is unfocused", () 
   expect(getTextCommand("h", state)?.id).toBe("collapse");
   expect(getTextCommand("l", state)?.id).toBe("expand");
   expect(getTextCommand("q", state)?.id).toBe("quit");
+  expect(getTextCommand("left", state)?.id).toBe("collapse");
 });
 
 test("getTextCommand respects command visibility state", () => {
@@ -77,4 +78,22 @@ test("short flags and condensed layout use - and _ respectively", () => {
   };
   expect(getTextCommand("-", commandState)).toBeNull();
   expect(getTextCommand("_", commandState)).toBeNull();
+});
+
+test("shortcut panel toggle uses ? outside text-entry modes", () => {
+  const state = createState();
+  expect(getTextCommand("?", state)?.id).toBe("shortcut-panel");
+
+  const commandState: AppState = {
+    ...state,
+    focusMode: "command",
+    commandBar: { ...state.commandBar, manual: true },
+  };
+  expect(getTextCommand("?", commandState)).toBeNull();
+
+  const revsetState: AppState = {
+    ...state,
+    focusMode: "revset",
+  };
+  expect(getTextCommand("?", revsetState)).toBeNull();
 });

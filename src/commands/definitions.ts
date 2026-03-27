@@ -20,6 +20,7 @@ export type CommandController = Readonly<{
   redo: () => void;
   focusWorkingCopy: () => void;
   openRevsetInput: () => void;
+  toggleShortcutPanel: () => void;
 }>;
 
 export type CommandDefinition = Readonly<{
@@ -78,6 +79,16 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     keys: [":"],
     when: (state) => state.focusMode !== "command",
     run: (controller) => controller.focusCommandBar(),
+    group: "global",
+  },
+  {
+    id: "shortcut-panel",
+    title: "Shortcuts",
+    description: "Expand or collapse the shortcut panel",
+    canonicalKeys: ["?"],
+    keys: ["?"],
+    when: (state) => state.focusMode !== "command" && state.focusMode !== "revset",
+    run: (controller) => controller.toggleShortcutPanel(),
     group: "global",
   },
   {

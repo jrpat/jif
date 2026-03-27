@@ -19,6 +19,7 @@ import {
   getSelectedRevisionIds,
   type CommandSegment,
 } from "../state/store.ts";
+import { logShortcutDebug } from "../debug.ts";
 import type { JjClient } from "../jj/client.ts";
 import { buildCompletionItems, extractLastToken, matchCompletions, type CompletionItem } from "../revset/completions.ts";
 import type { RevisionSummary, StatusMessage } from "../domain/types.ts";
@@ -39,6 +40,17 @@ import {
 } from "./revisionGutter.ts";
 import { buildRevisionHeaderLayout, type RevisionSideChip } from "./revisionLayout.ts";
 import { scrollToKeepChildVisible } from "./scroll.ts";
+import {
+  buildShortcutEntries,
+  buildShortcutGrid,
+  buildShortcutSummary,
+  computeShortcutPanelHeight,
+  getShortcutPanelCommands,
+  shortcutModeLabel,
+  type ShortcutGrid,
+} from "./shortcutPanel.ts";
+import { normalizeKey } from "./keyboard.ts";
+import { dispatchGlobalKey } from "./keybindings.ts";
 
 export function JifView(props: {
   store: AppStore;
@@ -51,6 +63,10 @@ export function JifView(props: {
   const [ready, setReady] = createSignal(false);
   const [workspaceRoot, setWorkspaceRoot] = createSignal<string | null>(null);
   const renderer = useRenderer();
+  const [terminalSize, setTerminalSize] = createSignal({
+    width: Math.max(renderer.width, 1),
+    height: Math.max(renderer.height, 1),
+  });
   let logViewport: ScrollBoxRenderable | undefined;
 
   async function detectAndApplyPalette() {
@@ -69,8 +85,19 @@ export function JifView(props: {
       renderer.clearPaletteCache();
       void detectAndApplyPalette();
     };
+    const handleResize = () => {
+      setTerminalSize({
+        width: Math.max(renderer.width, 1),
+        height: Math.max(renderer.height, 1),
+      });
+    };
+    handleResize();
     renderer.on(CliRenderEvents.THEME_MODE, handleThemeMode);
-    onCleanup(() => renderer.off(CliRenderEvents.THEME_MODE, handleThemeMode));
+    renderer.on(CliRenderEvents.RESIZE, handleResize);
+    onCleanup(() => {
+      renderer.off(CliRenderEvents.THEME_MODE, handleThemeMode);
+      renderer.off(CliRenderEvents.RESIZE, handleResize);
+    });
   });
 
   const controller: CommandController = {
@@ -209,6 +236,15 @@ export function JifView(props: {
     openRevsetInput() {
       store.actions.openRevsetInput();
     },
+    toggleShortcutPanel() {
+      const before = store.snapshot().shortcutPanelExpanded;
+      store.actions.toggleShortcutPanel();
+      logShortcutDebug("toggle-shortcut-panel", {
+        before,
+        after: store.state.shortcutPanelExpanded,
+        focusMode: store.state.focusMode,
+      });
+    },
     toggleRebaseDescendants() {
       const state = store.snapshot();
       if (state.commandDraft?.config.kind !== "rebase") {
@@ -244,7 +280,28 @@ export function JifView(props: {
     return getDisplayedCommandSegments(store.state);
   });
   const visibleCommands = createMemo(() => getVisibleCommands(store.state));
+  const shortcutCommands = createMemo(() =>
+    getShortcutPanelCommands(store.state, visibleCommands())
+  );
   const visibleEvents = createMemo(() => store.state.eventLog.slice(-3).reverse());
+  const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutCommands()));
+  const shortcutSummary = createMemo(() => buildShortcutSummary(shortcutEntries()));
+  const shortcutGrid = createMemo(() =>
+    buildShortcutGrid(shortcutEntries(), Math.max(1, terminalSize().width - 4))
+  );
+  const shortcutPanelHeight = createMemo(() =>
+    computeShortcutPanelHeight(terminalSize().height)
+  );
+  const canToggleShortcutPanel = createMemo(() =>
+    store.state.focusMode !== "command" && store.state.focusMode !== "revset"
+  );
+
+  createEffect(() => {
+    logShortcutDebug("shortcut-panel-state", {
+      expanded: store.state.shortcutPanelExpanded,
+      focusMode: store.state.focusMode,
+    });
+  });
 
   useKeyboard((event) => {
     if (event.eventType === "release" || event.ctrl || event.meta || event.option) {
@@ -253,33 +310,36 @@ export function JifView(props: {
 
     const state = store.snapshot();
     const normalizedKey = normalizeKey(event);
+    logShortcutDebug("key-event", {
+      name: event.name,
+      sequence: event.sequence,
+      shift: event.shift,
+      normalizedKey,
+      focusMode: state.focusMode,
+    });
     if (normalizedKey === null) {
       return;
     }
 
-    if (normalizedKey === "escape") {
-      event.preventDefault();
-      controller.cancelOrBlur();
+    const handled = dispatchGlobalKey({
+      normalizedKey,
+      state,
+      visibleCommands: visibleCommands(),
+      controller,
+    });
+    if (!handled) {
+      logShortcutDebug("key-ignored", {
+        normalizedKey,
+        focusMode: state.focusMode,
+      });
       return;
     }
 
-    if (state.focusMode === "command" || state.focusMode === "revset") {
-      return;
-    }
-
-    if (normalizedKey === "enter") {
-      event.preventDefault();
-      controller.confirm();
-      return;
-    }
-
-    const command = visibleCommands().find((definition) => definition.keys.includes(normalizedKey));
-    if (!command) {
-      return;
-    }
-
+    logShortcutDebug("key-handled", {
+      normalizedKey,
+      focusMode: state.focusMode,
+    });
     event.preventDefault();
-    command.run(controller);
   }, { release: true });
 
   let prevFocusedIndex = store.state.focusedRevisionIndex;
@@ -399,9 +459,12 @@ export function JifView(props: {
       <Show when={store.state.focusMode !== "revset"}>
         <StatusArea
           events={visibleEvents()}
-          helpText={visibleCommands()
-            .map((command) => `${command.canonicalKeys.join("/")} ${command.title.toLowerCase()}`)
-            .join("   ")}
+          shortcutSummary={shortcutSummary()}
+          shortcutGrid={shortcutGrid()}
+          expanded={store.state.shortcutPanelExpanded}
+          currentModeLabel={shortcutModeLabel(store.state.focusMode)}
+          panelHeight={shortcutPanelHeight()}
+          toggleHint={canToggleShortcutPanel() ? "? close" : null}
           config={config}
         />
       </Show>
@@ -1018,37 +1081,132 @@ function ChangedFiles(props: {
 
 function StatusArea(props: {
   events: readonly AppStore["state"]["eventLog"][number][];
-  helpText: string;
+  shortcutSummary: string;
+  shortcutGrid: ShortcutGrid;
+  expanded: boolean;
+  currentModeLabel: string;
+  panelHeight: number;
+  toggleHint: string | null;
   config: ResolvedAppConfig;
 }) {
-  const { events, helpText, config } = props;
+  const { events, config } = props;
   const colors = config.colorScheme.semanticColors;
-
+  const panelBodyHeight = () =>
+    Math.max(1, Math.min(props.shortcutGrid.rows.length, Math.max(1, props.panelHeight - 3)));
   return (
-    <box
-      width="100%"
-      border
-      borderStyle="single"
-      borderColor={colors.chromeBorderIdle}
-      backgroundColor={colors.chromeFillOne}
-      paddingX={1}
-      flexDirection="column"
-      >
-      <For each={events}>
-        {(event) => (
-          <box width="100%">
-            <text fg={statusColor(event.level, colors)} truncate>
-              {`${new Date(event.createdAt).toLocaleTimeString()} ${event.text}`}
+    <Show
+      when={props.expanded}
+      fallback={
+        <box
+          width="100%"
+          border
+          borderStyle="single"
+          borderColor={colors.chromeBorderIdle}
+          backgroundColor={colors.chromeFillOne}
+          paddingX={1}
+          flexDirection="column"
+        >
+          <For each={events}>
+            {(event) => (
+              <box width="100%">
+                <text fg={statusColor(event.level, colors)} truncate>
+                  {`${new Date(event.createdAt).toLocaleTimeString()} ${event.text}`}
+                </text>
+              </box>
+            )}
+          </For>
+          <box width="100%" backgroundColor={colors.chromeFillOne}>
+            <text fg={colors.textTertiary} truncate>
+              {props.shortcutSummary}
             </text>
           </box>
-        )}
-      </For>
-      <box width="100%" backgroundColor={colors.chromeFillOne}>
-        <text fg={colors.textTertiary} truncate>
-          {helpText}
-        </text>
+        </box>
+      }
+    >
+        <box
+          width="100%"
+          position="absolute"
+          left={0}
+          bottom={0}
+        zIndex={5}
+          border
+          borderStyle="single"
+          borderColor={colors.chromeBorderFocus}
+        backgroundColor={colors.chromeFillTwo}
+          flexDirection="column"
+        >
+        <box
+          width="100%"
+          flexDirection="row"
+          paddingX={1}
+          backgroundColor={colors.chromeFillTwo}
+        >
+          <text fg={colors.textPrimary} attributes={TextAttributes.BOLD}>
+            Shortcuts
+          </text>
+          <text fg={colors.textTertiary}>{` ${props.currentModeLabel}`}</text>
+          <box flexGrow={1} />
+          <Show when={props.toggleHint !== null}>
+            <text fg={colors.textTertiary}>{props.toggleHint}</text>
+          </Show>
+        </box>
+        <box width="100%" height={1} backgroundColor={colors.chromeFillTwo} />
+        <scrollbox
+          width="100%"
+          height={panelBodyHeight()}
+          scrollY
+          backgroundColor={colors.chromeFillTwo}
+          scrollbarOptions={{
+            trackOptions: {
+              backgroundColor: colors.chromeFillThree,
+              foregroundColor: colors.chromeBorderFocus,
+            },
+          }}
+        >
+          <Show
+            when={props.shortcutGrid.rows.length > 0}
+            fallback={
+              <box width="100%" paddingX={1}>
+                <text fg={colors.textTertiary}>No shortcuts for this mode.</text>
+              </box>
+            }
+          >
+            <box width="100%" flexDirection="column" paddingX={1}>
+              <For each={props.shortcutGrid.rows}>
+                {(row) => (
+                  <box width="100%" flexDirection="row" gap={props.shortcutGrid.gap}>
+                    <For each={row}>
+                      {(entry) => (
+                        <box
+                          width={props.shortcutGrid.columnWidth}
+                          minWidth={0}
+                          flexDirection="row"
+                        >
+                          <box width={props.shortcutGrid.keyWidth} flexShrink={0}>
+                            <text
+                              fg={colors.chromeBorderFocus}
+                              attributes={TextAttributes.BOLD}
+                              truncate
+                            >
+                              {entry.keyLabel}
+                            </text>
+                          </box>
+                          <box flexGrow={1} minWidth={0}>
+                            <text fg={colors.textSecondary} truncate>
+                              {` ${entry.title}`}
+                            </text>
+                          </box>
+                        </box>
+                      )}
+                    </For>
+                  </box>
+                )}
+              </For>
+            </box>
+          </Show>
+        </scrollbox>
       </box>
-    </box>
+    </Show>
   );
 }
 
@@ -1249,18 +1407,6 @@ function MessageOverlay(props: {
     </Show>
   );
 }
-function normalizeKey(event: { name: string; sequence: string }): string | null {
-  if (event.name === "return") {
-    return "enter";
-  }
-
-  if (event.sequence.length === 1 && event.sequence >= " ") {
-    return event.sequence;
-  }
-
-  return event.name || null;
-}
-
 function completionKindLabel(kind: CompletionItem["kind"]): string {
   switch (kind) {
     case "function": return "fn";

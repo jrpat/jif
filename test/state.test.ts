@@ -13,10 +13,13 @@ import {
   getDisplayedCommandSegments,
   getDisplayedCommandText,
   getSelectedRevisionIds,
+  openShortcutPanel,
   pushEvent,
   setCommandBarText,
   moveFocus,
   openFocusedRevision,
+  closeShortcutPanel,
+  toggleShortcutPanel,
   toggleCondensedLayout,
   setRevisionFiles,
   startCommandDraft,
@@ -295,6 +298,38 @@ test("toggleCondensedLayout flips only condensed layout", () => {
   expect(next.condensedLayout).toBeTrue();
   expect(next.useShortFlags).toBe(state.useShortFlags);
   expect(next.focusedRevisionIndex).toBe(state.focusedRevisionIndex);
+});
+
+test("shortcut panel is collapsed by default and can be toggled", () => {
+  let state = createState();
+  expect(state.shortcutPanelExpanded).toBeFalse();
+
+  state = toggleShortcutPanel(state);
+  expect(state.shortcutPanelExpanded).toBeTrue();
+
+  state = toggleShortcutPanel(state);
+  expect(state.shortcutPanelExpanded).toBeFalse();
+});
+
+test("openShortcutPanel and closeShortcutPanel are idempotent", () => {
+  const collapsed = createState();
+  const open = openShortcutPanel(collapsed);
+  expect(open.shortcutPanelExpanded).toBeTrue();
+  expect(openShortcutPanel(open)).toBe(open);
+
+  const closed = closeShortcutPanel(collapsed);
+  expect(closed).toBe(collapsed);
+  expect(closeShortcutPanel(open).shortcutPanelExpanded).toBeFalse();
+});
+
+test("shortcut panel expansion survives revset mode transitions", () => {
+  let state = createState();
+  state = openShortcutPanel(state);
+  state = openRevsetInput(state);
+  expect(state.shortcutPanelExpanded).toBeTrue();
+
+  state = closeRevsetInput(state);
+  expect(state.shortcutPanelExpanded).toBeTrue();
 });
 
 test("segment highlighting styles flags as command and values as selected/target", () => {
