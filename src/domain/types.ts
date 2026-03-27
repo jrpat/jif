@@ -73,7 +73,6 @@ export type AppState = Readonly<{
   statusMessage: StatusMessage | null;
   eventLog: readonly EventLogEntry[];
   loading: boolean;
-  error: string | null;
   useShortFlags: boolean;
   condensedLayout: boolean;
   revsetQuery: string;

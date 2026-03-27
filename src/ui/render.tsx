@@ -21,7 +21,7 @@ import {
 } from "../state/store.ts";
 import type { JjClient } from "../jj/client.ts";
 import { buildCompletionItems, extractLastToken, matchCompletions, type CompletionItem } from "../revset/completions.ts";
-import type { RevisionSummary } from "../domain/types.ts";
+import type { RevisionSummary, StatusMessage } from "../domain/types.ts";
 import { AutocompleteList, type AutocompleteListItem } from "./AutocompleteList.tsx";
 import {
   getAutocompleteAction,
@@ -107,8 +107,8 @@ export function JifView(props: {
     cancelOrBlur() {
       const state = store.snapshot();
 
-      if (state.error !== null || state.eventLog.some((e) => e.level === "error")) {
-        store.actions.dismissOldestError();
+      if (state.statusMessage !== null) {
+        store.actions.dismissStatusMessage();
         return;
       }
 
@@ -401,7 +401,6 @@ export function JifView(props: {
       </scrollbox>
       <Show when={store.state.focusMode !== "revset"}>
         <StatusArea
-          state={store.state}
           events={visibleEvents()}
           helpText={visibleCommands()
             .map((command) => `${command.canonicalKeys.join("/")} ${command.title.toLowerCase()}`)
@@ -428,6 +427,11 @@ export function JifView(props: {
           }}
         />
       </Show>
+      <MessageOverlay
+        message={store.state.statusMessage}
+        loading={store.state.loading}
+        config={config}
+      />
     </box>
     </Show>
   );
@@ -481,7 +485,6 @@ export function JifView(props: {
       store.actions.applyRepositoryData(repositoryData);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      store.actions.setError(message);
       store.actions.pushEvent(message, "error");
     }
   }
@@ -1014,12 +1017,11 @@ function ChangedFiles(props: {
 }
 
 function StatusArea(props: {
-  state: AppStore["state"];
   events: readonly AppStore["state"]["eventLog"][number][];
   helpText: string;
   config: ResolvedAppConfig;
 }) {
-  const { state, events, helpText, config } = props;
+  const { events, helpText, config } = props;
   const colors = config.colorScheme.semanticColors;
 
   return (
@@ -1032,23 +1034,6 @@ function StatusArea(props: {
       paddingX={1}
       flexDirection="column"
       >
-      {(state.error || state.loading || state.statusMessage) ? (
-        <box width="100%" backgroundColor={colors.chromeFillOne}>
-          <text
-            fg={statusColor(
-              state.error ? "error" : state.statusMessage?.level ?? "info",
-              colors,
-            )}
-            truncate
-          >
-            {state.error
-              ? state.error
-              : state.loading
-                ? "Refreshing repository state..."
-                : state.statusMessage!.text}
-          </text>
-        </box>
-      ) : null}
       <For each={events}>
         {(event) => (
           <box width="100%">
@@ -1214,6 +1199,43 @@ function RevsetInput(props: {
   );
 }
 
+function MessageOverlay(props: {
+  message: StatusMessage | null;
+  loading: boolean;
+  config: ResolvedAppConfig;
+}) {
+  const colors = props.config.colorScheme.semanticColors;
+
+  return (
+    <Show when={props.message || props.loading}>
+      {(() => {
+        const level = props.message?.level ?? "info";
+        const text = props.loading
+          ? "Refreshing repository state..."
+          : props.message!.text;
+        return (
+          <box
+            position="absolute"
+            bottom={0}
+            left={0}
+            width="100%"
+            maxHeight="60%"
+            zIndex={10}
+            backgroundColor={colors.chromeFillOne}
+            border
+            borderStyle="single"
+            borderColor={statusColor(level, colors)}
+            paddingX={1}
+          >
+            <text fg={statusColor(level, colors)}>
+              {text}
+            </text>
+          </box>
+        );
+      })()}
+    </Show>
+  );
+}
 function normalizeKey(event: { name: string; sequence: string }): string | null {
   if (event.name === "return") {
     return "enter";

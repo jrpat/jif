@@ -103,7 +103,6 @@ export function createInitialState(
     statusMessage: null,
     eventLog: [],
     loading: true,
-    error: null,
     useShortFlags: options?.useShortFlags ?? true,
     condensedLayout: options?.condensedLayout ?? false,
     revsetQuery: "",
@@ -183,7 +182,6 @@ export function applyRepositoryData(
     selectedRevisionIds,
     selectedFilePaths,
     loading: false,
-    error: null,
   };
 }
 
@@ -431,14 +429,6 @@ export function setLoading(state: AppState, loading: boolean): AppState {
   };
 }
 
-export function setError(state: AppState, error: string | null): AppState {
-  return {
-    ...state,
-    error,
-    loading: false,
-  };
-}
-
 export function pushEvent(
   state: AppState,
   text: string,
@@ -455,27 +445,15 @@ export function pushEvent(
   return {
     ...state,
     statusMessage: { text, level, createdAt },
-    eventLog: [...state.eventLog.slice(-19), event],
+    eventLog: [...state.eventLog.slice(-99), event],
   };
 }
 
-export function dismissOldestError(state: AppState): AppState {
-  if (state.error !== null) {
-    return { ...state, error: null };
-  }
-
-  const oldestErrorIndex = state.eventLog.findIndex((entry) => entry.level === "error");
-  if (oldestErrorIndex === -1) {
-    if (state.statusMessage !== null) {
-      return { ...state, statusMessage: null };
-    }
+export function dismissStatusMessage(state: AppState): AppState {
+  if (state.statusMessage === null) {
     return state;
   }
-
-  const eventLog = state.eventLog.filter((_, index) => index !== oldestErrorIndex);
-  const statusMessage =
-    state.statusMessage?.level === "error" ? null : state.statusMessage;
-  return { ...state, eventLog, statusMessage };
+  return { ...state, statusMessage: null };
 }
 
 export function clearStatusMessage(state: AppState): AppState {

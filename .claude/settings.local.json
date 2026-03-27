@@ -13,7 +13,9 @@
       "Bash(bun add:*)",
       "Bash(jj diff:*)",
       "Bash(jj rebase:*)",
-      "Bash(jj new:*)"
+      "Bash(jj new:*)",
+      "Skill(resolve)",
+      "Skill(resolve:*)"
     ]
   }
 }

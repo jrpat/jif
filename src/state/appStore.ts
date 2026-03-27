@@ -18,7 +18,7 @@ import {
   openRevsetInput,
   closeRevsetInput,
   setRevsetQuery,
-  dismissOldestError,
+  dismissStatusMessage,
   startCommandDraft,
   toggleFileSelection,
   toggleShortFlags,
@@ -29,7 +29,6 @@ import {
   openFocusedRevision,
   pushEvent,
   setCommandBarText,
-  setError,
   setLoading,
   setRevisionFiles,
   toggleRebaseDescendants,
@@ -72,9 +71,6 @@ export function createAppStore(
       setLoading(loading: boolean) {
         mutate((currentState) => setLoading(currentState, loading));
       },
-      setError(message: string | null) {
-        mutate((currentState) => setError(currentState, message));
-      },
       pushEvent(text: string, level: StatusLevel) {
         mutate((currentState) => pushEvent(currentState, text, level));
       },
@@ -105,8 +101,8 @@ export function createAppStore(
       clearStatusMessage() {
         mutate((currentState) => clearStatusMessage(currentState));
       },
-      dismissOldestError() {
-        mutate((currentState) => dismissOldestError(currentState));
+      dismissStatusMessage() {
+        mutate((currentState) => dismissStatusMessage(currentState));
       },
       startCommandDraft(config: CommandDraftConfig, options?: { descendantRevisionIds?: readonly string[] }) {
         mutate((currentState) => startCommandDraft(currentState, config, options));

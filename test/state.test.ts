@@ -6,7 +6,7 @@ import {
   clearRevisionSelection,
   closeFocusedRevision,
   createInitialState,
-  dismissOldestError,
+  dismissStatusMessage,
   draftConfigs,
   focusCommandBar,
   focusWorkingCopy,
@@ -15,7 +15,6 @@ import {
   getSelectedRevisionIds,
   pushEvent,
   setCommandBarText,
-  setError,
   moveFocus,
   openFocusedRevision,
   toggleCondensedLayout,
@@ -106,51 +105,39 @@ test("rebase command text updates when descendants are toggled", () => {
   expect(getDisplayedCommandText(state)).toBe("rebase -s a -d b");
 });
 
-test("dismissOldestError clears state.error first", () => {
+test("dismissStatusMessage clears the current status message", () => {
   let state = createState();
-  state = setError(state, "repo not found");
   state = pushEvent(state, "command failed", "error");
+  expect(state.statusMessage).not.toBeNull();
 
-  state = dismissOldestError(state);
-  expect(state.error).toBeNull();
+  state = dismissStatusMessage(state);
+  expect(state.statusMessage).toBeNull();
   expect(state.eventLog.length).toBe(1);
 });
 
-test("dismissOldestError removes oldest error event and clears error statusMessage", () => {
-  let state = createState();
-  state = pushEvent(state, "first error", "error");
-  state = pushEvent(state, "info message", "info");
-  state = pushEvent(state, "second error", "error");
-
-  state = dismissOldestError(state);
-  expect(state.eventLog.length).toBe(2);
-  expect(state.eventLog[0]?.text).toBe("info message");
-  expect(state.eventLog[1]?.text).toBe("second error");
-  expect(state.statusMessage).toBeNull();
-});
-
-test("dismissOldestError clears error statusMessage even with no error events", () => {
-  let state = createState();
-  state = pushEvent(state, "command failed", "error");
-  state = { ...state, eventLog: [] };
-
-  state = dismissOldestError(state);
-  expect(state.statusMessage).toBeNull();
-});
-
-test("dismissOldestError clears success statusMessage when no errors exist", () => {
+test("dismissStatusMessage clears success status message", () => {
   let state = createState();
   state = pushEvent(state, "all good", "success");
   expect(state.statusMessage?.level).toBe("success");
 
-  state = dismissOldestError(state);
+  state = dismissStatusMessage(state);
   expect(state.statusMessage).toBeNull();
 });
 
-test("dismissOldestError is a no-op when no status message exists", () => {
+test("dismissStatusMessage is a no-op when no status message exists", () => {
   const state = createState();
-  const next = dismissOldestError(state);
+  const next = dismissStatusMessage(state);
   expect(next).toBe(state);
+});
+
+test("pushEvent keeps a maximum of 100 entries in the event log", () => {
+  let state = createState();
+  for (let i = 0; i < 105; i++) {
+    state = pushEvent(state, `event ${i}`, "info", i);
+  }
+  expect(state.eventLog.length).toBe(100);
+  expect(state.eventLog[0]?.text).toBe("event 5");
+  expect(state.eventLog[99]?.text).toBe("event 104");
 });
 
 test("selected revision ids are populated when starting a command draft", () => {
