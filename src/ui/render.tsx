@@ -327,13 +327,6 @@ export function JifView(props: {
     }
   });
 
-  createEffect(() => {
-    const message = store.state.statusMessage;
-    if (message?.level === "success") {
-      const timer = setTimeout(() => store.actions.clearStatusMessage(), 5000);
-      onCleanup(() => clearTimeout(timer));
-    }
-  });
 
   onMount(() => {
     void (async () => {
@@ -431,6 +424,7 @@ export function JifView(props: {
         message={store.state.statusMessage}
         loading={store.state.loading}
         config={config}
+        onDismiss={() => store.actions.dismissStatusMessage()}
       />
     </box>
     </Show>
@@ -486,6 +480,7 @@ export function JifView(props: {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       store.actions.pushEvent(message, "error");
+      store.actions.setLoading(false);
     }
   }
 }
@@ -1203,36 +1198,49 @@ function MessageOverlay(props: {
   message: StatusMessage | null;
   loading: boolean;
   config: ResolvedAppConfig;
+  onDismiss: () => void;
 }) {
   const colors = props.config.colorScheme.semanticColors;
+  const level = () => props.message?.level ?? "info";
+  const visible = () => props.message !== null || props.loading;
+  const text = () =>
+    props.message !== null
+      ? props.message.text
+      : "Refreshing repository state...";
+
+  createEffect(() => {
+    if (props.message !== null) {
+      const timer = setTimeout(() => props.onDismiss(), 5000);
+      onCleanup(() => clearTimeout(timer));
+    }
+  });
 
   return (
-    <Show when={props.message || props.loading}>
-      {(() => {
-        const level = props.message?.level ?? "info";
-        const text = props.loading
-          ? "Refreshing repository state..."
-          : props.message!.text;
-        return (
-          <box
-            position="absolute"
-            bottom={0}
-            left={0}
-            width="100%"
-            maxHeight="60%"
-            zIndex={10}
-            backgroundColor={colors.chromeFillOne}
-            border
-            borderStyle="single"
-            borderColor={statusColor(level, colors)}
-            paddingX={1}
-          >
-            <text fg={statusColor(level, colors)}>
-              {text}
-            </text>
-          </box>
-        );
-      })()}
+    <Show when={visible()}>
+      <scrollbox
+        position="absolute"
+        bottom={0}
+        left={0}
+        width="100%"
+        maxHeight={10}
+        zIndex={10}
+        backgroundColor={colors.chromeFillOne}
+        border
+        borderStyle="single"
+        borderColor={statusColor(level(), colors)}
+        paddingX={1}
+        scrollY
+        scrollbarOptions={{
+          trackOptions: {
+            backgroundColor: colors.chromeFillThree,
+            foregroundColor: colors.chromeBorderFocus,
+          },
+        }}
+      >
+        <text fg={statusColor(level(), colors)} wrapMode="word">
+          {text()}
+        </text>
+      </scrollbox>
     </Show>
   );
 }

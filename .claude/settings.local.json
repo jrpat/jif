@@ -15,7 +15,8 @@
       "Bash(jj rebase:*)",
       "Bash(jj new:*)",
       "Skill(resolve)",
-      "Skill(resolve:*)"
+      "Skill(resolve:*)",
+      "Bash(jj status:*)"
     ]
   }
 }
