@@ -33,7 +33,7 @@ test("default middle revisions share a connected divider", () => {
   expect(row.borderChars?.topRight).toBe(BorderChars.single.topRight);
 });
 
-test("focused row owns both shared dividers and keeps them connected", () => {
+test("focused row owns both shared dividers with true corners", () => {
   const previousRow = getPolicy("default", null, "focused");
   const focusedRow = getPolicy("focused", "default", "default");
   const nextRow = getPolicy("default", "focused", null);
@@ -44,10 +44,10 @@ test("focused row owns both shared dividers and keeps them connected", () => {
   expect(focusedRow.ownsTop).toBeTrue();
   expect(focusedRow.ownsBottom).toBeTrue();
   expect(focusedRow.borderSides).toEqual(["top", "right", "bottom", "left"]);
-  expect(focusedRow.borderChars?.topLeft).toBe(BorderChars.single.leftT);
-  expect(focusedRow.borderChars?.topRight).toBe(BorderChars.single.rightT);
-  expect(focusedRow.borderChars?.bottomLeft).toBe(BorderChars.single.leftT);
-  expect(focusedRow.borderChars?.bottomRight).toBe(BorderChars.single.rightT);
+  expect(focusedRow.borderChars?.topLeft).toBe(BorderChars.single.topLeft);
+  expect(focusedRow.borderChars?.topRight).toBe(BorderChars.single.topRight);
+  expect(focusedRow.borderChars?.bottomLeft).toBe(BorderChars.single.bottomLeft);
+  expect(focusedRow.borderChars?.bottomRight).toBe(BorderChars.single.bottomRight);
 
   expect(nextRow.ownsTop).toBeFalse();
   expect(nextRow.borderSides).toEqual(["right", "bottom", "left"]);
@@ -85,39 +85,47 @@ test("selected row wins shared separator ownership over a focused neighbor", () 
   expect(selectedRow.borderChars?.topRight).toBe(BorderChars.single.topRight);
 });
 
-test("left corners use T-junction when neighbor has same graph width", () => {
-  const sameWidth = getPolicy("focused", "default", "default", {
+test("left corners use T-junction when affected neighbor has same graph width", () => {
+  const sameWidth = getPolicy("affected", "default", "default", {
     current: 3, previous: 3, next: 3,
   });
   expect(sameWidth.borderChars?.topLeft).toBe(BorderChars.single.leftT);
   expect(sameWidth.borderChars?.bottomLeft).toBe(BorderChars.single.leftT);
 });
 
-test("left corners use topT/bottomT when neighbor is wider (smaller graphWidth)", () => {
+test("left corners use topT/bottomT when affected neighbor is wider (smaller graphWidth)", () => {
   // Wider neighbor: connector path arrives from the left
-  const neighborWider = getPolicy("focused", "default", "default", {
+  const neighborWider = getPolicy("affected", "default", "default", {
     current: 3, previous: 1, next: 1,
   });
   expect(neighborWider.borderChars?.topLeft).toBe(BorderChars.single.topT);
   expect(neighborWider.borderChars?.bottomLeft).toBe(BorderChars.single.bottomT);
 });
 
-test("left corners use true corners when neighbor has larger graph width", () => {
-  const neighborNarrower = getPolicy("focused", "default", "default", {
+test("left corners use true corners when affected neighbor has larger graph width", () => {
+  const neighborNarrower = getPolicy("affected", "default", "default", {
     current: 1, previous: 3, next: 3,
   });
   expect(neighborNarrower.borderChars?.topLeft).toBe(BorderChars.single.topLeft);
   expect(neighborNarrower.borderChars?.bottomLeft).toBe(BorderChars.single.bottomLeft);
 });
 
-test("left corners use true corners for mixed neighbor widths", () => {
-  const mixedWidths = getPolicy("focused", "default", "default", {
+test("left corners use true corners for affected rows with mixed neighbor widths", () => {
+  const mixedWidths = getPolicy("affected", "default", "default", {
     current: 3, previous: 1, next: 5,
   });
   // previous (width 1) < current (width 3): topT (connector from wider neighbor)
   expect(mixedWidths.borderChars?.topLeft).toBe(BorderChars.single.topT);
   // next (width 5) > current (width 3): true corner
   expect(mixedWidths.borderChars?.bottomLeft).toBe(BorderChars.single.bottomLeft);
+});
+
+test("focused row always uses true corners regardless of graph width", () => {
+  const focusedSameWidth = getPolicy("focused", "default", "default", {
+    current: 1, previous: 1, next: 1,
+  });
+  expect(focusedSameWidth.borderChars?.topLeft).toBe(BorderChars.single.topLeft);
+  expect(focusedSameWidth.borderChars?.bottomLeft).toBe(BorderChars.single.bottomLeft);
 });
 
 test("selected row always uses true corners regardless of graph width", () => {

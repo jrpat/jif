@@ -76,7 +76,8 @@ function getBorderChars(options: Readonly<{
   nextGraphWidth: number | null;
 }>): BorderCharacters {
   const chars: BorderCharacters = { ...BorderChars.single };
-  const useConnectedCorners = options.rowState !== "selected";
+  const useConnectedCorners =
+    options.rowState === "default" || options.rowState === "affected";
 
   if (options.ownsTop && options.hasPreviousRow && useConnectedCorners) {
     if (options.previousGraphWidth === options.currentGraphWidth) {
