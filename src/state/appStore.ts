@@ -5,6 +5,7 @@ import type {
   ChangedFile,
   CommandDraftConfig,
   RepositoryData,
+  RevisionSummary,
   StatusLevel,
 } from "../domain/types.ts";
 import {
@@ -20,6 +21,7 @@ import {
   closeShortcutPanel,
   setRevsetQuery,
   dismissStatusMessage,
+  expandElidedRevision,
   startCommandDraft,
   toggleFileSelection,
   toggleShortFlags,
@@ -88,6 +90,9 @@ export function createAppStore(
       },
       openFocusedRevision() {
         mutate((currentState) => openFocusedRevision(currentState));
+      },
+      expandElidedRevision(elidedIndex: number, replacements: readonly RevisionSummary[]) {
+        mutate((currentState) => expandElidedRevision(currentState, elidedIndex, replacements));
       },
       closeFocusedRevision() {
         mutate((currentState) => closeFocusedRevision(currentState));

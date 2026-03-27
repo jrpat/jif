@@ -271,7 +271,7 @@ export function focusWorkingCopy(state: AppState): AppState {
 
 export function openFocusedRevision(state: AppState): AppState {
   const revision = getFocusedRevision(state);
-  if (!revision) {
+  if (!revision || revision.marker === "elided") {
     return state;
   }
 
@@ -281,6 +281,23 @@ export function openFocusedRevision(state: AppState): AppState {
     expandedRevisionId: revision.changeId,
     focusedFileIndex: 0,
     selectedFilePaths: [],
+  };
+}
+
+export function expandElidedRevision(
+  state: AppState,
+  elidedIndex: number,
+  replacements: readonly RevisionSummary[],
+): AppState {
+  const revisions = [
+    ...state.revisions.slice(0, elidedIndex),
+    ...replacements,
+    ...state.revisions.slice(elidedIndex + 1),
+  ];
+  return {
+    ...state,
+    revisions,
+    focusedRevisionIndex: replacements.length > 0 ? elidedIndex : state.focusedRevisionIndex,
   };
 }
 

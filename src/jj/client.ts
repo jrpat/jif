@@ -35,6 +35,30 @@ export class JjClient {
     };
   }
 
+  async loadElidedRevisions(
+    afterChangeId: string,
+    beforeChangeId: string | null,
+    limit = 20,
+  ): Promise<readonly RevisionSummary[]> {
+    const workspaceNamesByChangeId = await this.loadWorkspaceNamesByChangeId();
+    const revset = beforeChangeId
+      ? `${afterChangeId}::${beforeChangeId} ~ ${afterChangeId} ~ ${beforeChangeId}`
+      : `${afterChangeId}::`;
+    const args = [
+      "log",
+      "--limit",
+      String(limit),
+      "--color",
+      "never",
+      "--template",
+      `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
+      "-r",
+      revset,
+    ];
+    const logOutput = await this.runJj(args);
+    return parseLogOutput(logOutput.stdout, workspaceNamesByChangeId);
+  }
+
   async loadChangedFiles(revisionId: string): Promise<readonly ChangedFile[]> {
     const result = await this.runJj([
       "diff",
@@ -194,12 +218,28 @@ export function parseLogOutput(
     }
 
     if (!rawLine.includes(FIELD_SEPARATOR)) {
-      const previous = revisions.at(-1);
-      if (previous) {
-        revisions[revisions.length - 1] = {
-          ...previous,
-          graphTail: [...previous.graphTail, rawLine],
-        };
+      if (isElidedLine(rawLine)) {
+        const graphMatch = /^(?<graph>.*?)(?=\()/.exec(rawLine);
+        revisions.push({
+          changeId: `__elided_${revisions.length}`,
+          changeIdPrefixLength: 0,
+          commitId: "",
+          description: "(elided revisions)",
+          bookmarks: [],
+          workspaces: [],
+          graphHead: graphMatch?.groups?.graph ?? "~  ",
+          graphTail: [],
+          marker: "elided",
+          files: [],
+        });
+      } else {
+        const previous = revisions.at(-1);
+        if (previous) {
+          revisions[revisions.length - 1] = {
+            ...previous,
+            graphTail: [...previous.graphTail, rawLine],
+          };
+        }
       }
       continue;
     }
@@ -246,6 +286,10 @@ function splitWords(rawValue: string): readonly string[] {
   }
 
   return trimmed.split(/\s+/);
+}
+
+function isElidedLine(line: string): boolean {
+  return /~.*\(elided revisions\)/.test(line);
 }
 
 function deriveRevisionMarker(graphHead: string): RevisionMarker {

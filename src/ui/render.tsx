@@ -105,8 +105,14 @@ export function JifView(props: {
       store.actions.moveFocus(delta);
     },
     openFocusedRevision() {
-      const revision = getFocusedRevision(store.snapshot());
+      const state = store.snapshot();
+      const revision = getFocusedRevision(state);
       if (!revision) {
+        return;
+      }
+
+      if (revision.marker === "elided") {
+        void expandElidedRevisions(state.focusedRevisionIndex);
         return;
       }
 
@@ -440,18 +446,29 @@ export function JifView(props: {
         <box width="100%" flexDirection="column">
           <For each={store.state.revisions}>
             {(revision, index) => (
-              <RevisionItem
-                state={store.state}
-                revision={revision}
-                index={index()}
-                previousRevisionId={store.state.revisions[index() - 1]?.changeId ?? null}
-                nextRevisionId={store.state.revisions[index() + 1]?.changeId ?? null}
-                config={config}
-                focusedRevisionId={getFocusedRevision(store.state)?.changeId ?? null}
-                selectedRevisionIds={getSelectedRevisionIds(store.state)}
-                expandedRevisionId={getExpandedRevision(store.state)?.changeId ?? null}
-                commandTargetId={getCommandTargetRevisionId(store.state)}
-              />
+              <Show
+                when={revision.marker !== "elided"}
+                fallback={
+                  <ElidedRevisionItem
+                    revision={revision}
+                    focused={index() === store.state.focusedRevisionIndex}
+                    config={config}
+                  />
+                }
+              >
+                <RevisionItem
+                  state={store.state}
+                  revision={revision}
+                  index={index()}
+                  previousRevisionId={store.state.revisions[index() - 1]?.changeId ?? null}
+                  nextRevisionId={store.state.revisions[index() + 1]?.changeId ?? null}
+                  config={config}
+                  focusedRevisionId={getFocusedRevision(store.state)?.changeId ?? null}
+                  selectedRevisionIds={getSelectedRevisionIds(store.state)}
+                  expandedRevisionId={getExpandedRevision(store.state)?.changeId ?? null}
+                  commandTargetId={getCommandTargetRevisionId(store.state)}
+                />
+              </Show>
             )}
           </For>
         </box>
@@ -536,6 +553,26 @@ export function JifView(props: {
       const message = error instanceof Error ? error.message : String(error);
       store.actions.pushEvent(message, "error");
       store.actions.setLoading(false);
+    }
+  }
+
+  async function expandElidedRevisions(elidedIndex: number) {
+    const state = store.snapshot();
+    const afterRevision = state.revisions[elidedIndex + 1];
+    const beforeRevision = state.revisions[elidedIndex - 1];
+    if (!afterRevision) {
+      return;
+    }
+    try {
+      const revisions = await client.loadElidedRevisions(
+        afterRevision.changeId,
+        beforeRevision?.changeId ?? null,
+        20,
+      );
+      store.actions.expandElidedRevision(elidedIndex, revisions);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      store.actions.pushEvent(message, "error");
     }
   }
 
@@ -1025,6 +1062,24 @@ function RevisionSideChips(props: {
           </text>
         )}
       </For>
+    </box>
+  );
+}
+
+function ElidedRevisionItem(props: {
+  revision: RevisionSummary;
+  focused: boolean;
+  config: ResolvedAppConfig;
+}) {
+  const colors = props.config.colorScheme.semanticColors;
+  return (
+    <box width="100%" height={1} flexDirection="row">
+      <text fg={colors.textTertiary}>{props.revision.graphHead}</text>
+      <text
+        fg={props.focused ? colors.chromeBorderFocus : colors.textTertiary}
+      >
+        {props.revision.description}
+      </text>
     </box>
   );
 }

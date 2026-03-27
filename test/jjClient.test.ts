@@ -29,6 +29,21 @@ test("parseLogOutput groups graph continuation lines", () => {
   expect(revisions[1]?.changeIdPrefixLength).toBe(3);
 });
 
+test("parseLogOutput creates a synthetic elided revision", () => {
+  const output = [
+    "◆  abcdefgh\u001f11111111\u001fsome commit\u001f\u001fab\u001f",
+    "~  (elided revisions)",
+  ].join("\n");
+
+  const revisions = parseLogOutput(output, new Map());
+  expect(revisions).toHaveLength(2);
+  expect(revisions[0]?.graphTail).toEqual([]);
+  expect(revisions[1]?.marker).toBe("elided");
+  expect(revisions[1]?.description).toBe("(elided revisions)");
+  expect(revisions[1]?.graphHead).toBe("~  ");
+  expect(revisions[1]?.changeId).toBe("__elided_1");
+});
+
 test("JjClient loads a real sample repository", async () => {
   const repo = await materializeSampleRepo({
     baseDir: await createTempDir("client-sample"),

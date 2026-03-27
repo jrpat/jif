@@ -1,4 +1,4 @@
-export type RevisionMarker = "working-copy" | "bookmark" | "plain" | "immutable";
+export type RevisionMarker = "working-copy" | "bookmark" | "plain" | "immutable" | "elided";
 
 export type FocusMode = "revisions" | "files" | "command" | "revset";
 

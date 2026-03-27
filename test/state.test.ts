@@ -26,6 +26,7 @@ import {
   toggleFileSelection,
   toggleRebaseDescendants,
   toggleRevisionSelection,
+  expandElidedRevision,
   openRevsetInput,
   closeRevsetInput,
   setRevsetQuery,
@@ -369,4 +370,33 @@ test("setRevsetQuery updates the query", () => {
   expect(state.revsetQuery).toBe("");
   state = setRevsetQuery(state, "ancestors(trunk(), 10)");
   expect(state.revsetQuery).toBe("ancestors(trunk(), 10)");
+});
+
+test("expandElidedRevision replaces elided entry with new revisions and updates focus", () => {
+  let state = createState();
+  const elidedEntry = {
+    changeId: "__elided_2",
+    changeIdPrefixLength: 0,
+    commitId: "",
+    description: "(elided revisions)",
+    bookmarks: [] as readonly string[],
+    workspaces: [] as readonly string[],
+    graphHead: "~  ",
+    graphTail: [] as readonly string[],
+    marker: "elided" as const,
+    files: [] as readonly { status: string; path: string }[],
+  };
+  state = { ...state, revisions: [...state.revisions, elidedEntry], focusedRevisionIndex: 2 };
+  expect(state.revisions).toHaveLength(3);
+
+  const replacements = [
+    { ...elidedEntry, changeId: "cccccccc", marker: "plain" as const, description: "third" },
+    { ...elidedEntry, changeId: "dddddddd", marker: "plain" as const, description: "fourth" },
+  ];
+  state = expandElidedRevision(state, 2, replacements);
+
+  expect(state.revisions).toHaveLength(4);
+  expect(state.revisions[2]?.changeId).toBe("cccccccc");
+  expect(state.revisions[3]?.changeId).toBe("dddddddd");
+  expect(state.focusedRevisionIndex).toBe(2);
 });
