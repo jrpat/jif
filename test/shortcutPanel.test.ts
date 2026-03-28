@@ -7,6 +7,7 @@ import {
   buildShortcutGrid,
   buildShortcutSummary,
   computeShortcutPanelHeight,
+  formatShortcutKeyLabel,
   getShortcutPanelCommands,
   normalizeShortcutSortKey,
   shortcutModeLabel,
@@ -89,6 +90,27 @@ test("buildShortcutSummary creates a collapsed single-line help string", () => {
   );
 
   expect(summary).toBe("? shortcuts   q quit");
+});
+
+test("buildShortcutSummary uses abbreviated key labels from canonical keys", () => {
+  const summary = buildShortcutSummary(
+    buildShortcutEntries([
+      createCommand("cancel", "Cancel", ["escape"]),
+    ]),
+  );
+
+  expect(summary).toBe("esc cancel");
+});
+
+test("formatShortcutKeyLabel keeps key descriptions to three letters or fewer", () => {
+  expect(formatShortcutKeyLabel("space")).toBe("spc");
+  expect(formatShortcutKeyLabel("enter")).toBe("ret");
+  expect(formatShortcutKeyLabel("left")).toBe("←");
+  expect(formatShortcutKeyLabel("right")).toBe("→");
+  expect(formatShortcutKeyLabel("down")).toBe("↓");
+  expect(formatShortcutKeyLabel("up")).toBe("↑");
+  expect(formatShortcutKeyLabel("escape")).toBe("esc");
+  expect(formatShortcutKeyLabel("j")).toBe("j");
 });
 
 test("buildShortcutGrid packs entries left to right before wrapping", () => {

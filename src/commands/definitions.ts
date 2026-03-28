@@ -114,7 +114,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     id: "cancel",
     title: "Cancel",
     description: "Cancel command composition or leave input mode",
-    canonicalKeys: ["escape"],
+    canonicalKeys: ["esc"],
     keys: ["escape"],
     run: (controller) => controller.cancelOrBlur(),
     group: "cancel",

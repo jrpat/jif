@@ -17,6 +17,15 @@ const MODIFIER_PREFIXES = new Set([
 const GRID_GAP = 2;
 const MIN_COLUMN_WIDTH = 24;
 const MAX_KEY_WIDTH = 12;
+const KEY_LABEL_ABBREVIATIONS: Readonly<Record<string, string>> = {
+  escape: "esc",
+  enter: "ret",
+  space: "spc",
+  left: "←",
+  right: "→",
+  down: "↓",
+  up: "↑",
+};
 
 export type ShortcutEntry = Readonly<{
   id: string;
@@ -51,13 +60,16 @@ export function buildShortcutEntries(
 ): readonly ShortcutEntry[] {
   return commands
     .flatMap((command) =>
-      command.canonicalKeys.map((keyLabel) => ({
-        id: `${command.id}:${keyLabel}`,
+      command.canonicalKeys.map((rawKeyLabel) => {
+        const keyLabel = formatShortcutKeyLabel(rawKeyLabel);
+        return {
+          id: `${command.id}:${rawKeyLabel}`,
         commandId: command.id,
         keyLabel,
         title: command.title,
         sortKey: normalizeShortcutSortKey(keyLabel),
-      }))
+        };
+      })
     )
     .sort(compareShortcutEntries);
 }
@@ -143,6 +155,10 @@ export function shortcutModeLabel(mode: FocusMode): string {
     case "revset":
       return "Revset";
   }
+}
+
+export function formatShortcutKeyLabel(keyLabel: string): string {
+  return KEY_LABEL_ABBREVIATIONS[keyLabel] ?? keyLabel;
 }
 
 function compareShortcutEntries(a: ShortcutEntry, b: ShortcutEntry): number {
