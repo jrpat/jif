@@ -446,29 +446,18 @@ export function JifView(props: {
         <box width="100%" flexDirection="column">
           <For each={store.state.revisions}>
             {(revision, index) => (
-              <Show
-                when={revision.marker !== "elided"}
-                fallback={
-                  <ElidedRevisionItem
-                    revision={revision}
-                    focused={index() === store.state.focusedRevisionIndex}
-                    config={config}
-                  />
-                }
-              >
-                <RevisionItem
-                  state={store.state}
-                  revision={revision}
-                  index={index()}
-                  previousRevisionId={store.state.revisions[index() - 1]?.changeId ?? null}
-                  nextRevisionId={store.state.revisions[index() + 1]?.changeId ?? null}
-                  config={config}
-                  focusedRevisionId={getFocusedRevision(store.state)?.changeId ?? null}
-                  selectedRevisionIds={getSelectedRevisionIds(store.state)}
-                  expandedRevisionId={getExpandedRevision(store.state)?.changeId ?? null}
-                  commandTargetId={getCommandTargetRevisionId(store.state)}
-                />
-              </Show>
+              <RevisionItem
+                state={store.state}
+                revision={revision}
+                index={index()}
+                previousRevisionId={store.state.revisions[index() - 1]?.changeId ?? null}
+                nextRevisionId={store.state.revisions[index() + 1]?.changeId ?? null}
+                config={config}
+                focusedRevisionId={getFocusedRevision(store.state)?.changeId ?? null}
+                selectedRevisionIds={getSelectedRevisionIds(store.state)}
+                expandedRevisionId={getExpandedRevision(store.state)?.changeId ?? null}
+                commandTargetId={getCommandTargetRevisionId(store.state)}
+              />
             )}
           </For>
         </box>
@@ -869,7 +858,7 @@ export function RevisionItem(props: {
           </text>
         ) : null}
         <text fg={titleGraphColor()}>{padRight(gutterPlan().title, effectiveGraphWidth())}</text>
-        <Show when={headerLayout().headerRowCount === 2}>
+        <Show when={headerLayout().headerRowCount === 2 && revision.marker !== "elided"}>
           <text fg={continuationGraphColor()}>
             {padRight(gutterPlan().subtitle, effectiveGraphWidth())}
           </text>
@@ -914,85 +903,94 @@ export function RevisionItem(props: {
         customBorderChars={borderPolicy().borderChars}
       >
         <Show
-          when={showCondensedHeader()}
+          when={revision.marker !== "elided"}
           fallback={
-            <>
-              <box width="100%" flexDirection="row" gap={1}>
+            <text fg={colors().textTertiary} truncate>
+              {revision.description}
+            </text>
+          }
+        >
+          <Show
+            when={showCondensedHeader()}
+            fallback={
+              <>
+                <box width="100%" flexDirection="row" gap={1}>
+                  <RevisionChangeId
+                    revision={revision}
+                    focused={isFocused()}
+                    selected={isSelected()}
+                    colors={colors()}
+                  />
+                  {headerLayout().commandTarget ? (
+                    <CommandTargetChip
+                      text={headerLayout().commandTarget!.text}
+                      colors={colors()}
+                    />
+                  ) : null}
+                  <box flexGrow={1} />
+                  <RevisionSideChips chips={headerLayout().sideChips} colors={colors()} />
+                </box>
+                <box width="100%" flexDirection="row">
+                  <text fg={isSelected() || isFocused() ? colors().textPrimary : colors().textSecondary} truncate>
+                    {revision.description}
+                  </text>
+                </box>
+              </>
+            }
+          >
+            <box
+              width="100%"
+              height={headerLayout().contentHeight}
+              overflow={headerLayout().clipOverflow ? "hidden" : undefined}
+              position="relative"
+            >
+              <box width="100%" height={1} flexDirection="row">
                 <RevisionChangeId
                   revision={revision}
                   focused={isFocused()}
                   selected={isSelected()}
                   colors={colors()}
                 />
-                {headerLayout().commandTarget ? (
-                  <CommandTargetChip
-                    text={headerLayout().commandTarget!.text}
-                    colors={colors()}
-                  />
-                ) : null}
-                <box flexGrow={1} />
+                <box width={1} />
+                <box flexGrow={1} minWidth={0} height={1} overflow="hidden">
+                  <text
+                    fg={isSelected() || isFocused() ? colors().textPrimary : colors().textSecondary}
+                    wrapMode="none"
+                    truncate
+                  >
+                    {revision.description}
+                  </text>
+                </box>
+                <Show when={headerLayout().sideChips.length > 0}>
+                  <box width={1} />
+                </Show>
                 <RevisionSideChips chips={headerLayout().sideChips} colors={colors()} />
               </box>
-              <box width="100%" flexDirection="row">
-                <text fg={isSelected() || isFocused() ? colors().textPrimary : colors().textSecondary} truncate>
-                  {revision.description}
-                </text>
-              </box>
-            </>
-          }
-        >
-          <box
-            width="100%"
-            height={headerLayout().contentHeight}
-            overflow={headerLayout().clipOverflow ? "hidden" : undefined}
-            position="relative"
-          >
-            <box width="100%" height={1} flexDirection="row">
-              <RevisionChangeId
-                revision={revision}
-                focused={isFocused()}
-                selected={isSelected()}
-                colors={colors()}
-              />
-              <box width={1} />
-              <box flexGrow={1} minWidth={0} height={1} overflow="hidden">
+              {headerLayout().commandTarget?.placement === "overlay" ? (
                 <text
-                  fg={isSelected() || isFocused() ? colors().textPrimary : colors().textSecondary}
-                  wrapMode="none"
-                  truncate
+                  position="absolute"
+                  left={headerLayout().commandTarget!.leftOffset}
+                  top={0}
+                  zIndex={1}
+                  fg={colors().chromeFillOne}
+                  bg={colors().chromeBorderFocus}
                 >
-                  {revision.description}
+                  {` ${headerLayout().commandTarget!.text} `}
                 </text>
-              </box>
-              <Show when={headerLayout().sideChips.length > 0}>
-                <box width={1} />
-              </Show>
-              <RevisionSideChips chips={headerLayout().sideChips} colors={colors()} />
+              ) : null}
             </box>
-            {headerLayout().commandTarget?.placement === "overlay" ? (
-              <text
-                position="absolute"
-                left={headerLayout().commandTarget!.leftOffset}
-                top={0}
-                zIndex={1}
-                fg={colors().chromeFillOne}
-                bg={colors().chromeBorderFocus}
-              >
-                {` ${headerLayout().commandTarget!.text} `}
-              </text>
-            ) : null}
-          </box>
+          </Show>
+          <For each={visibleGutterTail()}>
+            {() => <box width="100%" height={1} />}
+          </For>
+          {isExpanded() ? (
+            <ChangedFiles
+              state={state}
+              revision={revision}
+              config={config}
+            />
+          ) : null}
         </Show>
-        <For each={visibleGutterTail()}>
-          {() => <box width="100%" height={1} />}
-        </For>
-        {isExpanded() ? (
-          <ChangedFiles
-            state={state}
-            revision={revision}
-            config={config}
-          />
-        ) : null}
       </box>
       {borderPolicy().ownsTop && prevLeftCol() !== null && currentLeftCol() < prevLeftCol()! ? (
         <text position="absolute" left={prevLeftCol()!} top={0} zIndex={1} fg={borderColor()}>┴</text>
@@ -1062,24 +1060,6 @@ function RevisionSideChips(props: {
           </text>
         )}
       </For>
-    </box>
-  );
-}
-
-function ElidedRevisionItem(props: {
-  revision: RevisionSummary;
-  focused: boolean;
-  config: ResolvedAppConfig;
-}) {
-  const colors = props.config.colorScheme.semanticColors;
-  return (
-    <box width="100%" height={1} flexDirection="row">
-      <text fg={colors.textTertiary}>{props.revision.graphHead}</text>
-      <text
-        fg={props.focused ? colors.chromeBorderFocus : colors.textTertiary}
-      >
-        {props.revision.description}
-      </text>
     </box>
   );
 }

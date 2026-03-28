@@ -34,6 +34,11 @@ export type CommandDefinition = Readonly<{
   group?: "global" | "mode" | "cancel";
 }>;
 
+function focusedIsElided(state: AppState): boolean {
+  const revision = state.revisions[state.focusedRevisionIndex];
+  return revision?.marker === "elided";
+}
+
 export const commandDefinitions: readonly CommandDefinition[] = [
   {
     id: "move-down",
@@ -68,7 +73,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Close the focused detail view",
     canonicalKeys: ["h"],
     keys: ["h", "left"],
-    when: (state) => state.focusMode !== "command",
+    when: (state) => state.focusMode !== "command" && !focusedIsElided(state),
     run: (controller) => controller.closeFocusedRevision(),
   },
   {
@@ -77,7 +82,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Focus the command bar",
     canonicalKeys: [":"],
     keys: [":"],
-    when: (state) => state.focusMode !== "command",
+    when: (state) => state.focusMode !== "command" && !focusedIsElided(state),
     run: (controller) => controller.focusCommandBar(),
     group: "global",
   },
@@ -125,7 +130,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Start a rebase command from the focused revision",
     canonicalKeys: ["r"],
     keys: ["r"],
-    when: (state) => state.focusMode === "revisions",
+    when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
     run: (controller) => controller.startRebase(),
     group: "global",
   },
@@ -145,7 +150,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Squash the focused revision into another",
     canonicalKeys: ["S"],
     keys: ["S"],
-    when: (state) => state.focusMode === "revisions" && state.commandDraft?.config.kind !== "rebase",
+    when: (state) => state.focusMode === "revisions" && state.commandDraft?.config.kind !== "rebase" && !focusedIsElided(state),
     run: (controller) => controller.startSquash(),
     group: "global",
   },
@@ -155,7 +160,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Add or remove the focused revision from the selection",
     canonicalKeys: ["space"],
     keys: [" "],
-    when: (state) => state.focusMode === "revisions",
+    when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
     run: (controller) => controller.toggleSelection(),
     group: "mode",
   },
@@ -215,7 +220,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Jump to the working-copy revision",
     canonicalKeys: ["@"],
     keys: ["@"],
-    when: (state) => state.focusMode === "revisions",
+    when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
     run: (controller) => controller.focusWorkingCopy(),
   },
   {
@@ -224,7 +229,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Include descendants in the rebase preview",
     canonicalKeys: ["s"],
     keys: ["s"],
-    when: (state) => state.commandDraft?.config.kind === "rebase" && state.focusMode === "revisions",
+    when: (state) => state.commandDraft?.config.kind === "rebase" && state.focusMode === "revisions" && !focusedIsElided(state),
     run: (controller) => controller.toggleRebaseDescendants(),
     group: "mode",
   },
