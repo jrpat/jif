@@ -4,6 +4,7 @@ import type {
   CommandBarState,
   CommandDraftConfig,
   EventLogEntry,
+  FocusMode,
   RepositoryData,
   RevisionSummary,
   StatusLevel,
@@ -145,7 +146,7 @@ export function openRevsetInput(state: AppState): AppState {
 }
 
 export function closeRevsetInput(state: AppState): AppState {
-  return { ...state, focusMode: "revisions" };
+  return { ...state, focusMode: getBrowseFocusMode(state) };
 }
 
 export function setRevsetQuery(state: AppState, query: string): AppState {
@@ -330,7 +331,7 @@ export function focusCommandBar(state: AppState): AppState {
 export function blurCommandBar(state: AppState): AppState {
   return {
     ...state,
-    focusMode: "revisions",
+    focusMode: getBrowseFocusMode(state),
   };
 }
 
@@ -347,7 +348,7 @@ export function setCommandBarText(state: AppState, text: string): AppState {
 export function cancelCommandState(state: AppState): AppState {
   return {
     ...state,
-    focusMode: "revisions",
+    focusMode: getBrowseFocusMode(state),
     commandBar: createEmptyCommandBar(),
     commandDraft: null,
     selectedRevisionIds: [],
@@ -669,6 +670,10 @@ function resolveRevisionFiles(
     files: previous.files,
     filesLoaded: previous.filesLoaded,
   };
+}
+
+function getBrowseFocusMode(state: AppState): FocusMode {
+  return state.expandedRevisionId !== null ? "files" : "revisions";
 }
 
 function clampIndex(value: number, size: number): number {

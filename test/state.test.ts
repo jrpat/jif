@@ -97,6 +97,17 @@ test("command bar editing is controlled by reducer state", () => {
   expect(state.focusMode).toBe("revisions");
 });
 
+test("cancelCommandState returns to file navigation when a revision is expanded", () => {
+  let state = createState();
+  state = openFocusedRevision(state);
+  state = focusCommandBar(state);
+
+  state = cancelCommandState(state);
+
+  expect(state.focusMode).toBe("files");
+  expect(state.expandedRevisionId).toBe("aaaaaaaa");
+});
+
 test("startCommandDraft advances focus to parent revision", () => {
   let state = createState();
   expect(state.focusedRevisionIndex).toBe(0);
@@ -368,6 +379,17 @@ test("closeRevsetInput restores focusMode to revisions", () => {
   state = openRevsetInput(state);
   state = closeRevsetInput(state);
   expect(state.focusMode).toBe("revisions");
+});
+
+test("closeRevsetInput returns to file navigation when a revision is expanded", () => {
+  let state = createState();
+  state = openFocusedRevision(state);
+  state = openRevsetInput(state);
+
+  state = closeRevsetInput(state);
+
+  expect(state.focusMode).toBe("files");
+  expect(state.expandedRevisionId).toBe("aaaaaaaa");
 });
 
 test("setRevsetQuery updates the query", () => {

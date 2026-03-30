@@ -51,7 +51,7 @@ import {
 } from "./shortcutPanel.ts";
 import { normalizeKey } from "./keyboard.ts";
 import { dispatchGlobalKey } from "./keybindings.ts";
-import { getChangedFilesPlaceholderText } from "./revisionFiles.ts";
+import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
 
 export function JifView(props: {
   store: AppStore;
@@ -1086,11 +1086,9 @@ function ChangedFiles(props: {
       ) : (
         <For each={props.revision.files}>
           {(file, index) => {
-            const focused =
-              props.state.focusMode === "files" &&
-              props.state.expandedRevisionId === props.revision.changeId &&
-              props.state.focusedFileIndex === index();
-            const selected = props.state.selectedFilePaths.includes(file.path);
+            const rowState = createMemo(() =>
+              getChangedFileRowState(props.state, props.revision.changeId, index(), file.path)
+            );
 
             return (
               <box
@@ -1098,18 +1096,26 @@ function ChangedFiles(props: {
                 flexDirection="row"
                 gap={1}
                 backgroundColor={
-                  selected
+                  rowState().selected
                     ? colors.rowSelectedFill
-                    : focused
+                    : rowState().focused
                       ? colors.rowFocusedFill
                       : undefined
                 }
               >
-                <text fg={selected ? colors.rowSelectedAccent : focused ? colors.fileFocusMarker : colors.textTertiary}>
-                  {selected ? "*" : focused ? ">" : " "}
+                <text
+                  fg={
+                    rowState().selected
+                      ? colors.rowSelectedAccent
+                      : rowState().focused
+                        ? colors.fileFocusMarker
+                        : colors.textTertiary
+                  }
+                >
+                  {rowState().marker}
                 </text>
                 <text fg={colors.fileStatusAccent}>{file.status}</text>
-                <text fg={selected || focused ? colors.textPrimary : colors.textSecondary} truncate>
+                <text fg={rowState().selected || rowState().focused ? colors.textPrimary : colors.textSecondary} truncate>
                   {file.path}
                 </text>
               </box>
