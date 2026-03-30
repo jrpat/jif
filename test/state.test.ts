@@ -4,6 +4,7 @@ import {
   applyRepositoryData,
   cancelCommandDraft,
   cancelCommandState,
+  clearStatusMessage,
   clearRevisionSelection,
   closeFocusedRevision,
   createInitialState,
@@ -125,29 +126,52 @@ test("rebase command text updates when descendants are toggled", () => {
   expect(getDisplayedCommandText(state)).toBe("rebase -s a -d b");
 });
 
-test("dismissStatusMessage clears the current status message", () => {
+test("pushEvent appends visible status messages instead of replacing them", () => {
   let state = createState();
   state = pushEvent(state, "command failed", "error");
-  expect(state.statusMessage).not.toBeNull();
+  state = pushEvent(state, "all good", "success");
 
-  state = dismissStatusMessage(state);
-  expect(state.statusMessage).toBeNull();
-  expect(state.eventLog.length).toBe(1);
+  expect(state.statusMessages.map((message) => message.text)).toEqual([
+    "command failed",
+    "all good",
+  ]);
+  expect(state.eventLog).toHaveLength(2);
 });
 
-test("dismissStatusMessage clears success status message", () => {
+test("dismissStatusMessage clears the oldest visible status message first", () => {
   let state = createState();
-  state = pushEvent(state, "all good", "success");
-  expect(state.statusMessage?.level).toBe("success");
+  state = pushEvent(state, "command failed", "error", 10);
+  state = pushEvent(state, "all good", "success", 20);
+  expect(state.statusMessages).toHaveLength(2);
 
   state = dismissStatusMessage(state);
-  expect(state.statusMessage).toBeNull();
+  expect(state.statusMessages.map((message) => message.text)).toEqual(["all good"]);
+  expect(state.eventLog.length).toBe(2);
+});
+
+test("dismissStatusMessage can target a specific status message id", () => {
+  let state = createState();
+  state = pushEvent(state, "first", "info", 10);
+  state = pushEvent(state, "second", "success", 20);
+  const targetId = state.statusMessages[1]?.id;
+
+  state = dismissStatusMessage(state, targetId);
+  expect(state.statusMessages.map((message) => message.text)).toEqual(["first"]);
 });
 
 test("dismissStatusMessage is a no-op when no status message exists", () => {
   const state = createState();
   const next = dismissStatusMessage(state);
   expect(next).toBe(state);
+});
+
+test("clearStatusMessage removes all visible status messages", () => {
+  let state = createState();
+  state = pushEvent(state, "first", "info", 10);
+  state = pushEvent(state, "second", "success", 20);
+
+  state = clearStatusMessage(state);
+  expect(state.statusMessages).toEqual([]);
 });
 
 test("pushEvent keeps a maximum of 100 entries in the event log", () => {

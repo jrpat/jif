@@ -109,8 +109,8 @@ export function createAppStore(
       clearStatusMessage() {
         mutate((currentState) => clearStatusMessage(currentState));
       },
-      dismissStatusMessage() {
-        mutate((currentState) => dismissStatusMessage(currentState));
+      dismissStatusMessage(id?: string) {
+        mutate((currentState) => dismissStatusMessage(currentState, id));
       },
       startCommandDraft(config: CommandDraftConfig, options?: { descendantRevisionIds?: readonly string[] }) {
         mutate((currentState) => startCommandDraft(currentState, config, options));

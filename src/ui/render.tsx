@@ -52,6 +52,7 @@ import {
 import { normalizeKey } from "./keyboard.ts";
 import { dispatchGlobalKey } from "./keybindings.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
+import { getStatusMessageDismissDelay } from "./statusMessages.ts";
 
 export function JifView(props: {
   store: AppStore;
@@ -141,7 +142,7 @@ export function JifView(props: {
     cancelOrBlur() {
       const state = store.snapshot();
 
-      if (state.statusMessage !== null) {
+      if (state.statusMessages.length > 0) {
         store.actions.dismissStatusMessage();
         return;
       }
@@ -496,10 +497,10 @@ export function JifView(props: {
         />
       </Show>
       <MessageOverlay
-        message={store.state.statusMessage}
+        messages={store.state.statusMessages}
         loading={store.state.loading}
         config={config}
-        onDismiss={() => store.actions.dismissStatusMessage()}
+        onDismiss={(id) => store.actions.dismissStatusMessage(id)}
       />
     </box>
     </Show>
@@ -1406,53 +1407,94 @@ function RevsetInput(props: {
 }
 
 function MessageOverlay(props: {
-  message: StatusMessage | null;
+  messages: readonly StatusMessage[];
   loading: boolean;
   config: ResolvedAppConfig;
-  onDismiss: () => void;
+  onDismiss: (id?: string) => void;
 }) {
-  const colors = props.config.colorScheme.semanticColors;
-  const level = () => props.message?.level ?? "info";
-  const visible = () => props.message !== null || props.loading;
-  const text = () =>
-    props.message !== null
-      ? props.message.text
-      : "Refreshing repository state...";
-
-  createEffect(() => {
-    if (props.message !== null) {
-      const timer = setTimeout(() => props.onDismiss(), 5000);
-      onCleanup(() => clearTimeout(timer));
-    }
-  });
+  const visible = () => props.messages.length > 0 || props.loading;
 
   return (
     <Show when={visible()}>
-      <scrollbox
+      <box
         position="absolute"
         bottom={0}
         left={0}
         width="100%"
-        maxHeight={10}
         zIndex={10}
-        backgroundColor={colors.chromeFillOne}
-        border
-        borderStyle="single"
-        borderColor={statusColor(level(), colors)}
-        paddingX={1}
-        scrollY
-        scrollbarOptions={{
-          trackOptions: {
-            backgroundColor: colors.chromeFillThree,
-            foregroundColor: colors.chromeBorderFocus,
-          },
-        }}
+        flexDirection="column-reverse"
+        gap={1}
       >
-        <text fg={statusColor(level(), colors)} wrapMode="word">
-          {text()}
-        </text>
-      </scrollbox>
+        <Show when={props.loading}>
+          <LoadingOverlay config={props.config} />
+        </Show>
+        <Show when={props.messages.length > 0}>
+          <box width="100%" flexDirection="column-reverse" gap={1}>
+            <For each={props.messages}>
+              {(message) => (
+                <StatusToast
+                  message={message}
+                  config={props.config}
+                  onDismiss={() => props.onDismiss(message.id)}
+                />
+              )}
+            </For>
+          </box>
+        </Show>
+      </box>
     </Show>
+  );
+}
+
+function LoadingOverlay(props: {
+  config: ResolvedAppConfig;
+}) {
+  const colors = props.config.colorScheme.semanticColors;
+
+  return (
+    <box
+      width="100%"
+      backgroundColor={colors.chromeFillOne}
+      border
+      borderStyle="single"
+      borderColor={statusColor("info", colors)}
+      paddingX={1}
+    >
+      <text fg={statusColor("info", colors)} wrapMode="word">
+        Refreshing repository state...
+      </text>
+    </box>
+  );
+}
+
+function StatusToast(props: {
+  message: StatusMessage;
+  config: ResolvedAppConfig;
+  onDismiss: () => void;
+}) {
+  const colors = props.config.colorScheme.semanticColors;
+
+  createEffect(() => {
+    const timer = setTimeout(
+      props.onDismiss,
+      getStatusMessageDismissDelay(props.message.createdAt),
+    );
+    onCleanup(() => clearTimeout(timer));
+  });
+
+  return (
+    <box
+      width="100%"
+      backgroundColor={colors.chromeFillOne}
+      border
+      borderStyle="single"
+      borderColor={statusColor(props.message.level, colors)}
+      paddingX={1}
+    >
+      <text fg={statusColor(props.message.level, colors)} wrapMode="word">
+        {props.message.text}
+      </text>
+    </box>
   );
 }
 function completionKindLabel(kind: CompletionItem["kind"]): string {

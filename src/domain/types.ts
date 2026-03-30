@@ -44,6 +44,7 @@ export type CommandDraft = Readonly<{
 export type StatusLevel = "info" | "success" | "warning" | "error";
 
 export type StatusMessage = Readonly<{
+  id: string;
   text: string;
   level: StatusLevel;
   createdAt: number;
@@ -73,7 +74,7 @@ export type AppState = Readonly<{
   selectedFilePaths: readonly string[];
   commandBar: CommandBarState;
   commandDraft: CommandDraft | null;
-  statusMessage: StatusMessage | null;
+  statusMessages: readonly StatusMessage[];
   eventLog: readonly EventLogEntry[];
   loading: boolean;
   useShortFlags: boolean;

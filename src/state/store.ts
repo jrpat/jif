@@ -7,6 +7,7 @@ import type {
   FocusMode,
   RepositoryData,
   RevisionSummary,
+  StatusMessage,
   StatusLevel,
 } from "../domain/types.ts";
 
@@ -102,7 +103,7 @@ export function createInitialState(
     selectedFilePaths: [],
     commandBar: createEmptyCommandBar(),
     commandDraft: null,
-    statusMessage: null,
+    statusMessages: [],
     eventLog: [],
     loading: true,
     useShortFlags: options?.useShortFlags ?? true,
@@ -353,7 +354,7 @@ export function cancelCommandState(state: AppState): AppState {
     commandDraft: null,
     selectedRevisionIds: [],
     selectedFilePaths: [],
-    statusMessage: state.commandDraft ? null : state.statusMessage,
+    statusMessages: state.commandDraft ? [] : state.statusMessages,
   };
 }
 
@@ -363,7 +364,7 @@ export function cancelCommandDraft(state: AppState): AppState {
     commandBar: createEmptyCommandBar(),
     commandDraft: null,
     selectedRevisionIds: [],
-    statusMessage: state.commandDraft ? null : state.statusMessage,
+    statusMessages: state.commandDraft ? [] : state.statusMessages,
   };
 }
 
@@ -476,8 +477,15 @@ export function pushEvent(
   level: StatusLevel,
   createdAt = Date.now(),
 ): AppState {
+  const id = `${createdAt}-${state.eventLog.length}`;
   const event: EventLogEntry = {
-    id: `${createdAt}-${state.eventLog.length}`,
+    id,
+    text,
+    level,
+    createdAt,
+  };
+  const statusMessage: StatusMessage = {
+    id,
     text,
     level,
     createdAt,
@@ -485,20 +493,34 @@ export function pushEvent(
 
   return {
     ...state,
-    statusMessage: { text, level, createdAt },
+    statusMessages: [...state.statusMessages, statusMessage],
     eventLog: [...state.eventLog.slice(-99), event],
   };
 }
 
-export function dismissStatusMessage(state: AppState): AppState {
-  if (state.statusMessage === null) {
+export function dismissStatusMessage(state: AppState, id?: string): AppState {
+  if (state.statusMessages.length === 0) {
     return state;
   }
-  return { ...state, statusMessage: null };
+
+  const nextMessages =
+    id === undefined
+      ? state.statusMessages.slice(1)
+      : state.statusMessages.filter((message) => message.id !== id);
+
+  if (nextMessages.length === state.statusMessages.length) {
+    return state;
+  }
+
+  return { ...state, statusMessages: nextMessages };
 }
 
 export function clearStatusMessage(state: AppState): AppState {
-  return { ...state, statusMessage: null };
+  if (state.statusMessages.length === 0) {
+    return state;
+  }
+
+  return { ...state, statusMessages: [] };
 }
 
 export function getFocusedRevision(state: AppState): RevisionSummary | null {

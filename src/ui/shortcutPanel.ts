@@ -222,7 +222,7 @@ function commandHasImmediateEffect(
 
 function hasCancelableState(state: AppState): boolean {
   return (
-    state.statusMessage !== null ||
+    state.statusMessages.length > 0 ||
     state.focusMode === "command" ||
     state.commandDraft !== null ||
     state.selectedRevisionIds.length > 0 ||
