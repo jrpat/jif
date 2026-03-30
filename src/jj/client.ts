@@ -20,7 +20,7 @@ export class JjClient {
       "--color",
       "never",
       "--template",
-      `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
+      `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
     ];
     if (revset) {
       args.push("-r", revset);
@@ -51,7 +51,7 @@ export class JjClient {
       "--color",
       "never",
       "--template",
-      `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
+      `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
       "-r",
       revset,
     ];
@@ -229,7 +229,9 @@ export function parseLogOutput(
           workspaces: [],
           graphHead: graphMatch?.groups?.graph ?? "~  ",
           graphTail: [],
+          isEmpty: false,
           marker: "elided",
+          filesLoaded: true,
           files: [],
         });
       } else {
@@ -250,6 +252,7 @@ export function parseLogOutput(
       rawDescription = "",
       rawBookmarks = "",
       rawChangeIdPrefix = "",
+      rawEmpty = "",
     ] = rawLine.split(FIELD_SEPARATOR);
     const graphMatch = /^(?<graph>.*?)(?<change>[a-z0-9]+)$/.exec(graphAndChangeId);
     if (!graphMatch?.groups) {
@@ -258,6 +261,7 @@ export function parseLogOutput(
 
     const changeId = graphMatch.groups.change ?? "";
     const graphHead = graphMatch.groups.graph ?? "";
+    const isEmpty = rawEmpty.trim() === "true";
     if (changeId.length === 0) {
       continue;
     }
@@ -266,12 +270,14 @@ export function parseLogOutput(
       changeId,
       changeIdPrefixLength: rawChangeIdPrefix.trim().length || changeId.length,
       commitId: commitId.trim(),
-      description: rawDescription.trim() || "(no description)",
+      description: rawDescription.trim() || (isEmpty ? "(empty) (no description)" : "(no description)"),
       bookmarks: splitWords(rawBookmarks),
       workspaces: workspaceNamesByChangeId.get(changeId) ?? [],
       graphHead,
       graphTail: [],
+      isEmpty,
       marker: deriveRevisionMarker(graphHead),
+      filesLoaded: isEmpty,
       files: [],
     });
   }

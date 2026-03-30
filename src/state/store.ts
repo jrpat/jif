@@ -163,12 +163,12 @@ export function applyRepositoryData(
   state: AppState,
   repositoryData: RepositoryData,
 ): AppState {
-  const previousFiles = new Map(
-    state.revisions.map((revision) => [revision.changeId, revision.files] as const),
+  const previousRevisions = new Map(
+    state.revisions.map((revision) => [revision.changeId, revision] as const),
   );
   const revisions = repositoryData.revisions.map((revision) => ({
     ...revision,
-    files: previousFiles.get(revision.changeId) ?? revision.files,
+    ...resolveRevisionFiles(previousRevisions.get(revision.changeId), revision),
   }));
   const focusedRevisionId = getFocusedRevision(state)?.changeId;
   const focusedRevisionIndex = clampIndex(
@@ -214,7 +214,7 @@ export function setRevisionFiles(
   files: readonly ChangedFile[],
 ): AppState {
   const revisions = state.revisions.map((revision) =>
-    revision.changeId === revisionId ? { ...revision, files } : revision,
+    revision.changeId === revisionId ? { ...revision, files, filesLoaded: true } : revision,
   );
 
   const filePaths = new Set(files.map((f) => f.path));
@@ -645,6 +645,30 @@ function getExpandedFilesCount(
   }
 
   return revisions.find((revision) => revision.changeId === expandedRevisionId)?.files.length ?? 0;
+}
+
+function resolveRevisionFiles(
+  previous: RevisionSummary | undefined,
+  next: RevisionSummary,
+): Pick<RevisionSummary, "files" | "filesLoaded"> {
+  if (next.isEmpty || next.marker === "elided") {
+    return {
+      files: [],
+      filesLoaded: true,
+    };
+  }
+
+  if (!previous || previous.commitId !== next.commitId || !previous.filesLoaded) {
+    return {
+      files: next.files,
+      filesLoaded: next.filesLoaded,
+    };
+  }
+
+  return {
+    files: previous.files,
+    filesLoaded: previous.filesLoaded,
+  };
 }
 
 function clampIndex(value: number, size: number): number {

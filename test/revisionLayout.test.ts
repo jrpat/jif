@@ -12,7 +12,9 @@ function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSumma
     workspaces: ["review"],
     graphHead: "@  ",
     graphTail: [],
+    isEmpty: false,
     marker: "working-copy",
+    filesLoaded: false,
     files: [],
     ...overrides,
   };

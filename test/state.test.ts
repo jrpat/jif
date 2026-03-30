@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { AppState } from "../src/domain/types.ts";
 import {
+  applyRepositoryData,
   cancelCommandDraft,
   cancelCommandState,
   clearRevisionSelection,
@@ -46,7 +47,9 @@ function createState(): AppState {
         workspaces: [],
         graphHead: "@  ",
         graphTail: [],
+        isEmpty: false,
         marker: "working-copy",
+        filesLoaded: true,
         files: [{ status: "M", path: "src/a.ts" }],
       },
       {
@@ -58,7 +61,9 @@ function createState(): AppState {
         workspaces: [],
         graphHead: "○  ",
         graphTail: [],
+        isEmpty: false,
         marker: "plain",
+        filesLoaded: true,
         files: [{ status: "M", path: "src/b.ts" }],
       },
     ],
@@ -383,7 +388,9 @@ test("expandElidedRevision replaces elided entry with new revisions and updates 
     workspaces: [] as readonly string[],
     graphHead: "~  ",
     graphTail: [] as readonly string[],
+    isEmpty: false,
     marker: "elided" as const,
+    filesLoaded: true,
     files: [] as readonly { status: string; path: string }[],
   };
   state = { ...state, revisions: [...state.revisions, elidedEntry], focusedRevisionIndex: 2 };
@@ -399,4 +406,33 @@ test("expandElidedRevision replaces elided entry with new revisions and updates 
   expect(state.revisions[2]?.changeId).toBe("cccccccc");
   expect(state.revisions[3]?.changeId).toBe("dddddddd");
   expect(state.focusedRevisionIndex).toBe(2);
+});
+
+test("applyRepositoryData clears stale loaded files when a revision becomes empty", () => {
+  const state = createState();
+
+  const next = applyRepositoryData(state, {
+    repoPath: state.repoPath,
+    revisions: [
+      {
+        changeId: "aaaaaaaa",
+        changeIdPrefixLength: 1,
+        commitId: "11111111",
+        description: "(empty)",
+        bookmarks: ["main"],
+        workspaces: [],
+        graphHead: "@  ",
+        graphTail: [],
+        isEmpty: true,
+        marker: "working-copy",
+        filesLoaded: true,
+        files: [],
+      },
+      state.revisions[1]!,
+    ],
+  });
+
+  expect(next.revisions[0]?.files).toEqual([]);
+  expect(next.revisions[0]?.filesLoaded).toBeTrue();
+  expect(next.revisions[0]?.isEmpty).toBeTrue();
 });

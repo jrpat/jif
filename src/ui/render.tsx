@@ -51,6 +51,7 @@ import {
 } from "./shortcutPanel.ts";
 import { normalizeKey } from "./keyboard.ts";
 import { dispatchGlobalKey } from "./keybindings.ts";
+import { getChangedFilesPlaceholderText } from "./revisionFiles.ts";
 
 export function JifView(props: {
   store: AppStore;
@@ -117,7 +118,7 @@ export function JifView(props: {
       }
 
       store.actions.openFocusedRevision();
-      if (revision.files.length > 0) {
+      if (revision.filesLoaded) {
         return;
       }
 
@@ -753,17 +754,16 @@ export function RevisionItem(props: {
   expandedRevisionId: string | null;
   commandTargetId: string | null;
 }) {
-  const { state, revision, config } = props;
-  const colors = () => config.colorScheme.semanticColors;
-  const affectedIds = createMemo(() => getOperationAffectedRevisionIds(state));
-  const isFocused = () => revision.changeId === props.focusedRevisionId;
-  const isSelected = () => props.selectedRevisionIds.has(revision.changeId);
-  const isExpanded = () => revision.changeId === props.expandedRevisionId;
+  const colors = () => props.config.colorScheme.semanticColors;
+  const affectedIds = createMemo(() => getOperationAffectedRevisionIds(props.state));
+  const isFocused = () => props.revision.changeId === props.focusedRevisionId;
+  const isSelected = () => props.selectedRevisionIds.has(props.revision.changeId);
+  const isExpanded = () => props.revision.changeId === props.expandedRevisionId;
   const anyExpanded = () => props.expandedRevisionId !== null;
-  const isAffected = () => affectedIds().has(revision.changeId);
-  const isCommandTarget = () => props.commandTargetId === revision.changeId;
+  const isAffected = () => affectedIds().has(props.revision.changeId);
+  const isCommandTarget = () => props.commandTargetId === props.revision.changeId;
   const rowState = createMemo(() =>
-    getRevisionRowState(revision.changeId, props.focusedRevisionId, props.selectedRevisionIds) ?? "default",
+    getRevisionRowState(props.revision.changeId, props.focusedRevisionId, props.selectedRevisionIds) ?? "default",
   );
   const previousRowState = createMemo(() =>
     getRevisionRowState(props.previousRevisionId, props.focusedRevisionId, props.selectedRevisionIds),
@@ -772,14 +772,14 @@ export function RevisionItem(props: {
     getRevisionRowState(props.nextRevisionId, props.focusedRevisionId, props.selectedRevisionIds),
   );
   const coreGraphWidth = createMemo(() =>
-    measureCoreGraphWidth(revision.graphHead, revision.graphTail)
+    measureCoreGraphWidth(props.revision.graphHead, props.revision.graphTail)
   );
   const previousCoreGraphWidth = createMemo(() => {
-    const prev = props.index > 0 ? state.revisions[props.index - 1] : null;
+    const prev = props.index > 0 ? props.state.revisions[props.index - 1] : null;
     return prev ? measureCoreGraphWidth(prev.graphHead, prev.graphTail) : null;
   });
   const nextCoreGraphWidth = createMemo(() => {
-    const next = state.revisions[props.index + 1] ?? null;
+    const next = props.state.revisions[props.index + 1] ?? null;
     return next ? measureCoreGraphWidth(next.graphHead, next.graphTail) : null;
   });
   const effectiveRowState = createMemo((): RevisionRowState => {
@@ -805,27 +805,27 @@ export function RevisionItem(props: {
     previousGraphWidth: previousCoreGraphWidth(),
     nextGraphWidth: nextCoreGraphWidth(),
   }));
-  const detailRowCount = () => isExpanded() ? Math.max(revision.files.length, 1) : 0;
+  const detailRowCount = () => isExpanded() ? Math.max(props.revision.files.length, 1) : 0;
   const headerLayout = createMemo(() =>
-    buildRevisionHeaderLayout(revision, {
-      condensed: state.condensedLayout,
+    buildRevisionHeaderLayout(props.revision, {
+      condensed: props.state.condensedLayout,
       isCommandTarget: isCommandTarget(),
-      badgeText: state.commandDraft?.config.badgeText ?? "onto",
+      badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
     }),
   );
   const showCondensedHeader = () => headerLayout().headerRowCount === 1;
   const gutterPlan = createMemo(() => buildRevisionGutterPlan({
-    graphHead: revision.graphHead,
-    graphTail: revision.graphTail,
+    graphHead: props.revision.graphHead,
+    graphTail: props.revision.graphTail,
     detailRowCount: detailRowCount(),
     ownsTop: borderPolicy().ownsTop,
     ownsBottom: borderPolicy().ownsBottom,
     previousGraphBottom: (() => {
-      const prev = props.index > 0 ? state.revisions[props.index - 1] : null;
+      const prev = props.index > 0 ? props.state.revisions[props.index - 1] : null;
       if (!prev) return null;
       return prev.graphTail.at(-1) ?? prev.graphHead;
     })(),
-    hasNextRevision: props.index + 1 < state.revisions.length,
+    hasNextRevision: props.index + 1 < props.state.revisions.length,
   }));
   const visibleGutterTail = createMemo(() => showCondensedHeader() ? [] : gutterPlan().tail);
   const effectiveGraphWidth = createMemo(() => measureGutterPlanWidth(gutterPlan()));
@@ -841,12 +841,19 @@ export function RevisionItem(props: {
         ? colors().rowBorderCommandTarget
         : colors().rowBorderIdle
   );
-  const titleGraphColor = createMemo(() => markerColor(revision, colors()));
+  const titleGraphColor = createMemo(() => markerColor(props.revision, colors()));
   const continuationGraphColor = createMemo(() => colors().textTertiary);
+  const descriptionColor = createMemo(() =>
+    props.revision.isEmpty
+      ? colors().textTertiary
+      : isSelected() || isFocused()
+        ? colors().textPrimary
+        : colors().textSecondary
+  );
 
   return (
     <box
-      id={`revision-${revision.changeId}`}
+      id={`revision-${props.revision.changeId}`}
       width="100%"
       flexDirection="row"
       opacity={anyExpanded() && !isExpanded() ? 0.6 : 1}
@@ -858,7 +865,7 @@ export function RevisionItem(props: {
           </text>
         ) : null}
         <text fg={titleGraphColor()}>{padRight(gutterPlan().title, effectiveGraphWidth())}</text>
-        <Show when={headerLayout().headerRowCount === 2 && revision.marker !== "elided"}>
+        <Show when={headerLayout().headerRowCount === 2 && props.revision.marker !== "elided"}>
           <text fg={continuationGraphColor()}>
             {padRight(gutterPlan().subtitle, effectiveGraphWidth())}
           </text>
@@ -903,10 +910,10 @@ export function RevisionItem(props: {
         customBorderChars={borderPolicy().borderChars}
       >
         <Show
-          when={revision.marker !== "elided"}
+          when={props.revision.marker !== "elided"}
           fallback={
             <text fg={colors().textTertiary} truncate>
-              {revision.description}
+              {props.revision.description}
             </text>
           }
         >
@@ -916,7 +923,7 @@ export function RevisionItem(props: {
               <>
                 <box width="100%" flexDirection="row" gap={1}>
                   <RevisionChangeId
-                    revision={revision}
+                    revision={props.revision}
                     focused={isFocused()}
                     selected={isSelected()}
                     colors={colors()}
@@ -931,8 +938,8 @@ export function RevisionItem(props: {
                   <RevisionSideChips chips={headerLayout().sideChips} colors={colors()} />
                 </box>
                 <box width="100%" flexDirection="row">
-                  <text fg={isSelected() || isFocused() ? colors().textPrimary : colors().textSecondary} truncate>
-                    {revision.description}
+                  <text fg={descriptionColor()} truncate>
+                    {props.revision.description}
                   </text>
                 </box>
               </>
@@ -946,7 +953,7 @@ export function RevisionItem(props: {
             >
               <box width="100%" height={1} flexDirection="row">
                 <RevisionChangeId
-                  revision={revision}
+                  revision={props.revision}
                   focused={isFocused()}
                   selected={isSelected()}
                   colors={colors()}
@@ -954,11 +961,11 @@ export function RevisionItem(props: {
                 <box width={1} />
                 <box flexGrow={1} minWidth={0} height={1} overflow="hidden">
                   <text
-                    fg={isSelected() || isFocused() ? colors().textPrimary : colors().textSecondary}
+                    fg={descriptionColor()}
                     wrapMode="none"
                     truncate
                   >
-                    {revision.description}
+                    {props.revision.description}
                   </text>
                 </box>
                 <Show when={headerLayout().sideChips.length > 0}>
@@ -985,9 +992,9 @@ export function RevisionItem(props: {
           </For>
           {isExpanded() ? (
             <ChangedFiles
-              state={state}
-              revision={revision}
-              config={config}
+              state={props.state}
+              revision={props.revision}
+              config={props.config}
             />
           ) : null}
         </Show>
@@ -1069,21 +1076,21 @@ function ChangedFiles(props: {
   revision: RevisionSummary;
   config: ResolvedAppConfig;
 }) {
-  const { state, revision, config } = props;
-  const colors = config.colorScheme.semanticColors;
+  const colors = props.config.colorScheme.semanticColors;
+  const placeholderText = createMemo(() => getChangedFilesPlaceholderText(props.revision));
 
   return (
     <box width="100%" flexDirection="column">
-      {revision.files.length === 0 ? (
-        <text fg={colors.textTertiary}>Loading changed files...</text>
+      {placeholderText() ? (
+        <text fg={colors.textTertiary}>{placeholderText()}</text>
       ) : (
-        <For each={revision.files}>
+        <For each={props.revision.files}>
           {(file, index) => {
             const focused =
-              state.focusMode === "files" &&
-              state.expandedRevisionId === revision.changeId &&
-              state.focusedFileIndex === index();
-            const selected = state.selectedFilePaths.includes(file.path);
+              props.state.focusMode === "files" &&
+              props.state.expandedRevisionId === props.revision.changeId &&
+              props.state.focusedFileIndex === index();
+            const selected = props.state.selectedFilePaths.includes(file.path);
 
             return (
               <box
