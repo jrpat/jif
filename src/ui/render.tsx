@@ -34,6 +34,7 @@ import {
   type RevisionRowState,
 } from "./revisionBorders.ts";
 import {
+  buildCondensedGraphLine,
   buildRevisionGutterPlan,
   measureCoreGraphWidth,
   measureGutterPlanWidth,
@@ -830,6 +831,11 @@ export function RevisionItem(props: {
   }));
   const visibleGutterTail = createMemo(() => showCondensedHeader() ? [] : gutterPlan().tail);
   const effectiveGraphWidth = createMemo(() => measureGutterPlanWidth(gutterPlan()));
+  const displayedTitleGraph = createMemo(() =>
+    showCondensedHeader()
+      ? buildCondensedGraphLine(props.revision.graphHead, props.revision.graphTail)
+      : gutterPlan().title
+  );
   const currentLeftCol = () => coreGraphWidth() + 1;
   const prevLeftCol = () => previousCoreGraphWidth() !== null ? previousCoreGraphWidth()! + 1 : null;
   const nextLeftCol = () => nextCoreGraphWidth() !== null ? nextCoreGraphWidth()! + 1 : null;
@@ -865,7 +871,7 @@ export function RevisionItem(props: {
             {padRight(gutterPlan().topDivider!, effectiveGraphWidth())}
           </text>
         ) : null}
-        <text fg={titleGraphColor()}>{padRight(gutterPlan().title, effectiveGraphWidth())}</text>
+        <text fg={titleGraphColor()}>{padRight(displayedTitleGraph(), effectiveGraphWidth())}</text>
         <Show when={headerLayout().headerRowCount === 2 && props.revision.marker !== "elided"}>
           <text fg={continuationGraphColor()}>
             {padRight(gutterPlan().subtitle, effectiveGraphWidth())}

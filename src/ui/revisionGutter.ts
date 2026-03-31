@@ -48,6 +48,24 @@ export function measureGutterPlanWidth(plan: RevisionGutterPlan): number {
   );
 }
 
+export function buildCondensedGraphLine(graphHead: string, graphTail: readonly string[]): string {
+  const title = normalizeGraphLine(graphHead);
+  const subtitle = graphTail[0] ? normalizeGraphLine(graphTail[0]!) : "";
+  if (subtitle.length === 0) {
+    return title;
+  }
+
+  const output = [...subtitle];
+  for (let index = 0; index < title.length; index += 1) {
+    const titleChar = title[index] ?? " ";
+    if (NODE_MARKERS.has(titleChar)) {
+      output[index] = titleChar;
+    }
+  }
+
+  return normalizeGraphLine(output.join(""));
+}
+
 export function deriveGraphContinuationLine(graphHead: string): string {
   return normalizeGraphLine(
     [...normalizeGraphLine(graphHead)]

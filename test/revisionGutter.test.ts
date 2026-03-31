@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
   buildRevisionGutterPlan,
+  buildCondensedGraphLine,
   deriveGraphContinuationLine,
   measureCoreGraphWidth,
   measureGutterPlanWidth,
@@ -33,6 +34,28 @@ test("buildRevisionGutterPlan promotes the first crossover row into the subtitle
   expect(plan.tail).toEqual([]);
   expect(plan.detail).toEqual(["│", "│"]);
   expect(plan.bottomDivider).toBe("│");
+});
+
+test("buildCondensedGraphLine keeps single-line graphs unchanged", () => {
+  expect(buildCondensedGraphLine("@  ", [])).toBe("@");
+  expect(buildCondensedGraphLine("○ │", [])).toBe("○ │");
+});
+
+test("buildCondensedGraphLine folds the default jj branch row into the node row", () => {
+  expect(buildCondensedGraphLine("│ ○  ", ["├─╯"])).toBe("├─○");
+});
+
+test("buildCondensedGraphLine folds narrow branch-off rows into the title row", () => {
+  expect(buildCondensedGraphLine("○    ", ["├─╮"])).toBe("○─╮");
+});
+
+test("buildCondensedGraphLine folds wide branch-off rows into the title row", () => {
+  expect(buildCondensedGraphLine("○ │    ", ["├───╮"])).toBe("○───╮");
+});
+
+test("buildCondensedGraphLine folds merge rows into the title row", () => {
+  expect(buildCondensedGraphLine("○ │ │  ", ["├─╯ │"])).toBe("○─╯ │");
+  expect(buildCondensedGraphLine("○   │  ", ["├───╯"])).toBe("○───╯");
 });
 
 test("buildRevisionGutterPlan keeps a vertical directly above a node on divider rows", () => {
