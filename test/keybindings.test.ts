@@ -39,6 +39,8 @@ function createController(calls: string[]): CommandController {
     focusCommandBar: () => calls.push("focusCommandBar"),
     startRebase: () => calls.push("startRebase"),
     startSquash: () => calls.push("startSquash"),
+    startNewRevision: () => calls.push("startNewRevision"),
+    editRevision: () => calls.push("editRevision"),
     toggleSelection: () => calls.push("toggleSelection"),
     toggleFileSelection: () => calls.push("toggleFileSelection"),
     restoreFiles: () => calls.push("restoreFiles"),
@@ -99,4 +101,30 @@ test("dispatchGlobalKey ignores ? in revset mode", () => {
 
   expect(handled).toBeFalse();
   expect(calls).toEqual([]);
+});
+
+test("dispatchGlobalKey routes n and e to immediate revision actions", () => {
+  const newCalls: string[] = [];
+  const state = createState();
+
+  const newHandled = dispatchGlobalKey({
+    normalizedKey: "n",
+    state,
+    visibleCommands: getVisibleCommands(state),
+    controller: createController(newCalls),
+  });
+
+  expect(newHandled).toBeTrue();
+  expect(newCalls).toEqual(["startNewRevision"]);
+
+  const editCalls: string[] = [];
+  const editHandled = dispatchGlobalKey({
+    normalizedKey: "e",
+    state,
+    visibleCommands: getVisibleCommands(state),
+    controller: createController(editCalls),
+  });
+
+  expect(editHandled).toBeTrue();
+  expect(editCalls).toEqual(["editRevision"]);
 });

@@ -100,3 +100,43 @@ test("shortcut panel toggle uses ? outside text-entry modes", () => {
   };
   expect(getTextCommand("?", revsetState)).toBeNull();
 });
+
+test("new and edit commands resolve in revision mode only", () => {
+  const state = createState();
+  expect(getTextCommand("n", state)?.id).toBe("new-revision");
+  expect(getTextCommand("e", state)?.id).toBe("edit-revision");
+
+  const commandState: AppState = {
+    ...state,
+    focusMode: "command",
+    commandBar: { ...state.commandBar, manual: true },
+  };
+  expect(getTextCommand("n", commandState)).toBeNull();
+  expect(getTextCommand("e", commandState)).toBeNull();
+});
+
+test("new and edit commands do not resolve for elided revisions", () => {
+  const state: AppState = {
+    ...createState(),
+    revisions: [
+      {
+        changeId: "__elided_0",
+        changeIdPrefixLength: 0,
+        commitId: "",
+        description: "(elided revisions)",
+        localTimestamp: "",
+        bookmarks: [],
+        workspaces: [],
+        graphHead: "~  ",
+        graphTail: [],
+        isEmpty: false,
+        marker: "elided",
+        filesLoaded: true,
+        files: [],
+      },
+    ],
+  };
+
+  expect(getTextCommand("n", state)).toBeNull();
+  expect(getTextCommand("e", state)).toBeNull();
+});

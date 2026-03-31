@@ -166,6 +166,14 @@ test("shortcutModeLabel formats the current mode for the panel header", () => {
   expect(shortcutModeLabel("command")).toBe("Command");
 });
 
+test("getShortcutPanelCommands includes immediate revision actions in revision mode", () => {
+  const commands = getShortcutPanelCommands(createState(), getVisibleCommands(createState()));
+  const ids = commands.map((command) => command.id);
+
+  expect(ids).toContain("new-revision");
+  expect(ids).toContain("edit-revision");
+});
+
 test("getShortcutPanelCommands narrows rebase draft shortcuts to draft-relevant actions", () => {
   let state = createState();
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
@@ -198,6 +206,8 @@ test("getShortcutPanelCommands narrows file mode shortcuts to file-relevant acti
   expect(ids).toContain("shortcut-panel");
   expect(ids).not.toContain("rebase");
   expect(ids).not.toContain("squash");
+  expect(ids).not.toContain("new-revision");
+  expect(ids).not.toContain("edit-revision");
   expect(ids).not.toContain("undo");
   expect(ids).not.toContain("edit-revset");
 });

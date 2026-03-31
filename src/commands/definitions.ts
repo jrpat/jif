@@ -10,6 +10,8 @@ export type CommandController = Readonly<{
   focusCommandBar: () => void;
   startRebase: () => void;
   startSquash: () => void;
+  startNewRevision: () => void;
+  editRevision: () => void;
   toggleSelection: () => void;
   toggleFileSelection: () => void;
   restoreFiles: () => void;
@@ -152,6 +154,26 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     keys: ["S"],
     when: (state) => state.focusMode === "revisions" && state.commandDraft?.config.kind !== "rebase" && !focusedIsElided(state),
     run: (controller) => controller.startSquash(),
+    group: "global",
+  },
+  {
+    id: "new-revision",
+    title: "New Revision",
+    description: "Create a new revision from the focused revision",
+    canonicalKeys: ["n"],
+    keys: ["n"],
+    when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
+    run: (controller) => controller.startNewRevision(),
+    group: "global",
+  },
+  {
+    id: "edit-revision",
+    title: "Edit Revision",
+    description: "Edit the focused revision",
+    canonicalKeys: ["e"],
+    keys: ["e"],
+    when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
+    run: (controller) => controller.editRevision(),
     group: "global",
   },
   {

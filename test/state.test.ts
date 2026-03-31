@@ -11,6 +11,7 @@ import {
   dismissStatusMessage,
   draftConfigs,
   focusCommandBar,
+  getFocusedRevisionArg,
   focusWorkingCopy,
   getDisplayedCommandSegments,
   getDisplayedCommandText,
@@ -284,6 +285,47 @@ test("focusWorkingCopy is a no-op when no working copy exists", () => {
 
   state = focusWorkingCopy(state);
   expect(state.focusedRevisionIndex).toBe(before);
+});
+
+test("getFocusedRevisionArg uses the focused revision prefix length", () => {
+  const state = createState();
+  expect(getFocusedRevisionArg(state)).toBe("a");
+});
+
+test("focusWorkingCopy selects the new working-copy revision after repository refresh", () => {
+  const state = createState();
+
+  const refreshed = applyRepositoryData(state, {
+    repoPath: state.repoPath,
+    revisions: [
+      {
+        changeId: "cccccccc",
+        changeIdPrefixLength: 1,
+        commitId: "33333333",
+        description: "new child",
+        localTimestamp: "2026-03-30 07:22:41",
+        bookmarks: [],
+        workspaces: [],
+        graphHead: "@  ",
+        graphTail: [],
+        isEmpty: true,
+        marker: "working-copy",
+        filesLoaded: true,
+        files: [],
+      },
+      {
+        ...state.revisions[0]!,
+        marker: "plain",
+      },
+      state.revisions[1]!,
+    ],
+  });
+
+  expect(refreshed.focusedRevisionIndex).toBe(1);
+
+  const focusedWorkingCopy = focusWorkingCopy(refreshed);
+  expect(focusedWorkingCopy.focusedRevisionIndex).toBe(0);
+  expect(focusedWorkingCopy.revisions[0]?.changeId).toBe("cccccccc");
 });
 
 test("startCommandDraft uses pre-selected revisions and does not advance focus", () => {

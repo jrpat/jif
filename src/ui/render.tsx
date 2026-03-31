@@ -14,6 +14,7 @@ import {
   getDisplayedCommandSegments,
   getDisplayedCommandText,
   getExpandedRevision,
+  getFocusedRevisionArg,
   getFocusedRevision,
   getOperationAffectedRevisionIds,
   getSelectedRevisionIds,
@@ -202,6 +203,22 @@ export function JifView(props: {
           store.actions.pushEvent(message, "error");
         }
       })();
+    },
+    startNewRevision() {
+      const revisionArg = getFocusedRevisionArg(store.snapshot());
+      if (!revisionArg) {
+        return;
+      }
+
+      void runJjCommand(`new ${revisionArg}`, { focusWorkingCopyAfterRefresh: true });
+    },
+    editRevision() {
+      const revisionArg = getFocusedRevisionArg(store.snapshot());
+      if (!revisionArg) {
+        return;
+      }
+
+      void runJjCommand(`edit ${revisionArg}`);
     },
     toggleSelection() {
       store.actions.toggleRevisionSelection();
@@ -539,13 +556,19 @@ export function JifView(props: {
     }
   }
 
-  async function runJjCommand(commandText: string) {
+  async function runJjCommand(
+    commandText: string,
+    options?: { focusWorkingCopyAfterRefresh?: boolean },
+  ) {
     store.actions.setLoading(true);
     try {
       const resultMessage = await client.executeCommand(commandText);
       store.actions.cancelCommand();
       store.actions.pushEvent(resultMessage, "success");
       await refreshRepository();
+      if (options?.focusWorkingCopyAfterRefresh) {
+        store.actions.focusWorkingCopy();
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       store.actions.pushEvent(message, "error");

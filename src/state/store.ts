@@ -527,6 +527,15 @@ export function getFocusedRevision(state: AppState): RevisionSummary | null {
   return state.revisions[state.focusedRevisionIndex] ?? null;
 }
 
+export function getFocusedRevisionArg(state: AppState): string | null {
+  const revision = getFocusedRevision(state);
+  if (!revision) {
+    return null;
+  }
+
+  return revision.changeId.slice(0, revision.changeIdPrefixLength);
+}
+
 export function getExpandedRevision(state: AppState): RevisionSummary | null {
   if (!state.expandedRevisionId) {
     return null;
