@@ -12,6 +12,7 @@ export type RevisionSummary = Readonly<{
   changeIdPrefixLength: number;
   commitId: string;
   description: string;
+  localTimestamp: string;
   bookmarks: readonly string[];
   workspaces: readonly string[];
   graphHead: string;

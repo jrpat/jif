@@ -20,7 +20,7 @@ export class JjClient {
       "--color",
       "never",
       "--template",
-      `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
+      `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
     ];
     if (revset) {
       args.push("-r", revset);
@@ -51,7 +51,7 @@ export class JjClient {
       "--color",
       "never",
       "--template",
-      `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
+      `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
       "-r",
       revset,
     ];
@@ -225,6 +225,7 @@ export function parseLogOutput(
           changeIdPrefixLength: 0,
           commitId: "",
           description: "(elided revisions)",
+          localTimestamp: "",
           bookmarks: [],
           workspaces: [],
           graphHead: graphMatch?.groups?.graph ?? "~  ",
@@ -253,6 +254,7 @@ export function parseLogOutput(
       rawBookmarks = "",
       rawChangeIdPrefix = "",
       rawEmpty = "",
+      rawTimestamp = "",
     ] = rawLine.split(FIELD_SEPARATOR);
     const graphMatch = /^(?<graph>.*?)(?<change>[a-z0-9]+)$/.exec(graphAndChangeId);
     if (!graphMatch?.groups) {
@@ -271,6 +273,7 @@ export function parseLogOutput(
       changeIdPrefixLength: rawChangeIdPrefix.trim().length || changeId.length,
       commitId: commitId.trim(),
       description: rawDescription.trim() || (isEmpty ? "(empty) (no description)" : "(no description)"),
+      localTimestamp: rawTimestamp.trim(),
       bookmarks: splitWords(rawBookmarks),
       workspaces: workspaceNamesByChangeId.get(changeId) ?? [],
       graphHead,

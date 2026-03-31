@@ -40,6 +40,11 @@ import {
   measureGutterPlanWidth,
 } from "./revisionGutter.ts";
 import { buildRevisionHeaderLayout, type RevisionSideChip } from "./revisionLayout.ts";
+import {
+  buildRevisionChangeIdSegments,
+  getRevisionChangeIdColors,
+  getRevisionDescriptionColor,
+} from "./revisionHeader.ts";
 import { scrollToKeepChildVisible } from "./scroll.ts";
 import {
   buildShortcutEntries,
@@ -851,12 +856,12 @@ export function RevisionItem(props: {
   const titleGraphColor = createMemo(() => markerColor(props.revision, colors()));
   const continuationGraphColor = createMemo(() => colors().textTertiary);
   const descriptionColor = createMemo(() =>
-    props.revision.isEmpty
-      ? colors().textTertiary
-      : isSelected() || isFocused()
-        ? colors().textPrimary
-        : colors().textSecondary
+    getRevisionDescriptionColor(props.revision, {
+      rowState: effectiveRowState(),
+      colors: colors(),
+    })
   );
+  const showExpandedTimestamp = () => !props.state.condensedLayout;
 
   return (
     <box
@@ -931,9 +936,9 @@ export function RevisionItem(props: {
                 <box width="100%" flexDirection="row" gap={1}>
                   <RevisionChangeId
                     revision={props.revision}
-                    focused={isFocused()}
-                    selected={isSelected()}
+                    rowState={effectiveRowState()}
                     colors={colors()}
+                    showTimestamp={showExpandedTimestamp()}
                   />
                   {headerLayout().commandTarget ? (
                     <CommandTargetChip
@@ -961,9 +966,9 @@ export function RevisionItem(props: {
               <box width="100%" height={1} flexDirection="row">
                 <RevisionChangeId
                   revision={props.revision}
-                  focused={isFocused()}
-                  selected={isSelected()}
+                  rowState={effectiveRowState()}
                   colors={colors()}
+                  showTimestamp={showExpandedTimestamp()}
                 />
                 <box width={1} />
                 <box flexGrow={1} minWidth={0} height={1} overflow="hidden">
@@ -1027,22 +1032,33 @@ export function RevisionItem(props: {
 }
 
 function RevisionChangeId(props: {
-  revision: Pick<RevisionSummary, "changeId" | "changeIdPrefixLength">;
-  focused: boolean;
-  selected: boolean;
+  revision: Pick<RevisionSummary, "changeId" | "changeIdPrefixLength" | "localTimestamp">;
+  rowState: RevisionRowState;
   colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
+  showTimestamp: boolean;
 }) {
+  const segments = createMemo(() =>
+    buildRevisionChangeIdSegments(props.revision, { showTimestamp: props.showTimestamp })
+  );
+  const changeIdColors = createMemo(() =>
+    getRevisionChangeIdColors({
+      rowState: props.rowState,
+      colors: props.colors,
+    })
+  );
+
   return (
     <box flexDirection="row" flexShrink={0}>
-      <text
-        fg={props.selected ? props.colors.rowSelectedAccent : props.focused ? props.colors.chromeBorderFocus : props.colors.revsetPrefix}
-        attributes={TextAttributes.BOLD}
-      >
-        {props.revision.changeId.slice(0, props.revision.changeIdPrefixLength)}
-      </text>
-      <text fg={props.selected ? props.colors.rowSelectedAccent : props.focused ? props.colors.chromeBorderFocus : props.colors.textTertiary}>
-        {props.revision.changeId.slice(props.revision.changeIdPrefixLength)}
-      </text>
+      <For each={segments()}>
+        {(segment) => (
+          <text
+            fg={segment.kind === "prefix" ? changeIdColors().prefix : changeIdColors().suffix}
+            attributes={segment.kind === "prefix" ? TextAttributes.BOLD : undefined}
+          >
+            {segment.text}
+          </text>
+        )}
+      </For>
     </box>
   );
 }

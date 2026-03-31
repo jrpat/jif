@@ -8,6 +8,7 @@ function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSumma
     changeIdPrefixLength: 2,
     commitId: "12345678",
     description: "feat: tighten condensed layout packing",
+    localTimestamp: "2026-03-30 07:22:39",
     bookmarks: ["main"],
     workspaces: ["review"],
     graphHead: "@  ",

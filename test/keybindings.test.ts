@@ -14,6 +14,7 @@ function createState(): AppState {
         changeIdPrefixLength: 1,
         commitId: "11111111",
         description: "first",
+        localTimestamp: "2026-03-30 07:22:39",
         bookmarks: [],
         workspaces: [],
         graphHead: "@  ",
