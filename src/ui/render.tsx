@@ -1202,10 +1202,15 @@ function StatusArea(props: {
         >
           <For each={events}>
             {(event) => (
-              <box width="100%">
-                <text fg={statusColor(event.level, colors)} truncate>
-                  {`${new Date(event.createdAt).toLocaleTimeString()} ${event.text}`}
+              <box width="100%" flexDirection="row" minWidth={0}>
+                <text fg={statusColor(event.level, colors)}>
+                  {new Date(event.createdAt).toLocaleTimeString()}
                 </text>
+                <box flexGrow={1} minWidth={0}>
+                  <text fg={colors.textPrimary} truncate>
+                    {` ${event.text}`}
+                  </text>
+                </box>
               </box>
             )}
           </For>
@@ -1468,13 +1473,12 @@ function MessageOverlay(props: {
         width="100%"
         zIndex={10}
         flexDirection="column-reverse"
-        gap={1}
       >
         <Show when={props.loading}>
           <LoadingOverlay config={props.config} />
         </Show>
         <Show when={props.messages.length > 0}>
-          <box width="100%" flexDirection="column-reverse" gap={1}>
+          <box width="100%" flexDirection="column-reverse">
             <For each={props.messages}>
               {(message) => (
                 <StatusToast
@@ -1536,7 +1540,7 @@ function StatusToast(props: {
       borderColor={statusColor(props.message.level, colors)}
       paddingX={1}
     >
-      <text fg={statusColor(props.message.level, colors)} wrapMode="word">
+      <text fg={colors.textPrimary} wrapMode="word">
         {props.message.text}
       </text>
     </box>
