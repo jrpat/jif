@@ -39,11 +39,11 @@ export function getRevisionDescriptionColor(
   options: Readonly<{
     rowState: RevisionRowState;
     colors: Readonly<{
-      textPrimary: string;
-      textTertiary: string;
+      textPrimary: string | undefined;
+      textTertiary: string | undefined;
     }>;
   }>,
-): string {
+): string | undefined {
   if (revision.isEmpty) {
     return options.colors.textTertiary;
   }

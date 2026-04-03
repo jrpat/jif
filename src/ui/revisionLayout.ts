@@ -5,11 +5,13 @@ export type RevisionSideChip = Readonly<{
   text: string;
 }>;
 
-export type RevisionHeaderLayout = Readonly<{
+export type RevisionLayoutMode = "expanded" | "compact";
+
+export type RevisionLayoutSpec = Readonly<{
+  mode: RevisionLayoutMode;
   headerRowCount: 1 | 2;
-  contentHeight: 1 | 2;
-  clipOverflow: boolean;
-  descriptionPlacement: "separate-row" | "between-id-and-side-chips" | "full-row-after-id";
+  baseGraphRowCount: number;
+  visibleGraphMode: "direct" | "fold-first-two";
   sideChips: readonly RevisionSideChip[];
   commandTarget: Readonly<{
     placement: "inline" | "overlay";
@@ -18,47 +20,44 @@ export type RevisionHeaderLayout = Readonly<{
   }> | null;
 }>;
 
-export function buildRevisionHeaderLayout(
+const BASE_LAYOUT_SPECS: Readonly<Record<RevisionLayoutMode, Omit<RevisionLayoutSpec, "mode" | "sideChips" | "commandTarget">>> = {
+  expanded: {
+    headerRowCount: 2,
+    baseGraphRowCount: 2,
+    visibleGraphMode: "direct",
+  },
+  compact: {
+    headerRowCount: 1,
+    baseGraphRowCount: 2,
+    visibleGraphMode: "fold-first-two",
+  },
+};
+
+export function getMaxRevisionBaseGraphRowCount(): number {
+  return Math.max(...Object.values(BASE_LAYOUT_SPECS).map((spec) => spec.baseGraphRowCount));
+}
+
+export function buildRevisionLayoutSpec(
   revision: Pick<RevisionSummary, "changeId" | "bookmarks" | "workspaces">,
   options: Readonly<{
-    condensed: boolean;
+    mode: RevisionLayoutMode;
     isCommandTarget: boolean;
     badgeText: string;
   }>,
-): RevisionHeaderLayout {
+): RevisionLayoutSpec {
   const sideChips: RevisionSideChip[] = [
     ...revision.bookmarks.map((text) => ({ kind: "bookmark" as const, text })),
     ...revision.workspaces.map((text) => ({ kind: "workspace" as const, text })),
   ];
-
-  if (!options.condensed) {
-    return {
-      headerRowCount: 2,
-      contentHeight: 2,
-      clipOverflow: false,
-      descriptionPlacement: "separate-row",
-      sideChips,
-      commandTarget: options.isCommandTarget
-        ? {
-            placement: "inline",
-            leftOffset: revision.changeId.length + 1,
-            text: options.badgeText,
-          }
-        : null,
-    };
-  }
+  const base = BASE_LAYOUT_SPECS[options.mode];
 
   return {
-    headerRowCount: 1,
-    contentHeight: 1,
-    clipOverflow: true,
-    descriptionPlacement: sideChips.length > 0
-      ? "between-id-and-side-chips"
-      : "full-row-after-id",
+    mode: options.mode,
+    ...base,
     sideChips,
     commandTarget: options.isCommandTarget
       ? {
-          placement: "overlay",
+          placement: options.mode === "expanded" ? "inline" : "overlay",
           leftOffset: revision.changeId.length + 1,
           text: options.badgeText,
         }

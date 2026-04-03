@@ -19,8 +19,9 @@ test("deriveGraphContinuationLine turns node markers into continuations", () => 
 
 test("buildRevisionGutterPlan promotes the first crossover row into the subtitle line", () => {
   const plan = buildRevisionGutterPlan({
-    graphHead: "│ ○  ",
-    graphTail: ["├─╯"],
+    graphRows: ["│ ○  ", "├─╯"],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "direct",
     detailRowCount: 2,
     ownsTop: true,
     ownsBottom: true,
@@ -37,31 +38,48 @@ test("buildRevisionGutterPlan promotes the first crossover row into the subtitle
 });
 
 test("buildCondensedGraphLine keeps single-line graphs unchanged", () => {
-  expect(buildCondensedGraphLine("@  ", [])).toBe("@");
-  expect(buildCondensedGraphLine("○ │", [])).toBe("○ │");
+  expect(buildCondensedGraphLine(["@  "])).toBe("@");
+  expect(buildCondensedGraphLine(["○ │"])).toBe("○ │");
 });
 
 test("buildCondensedGraphLine folds the default jj branch row into the node row", () => {
-  expect(buildCondensedGraphLine("│ ○  ", ["├─╯"])).toBe("├─○");
+  expect(buildCondensedGraphLine(["│ ○  ", "├─╯"])).toBe("├─○");
 });
 
 test("buildCondensedGraphLine folds narrow branch-off rows into the title row", () => {
-  expect(buildCondensedGraphLine("○    ", ["├─╮"])).toBe("○─╮");
+  expect(buildCondensedGraphLine(["○    ", "├─╮"])).toBe("○─╮");
 });
 
 test("buildCondensedGraphLine folds wide branch-off rows into the title row", () => {
-  expect(buildCondensedGraphLine("○ │    ", ["├───╮"])).toBe("○───╮");
+  expect(buildCondensedGraphLine(["○ │    ", "├───╮"])).toBe("○───╮");
 });
 
 test("buildCondensedGraphLine folds merge rows into the title row", () => {
-  expect(buildCondensedGraphLine("○ │ │  ", ["├─╯ │"])).toBe("○─╯ │");
-  expect(buildCondensedGraphLine("○   │  ", ["├───╯"])).toBe("○───╯");
+  expect(buildCondensedGraphLine(["○ │ │  ", "├─╯ │"])).toBe("○─╯ │");
+  expect(buildCondensedGraphLine(["○   │  ", "├───╯"])).toBe("○───╯");
+});
+
+test("buildRevisionGutterPlan folds the first two graph rows in compact mode", () => {
+  const plan = buildRevisionGutterPlan({
+    graphRows: ["│ ○  ", "├─╯", "│"],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "fold-first-two",
+    detailRowCount: 0,
+    ownsTop: false,
+    ownsBottom: false,
+    previousGraphBottom: null,
+    hasNextRevision: true,
+  });
+
+  expect(plan.title).toBe("├─○");
+  expect(plan.tail).toEqual(["│"]);
 });
 
 test("buildRevisionGutterPlan keeps a vertical directly above a node on divider rows", () => {
   const previousRowPlan = buildRevisionGutterPlan({
-    graphHead: "│ ○  ",
-    graphTail: ["├─╯"],
+    graphRows: ["│ ○  ", "├─╯"],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "direct",
     detailRowCount: 0,
     ownsTop: true,
     ownsBottom: true,
@@ -69,8 +87,9 @@ test("buildRevisionGutterPlan keeps a vertical directly above a node on divider 
     hasNextRevision: true,
   });
   const currentRowPlan = buildRevisionGutterPlan({
-    graphHead: "○  ",
-    graphTail: [],
+    graphRows: ["○  "],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "direct",
     detailRowCount: 0,
     ownsTop: false,
     ownsBottom: false,
@@ -86,8 +105,9 @@ test("buildRevisionGutterPlan keeps a vertical directly above a node on divider 
 
 test("buildRevisionGutterPlan leaves edge dividers blank at the list boundaries", () => {
   const plan = buildRevisionGutterPlan({
-    graphHead: "@  ",
-    graphTail: [],
+    graphRows: ["@  "],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "direct",
     detailRowCount: 0,
     ownsTop: true,
     ownsBottom: true,
@@ -105,8 +125,9 @@ test("topDivider uses previous revision graph topology, not current graphHead", 
   // When the current revision merges a branch (graphHead = "○─╯"),
   // the topDivider should still show both branches from the previous revision
   const plan = buildRevisionGutterPlan({
-    graphHead: "○─╯",
-    graphTail: [],
+    graphRows: ["○─╯"],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "direct",
     detailRowCount: 0,
     ownsTop: true,
     ownsBottom: true,
@@ -122,8 +143,9 @@ test("bottomDivider uses current tail continuation, not next graphHead", () => {
   // When the next revision merges a branch, the bottomDivider should still
   // show the branch as it exists at the current revision's level
   const plan = buildRevisionGutterPlan({
-    graphHead: "○ │",
-    graphTail: ["│ │"],
+    graphRows: ["○ │", "│ │"],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "direct",
     detailRowCount: 0,
     ownsTop: false,
     ownsBottom: true,
@@ -134,19 +156,20 @@ test("bottomDivider uses current tail continuation, not next graphHead", () => {
   expect(plan.bottomDivider).toBe("│ │");
 });
 
-test("measureCoreGraphWidth returns the max width of graphHead and graphTail", () => {
-  expect(measureCoreGraphWidth("@  ", [])).toBe(1);
-  expect(measureCoreGraphWidth("│ ○  ", ["├─╯"])).toBe(3);
-  expect(measureCoreGraphWidth("○ │", ["│ │"])).toBe(3);
-  expect(measureCoreGraphWidth("│ │ ○  ", ["│ ├─╯"])).toBe(5);
-  expect(measureCoreGraphWidth("○  ", [])).toBe(1);
+test("measureCoreGraphWidth returns the max width of graphRows", () => {
+  expect(measureCoreGraphWidth(["@  "])).toBe(1);
+  expect(measureCoreGraphWidth(["│ ○  ", "├─╯"])).toBe(3);
+  expect(measureCoreGraphWidth(["○ │", "│ │"])).toBe(3);
+  expect(measureCoreGraphWidth(["│ │ ○  ", "│ ├─╯"])).toBe(5);
+  expect(measureCoreGraphWidth(["○  "])).toBe(1);
 });
 
 test("measureGutterPlanWidth includes divider widths from neighbors", () => {
   // Core graph is width 1, but topDivider from wider previous is width 3
   const plan = buildRevisionGutterPlan({
-    graphHead: "○  ",
-    graphTail: [],
+    graphRows: ["○  "],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "direct",
     detailRowCount: 0,
     ownsTop: true,
     ownsBottom: true,
@@ -154,14 +177,15 @@ test("measureGutterPlanWidth includes divider widths from neighbors", () => {
     hasNextRevision: true,
   });
 
-  expect(measureCoreGraphWidth("○  ", [])).toBe(1);
+  expect(measureCoreGraphWidth(["○  "])).toBe(1);
   expect(measureGutterPlanWidth(plan)).toBe(3);
 });
 
 test("measureGutterPlanWidth matches core width when no wider neighbors", () => {
   const plan = buildRevisionGutterPlan({
-    graphHead: "│ ○  ",
-    graphTail: ["├─╯"],
+    graphRows: ["│ ○  ", "├─╯"],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "direct",
     detailRowCount: 0,
     ownsTop: true,
     ownsBottom: true,
@@ -169,6 +193,6 @@ test("measureGutterPlanWidth matches core width when no wider neighbors", () => 
     hasNextRevision: true,
   });
 
-  expect(measureCoreGraphWidth("│ ○  ", ["├─╯"])).toBe(3);
+  expect(measureCoreGraphWidth(["│ ○  ", "├─╯"])).toBe(3);
   expect(measureGutterPlanWidth(plan)).toBe(3);
 });

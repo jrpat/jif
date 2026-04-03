@@ -5,8 +5,12 @@ import type {
   RevisionMarker,
   RevisionSummary,
 } from "../domain/types.ts";
+import { getMaxRevisionBaseGraphRowCount } from "../ui/revisionLayout.ts";
 
 const FIELD_SEPARATOR = "\u001f";
+const ROW_KIND_HEADER = "header";
+const ROW_KIND_BODY = "body";
+const LOG_TEMPLATE = buildLogTemplate(getMaxRevisionBaseGraphRowCount());
 
 export class JjClient {
   constructor(readonly repoPath: string) {}
@@ -20,7 +24,7 @@ export class JjClient {
       "--color",
       "never",
       "--template",
-      `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
+      LOG_TEMPLATE,
     ];
     if (revset) {
       args.push("-r", revset);
@@ -51,7 +55,7 @@ export class JjClient {
       "--color",
       "never",
       "--template",
-      `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ "\\n"`,
+      LOG_TEMPLATE,
       "-r",
       revset,
     ];
@@ -228,8 +232,7 @@ export function parseLogOutput(
           localTimestamp: "",
           bookmarks: [],
           workspaces: [],
-          graphHead: graphMatch?.groups?.graph ?? "~  ",
-          graphTail: [],
+          graphRows: [graphMatch?.groups?.graph ?? "~  "],
           isEmpty: false,
           marker: "elided",
           filesLoaded: true,
@@ -240,52 +243,72 @@ export function parseLogOutput(
         if (previous) {
           revisions[revisions.length - 1] = {
             ...previous,
-            graphTail: [...previous.graphTail, rawLine],
+            graphRows: [...previous.graphRows, rawLine],
           };
         }
       }
       continue;
     }
 
-    const [
-      graphAndChangeId = "",
-      commitId = "",
-      rawDescription = "",
-      rawBookmarks = "",
-      rawChangeIdPrefix = "",
-      rawEmpty = "",
-      rawTimestamp = "",
-    ] = rawLine.split(FIELD_SEPARATOR);
-    const graphMatch = /^(?<graph>.*?)(?<change>[a-z0-9]+)$/.exec(graphAndChangeId);
-    if (!graphMatch?.groups) {
+    const [visibleGraph = "", rowKind = "", ...fields] = rawLine.split(FIELD_SEPARATOR);
+    if (rowKind === ROW_KIND_HEADER) {
+      const [
+        changeId = "",
+        commitId = "",
+        rawDescription = "",
+        rawBookmarks = "",
+        rawChangeIdPrefix = "",
+        rawEmpty = "",
+        rawTimestamp = "",
+      ] = fields;
+      if (changeId.length === 0) {
+        continue;
+      }
+
+      const graphRow = extractGraphPrefix(visibleGraph, changeId);
+      const isEmpty = rawEmpty.trim() === "true";
+      revisions.push({
+        changeId,
+        changeIdPrefixLength: rawChangeIdPrefix.trim().length || changeId.length,
+        commitId: commitId.trim(),
+        description: rawDescription.trim() || (isEmpty ? "(empty) (no description)" : "(no description)"),
+        localTimestamp: rawTimestamp.trim(),
+        bookmarks: splitWords(rawBookmarks),
+        workspaces: workspaceNamesByChangeId.get(changeId) ?? [],
+        graphRows: [graphRow],
+        isEmpty,
+        marker: deriveRevisionMarker(graphRow),
+        filesLoaded: isEmpty,
+        files: [],
+      });
       continue;
     }
 
-    const changeId = graphMatch.groups.change ?? "";
-    const graphHead = graphMatch.groups.graph ?? "";
-    const isEmpty = rawEmpty.trim() === "true";
-    if (changeId.length === 0) {
-      continue;
+    if (rowKind === ROW_KIND_BODY) {
+      const [changeId = ""] = fields;
+      const previous = revisions.at(-1);
+      if (previous && previous.changeId === changeId) {
+        revisions[revisions.length - 1] = {
+          ...previous,
+          graphRows: [...previous.graphRows, visibleGraph],
+        };
+      }
     }
-
-    revisions.push({
-      changeId,
-      changeIdPrefixLength: rawChangeIdPrefix.trim().length || changeId.length,
-      commitId: commitId.trim(),
-      description: rawDescription.trim() || (isEmpty ? "(empty) (no description)" : "(no description)"),
-      localTimestamp: rawTimestamp.trim(),
-      bookmarks: splitWords(rawBookmarks),
-      workspaces: workspaceNamesByChangeId.get(changeId) ?? [],
-      graphHead,
-      graphTail: [],
-      isEmpty,
-      marker: deriveRevisionMarker(graphHead),
-      filesLoaded: isEmpty,
-      files: [],
-    });
   }
 
   return revisions;
+}
+
+function buildLogTemplate(baseGraphRowCount: number): string {
+  const rows = [
+    `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ "${ROW_KIND_HEADER}" ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "\\n"`,
+  ];
+
+  for (let index = 1; index < baseGraphRowCount; index += 1) {
+    rows.push(`"${FIELD_SEPARATOR}" ++ "${ROW_KIND_BODY}" ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8) ++ "\\n"`);
+  }
+
+  return rows.join(" ++ ");
 }
 
 function splitWords(rawValue: string): readonly string[] {
@@ -301,14 +324,27 @@ function isElidedLine(line: string): boolean {
   return /~.*\(elided revisions\)/.test(line);
 }
 
-function deriveRevisionMarker(graphHead: string): RevisionMarker {
-  if (graphHead.includes("@")) {
+function extractGraphPrefix(visibleGraph: string, changeId: string): string {
+  if (visibleGraph.endsWith(changeId)) {
+    return visibleGraph.slice(0, -changeId.length);
+  }
+
+  const graphMatch = /^(?<graph>.*?)(?<change>[a-z0-9]+)$/.exec(visibleGraph);
+  if (graphMatch?.groups?.change === changeId) {
+    return graphMatch.groups.graph ?? "";
+  }
+
+  return visibleGraph;
+}
+
+function deriveRevisionMarker(graphRow: string): RevisionMarker {
+  if (graphRow.includes("@")) {
     return "working-copy";
   }
-  if (graphHead.includes("◆")) {
+  if (graphRow.includes("◆")) {
     return "immutable";
   }
-  if (graphHead.includes("*")) {
+  if (graphRow.includes("*")) {
     return "bookmark";
   }
   return "plain";

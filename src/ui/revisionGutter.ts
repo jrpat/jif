@@ -32,8 +32,8 @@ export function measureGraphLineWidth(graphLine: string): number {
   return normalizeGraphLine(graphLine).length;
 }
 
-export function measureCoreGraphWidth(graphHead: string, graphTail: readonly string[]): number {
-  return Math.max(measureGraphLineWidth(graphHead), ...graphTail.map(measureGraphLineWidth), 1);
+export function measureCoreGraphWidth(graphRows: readonly string[]): number {
+  return Math.max(...graphRows.map(measureGraphLineWidth), 1);
 }
 
 export function measureGutterPlanWidth(plan: RevisionGutterPlan): number {
@@ -48,9 +48,9 @@ export function measureGutterPlanWidth(plan: RevisionGutterPlan): number {
   );
 }
 
-export function buildCondensedGraphLine(graphHead: string, graphTail: readonly string[]): string {
-  const title = normalizeGraphLine(graphHead);
-  const subtitle = graphTail[0] ? normalizeGraphLine(graphTail[0]!) : "";
+export function buildCondensedGraphLine(graphRows: readonly string[]): string {
+  const title = normalizeGraphLine(graphRows[0] ?? "");
+  const subtitle = graphRows[1] ? normalizeGraphLine(graphRows[1]!) : "";
   if (subtitle.length === 0) {
     return title;
   }
@@ -81,20 +81,26 @@ export function deriveGraphContinuationLine(graphHead: string): string {
 }
 
 export function buildRevisionGutterPlan(options: Readonly<{
-  graphHead: string;
-  graphTail: readonly string[];
+  graphRows: readonly string[];
+  baseGraphRowCount: number;
+  visibleGraphMode: "direct" | "fold-first-two";
   detailRowCount: number;
   ownsTop: boolean;
   ownsBottom: boolean;
   previousGraphBottom: string | null;
   hasNextRevision: boolean;
 }>): RevisionGutterPlan {
-  const title = normalizeGraphLine(options.graphHead);
+  const normalizedRows = options.graphRows.map(normalizeGraphLine);
+  const baseRows = normalizedRows.slice(0, options.baseGraphRowCount);
+  const tailStart = options.visibleGraphMode === "direct" ? options.baseGraphRowCount : Math.min(options.baseGraphRowCount, 2);
+  const title =
+    options.visibleGraphMode === "fold-first-two"
+      ? buildCondensedGraphLine(baseRows)
+      : (baseRows[0] ?? "");
   const titleContinuation = deriveGraphContinuationLine(title);
-  const graphTail = options.graphTail.map(normalizeGraphLine);
-  const subtitle = graphTail[0] ?? titleContinuation;
-  const tail = graphTail.slice(1);
-  const detailContinuation = deriveGraphContinuationLine(graphTail.at(-1) ?? title);
+  const subtitle = baseRows[1] ?? titleContinuation;
+  const tail = normalizedRows.slice(tailStart);
+  const detailContinuation = deriveGraphContinuationLine(normalizedRows.at(-1) ?? title);
 
   return {
     topDivider: options.ownsTop ? (options.previousGraphBottom !== null ? deriveGraphContinuationLine(options.previousGraphBottom) : "") : null,

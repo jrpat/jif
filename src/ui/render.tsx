@@ -35,12 +35,11 @@ import {
   type RevisionRowState,
 } from "./revisionBorders.ts";
 import {
-  buildCondensedGraphLine,
   buildRevisionGutterPlan,
   measureCoreGraphWidth,
   measureGutterPlanWidth,
 } from "./revisionGutter.ts";
-import { buildRevisionHeaderLayout, type RevisionSideChip } from "./revisionLayout.ts";
+import { buildRevisionLayoutSpec, type RevisionSideChip } from "./revisionLayout.ts";
 import {
   buildRevisionChangeIdSegments,
   getRevisionChangeIdColors,
@@ -802,15 +801,15 @@ export function RevisionItem(props: {
     getRevisionRowState(props.nextRevisionId, props.focusedRevisionId, props.selectedRevisionIds),
   );
   const coreGraphWidth = createMemo(() =>
-    measureCoreGraphWidth(props.revision.graphHead, props.revision.graphTail)
+    measureCoreGraphWidth(props.revision.graphRows)
   );
   const previousCoreGraphWidth = createMemo(() => {
     const prev = props.index > 0 ? props.state.revisions[props.index - 1] : null;
-    return prev ? measureCoreGraphWidth(prev.graphHead, prev.graphTail) : null;
+    return prev ? measureCoreGraphWidth(prev.graphRows) : null;
   });
   const nextCoreGraphWidth = createMemo(() => {
     const next = props.state.revisions[props.index + 1] ?? null;
-    return next ? measureCoreGraphWidth(next.graphHead, next.graphTail) : null;
+    return next ? measureCoreGraphWidth(next.graphRows) : null;
   });
   const effectiveRowState = createMemo((): RevisionRowState => {
     const rs = rowState();
@@ -836,34 +835,28 @@ export function RevisionItem(props: {
     nextGraphWidth: nextCoreGraphWidth(),
   }));
   const detailRowCount = () => isExpanded() ? Math.max(props.revision.files.length, 1) : 0;
-  const headerLayout = createMemo(() =>
-    buildRevisionHeaderLayout(props.revision, {
-      condensed: props.state.condensedLayout,
+  const layoutSpec = createMemo(() =>
+    buildRevisionLayoutSpec(props.revision, {
+      mode: props.state.condensedLayout ? "compact" : "expanded",
       isCommandTarget: isCommandTarget(),
       badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
     }),
   );
-  const showCondensedHeader = () => headerLayout().headerRowCount === 1;
   const gutterPlan = createMemo(() => buildRevisionGutterPlan({
-    graphHead: props.revision.graphHead,
-    graphTail: props.revision.graphTail,
+    graphRows: props.revision.graphRows,
+    baseGraphRowCount: layoutSpec().baseGraphRowCount,
+    visibleGraphMode: layoutSpec().visibleGraphMode,
     detailRowCount: detailRowCount(),
     ownsTop: borderPolicy().ownsTop,
     ownsBottom: borderPolicy().ownsBottom,
     previousGraphBottom: (() => {
       const prev = props.index > 0 ? props.state.revisions[props.index - 1] : null;
       if (!prev) return null;
-      return prev.graphTail.at(-1) ?? prev.graphHead;
+      return prev.graphRows.at(-1) ?? prev.graphRows[0] ?? null;
     })(),
     hasNextRevision: props.index + 1 < props.state.revisions.length,
   }));
-  const visibleGutterTail = createMemo(() => showCondensedHeader() ? [] : gutterPlan().tail);
   const effectiveGraphWidth = createMemo(() => measureGutterPlanWidth(gutterPlan()));
-  const displayedTitleGraph = createMemo(() =>
-    showCondensedHeader()
-      ? buildCondensedGraphLine(props.revision.graphHead, props.revision.graphTail)
-      : gutterPlan().title
-  );
   const currentLeftCol = () => coreGraphWidth() + 1;
   const prevLeftCol = () => previousCoreGraphWidth() !== null ? previousCoreGraphWidth()! + 1 : null;
   const nextLeftCol = () => nextCoreGraphWidth() !== null ? nextCoreGraphWidth()! + 1 : null;
@@ -884,7 +877,7 @@ export function RevisionItem(props: {
       colors: colors(),
     })
   );
-  const showExpandedTimestamp = () => !props.state.condensedLayout;
+  const showExpandedTimestamp = () => layoutSpec().mode === "expanded";
 
   return (
     <box
@@ -899,13 +892,13 @@ export function RevisionItem(props: {
             {padRight(gutterPlan().topDivider!, effectiveGraphWidth())}
           </text>
         ) : null}
-        <text fg={titleGraphColor()}>{padRight(displayedTitleGraph(), effectiveGraphWidth())}</text>
-        <Show when={headerLayout().headerRowCount === 2 && props.revision.marker !== "elided"}>
+        <text fg={titleGraphColor()}>{padRight(gutterPlan().title, effectiveGraphWidth())}</text>
+        <Show when={layoutSpec().headerRowCount === 2 && props.revision.marker !== "elided"}>
           <text fg={continuationGraphColor()}>
             {padRight(gutterPlan().subtitle, effectiveGraphWidth())}
           </text>
         </Show>
-        <For each={visibleGutterTail()}>
+        <For each={gutterPlan().tail}>
           {(graphLine) => (
             <text fg={continuationGraphColor()}>
               {padRight(graphLine, effectiveGraphWidth())}
@@ -953,7 +946,7 @@ export function RevisionItem(props: {
           }
         >
           <Show
-            when={showCondensedHeader()}
+            when={layoutSpec().headerRowCount === 1}
             fallback={
               <>
                 <box width="100%" flexDirection="row" gap={1}>
@@ -963,14 +956,14 @@ export function RevisionItem(props: {
                     colors={colors()}
                     showTimestamp={showExpandedTimestamp()}
                   />
-                  {headerLayout().commandTarget ? (
+                  {layoutSpec().commandTarget ? (
                     <CommandTargetChip
-                      text={headerLayout().commandTarget!.text}
+                      text={layoutSpec().commandTarget!.text}
                       colors={colors()}
                     />
                   ) : null}
                   <box flexGrow={1} />
-                  <RevisionSideChips chips={headerLayout().sideChips} colors={colors()} />
+                  <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
                 </box>
                 <box width="100%" flexDirection="row">
                   <text fg={descriptionColor()} truncate>
@@ -982,8 +975,8 @@ export function RevisionItem(props: {
           >
             <box
               width="100%"
-              height={headerLayout().contentHeight}
-              overflow={headerLayout().clipOverflow ? "hidden" : undefined}
+              height={layoutSpec().headerRowCount}
+              overflow={layoutSpec().headerRowCount === 1 ? "hidden" : undefined}
               position="relative"
             >
               <box width="100%" height={1} flexDirection="row">
@@ -1003,26 +996,26 @@ export function RevisionItem(props: {
                     {props.revision.description}
                   </text>
                 </box>
-                <Show when={headerLayout().sideChips.length > 0}>
+                <Show when={layoutSpec().sideChips.length > 0}>
                   <box width={1} />
                 </Show>
-                <RevisionSideChips chips={headerLayout().sideChips} colors={colors()} />
+                <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
               </box>
-              {headerLayout().commandTarget?.placement === "overlay" ? (
+              {layoutSpec().commandTarget?.placement === "overlay" ? (
                 <text
                   position="absolute"
-                  left={headerLayout().commandTarget!.leftOffset}
+                  left={layoutSpec().commandTarget!.leftOffset}
                   top={0}
                   zIndex={1}
                   fg={colors().chromeFillOne}
                   bg={colors().chromeBorderFocus}
                 >
-                  {` ${headerLayout().commandTarget!.text} `}
+                  {` ${layoutSpec().commandTarget!.text} `}
                 </text>
               ) : null}
             </box>
           </Show>
-          <For each={visibleGutterTail()}>
+          <For each={gutterPlan().tail}>
             {() => <box width="100%" height={1} />}
           </For>
           {isExpanded() ? (

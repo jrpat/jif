@@ -15,8 +15,7 @@ export type RevisionSummary = Readonly<{
   localTimestamp: string;
   bookmarks: readonly string[];
   workspaces: readonly string[];
-  graphHead: string;
-  graphTail: readonly string[];
+  graphRows: readonly string[];
   isEmpty: boolean;
   marker: RevisionMarker;
   filesLoaded: boolean;

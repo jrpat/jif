@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 import type { RevisionSummary } from "../src/domain/types.ts";
-import { buildRevisionHeaderLayout } from "../src/ui/revisionLayout.ts";
+import {
+  buildRevisionLayoutSpec,
+  getMaxRevisionBaseGraphRowCount,
+} from "../src/ui/revisionLayout.ts";
 
 function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSummary {
   return {
@@ -11,8 +14,7 @@ function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSumma
     localTimestamp: "2026-03-30 07:22:39",
     bookmarks: ["main"],
     workspaces: ["review"],
-    graphHead: "@  ",
-    graphTail: [],
+    graphRows: ["@  "],
     isEmpty: false,
     marker: "working-copy",
     filesLoaded: false,
@@ -21,17 +23,18 @@ function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSumma
   };
 }
 
-test("expanded header keeps chips on the top row and description on a second row", () => {
-  const layout = buildRevisionHeaderLayout(createRevision(), {
-    condensed: false,
+test("expanded layout uses direct two-row graph geometry", () => {
+  const layout = buildRevisionLayoutSpec(createRevision(), {
+    mode: "expanded",
     isCommandTarget: true,
     badgeText: "onto",
   });
 
+  expect(getMaxRevisionBaseGraphRowCount()).toBe(2);
+  expect(layout.mode).toBe("expanded");
   expect(layout.headerRowCount).toBe(2);
-  expect(layout.contentHeight).toBe(2);
-  expect(layout.clipOverflow).toBeFalse();
-  expect(layout.descriptionPlacement).toBe("separate-row");
+  expect(layout.baseGraphRowCount).toBe(2);
+  expect(layout.visibleGraphMode).toBe("direct");
   expect(layout.commandTarget?.placement).toBe("inline");
   expect(layout.sideChips).toEqual([
     { kind: "bookmark", text: "main" },
@@ -39,18 +42,18 @@ test("expanded header keeps chips on the top row and description on a second row
   ]);
 });
 
-test("condensed header overlays the command target chip and keeps right chips trailing", () => {
+test("compact layout folds the first two graph rows and overlays the target chip", () => {
   const revision = createRevision();
-  const layout = buildRevisionHeaderLayout(revision, {
-    condensed: true,
+  const layout = buildRevisionLayoutSpec(revision, {
+    mode: "compact",
     isCommandTarget: true,
     badgeText: "onto",
   });
 
+  expect(layout.mode).toBe("compact");
   expect(layout.headerRowCount).toBe(1);
-  expect(layout.contentHeight).toBe(1);
-  expect(layout.clipOverflow).toBeTrue();
-  expect(layout.descriptionPlacement).toBe("between-id-and-side-chips");
+  expect(layout.baseGraphRowCount).toBe(2);
+  expect(layout.visibleGraphMode).toBe("fold-first-two");
   expect(layout.commandTarget).toEqual({
     placement: "overlay",
     leftOffset: revision.changeId.length + 1,
@@ -58,19 +61,16 @@ test("condensed header overlays the command target chip and keeps right chips tr
   });
 });
 
-test("condensed header uses the full trailing width when there are no side chips", () => {
-  const layout = buildRevisionHeaderLayout(
+test("compact layout keeps chip metadata empty when there are no side chips", () => {
+  const layout = buildRevisionLayoutSpec(
     createRevision({ bookmarks: [], workspaces: [] }),
     {
-      condensed: true,
+      mode: "compact",
       isCommandTarget: false,
       badgeText: "onto",
     },
   );
 
   expect(layout.sideChips).toEqual([]);
-  expect(layout.contentHeight).toBe(1);
-  expect(layout.clipOverflow).toBeTrue();
-  expect(layout.descriptionPlacement).toBe("full-row-after-id");
   expect(layout.commandTarget).toBeNull();
 });
