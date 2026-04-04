@@ -58,6 +58,7 @@ import {
 import { normalizeKey } from "./keyboard.ts";
 import { dispatchGlobalKey } from "./keybindings.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
+import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { getStatusMessageDismissDelay } from "./statusMessages.ts";
 
 export function JifView(props: {
@@ -74,6 +75,11 @@ export function JifView(props: {
   const [terminalSize, setTerminalSize] = createSignal({
     width: Math.max(renderer.width, 1),
     height: Math.max(renderer.height, 1),
+  });
+  const refreshRepository = createRepositoryRefresher({
+    client,
+    actions: store.actions,
+    getRevsetQuery: () => store.snapshot().revsetQuery,
   });
   let logViewport: ScrollBoxRenderable | undefined;
 
@@ -102,9 +108,11 @@ export function JifView(props: {
     handleResize();
     renderer.on(CliRenderEvents.THEME_MODE, handleThemeMode);
     renderer.on(CliRenderEvents.RESIZE, handleResize);
+    const disposeFocusRefresh = bindRefreshOnFocus(renderer, () => refreshRepository());
     onCleanup(() => {
       renderer.off(CliRenderEvents.THEME_MODE, handleThemeMode);
       renderer.off(CliRenderEvents.RESIZE, handleResize);
+      disposeFocusRefresh();
     });
   });
 
@@ -592,19 +600,6 @@ export function JifView(props: {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       store.actions.pushEvent(message, "error");
-    }
-  }
-
-  async function refreshRepository(revset?: string) {
-    store.actions.setLoading(true);
-    try {
-      await client.verifyRepository();
-      const repositoryData = await client.loadRepository(undefined, revset || store.state.revsetQuery || undefined);
-      store.actions.applyRepositoryData(repositoryData);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      store.actions.pushEvent(message, "error");
-      store.actions.setLoading(false);
     }
   }
 }
