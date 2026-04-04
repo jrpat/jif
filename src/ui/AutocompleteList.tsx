@@ -79,7 +79,7 @@ export function AutocompleteList(props: {
       scrollbarOptions={{
         trackOptions: {
           backgroundColor: colors.chromeFillThree,
-          foregroundColor: colors.chromeBorderFocus,
+          foregroundColor: colors.chromeScrollbarThumb,
         },
       }}
     >

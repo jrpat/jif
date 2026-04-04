@@ -17,6 +17,7 @@ export type SemanticColorScheme = Readonly<{
   chromeFillOne: SemanticColorValue;
   chromeFillTwo: SemanticColorValue;
   chromeFillThree: SemanticColorValue;
+  chromeScrollbarThumb: SemanticColorValue;
   chromeBorderIdle: SemanticColorValue;
   chromeBorderFocus: SemanticColorValue;
   rowFocusedFill: SemanticColorValue;
@@ -84,6 +85,7 @@ const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   chromeFillOne:          { source: "background",  opacity: 1.0  },
   chromeFillTwo:          { source: "foreground",  opacity: 0.08 },
   chromeFillThree:        { source: "foreground",  opacity: 0.12 },
+  chromeScrollbarThumb:   { source: "foreground",  opacity: 0.24 },
   chromeBorderIdle:       { source: "foreground",  opacity: 0.35 },
   chromeBorderFocus:      { source: "blue",        opacity: 1.0  },
 

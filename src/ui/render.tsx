@@ -463,7 +463,7 @@ export function JifView(props: {
         scrollbarOptions={{
           trackOptions: {
             backgroundColor: config.colorScheme.semanticColors.chromeFillThree,
-            foregroundColor: config.colorScheme.semanticColors.chromeBorderFocus,
+            foregroundColor: config.colorScheme.semanticColors.chromeScrollbarThumb,
           },
         }}
       >
@@ -1251,7 +1251,7 @@ function StatusArea(props: {
           scrollbarOptions={{
             trackOptions: {
               backgroundColor: colors.chromeFillThree,
-              foregroundColor: colors.chromeBorderFocus,
+              foregroundColor: colors.chromeScrollbarThumb,
             },
           }}
         >

@@ -33,6 +33,9 @@ test("resolveAppConfig produces different colors for light vs dark palettes", ()
   expect(dark.colorScheme.semanticColors.textPrimary).not.toBe(
     light.colorScheme.semanticColors.textPrimary,
   );
+  expect(dark.colorScheme.semanticColors.chromeScrollbarThumb).not.toBe(
+    light.colorScheme.semanticColors.chromeScrollbarThumb,
+  );
 });
 
 test("resolveAppConfig applies user hex overrides", () => {
@@ -82,6 +85,20 @@ test("resolveAppConfig blends colors at sub-1.0 opacity against background", () 
   expect(fillTwo).not.toBe("#e5e5e5");
   // Should be a very dark gray (foreground #e5e5e5 at 8% over #000000)
   expect(fillTwo.startsWith("#")).toBe(true);
+});
+
+test("resolveAppConfig makes the scrollbar thumb three steps more prominent than the track", () => {
+  const dark = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
+  const light = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_LIGHT,
+  });
+
+  expect(dark.colorScheme.semanticColors.chromeFillThree).toBe("#1b1b1b");
+  expect(dark.colorScheme.semanticColors.chromeScrollbarThumb).toBe("#373737");
+  expect(light.colorScheme.semanticColors.chromeFillThree).toBe("#e0e0e0");
+  expect(light.colorScheme.semanticColors.chromeScrollbarThumb).toBe("#c2c2c2");
 });
 
 test("resolveAppConfig defaults log.scrollMargin to 1", () => {
