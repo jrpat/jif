@@ -29,13 +29,6 @@ export function AutocompleteList(props: {
     Math.min(props.items.length, props.maxVisibleItems ?? 10)
   );
 
-  const scrollToEdge = () => {
-    if (!viewport) {
-      return;
-    }
-    viewport.scrollBy(props.flow === "top-to-bottom" ? -Infinity : Infinity);
-  };
-
   const scrollToSelection = () => {
     if (!viewport || props.selectedIndex === null) {
       return;
@@ -57,11 +50,6 @@ export function AutocompleteList(props: {
   };
 
   createRenderEffect(() => {
-    props.items;
-    scrollToEdge();
-  });
-
-  createRenderEffect(() => {
     props.selectedIndex;
     scrollToSelection();
   });
@@ -70,11 +58,12 @@ export function AutocompleteList(props: {
     <scrollbox
       ref={(el: ScrollBoxRenderable) => {
         viewport = el;
-        scrollToEdge();
       }}
       width="100%"
       height={visibleHeight()}
       scrollY
+      stickyScroll={props.flow !== "top-to-bottom"}
+      stickyStart={props.flow !== "top-to-bottom" ? "bottom" : undefined}
       backgroundColor={colors.chromeFillTwo}
       scrollbarOptions={{
         trackOptions: {

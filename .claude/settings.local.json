@@ -18,5 +18,9 @@
       "Skill(resolve:*)",
       "Bash(jj status:*)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "serena"
+  ],
+  "enableAllProjectMcpServers": true
 }

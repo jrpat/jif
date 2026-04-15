@@ -51,6 +51,8 @@ function createController(calls: string[]): CommandController {
     focusWorkingCopy: () => calls.push("focusWorkingCopy"),
     openRevsetInput: () => calls.push("openRevsetInput"),
     toggleShortcutPanel: () => calls.push("toggleShortcutPanel"),
+    commit: () => calls.push("commit"),
+    describe: () => calls.push("describe"),
   };
 }
 

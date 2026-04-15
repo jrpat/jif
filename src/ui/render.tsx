@@ -22,6 +22,7 @@ import {
 } from "../state/store.ts";
 import { logShortcutDebug } from "../debug.ts";
 import type { JjClient } from "../jj/client.ts";
+import { runInteractiveCommand } from "../jj/process.ts";
 import { buildCompletionItems, extractLastToken, matchCompletions, type CompletionItem } from "../revset/completions.ts";
 import type { RevisionSummary, StatusMessage } from "../domain/types.ts";
 import { AutocompleteList, type AutocompleteListItem } from "./AutocompleteList.tsx";
@@ -201,6 +202,14 @@ export function JifView(props: {
       }
 
       void runJjCommand(`edit ${revisionArg}`);
+    },
+    commit() {
+      void runInteractiveJjCommand("commit");
+    },
+    describe() {
+      const revisionArg = getFocusedRevisionArg(store.snapshot());
+      if (!revisionArg) return;
+      void runInteractiveJjCommand(`describe -r ${revisionArg}`);
     },
     toggleSelection() {
       store.actions.toggleRevisionSelection();
@@ -587,6 +596,22 @@ export function JifView(props: {
       const message = error instanceof Error ? error.message : String(error);
       store.actions.pushEvent(message, "error");
       store.actions.setLoading(false);
+    }
+  }
+
+  async function runInteractiveJjCommand(commandText: string) {
+    const root = workspaceRoot();
+    if (!root) return;
+    renderer.suspend();
+    try {
+      await runInteractiveCommand(root, ["jj", ...commandText.split(" ")]);
+      store.actions.cancelCommand();
+      await refreshRepository();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      store.actions.pushEvent(message, "error");
+    } finally {
+      renderer.resume();
     }
   }
 

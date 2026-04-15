@@ -23,6 +23,8 @@ export type CommandController = Readonly<{
   focusWorkingCopy: () => void;
   openRevsetInput: () => void;
   toggleShortcutPanel: () => void;
+  commit: () => void;
+  describe: () => void;
 }>;
 
 export type CommandDefinition = Readonly<{
@@ -174,6 +176,26 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     keys: ["e"],
     when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
     run: (controller) => controller.editRevision(),
+    group: "global",
+  },
+  {
+    id: "commit",
+    title: "Commit",
+    description: "Commit the working-copy revision (@)",
+    canonicalKeys: ["c"],
+    keys: ["c"],
+    when: (state) => state.focusMode === "revisions",
+    run: (controller) => controller.commit(),
+    group: "global",
+  },
+  {
+    id: "describe",
+    title: "Describe",
+    description: "Edit description of the focused revision",
+    canonicalKeys: ["D"],
+    keys: ["D"],
+    when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
+    run: (controller) => controller.describe(),
     group: "global",
   },
   {

@@ -26,8 +26,6 @@ export function createRepositoryRefresher(args: {
 
     const effectiveRevset = revset || args.getRevsetQuery() || undefined;
     refreshInFlight = (async () => {
-      args.actions.setLoading(true);
-
       try {
         await args.client.verifyRepository();
         const repositoryData = await args.client.loadRepository(undefined, effectiveRevset);

@@ -65,6 +65,29 @@ export async function runCommand(
   };
 }
 
+export async function runInteractiveCommand(
+  cwd: string,
+  command: readonly string[],
+): Promise<void> {
+  const proc = Bun.spawn({
+    cmd: [...command],
+    cwd,
+    stdin: "inherit",
+    stdout: "inherit",
+    stderr: "inherit",
+    env: { ...process.env },
+  });
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    throw new CommandExecutionError({
+      command,
+      cwd,
+      exitCode,
+      stderr: "",
+    });
+  }
+}
+
 export function quoteCommand(command: readonly string[]): string {
   return command
     .map((part) => {
