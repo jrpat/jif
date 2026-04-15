@@ -37,6 +37,13 @@ import {
   openRevsetInput,
   closeRevsetInput,
   setRevsetQuery,
+  openSearch,
+  setSearchText,
+  finalizeSearch,
+  closeSearch,
+  nextSearchMatch,
+  prevSearchMatch,
+  getSearchMatchIndices,
 } from "../src/state/store.ts";
 
 function createState(): AppState {
@@ -587,4 +594,122 @@ test("applyRepositoryData clears stale loaded files when a revision becomes empt
   expect(next.revisions[0]?.files).toEqual([]);
   expect(next.revisions[0]?.filesLoaded).toBeTrue();
   expect(next.revisions[0]?.isEmpty).toBeTrue();
+});
+
+test("openSearch sets focusMode to search and clears searchQuery", () => {
+  let state = createState();
+  state = openSearch(state);
+  expect(state.focusMode).toBe("search");
+  expect(state.searchQuery).toBe("");
+});
+
+test("setSearchText moves focus to first matching revision", () => {
+  let state = createState();
+  state = openSearch(state);
+  expect(state.focusedRevisionIndex).toBe(0);
+
+  state = setSearchText(state, "second");
+  expect(state.searchQuery).toBe("second");
+  expect(state.focusedRevisionIndex).toBe(1);
+});
+
+test("setSearchText matches bookmarks", () => {
+  let state = createState();
+  state = openSearch(state);
+  state = moveFocus(state, 1);
+  expect(state.focusedRevisionIndex).toBe(1);
+
+  state = setSearchText(state, "main");
+  expect(state.focusedRevisionIndex).toBe(0);
+});
+
+test("setSearchText with no match preserves current focus", () => {
+  let state = createState();
+  state = openSearch(state);
+  state = moveFocus(state, 1);
+
+  state = setSearchText(state, "nonexistent");
+  expect(state.focusedRevisionIndex).toBe(1);
+});
+
+test("finalizeSearch returns to browse mode but keeps query", () => {
+  let state = createState();
+  state = openSearch(state);
+  state = setSearchText(state, "first");
+
+  state = finalizeSearch(state);
+  expect(state.focusMode).toBe("revisions");
+  expect(state.searchQuery).toBe("first");
+});
+
+test("closeSearch clears query and returns to browse mode", () => {
+  let state = createState();
+  state = openSearch(state);
+  state = setSearchText(state, "first");
+
+  state = closeSearch(state);
+  expect(state.focusMode).toBe("revisions");
+  expect(state.searchQuery).toBe("");
+});
+
+test("nextSearchMatch wraps around to first match", () => {
+  let state = createState();
+  state = setSearchText(state, "a");
+  // Both "aaaaaaaa" and "bbbbbbbb" contain 'a'... let me use description
+  state = { ...state, searchQuery: "" };
+
+  // Set up: both revisions match "s" (first, second)
+  state = setSearchText(state, "s");
+  expect(state.focusedRevisionIndex).toBe(0);
+
+  state = nextSearchMatch(state);
+  expect(state.focusedRevisionIndex).toBe(1);
+
+  // Wrap around
+  state = nextSearchMatch(state);
+  expect(state.focusedRevisionIndex).toBe(0);
+});
+
+test("prevSearchMatch wraps around to last match", () => {
+  let state = createState();
+  state = setSearchText(state, "s");
+  expect(state.focusedRevisionIndex).toBe(0);
+
+  // Wrap around to last
+  state = prevSearchMatch(state);
+  expect(state.focusedRevisionIndex).toBe(1);
+
+  state = prevSearchMatch(state);
+  expect(state.focusedRevisionIndex).toBe(0);
+});
+
+test("getSearchMatchIndices returns correct indices", () => {
+  let state = createState();
+  state = { ...state, searchQuery: "second" };
+  expect(getSearchMatchIndices(state)).toEqual([1]);
+
+  state = { ...state, searchQuery: "" };
+  expect(getSearchMatchIndices(state)).toEqual([]);
+});
+
+test("cancelOrBlurState exits search before handling other state", () => {
+  let state = createState();
+  state = openSearch(state);
+  state = setSearchText(state, "first");
+
+  state = cancelOrBlurState(state);
+  expect(state.focusMode).toBe("revisions");
+  expect(state.searchQuery).toBe("");
+});
+
+test("cancelOrBlurState clears finalized search query", () => {
+  let state = createState();
+  state = openSearch(state);
+  state = setSearchText(state, "first");
+  state = finalizeSearch(state);
+  expect(state.focusMode).toBe("revisions");
+  expect(state.searchQuery).toBe("first");
+
+  state = cancelOrBlurState(state);
+  expect(state.searchQuery).toBe("");
 });

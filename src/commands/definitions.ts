@@ -26,6 +26,9 @@ export type CommandController = Readonly<{
   commit: () => void;
   describe: () => void;
   showDiff: () => void;
+  openSearch: () => void;
+  nextSearchMatch: () => void;
+  prevSearchMatch: () => void;
 }>;
 
 export type CommandDefinition = Readonly<{
@@ -33,8 +36,7 @@ export type CommandDefinition = Readonly<{
   title: string;
   description: string;
   canonicalKeys: readonly string[];
-  keys: readonly string[];
-  when?: (state: AppState) => boolean;
+  canExecute?: (state: AppState) => boolean;
   run: (controller: CommandController) => void;
   group?: "global" | "mode" | "cancel";
 }>;
@@ -50,8 +52,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Move Down",
     description: "Move through revisions or files",
     canonicalKeys: ["j"],
-    keys: ["j", "down"],
-    when: (state) => state.focusMode !== "command",
     run: (controller) => controller.moveFocus(1),
   },
   {
@@ -59,8 +59,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Move Up",
     description: "Move through revisions or files",
     canonicalKeys: ["k"],
-    keys: ["k", "up"],
-    when: (state) => state.focusMode !== "command",
     run: (controller) => controller.moveFocus(-1),
   },
   {
@@ -68,8 +66,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Expand Revision",
     description: "Open changed files for the focused revision",
     canonicalKeys: ["l"],
-    keys: ["l", "right"],
-    when: (state) => state.focusMode !== "command",
     run: (controller) => controller.openFocusedRevision(),
   },
   {
@@ -77,8 +73,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Collapse Revision",
     description: "Close the focused detail view",
     canonicalKeys: ["h"],
-    keys: ["h", "left"],
-    when: (state) => state.focusMode !== "command" && !focusedIsElided(state),
+    canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.closeFocusedRevision(),
   },
   {
@@ -86,8 +81,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Command Bar",
     description: "Focus the command bar",
     canonicalKeys: [":"],
-    keys: [":"],
-    when: (state) => state.focusMode !== "command" && !focusedIsElided(state),
+    canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.focusCommandBar(),
     group: "global",
   },
@@ -96,8 +90,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Shortcuts",
     description: "Expand or collapse the shortcut panel",
     canonicalKeys: ["?"],
-    keys: ["?"],
-    when: (state) => state.focusMode !== "command" && state.focusMode !== "revset",
     run: (controller) => controller.toggleShortcutPanel(),
     group: "global",
   },
@@ -106,8 +98,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Quit",
     description: "Exit the application",
     canonicalKeys: ["q"],
-    keys: ["q"],
-    when: (state) => state.focusMode !== "command",
     run: (controller) => controller.quit(),
     group: "global",
   },
@@ -116,7 +106,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Confirm",
     description: "Run the current command",
     canonicalKeys: ["enter"],
-    keys: ["enter"],
     run: (controller) => controller.confirm(),
     group: "mode",
   },
@@ -125,7 +114,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Cancel",
     description: "Cancel command composition or leave input mode",
     canonicalKeys: ["esc"],
-    keys: ["escape"],
     run: (controller) => controller.cancelOrBlur(),
     group: "cancel",
   },
@@ -134,8 +122,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Rebase",
     description: "Start a rebase command from the focused revision",
     canonicalKeys: ["r"],
-    keys: ["r"],
-    when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
+    canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.startRebase(),
     group: "global",
   },
@@ -144,8 +131,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Restore",
     description: "Restore selected files to their state before this change",
     canonicalKeys: ["r"],
-    keys: ["r"],
-    when: (state) => state.focusMode === "files",
     run: (controller) => controller.restoreFiles(),
     group: "mode",
   },
@@ -154,8 +139,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Squash",
     description: "Squash the focused revision into another",
     canonicalKeys: ["S"],
-    keys: ["S"],
-    when: (state) => state.focusMode === "revisions" && state.commandDraft?.config.kind !== "rebase" && !focusedIsElided(state),
+    canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.startSquash(),
     group: "global",
   },
@@ -164,8 +148,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "New Revision",
     description: "Create a new revision from the focused revision",
     canonicalKeys: ["n"],
-    keys: ["n"],
-    when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
+    canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.startNewRevision(),
     group: "global",
   },
@@ -174,8 +157,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Edit Revision",
     description: "Edit the focused revision",
     canonicalKeys: ["e"],
-    keys: ["e"],
-    when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
+    canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.editRevision(),
     group: "global",
   },
@@ -184,8 +166,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Commit",
     description: "Commit the working-copy revision (@)",
     canonicalKeys: ["c"],
-    keys: ["c"],
-    when: (state) => state.focusMode === "revisions",
     run: (controller) => controller.commit(),
     group: "global",
   },
@@ -194,8 +174,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Describe",
     description: "Edit description of the focused revision",
     canonicalKeys: ["D"],
-    keys: ["D"],
-    when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
+    canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.describe(),
     group: "global",
   },
@@ -204,10 +183,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Diff",
     description: "Show diff for the focused revision or file",
     canonicalKeys: ["d"],
-    keys: ["d"],
-    when: (state) =>
-      (state.focusMode === "revisions" || state.focusMode === "files") &&
-      !focusedIsElided(state),
+    canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.showDiff(),
     group: "global",
   },
@@ -216,8 +192,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Select",
     description: "Add or remove the focused revision from the selection",
     canonicalKeys: ["space"],
-    keys: [" "],
-    when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
+    canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.toggleSelection(),
     group: "mode",
   },
@@ -226,8 +201,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Select File",
     description: "Add or remove the focused file from the selection",
     canonicalKeys: ["space"],
-    keys: [" "],
-    when: (state) => state.focusMode === "files",
     run: (controller) => controller.toggleFileSelection(),
     group: "mode",
   },
@@ -236,8 +209,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Short Flags",
     description: "Toggle between short and long flag names",
     canonicalKeys: ["-"],
-    keys: ["-"],
-    when: (state) => state.focusMode !== "command",
     run: (controller) => controller.toggleShortFlags(),
     group: "global",
   },
@@ -246,8 +217,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Condensed Layout",
     description: "Toggle single-line revision rows",
     canonicalKeys: ["_"],
-    keys: ["_"],
-    when: (state) => state.focusMode !== "command",
     run: (controller) => controller.toggleCondensedLayout(),
     group: "global",
   },
@@ -256,8 +225,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Undo",
     description: "Undo the last operation",
     canonicalKeys: ["u"],
-    keys: ["u"],
-    when: (state) => state.focusMode !== "command",
     run: (controller) => controller.undo(),
     group: "global",
   },
@@ -266,8 +233,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Redo",
     description: "Redo the last undone operation",
     canonicalKeys: ["U"],
-    keys: ["U"],
-    when: (state) => state.focusMode !== "command",
     run: (controller) => controller.redo(),
     group: "global",
   },
@@ -276,8 +241,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Jump to @",
     description: "Jump to the working-copy revision",
     canonicalKeys: ["@"],
-    keys: ["@"],
-    when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
     run: (controller) => controller.focusWorkingCopy(),
   },
   {
@@ -285,8 +248,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Toggle Descendants",
     description: "Include descendants in the rebase preview",
     canonicalKeys: ["s"],
-    keys: ["s"],
-    when: (state) => state.commandDraft?.config.kind === "rebase" && state.focusMode === "revisions" && !focusedIsElided(state),
     run: (controller) => controller.toggleRebaseDescendants(),
     group: "mode",
   },
@@ -295,25 +256,30 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Edit Revset",
     description: "Change which revisions are displayed",
     canonicalKeys: ["L"],
-    keys: ["L"],
-    when: (state) => state.focusMode !== "command" && state.focusMode !== "revset",
     run: (controller) => controller.openRevsetInput(),
   },
+  {
+    id: "search",
+    title: "Search",
+    description: "Incremental search through the revision log",
+    canonicalKeys: ["/"],
+    run: (controller) => controller.openSearch(),
+    group: "global",
+  },
+  {
+    id: "search-next",
+    title: "Next Match",
+    description: "Jump to the next search match",
+    canonicalKeys: ["n"],
+    run: (controller) => controller.nextSearchMatch(),
+    group: "mode",
+  },
+  {
+    id: "search-prev",
+    title: "Prev Match",
+    description: "Jump to the previous search match",
+    canonicalKeys: ["p"],
+    run: (controller) => controller.prevSearchMatch(),
+    group: "mode",
+  },
 ];
-
-export function getTextCommand(
-  text: string,
-  state: AppState,
-): CommandDefinition | null {
-  return (
-    commandDefinitions.find(
-      (definition) =>
-        definition.keys.includes(text) &&
-        definition.when?.(state) !== false,
-    ) ?? null
-  );
-}
-
-export function getVisibleCommands(state: AppState): readonly CommandDefinition[] {
-  return commandDefinitions.filter((definition) => definition.when?.(state) ?? true);
-}

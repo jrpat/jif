@@ -19,8 +19,14 @@ import {
   focusWorkingCopy,
   openRevsetInput,
   closeRevsetInput,
+  closeSearch,
   closeShortcutPanel,
   setRevsetQuery,
+  setSearchText,
+  openSearch,
+  finalizeSearch,
+  nextSearchMatch,
+  prevSearchMatch,
   dismissStatusMessage,
   expandElidedRevision,
   logEvent,
@@ -172,6 +178,24 @@ export function createAppStore(
       },
       setRevsetQuery(query: string) {
         mutate((currentState) => setRevsetQuery(currentState, query));
+      },
+      openSearch() {
+        mutate((currentState) => openSearch(currentState));
+      },
+      setSearchText(query: string) {
+        mutate((currentState) => setSearchText(currentState, query));
+      },
+      finalizeSearch() {
+        mutate((currentState) => finalizeSearch(currentState));
+      },
+      closeSearch() {
+        mutate((currentState) => closeSearch(currentState));
+      },
+      nextSearchMatch() {
+        mutate((currentState) => nextSearchMatch(currentState));
+      },
+      prevSearchMatch() {
+        mutate((currentState) => prevSearchMatch(currentState));
       },
     },
   };

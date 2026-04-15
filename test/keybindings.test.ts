@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
-import { getVisibleCommands, type CommandController } from "../src/commands/definitions.ts";
+import { commandDefinitions, type CommandController } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
-import { createInitialState } from "../src/state/store.ts";
+import { createInitialState, draftConfigs, startCommandDraft } from "../src/state/store.ts";
 import { dispatchGlobalKey } from "../src/ui/keybindings.ts";
 
 function createState(): AppState {
@@ -54,6 +54,9 @@ function createController(calls: string[]): CommandController {
     commit: () => calls.push("commit"),
     describe: () => calls.push("describe"),
     showDiff: () => calls.push("showDiff"),
+    openSearch: () => calls.push("openSearch"),
+    nextSearchMatch: () => calls.push("nextSearchMatch"),
+    prevSearchMatch: () => calls.push("prevSearchMatch"),
   };
 }
 
@@ -64,7 +67,7 @@ test("dispatchGlobalKey routes ? to the shortcut panel toggle", () => {
   const handled = dispatchGlobalKey({
     normalizedKey: "?",
     state,
-    visibleCommands: getVisibleCommands(state),
+    commands: commandDefinitions,
     controller: createController(calls),
   });
 
@@ -79,7 +82,7 @@ test("dispatchGlobalKey routes escape to cancelOrBlur", () => {
   const handled = dispatchGlobalKey({
     normalizedKey: "escape",
     state,
-    visibleCommands: getVisibleCommands(state),
+    commands: commandDefinitions,
     controller: createController(calls),
   });
 
@@ -94,7 +97,7 @@ test("dispatchGlobalKey preserves h as collapse", () => {
   const handled = dispatchGlobalKey({
     normalizedKey: "h",
     state,
-    visibleCommands: getVisibleCommands(state),
+    commands: commandDefinitions,
     controller: createController(calls),
   });
 
@@ -112,7 +115,7 @@ test("dispatchGlobalKey ignores ? in revset mode", () => {
   const handled = dispatchGlobalKey({
     normalizedKey: "?",
     state,
-    visibleCommands: getVisibleCommands(state),
+    commands: commandDefinitions,
     controller: createController(calls),
   });
 
@@ -127,7 +130,7 @@ test("dispatchGlobalKey routes n and e to immediate revision actions", () => {
   const newHandled = dispatchGlobalKey({
     normalizedKey: "n",
     state,
-    visibleCommands: getVisibleCommands(state),
+    commands: commandDefinitions,
     controller: createController(newCalls),
   });
 
@@ -138,10 +141,127 @@ test("dispatchGlobalKey routes n and e to immediate revision actions", () => {
   const editHandled = dispatchGlobalKey({
     normalizedKey: "e",
     state,
-    visibleCommands: getVisibleCommands(state),
+    commands: commandDefinitions,
     controller: createController(editCalls),
   });
 
   expect(editHandled).toBeTrue();
   expect(editCalls).toEqual(["editRevision"]);
+});
+
+test("dispatchGlobalKey routes s to rebase-descendants in rebase mode", () => {
+  const calls: string[] = [];
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "s",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["toggleRebaseDescendants"]);
+});
+
+test("dispatchGlobalKey does not route s in normal mode", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "s",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeFalse();
+  expect(calls).toEqual([]);
+});
+
+test("dispatchGlobalKey handles escape even in input modes", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "command",
+    commandBar: { text: "log", manual: true },
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "escape",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["cancelOrBlur"]);
+});
+
+test("dispatchGlobalKey routes / to openSearch in normal mode", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "/",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["openSearch"]);
+});
+
+test("dispatchGlobalKey passes keys through in search mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "search",
+    searchQuery: "",
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "a",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeFalse();
+  expect(calls).toEqual([]);
+});
+
+test("dispatchGlobalKey routes n to search-next when searchQuery is set", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    searchQuery: "something",
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "n",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["nextSearchMatch"]);
+});
+
+test("dispatchGlobalKey routes n to new-revision when searchQuery is empty", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "n",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["startNewRevision"]);
 });

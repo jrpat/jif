@@ -2,7 +2,7 @@ import { TextAttributes, CliRenderEvents, type ScrollBoxRenderable } from "@open
 import { For, Show, createEffect, createMemo, createRenderEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { useKeyboard, useRenderer } from "@opentui/solid";
-import { getVisibleCommands, type CommandController } from "../commands/definitions.ts";
+import { commandDefinitions, type CommandController } from "../commands/definitions.ts";
 import { resolveAppConfig, type AppConfig, type ResolvedAppConfig } from "../config/index.ts";
 import { HistoryStore, matchHistoryEntries } from "../history/store.ts";
 import type { AppStore } from "../state/appStore.ts";
@@ -19,6 +19,7 @@ import {
   isFileNavigationActive,
   getOperationAffectedRevisionIds,
   getSelectedRevisionIds,
+  revisionMatchesSearch,
   type CommandSegment,
 } from "../state/store.ts";
 import { logShortcutDebug } from "../debug.ts";
@@ -59,6 +60,7 @@ import {
 } from "./shortcutPanel.ts";
 import { normalizeKey } from "./keyboard.ts";
 import { dispatchGlobalKey } from "./keybindings.ts";
+import { getActiveMode, getCommandsForMode, defaultKeymap } from "../modes.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { getStatusMessageDismissDelay } from "./statusMessages.ts";
@@ -312,6 +314,15 @@ export function JifView(props: {
         }
       })();
     },
+    openSearch() {
+      store.actions.openSearch();
+    },
+    nextSearchMatch() {
+      store.actions.nextSearchMatch();
+    },
+    prevSearchMatch() {
+      store.actions.prevSearchMatch();
+    },
   };
 
   const commandText = createMemo(() => {
@@ -330,7 +341,10 @@ export function JifView(props: {
     store.state.selectedRevisionIds;
     return getDisplayedCommandSegments(store.state);
   });
-  const visibleCommands = createMemo(() => getVisibleCommands(store.state));
+  const activeMode = createMemo(() => getActiveMode(store.state));
+  const visibleCommands = createMemo(() =>
+    getCommandsForMode(activeMode(), defaultKeymap, commandDefinitions)
+  );
   const shortcutCommands = createMemo(() =>
     getShortcutPanelCommands(store.state, visibleCommands())
   );
@@ -349,17 +363,23 @@ export function JifView(props: {
   const [promptSurfaceHeight, setPromptSurfaceHeight] = createSignal(3);
   const showsCommandPrompt = createMemo(() => store.state.focusMode === "command");
   const showsRevsetPrompt = createMemo(() => store.state.focusMode === "revset");
+  const showsSearchPrompt = createMemo(() =>
+    !showsCommandPrompt() && !showsRevsetPrompt() &&
+    (store.state.focusMode === "search" || store.state.searchQuery !== "")
+  );
   const showsShortcutPanel = createMemo(() =>
-    !showsCommandPrompt() && !showsRevsetPrompt() && store.state.shortcutPanelExpanded
+    !showsCommandPrompt() && !showsRevsetPrompt() && !showsSearchPrompt() &&
+    store.state.shortcutPanelExpanded
   );
   const showsCommandPreview = createMemo(() =>
     !showsCommandPrompt() &&
     !showsRevsetPrompt() &&
+    !showsSearchPrompt() &&
     !showsShortcutPanel() &&
     commandSegments() !== null
   );
   const bottomSurfaceHeight = createMemo(() => {
-    if (showsCommandPrompt() || showsRevsetPrompt() || showsCommandPreview()) {
+    if (showsCommandPrompt() || showsRevsetPrompt() || showsSearchPrompt() || showsCommandPreview()) {
       return promptSurfaceHeight();
     }
 
@@ -398,7 +418,7 @@ export function JifView(props: {
     const handled = dispatchGlobalKey({
       normalizedKey,
       state,
-      visibleCommands: visibleCommands(),
+      commands: commandDefinitions,
       controller,
     });
     if (!handled) {
@@ -497,6 +517,7 @@ export function JifView(props: {
                   selectedRevisionIds={getSelectedRevisionIds(store.state)}
                   expandedRevisionId={getExpandedRevision(store.state)?.changeId ?? null}
                   commandTargetId={getCommandTargetRevisionId(store.state)}
+                  searchQuery={store.state.searchQuery}
                 />
               )}
             </For>
@@ -542,6 +563,15 @@ export function JifView(props: {
             onHeightChange={setPromptSurfaceHeight}
           />
         </Show>
+        <Show when={showsSearchPrompt()}>
+          <SearchPrompt
+            store={store}
+            config={config}
+            focused={store.state.focusMode === "search"}
+            searchQuery={store.state.searchQuery}
+            onHeightChange={setPromptSurfaceHeight}
+          />
+        </Show>
         <Show when={showsCommandPreview()}>
           <CommandPreview
             config={config}
@@ -549,12 +579,12 @@ export function JifView(props: {
             onHeightChange={setPromptSurfaceHeight}
           />
         </Show>
-        <Show when={!showsCommandPrompt() && !showsRevsetPrompt() && !showsCommandPreview()}>
+        <Show when={!showsCommandPrompt() && !showsRevsetPrompt() && !showsSearchPrompt() && !showsCommandPreview()}>
           <StatusArea
             shortcutSummary={shortcutSummary()}
             shortcutGrid={shortcutGrid()}
             expanded={showsShortcutPanel()}
-            currentModeLabel={shortcutModeLabel(store.state.focusMode)}
+            currentModeLabel={shortcutModeLabel(activeMode())}
             panelBodyHeight={shortcutPanelBodyHeight()}
             config={config}
           />
@@ -850,6 +880,57 @@ function CommandPreview(props: {
   );
 }
 
+function SearchPrompt(props: {
+  store: AppStore;
+  config: ResolvedAppConfig;
+  focused: boolean;
+  searchQuery: string;
+  onHeightChange?: (height: number) => void;
+}) {
+  const { store, config } = props;
+  const colors = config.colorScheme.semanticColors;
+
+  useKeyboard((event) => {
+    if (event.eventType === "release") {
+      return;
+    }
+
+    if (event.name === "return") {
+      event.preventDefault();
+      store.actions.finalizeSearch();
+      return;
+    }
+  }, { release: true });
+
+  return (
+    <PromptShell
+      config={config}
+      items={[]}
+      selectedIndex={null}
+      flow="bottom-to-top"
+      focused={props.focused}
+      onHeightChange={props.onHeightChange}
+    >
+      <box width={2} flexDirection="row" flexShrink={0}>
+        <text fg={colors.textPrimary}>/ </text>
+      </box>
+      <input
+        flexGrow={1}
+        value={props.searchQuery}
+        placeholder="search"
+        focused={props.focused}
+        textColor={colors.textPrimary}
+        focusedTextColor={colors.textPrimary}
+        placeholderColor={colors.textQuaternary}
+        cursorColor={colors.chromeBorderFocus}
+        onInput={(value) => {
+          store.actions.setSearchText(value);
+        }}
+      />
+    </PromptShell>
+  );
+}
+
 export function RevisionItem(props: {
   state: AppStore["state"];
   revision: RevisionSummary;
@@ -861,6 +942,7 @@ export function RevisionItem(props: {
   selectedRevisionIds: ReadonlySet<string>;
   expandedRevisionId: string | null;
   commandTargetId: string | null;
+  searchQuery: string;
 }) {
   const colors = () => props.config.colorScheme.semanticColors;
   const affectedIds = createMemo(() => getOperationAffectedRevisionIds(props.state));
@@ -870,6 +952,7 @@ export function RevisionItem(props: {
   const anyExpanded = () => props.expandedRevisionId !== null;
   const isAffected = () => affectedIds().has(props.revision.changeId);
   const isCommandTarget = () => props.commandTargetId === props.revision.changeId;
+  const isSearchMatch = () => revisionMatchesSearch(props.revision, props.searchQuery);
   const rowState = createMemo(() =>
     getRevisionRowState(props.revision.changeId, props.focusedRevisionId, props.selectedRevisionIds) ?? "default",
   );
@@ -1111,7 +1194,11 @@ export function RevisionItem(props: {
                     <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
                   </box>
                   <box width="100%" flexDirection="row">
-                    <text fg={descriptionColor()} truncate>
+                    <text
+                      fg={descriptionColor()}
+                      truncate
+                      attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
+                    >
                       {props.revision.description}
                     </text>
                   </box>
@@ -1137,6 +1224,7 @@ export function RevisionItem(props: {
                       fg={descriptionColor()}
                       wrapMode="none"
                       truncate
+                      attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
                     >
                       {props.revision.description}
                     </text>

@@ -53,6 +53,7 @@ async function renderRevisionStack(focusedRevisionId: string | null) {
             selectedRevisionIds={new Set()}
             expandedRevisionId={null}
             commandTargetId={null}
+            searchQuery=""
           />
         )}
       </For>

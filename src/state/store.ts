@@ -109,6 +109,7 @@ export function createInitialState(
     useShortFlags: options?.useShortFlags ?? true,
     condensedLayout: options?.condensedLayout ?? false,
     revsetQuery: "",
+    searchQuery: "",
   };
 }
 
@@ -368,7 +369,89 @@ export function cancelCommandDraft(state: AppState): AppState {
   };
 }
 
+export function openSearch(state: AppState): AppState {
+  return { ...state, focusMode: "search", searchQuery: "" };
+}
+
+export function setSearchText(state: AppState, query: string): AppState {
+  if (query === "") {
+    return { ...state, searchQuery: "" };
+  }
+
+  const firstMatchIndex = state.revisions.findIndex((r) =>
+    revisionMatchesSearch(r, query),
+  );
+
+  return {
+    ...state,
+    searchQuery: query,
+    focusedRevisionIndex:
+      firstMatchIndex >= 0 ? firstMatchIndex : state.focusedRevisionIndex,
+  };
+}
+
+export function finalizeSearch(state: AppState): AppState {
+  return { ...state, focusMode: getBrowseFocusMode(state) };
+}
+
+export function closeSearch(state: AppState): AppState {
+  return {
+    ...state,
+    searchQuery: "",
+    focusMode:
+      state.focusMode === "search" ? getBrowseFocusMode(state) : state.focusMode,
+  };
+}
+
+export function nextSearchMatch(state: AppState): AppState {
+  const matches = getSearchMatchIndices(state);
+  if (matches.length === 0) return state;
+
+  const next =
+    matches.find((i) => i > state.focusedRevisionIndex) ?? matches[0]!;
+  return { ...state, focusedRevisionIndex: next };
+}
+
+export function prevSearchMatch(state: AppState): AppState {
+  const matches = getSearchMatchIndices(state);
+  if (matches.length === 0) return state;
+
+  let prev: number | undefined;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    if (matches[i]! < state.focusedRevisionIndex) {
+      prev = matches[i];
+      break;
+    }
+  }
+  return { ...state, focusedRevisionIndex: prev ?? matches[matches.length - 1]! };
+}
+
+export function revisionMatchesSearch(
+  revision: RevisionSummary,
+  query: string,
+): boolean {
+  if (query === "") return false;
+  const lowerQuery = query.toLowerCase();
+  return (
+    revision.changeId.toLowerCase().includes(lowerQuery) ||
+    revision.description.toLowerCase().includes(lowerQuery) ||
+    revision.bookmarks.some((b) => b.toLowerCase().includes(lowerQuery)) ||
+    revision.workspaces.some((w) => w.toLowerCase().includes(lowerQuery))
+  );
+}
+
+export function getSearchMatchIndices(state: AppState): number[] {
+  if (state.searchQuery === "") return [];
+  return state.revisions
+    .map((r, i) => (revisionMatchesSearch(r, state.searchQuery) ? i : -1))
+    .filter((i) => i >= 0);
+}
+
 export function cancelOrBlurState(state: AppState): AppState {
+  if (state.focusMode === "search" || state.searchQuery !== "") {
+    return closeSearch(state);
+  }
+
   const dismissable = state.statusMessages.find((m) => m.level !== "info");
   if (dismissable) {
     return dismissStatusMessage(state, dismissable.id);

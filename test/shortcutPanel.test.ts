@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
-import { getVisibleCommands, type CommandDefinition } from "../src/commands/definitions.ts";
+import { commandDefinitions, type CommandDefinition } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
 import { createInitialState, draftConfigs, openFocusedRevision, startCommandDraft } from "../src/state/store.ts";
+import { getActiveMode, getCommandsForMode, defaultKeymap } from "../src/modes.ts";
 import {
   buildShortcutEntries,
   buildShortcutGrid,
@@ -159,13 +160,15 @@ test("computeShortcutPanelHeight follows the adaptive terminal-height rule", () 
 });
 
 test("shortcutModeLabel formats the current mode for the panel header", () => {
-  expect(shortcutModeLabel("revisions")).toBe("Revisions");
+  expect(shortcutModeLabel("normal")).toBe("Revisions");
   expect(shortcutModeLabel("files")).toBe("Files");
   expect(shortcutModeLabel("command")).toBe("Command");
+  expect(shortcutModeLabel("rebase")).toBe("Rebase");
+  expect(shortcutModeLabel("squash")).toBe("Squash");
 });
 
 test("getShortcutPanelCommands includes immediate revision actions in revision mode", () => {
-  const commands = getShortcutPanelCommands(createState(), getVisibleCommands(createState()));
+  const commands = getShortcutPanelCommands(createState(), getCommandsForMode(getActiveMode(createState()), defaultKeymap, commandDefinitions));
   const ids = commands.map((command) => command.id);
 
   expect(ids).toContain("new-revision");
@@ -176,7 +179,7 @@ test("getShortcutPanelCommands narrows rebase draft shortcuts to draft-relevant 
   let state = createState();
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
 
-  const commands = getShortcutPanelCommands(state, getVisibleCommands(state));
+  const commands = getShortcutPanelCommands(state, getCommandsForMode(getActiveMode(state), defaultKeymap, commandDefinitions));
   const ids = commands.map((command) => command.id);
 
   expect(ids).toContain("move-down");
@@ -195,7 +198,7 @@ test("getShortcutPanelCommands narrows file mode shortcuts to file-relevant acti
   let state = createState();
   state = openFocusedRevision(state);
 
-  const commands = getShortcutPanelCommands(state, getVisibleCommands(state));
+  const commands = getShortcutPanelCommands(state, getCommandsForMode(getActiveMode(state), defaultKeymap, commandDefinitions));
   const ids = commands.map((command) => command.id);
 
   expect(ids).toContain("restore");

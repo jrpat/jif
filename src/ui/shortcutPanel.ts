@@ -1,5 +1,6 @@
 import type { CommandDefinition } from "../commands/definitions.ts";
-import type { AppState, FocusMode } from "../domain/types.ts";
+import type { AppState } from "../domain/types.ts";
+import type { Mode } from "../modes.ts";
 import { commandCanExecute, getExpandedRevision, getFocusedRevision } from "../state/store.ts";
 
 const MODIFIER_PREFIXES = new Set([
@@ -151,16 +152,24 @@ export function computeShortcutPanelHeight(terminalHeight: number): number {
   return Math.max(1, Math.min(20, Math.floor(safeHeight / 2)));
 }
 
-export function shortcutModeLabel(mode: FocusMode): string {
+export function shortcutModeLabel(mode: Mode): string {
   switch (mode) {
-    case "revisions":
+    case "normal":
       return "Revisions";
     case "files":
       return "Files";
+    case "rebase":
+      return "Rebase";
+    case "squash":
+      return "Squash";
     case "command":
       return "Command";
     case "revset":
       return "Revset";
+    case "search":
+      return "Search";
+    case "search-results":
+      return "Search Results";
   }
 }
 

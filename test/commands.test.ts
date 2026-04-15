@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
-import { getTextCommand } from "../src/commands/definitions.ts";
+import { commandDefinitions } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
 import { createInitialState, draftConfigs, startCommandDraft } from "../src/state/store.ts";
+import { resolveCommand, getActiveMode, defaultKeymap } from "../src/modes.ts";
 
 function createState(): AppState {
   return {
@@ -26,95 +27,87 @@ function createState(): AppState {
   };
 }
 
-test("getTextCommand resolves vim navigation when command bar is unfocused", () => {
+function resolveForState(key: string, state: AppState): string | null {
+  const mode = getActiveMode(state);
+  const commandId = resolveCommand(mode, key);
+  if (!commandId) return null;
+
+  const command = commandDefinitions.find((c) => c.id === commandId);
+  if (!command) return null;
+  if (command.canExecute && !command.canExecute(state)) return null;
+
+  return commandId;
+}
+
+test("resolveCommand resolves vim navigation in normal mode", () => {
   const state = createState();
 
-  expect(getTextCommand("j", state)?.id).toBe("move-down");
-  expect(getTextCommand("k", state)?.id).toBe("move-up");
-  expect(getTextCommand("h", state)?.id).toBe("collapse");
-  expect(getTextCommand("l", state)?.id).toBe("expand");
-  expect(getTextCommand("q", state)?.id).toBe("quit");
-  expect(getTextCommand("left", state)?.id).toBe("collapse");
+  expect(resolveForState("j", state)).toBe("move-down");
+  expect(resolveForState("k", state)).toBe("move-up");
+  expect(resolveForState("h", state)).toBe("collapse");
+  expect(resolveForState("l", state)).toBe("expand");
+  expect(resolveForState("q", state)).toBe("quit");
+  expect(resolveForState("left", state)).toBe("collapse");
 });
 
-test("getTextCommand respects command visibility state", () => {
-  const focusedState = {
+test("resolveCommand returns null for unbound keys", () => {
+  const state = createState();
+  expect(resolveForState("z", state)).toBeNull();
+});
+
+test("resolveCommand returns null in command mode for browse keys", () => {
+  const state: AppState = {
     ...createState(),
-    focusMode: "command" as const,
-    commandBar: {
-      ...createState().commandBar,
-      manual: true,
-    },
+    focusMode: "command",
+    commandBar: { text: "", manual: true },
   };
-  expect(getTextCommand("j", focusedState)).toBeNull();
+
+  expect(resolveForState("j", state)).toBeNull();
+  expect(resolveForState("k", state)).toBeNull();
+});
+
+test("rebase-descendants resolves in rebase mode but not normal mode", () => {
+  expect(resolveForState("s", createState())).toBeNull();
 
   const rebaseState = startCommandDraft(createState(), draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
-  expect(getTextCommand("s", createState())).toBeNull();
-  expect(getTextCommand("s", rebaseState)?.id).toBe("rebase-descendants");
+  expect(resolveForState("s", rebaseState)).toBe("rebase-descendants");
 });
 
-test("undo and redo commands resolve in normal mode but not command mode", () => {
+test("undo and redo resolve in normal mode", () => {
   const state = createState();
-  expect(getTextCommand("u", state)?.id).toBe("undo");
-  expect(getTextCommand("U", state)?.id).toBe("redo");
-
-  const commandState: AppState = {
-    ...state,
-    focusMode: "command",
-    commandBar: { ...state.commandBar, manual: true },
-  };
-  expect(getTextCommand("u", commandState)).toBeNull();
-  expect(getTextCommand("U", commandState)).toBeNull();
+  expect(resolveForState("u", state)).toBe("undo");
+  expect(resolveForState("U", state)).toBe("redo");
 });
 
 test("short flags and condensed layout use - and _ respectively", () => {
   const state = createState();
-
-  expect(getTextCommand("-", state)?.id).toBe("toggle-flags");
-  expect(getTextCommand("_", state)?.id).toBe("toggle-condensed-layout");
-
-  const commandState: AppState = {
-    ...state,
-    focusMode: "command",
-    commandBar: { ...state.commandBar, manual: true },
-  };
-  expect(getTextCommand("-", commandState)).toBeNull();
-  expect(getTextCommand("_", commandState)).toBeNull();
+  expect(resolveForState("-", state)).toBe("toggle-flags");
+  expect(resolveForState("_", state)).toBe("toggle-condensed-layout");
 });
 
-test("shortcut panel toggle uses ? outside text-entry modes", () => {
+test("shortcut panel toggle uses ? in normal mode", () => {
   const state = createState();
-  expect(getTextCommand("?", state)?.id).toBe("shortcut-panel");
+  expect(resolveForState("?", state)).toBe("shortcut-panel");
 
-  const commandState: AppState = {
-    ...state,
-    focusMode: "command",
-    commandBar: { ...state.commandBar, manual: true },
-  };
-  expect(getTextCommand("?", commandState)).toBeNull();
-
-  const revsetState: AppState = {
-    ...state,
-    focusMode: "revset",
-  };
-  expect(getTextCommand("?", revsetState)).toBeNull();
+  const revsetState: AppState = { ...state, focusMode: "revset" };
+  expect(resolveForState("?", revsetState)).toBeNull();
 });
 
-test("new and edit commands resolve in revision mode only", () => {
+test("new and edit resolve in normal mode only", () => {
   const state = createState();
-  expect(getTextCommand("n", state)?.id).toBe("new-revision");
-  expect(getTextCommand("e", state)?.id).toBe("edit-revision");
+  expect(resolveForState("n", state)).toBe("new-revision");
+  expect(resolveForState("e", state)).toBe("edit-revision");
 
   const commandState: AppState = {
     ...state,
     focusMode: "command",
-    commandBar: { ...state.commandBar, manual: true },
+    commandBar: { text: "", manual: true },
   };
-  expect(getTextCommand("n", commandState)).toBeNull();
-  expect(getTextCommand("e", commandState)).toBeNull();
+  expect(resolveForState("n", commandState)).toBeNull();
+  expect(resolveForState("e", commandState)).toBeNull();
 });
 
-test("new and edit commands do not resolve for elided revisions", () => {
+test("canExecute blocks commands on elided revisions", () => {
   const state: AppState = {
     ...createState(),
     revisions: [
@@ -135,6 +128,30 @@ test("new and edit commands do not resolve for elided revisions", () => {
     ],
   };
 
-  expect(getTextCommand("n", state)).toBeNull();
-  expect(getTextCommand("e", state)).toBeNull();
+  expect(resolveForState("n", state)).toBeNull();
+  expect(resolveForState("e", state)).toBeNull();
+  expect(resolveForState("h", state)).toBeNull();
+  // expand still works (controller handles elided expansion)
+  expect(resolveForState("l", state)).toBe("expand");
+});
+
+test("mode inheritance lets files mode use normal keys", () => {
+  const state: AppState = {
+    ...createState(),
+    focusMode: "files",
+    expandedRevisionId: "aaaaaaaa",
+  };
+
+  // Inherited from normal
+  expect(resolveForState("j", state)).toBe("move-down");
+  expect(resolveForState("k", state)).toBe("move-up");
+  expect(resolveForState("?", state)).toBe("shortcut-panel");
+
+  // Overridden in files
+  expect(resolveForState("r", state)).toBe("restore");
+  expect(resolveForState(" ", state)).toBe("toggle-file-selection");
+});
+
+test("_global escape binding resolves regardless of mode", () => {
+  expect(defaultKeymap._global["escape"]).toBe("cancel");
 });
