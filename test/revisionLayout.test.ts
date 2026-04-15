@@ -43,7 +43,7 @@ test("expanded layout uses direct two-row graph geometry", () => {
 });
 
 test("compact layout folds the first two graph rows and overlays the target chip", () => {
-  const revision = createRevision();
+  const revision = createRevision({ graphRows: ["@  ", "│"] });
   const layout = buildRevisionLayoutSpec(revision, {
     mode: "compact",
     isCommandTarget: true,
@@ -59,6 +59,20 @@ test("compact layout folds the first two graph rows and overlays the target chip
     leftOffset: revision.changeId.length + 1,
     text: "onto",
   });
+});
+
+test("compact layout preserves a second graph row when it carries branch topology", () => {
+  const layout = buildRevisionLayoutSpec(
+    createRevision({ graphRows: ["│ ○  ", "├─╯"] }),
+    {
+      mode: "compact",
+      isCommandTarget: false,
+      badgeText: "onto",
+    },
+  );
+
+  expect(layout.headerRowCount).toBe(1);
+  expect(layout.visibleGraphMode).toBe("keep-second-row");
 });
 
 test("compact layout keeps chip metadata empty when there are no side chips", () => {

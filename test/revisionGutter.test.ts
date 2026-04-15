@@ -3,8 +3,10 @@ import {
   buildRevisionGutterPlan,
   buildCondensedGraphLine,
   deriveGraphContinuationLine,
+  measureBoxedGraphWidth,
   measureCoreGraphWidth,
   measureGutterPlanWidth,
+  shouldCondenseGraphRows,
 } from "../src/ui/revisionGutter.ts";
 
 test("deriveGraphContinuationLine turns node markers into continuations", () => {
@@ -42,26 +44,17 @@ test("buildCondensedGraphLine keeps single-line graphs unchanged", () => {
   expect(buildCondensedGraphLine(["○ │"])).toBe("○ │");
 });
 
-test("buildCondensedGraphLine folds the default jj branch row into the node row", () => {
-  expect(buildCondensedGraphLine(["│ ○  ", "├─╯"])).toBe("├─○");
+test("shouldCondenseGraphRows allows folding only for pure continuation rows", () => {
+  expect(shouldCondenseGraphRows(["@  ", "│"])).toBeTrue();
+  expect(shouldCondenseGraphRows(["@  ", "|"])).toBeTrue();
+  expect(shouldCondenseGraphRows(["○ │", "│ │"])).toBeTrue();
+  expect(shouldCondenseGraphRows(["│ ○  ", "├─╯"])).toBeFalse();
+  expect(shouldCondenseGraphRows(["○    ", "├─╮"])).toBeFalse();
 });
 
-test("buildCondensedGraphLine folds narrow branch-off rows into the title row", () => {
-  expect(buildCondensedGraphLine(["○    ", "├─╮"])).toBe("○─╮");
-});
-
-test("buildCondensedGraphLine folds wide branch-off rows into the title row", () => {
-  expect(buildCondensedGraphLine(["○ │    ", "├───╮"])).toBe("○───╮");
-});
-
-test("buildCondensedGraphLine folds merge rows into the title row", () => {
-  expect(buildCondensedGraphLine(["○ │ │  ", "├─╯ │"])).toBe("○─╯ │");
-  expect(buildCondensedGraphLine(["○   │  ", "├───╯"])).toBe("○───╯");
-});
-
-test("buildRevisionGutterPlan folds the first two graph rows in compact mode", () => {
+test("buildRevisionGutterPlan folds only continuation rows in compact mode", () => {
   const plan = buildRevisionGutterPlan({
-    graphRows: ["│ ○  ", "├─╯", "│"],
+    graphRows: ["@  ", "│", "│"],
     baseGraphRowCount: 2,
     visibleGraphMode: "fold-first-two",
     detailRowCount: 0,
@@ -71,8 +64,58 @@ test("buildRevisionGutterPlan folds the first two graph rows in compact mode", (
     hasNextRevision: true,
   });
 
-  expect(plan.title).toBe("├─○");
+  expect(plan.title).toBe("@");
   expect(plan.tail).toEqual(["│"]);
+});
+
+test("buildRevisionGutterPlan keeps only the elbow spacer row in compact branch mode", () => {
+  const plan = buildRevisionGutterPlan({
+    graphRows: ["│ ○  ", "├─╯", "│"],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "keep-second-row",
+    detailRowCount: 0,
+    ownsTop: false,
+    ownsBottom: false,
+    previousGraphBottom: null,
+    hasNextRevision: true,
+  });
+
+  expect(plan.title).toBe("│ ○");
+  expect(plan.subtitle).toBe("│ │");
+  expect(plan.tail).toEqual(["├─╯"]);
+});
+
+test("buildRevisionGutterPlan keeps inline dividers for compact branch spacer rows", () => {
+  const plan = buildRevisionGutterPlan({
+    graphRows: ["○  ", "├─╯"],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "keep-second-row",
+    detailRowCount: 0,
+    ownsTop: true,
+    ownsBottom: false,
+    previousGraphBottom: "│",
+    hasNextRevision: true,
+  });
+
+  expect(plan.topDivider).toBe("│");
+  expect(plan.bottomDivider).toBeNull();
+});
+
+test("buildRevisionGutterPlan keeps boxed-row continuation for compact branch detail rows", () => {
+  const plan = buildRevisionGutterPlan({
+    graphRows: ["│ ○  ", "├─╯"],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "keep-second-row",
+    detailRowCount: 2,
+    ownsTop: true,
+    ownsBottom: true,
+    previousGraphBottom: "│ │",
+    hasNextRevision: true,
+  });
+
+  expect(plan.topDivider).toBe("│ │");
+  expect(plan.detail).toEqual(["│ │", "│ │"]);
+  expect(plan.bottomDivider).toBe("│ │");
 });
 
 test("buildRevisionGutterPlan keeps a vertical directly above a node on divider rows", () => {
@@ -162,6 +205,20 @@ test("measureCoreGraphWidth returns the max width of graphRows", () => {
   expect(measureCoreGraphWidth(["○ │", "│ │"])).toBe(3);
   expect(measureCoreGraphWidth(["│ │ ○  ", "│ ├─╯"])).toBe(5);
   expect(measureCoreGraphWidth(["○  "])).toBe(1);
+});
+
+test("measureBoxedGraphWidth excludes the external elbow spacer row", () => {
+  expect(measureBoxedGraphWidth({
+    graphRows: ["○  ", "├─╯"],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "keep-second-row",
+  })).toBe(1);
+
+  expect(measureBoxedGraphWidth({
+    graphRows: ["│ ○  ", "├─╯"],
+    baseGraphRowCount: 2,
+    visibleGraphMode: "keep-second-row",
+  })).toBe(3);
 });
 
 test("measureGutterPlanWidth includes divider widths from neighbors", () => {

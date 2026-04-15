@@ -368,6 +368,34 @@ export function cancelCommandDraft(state: AppState): AppState {
   };
 }
 
+export function cancelOrBlurState(state: AppState): AppState {
+  if (state.statusMessages.length > 0) {
+    return dismissStatusMessage(state);
+  }
+
+  if (state.focusMode === "command") {
+    return cancelCommandState(state);
+  }
+
+  if (state.shortcutPanelExpanded) {
+    return closeShortcutPanel(state);
+  }
+
+  if (state.commandDraft !== null) {
+    return cancelCommandDraft(state);
+  }
+
+  if (state.selectedRevisionIds.length > 0) {
+    return clearRevisionSelection(state);
+  }
+
+  if (state.focusMode === "files") {
+    return closeFocusedRevision(state);
+  }
+
+  return state;
+}
+
 export function clearRevisionSelection(state: AppState): AppState {
   return {
     ...state,

@@ -36,6 +36,35 @@ export function measureCoreGraphWidth(graphRows: readonly string[]): number {
   return Math.max(...graphRows.map(measureGraphLineWidth), 1);
 }
 
+export function measureBoxedGraphWidth(options: Readonly<{
+  graphRows: readonly string[];
+  baseGraphRowCount: number;
+  visibleGraphMode: "direct" | "fold-first-two" | "keep-second-row";
+}>): number {
+  const normalizedRows = options.graphRows.map(normalizeGraphLine);
+  const baseRows = normalizedRows.slice(0, options.baseGraphRowCount);
+  const title = options.visibleGraphMode === "fold-first-two"
+    ? buildCondensedGraphLine(baseRows)
+    : (baseRows[0] ?? "");
+  const titleContinuation = deriveGraphContinuationLine(title);
+  const subtitle =
+    options.visibleGraphMode === "keep-second-row"
+      ? titleContinuation
+      : (baseRows[1] ?? titleContinuation);
+  const tail = options.visibleGraphMode === "direct"
+    ? normalizedRows.slice(options.baseGraphRowCount)
+    : options.visibleGraphMode === "keep-second-row"
+      ? []
+      : normalizedRows.slice(Math.min(options.baseGraphRowCount, 2));
+
+  return Math.max(
+    measureGraphLineWidth(title),
+    measureGraphLineWidth(subtitle),
+    ...tail.map(measureGraphLineWidth),
+    1,
+  );
+}
+
 export function measureGutterPlanWidth(plan: RevisionGutterPlan): number {
   return Math.max(
     plan.topDivider !== null ? measureGraphLineWidth(plan.topDivider) : 0,
@@ -66,6 +95,17 @@ export function buildCondensedGraphLine(graphRows: readonly string[]): string {
   return normalizeGraphLine(output.join(""));
 }
 
+export function shouldCondenseGraphRows(graphRows: readonly string[]): boolean {
+  const title = normalizeGraphLine(graphRows[0] ?? "");
+  const subtitle = normalizeGraphLine(graphRows[1] ?? "");
+
+  if (subtitle.length === 0) {
+    return true;
+  }
+
+  return normalizeContinuationGlyphs(subtitle) === normalizeContinuationGlyphs(deriveGraphContinuationLine(title));
+}
+
 export function deriveGraphContinuationLine(graphHead: string): string {
   return normalizeGraphLine(
     [...normalizeGraphLine(graphHead)]
@@ -80,10 +120,14 @@ export function deriveGraphContinuationLine(graphHead: string): string {
   );
 }
 
+function normalizeContinuationGlyphs(graphLine: string): string {
+  return graphLine.replaceAll("|", GRAPH_VERTICAL);
+}
+
 export function buildRevisionGutterPlan(options: Readonly<{
   graphRows: readonly string[];
   baseGraphRowCount: number;
-  visibleGraphMode: "direct" | "fold-first-two";
+  visibleGraphMode: "direct" | "fold-first-two" | "keep-second-row";
   detailRowCount: number;
   ownsTop: boolean;
   ownsBottom: boolean;
@@ -92,22 +136,32 @@ export function buildRevisionGutterPlan(options: Readonly<{
 }>): RevisionGutterPlan {
   const normalizedRows = options.graphRows.map(normalizeGraphLine);
   const baseRows = normalizedRows.slice(0, options.baseGraphRowCount);
-  const tailStart = options.visibleGraphMode === "direct" ? options.baseGraphRowCount : Math.min(options.baseGraphRowCount, 2);
-  const title =
-    options.visibleGraphMode === "fold-first-two"
-      ? buildCondensedGraphLine(baseRows)
-      : (baseRows[0] ?? "");
+  const title = options.visibleGraphMode === "fold-first-two"
+    ? buildCondensedGraphLine(baseRows)
+    : (baseRows[0] ?? "");
   const titleContinuation = deriveGraphContinuationLine(title);
-  const subtitle = baseRows[1] ?? titleContinuation;
-  const tail = normalizedRows.slice(tailStart);
-  const detailContinuation = deriveGraphContinuationLine(normalizedRows.at(-1) ?? title);
+  const subtitle =
+    options.visibleGraphMode === "keep-second-row"
+      ? titleContinuation
+      : (baseRows[1] ?? titleContinuation);
+  const tail = options.visibleGraphMode === "direct"
+    ? normalizedRows.slice(options.baseGraphRowCount)
+    : options.visibleGraphMode === "keep-second-row"
+      ? normalizedRows.slice(1, 2)
+      : normalizedRows.slice(Math.min(options.baseGraphRowCount, 2));
+  const inlineContinuation = options.visibleGraphMode === "keep-second-row"
+    ? titleContinuation
+    : deriveGraphContinuationLine(normalizedRows.at(-1) ?? title);
+  const topDivider = options.ownsTop
+    ? (options.previousGraphBottom !== null ? deriveGraphContinuationLine(options.previousGraphBottom) : "")
+    : null;
 
   return {
-    topDivider: options.ownsTop ? (options.previousGraphBottom !== null ? deriveGraphContinuationLine(options.previousGraphBottom) : "") : null,
+    topDivider,
     title,
     subtitle,
     tail,
-    detail: Array.from({ length: options.detailRowCount }, () => detailContinuation),
-    bottomDivider: options.ownsBottom ? (options.hasNextRevision ? detailContinuation : "") : null,
+    detail: Array.from({ length: options.detailRowCount }, () => inlineContinuation),
+    bottomDivider: options.ownsBottom ? (options.hasNextRevision ? inlineContinuation : "") : null,
   };
 }

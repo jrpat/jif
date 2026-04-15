@@ -75,7 +75,8 @@ export function buildShortcutEntries(
 }
 
 export function buildShortcutSummary(entries: readonly ShortcutEntry[]): string {
-  return entries.map((entry) => `${entry.keyLabel} ${entry.title.toLowerCase()}`).join("   ");
+  void entries;
+  return ": command   ? help   j/k move";
 }
 
 export function buildShortcutGrid(
@@ -94,9 +95,15 @@ export function buildShortcutGrid(
     entries.reduce((maxWidth, entry) => Math.max(maxWidth, entry.keyLabel.length), 0),
   );
 
-  const rows: ShortcutEntry[][] = [];
-  for (let index = 0; index < entries.length; index += columnCount) {
-    rows.push(entries.slice(index, index + columnCount));
+  const rowCount = Math.max(1, Math.ceil(entries.length / columnCount));
+  const rows: ShortcutEntry[][] = Array.from({ length: rowCount }, () => []);
+  for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+    for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+      const entry = entries[columnIndex * rowCount + rowIndex];
+      if (entry) {
+        rows[rowIndex]!.push(entry);
+      }
+    }
   }
 
   return {

@@ -93,7 +93,7 @@ test("buildShortcutSummary creates a collapsed single-line help string", () => {
     ]),
   );
 
-  expect(summary).toBe("? shortcuts   q quit");
+  expect(summary).toBe(": command   ? help   j/k move");
 });
 
 test("buildShortcutSummary uses abbreviated key labels from canonical keys", () => {
@@ -103,7 +103,7 @@ test("buildShortcutSummary uses abbreviated key labels from canonical keys", () 
     ]),
   );
 
-  expect(summary).toBe("esc cancel");
+  expect(summary).toBe(": command   ? help   j/k move");
 });
 
 test("formatShortcutKeyLabel keeps key descriptions to three letters or fewer", () => {
@@ -117,7 +117,7 @@ test("formatShortcutKeyLabel keeps key descriptions to three letters or fewer", 
   expect(formatShortcutKeyLabel("j")).toBe("j");
 });
 
-test("buildShortcutGrid packs entries left to right before wrapping", () => {
+test("buildShortcutGrid packs entries top to bottom before moving right", () => {
   const entries = buildShortcutEntries([
     createCommand("a", "Alpha", ["a"]),
     createCommand("b", "Bravo", ["b"]),
@@ -130,9 +130,9 @@ test("buildShortcutGrid packs entries left to right before wrapping", () => {
 
   expect(grid.columnCount).toBe(2);
   expect(grid.rows.map((row) => row.map((entry) => entry.keyLabel))).toEqual([
-    ["a", "b"],
-    ["c", "d"],
-    ["e"],
+    ["a", "d"],
+    ["b", "e"],
+    ["c"],
   ]);
 });
 

@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import type { AppState } from "../src/domain/types.ts";
 import {
   applyRepositoryData,
+  cancelOrBlurState,
   cancelCommandDraft,
   cancelCommandState,
   clearStatusMessage,
@@ -106,6 +107,18 @@ test("cancelCommandState returns to file navigation when a revision is expanded"
 
   state = cancelCommandState(state);
 
+  expect(state.focusMode).toBe("files");
+  expect(state.expandedRevisionId).toBe("aaaaaaaa");
+});
+
+test("cancelOrBlurState closes the shortcut panel before other browse-mode state", () => {
+  let state = createState();
+  state = openFocusedRevision(state);
+  state = openShortcutPanel(state);
+
+  state = cancelOrBlurState(state);
+
+  expect(state.shortcutPanelExpanded).toBeFalse();
   expect(state.focusMode).toBe("files");
   expect(state.expandedRevisionId).toBe("aaaaaaaa");
 });

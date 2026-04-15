@@ -156,6 +156,19 @@
 {"kind":"writeFile","path":"test/integration.test.ts","content":"export const integrationTests = [\"materialize sample repo\"];\n"}
 {"kind":"jj","args":["describe","-m","test: materialize sample jj repo in integration"]}
 {"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new","main"]}
+{"kind":"writeFile","path":"docs/compact-branch.md","content":"# Compact Branch Fixture\n\nThis branch exists to exercise condensed graph elbows.\n"}
+{"kind":"jj","args":["describe","-m","docs(sample): seed compact branch fixture"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"docs/compact-branch.md","content":"\n- Includes a short linear branch after the integration fixture commit.\n"}
+{"kind":"writeFile","path":"test/compact-branch.test.ts","content":"export const compactBranchCases = [\"keeps elbow rows visible\"];\n"}
+{"kind":"jj","args":["describe","-m","test(sample): add compact branch coverage notes"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"docs/compact-branch.md","content":"- Keeps the branch unmerged so the graph stays simple.\n"}
+{"kind":"appendFile","path":"test/compact-branch.test.ts","content":"compactBranchCases.push(\"stays on its own branch\");\n"}
+{"kind":"jj","args":["describe","-m","docs(sample): keep a simple branch near the top"]}
+{"kind":"jj","args":["bookmark","create","sample/compact-branch"]}
+{"kind":"jj","args":["edit","main"]}
 {"kind":"workspaceAdd","name":"review","destination":"review-workspace","revision":"main","message":"review workspace"}
 {"kind":"appendFile","workspace":"review","path":"docs/architecture.md","content":"\n- Review workspace checks command discoverability.\n"}
 {"kind":"jj","workspace":"review","args":["describe","-m","docs(review): annotate architecture tradeoffs"]}

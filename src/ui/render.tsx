@@ -36,7 +36,7 @@ import {
 } from "./revisionBorders.ts";
 import {
   buildRevisionGutterPlan,
-  measureCoreGraphWidth,
+  measureBoxedGraphWidth,
   measureGutterPlanWidth,
 } from "./revisionGutter.ts";
 import { buildRevisionLayoutSpec, type RevisionSideChip } from "./revisionLayout.ts";
@@ -154,32 +154,7 @@ export function JifView(props: {
       renderer.destroy();
     },
     cancelOrBlur() {
-      const state = store.snapshot();
-
-      if (state.statusMessages.length > 0) {
-        store.actions.dismissStatusMessage();
-        return;
-      }
-
-      if (state.focusMode === "command") {
-        store.actions.cancelCommand();
-        return;
-      }
-
-      if (state.commandDraft !== null) {
-        store.actions.cancelCommandDraft();
-        return;
-      }
-
-      if (state.selectedRevisionIds.length > 0) {
-        store.actions.clearRevisionSelection();
-        return;
-      }
-
-      if (state.focusMode === "files") {
-        store.actions.closeFocusedRevision();
-        return;
-      }
+      store.actions.cancelOrBlur();
     },
     confirm() {
       void executeCurrentCommand();
@@ -321,7 +296,6 @@ export function JifView(props: {
   const shortcutCommands = createMemo(() =>
     getShortcutPanelCommands(store.state, visibleCommands())
   );
-  const visibleEvents = createMemo(() => store.state.eventLog.slice(-3).reverse());
   const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutCommands()));
   const shortcutSummary = createMemo(() => buildShortcutSummary(shortcutEntries()));
   const shortcutGrid = createMemo(() =>
@@ -330,9 +304,33 @@ export function JifView(props: {
   const shortcutPanelHeight = createMemo(() =>
     computeShortcutPanelHeight(terminalSize().height)
   );
-  const canToggleShortcutPanel = createMemo(() =>
-    store.state.focusMode !== "command" && store.state.focusMode !== "revset"
+  const shortcutPanelBodyHeight = createMemo(() =>
+    Math.max(1, Math.min(shortcutGrid().rows.length, Math.max(1, shortcutPanelHeight() - 3)))
   );
+  const shortcutPanelRenderedHeight = createMemo(() => shortcutPanelBodyHeight() + 4);
+  const [promptSurfaceHeight, setPromptSurfaceHeight] = createSignal(3);
+  const showsCommandPrompt = createMemo(() => store.state.focusMode === "command");
+  const showsRevsetPrompt = createMemo(() => store.state.focusMode === "revset");
+  const showsShortcutPanel = createMemo(() =>
+    !showsCommandPrompt() && !showsRevsetPrompt() && store.state.shortcutPanelExpanded
+  );
+  const showsCommandPreview = createMemo(() =>
+    !showsCommandPrompt() &&
+    !showsRevsetPrompt() &&
+    !showsShortcutPanel() &&
+    commandSegments() !== null
+  );
+  const bottomSurfaceHeight = createMemo(() => {
+    if (showsCommandPrompt() || showsRevsetPrompt() || showsCommandPreview()) {
+      return promptSurfaceHeight();
+    }
+
+    if (showsShortcutPanel()) {
+      return shortcutPanelRenderedHeight();
+    }
+
+    return 3;
+  });
 
   createEffect(() => {
     logShortcutDebug("shortcut-panel-state", {
@@ -446,93 +444,102 @@ export function JifView(props: {
 
   return (
     <Show when={ready()}>
-    <box
-      width="100%"
-      height="100%"
-      flexDirection="column"
-      backgroundColor={config.colorScheme.semanticColors.chromeFillOne}
-    >
-      <CommandBar
-        store={store}
-        config={config}
-        workspaceRoot={workspaceRoot()}
-        commandText={commandText()}
-        commandSegments={commandSegments()}
-        onSubmit={(value) => {
-          store.actions.setCommandBarText(value);
-          void executeCurrentCommand(value, { recordHistory: true });
-        }}
-      />
-      <scrollbox
-        ref={logViewport}
+      <box
         width="100%"
-        flexGrow={1}
-        scrollY
-        scrollbarOptions={{
-          trackOptions: {
-            backgroundColor: config.colorScheme.semanticColors.chromeFillThree,
-            foregroundColor: config.colorScheme.semanticColors.chromeScrollbarThumb,
-          },
-        }}
+        height="100%"
+        flexDirection="column"
+        backgroundColor={config.colorScheme.semanticColors.chromeFillOne}
       >
-        <box width="100%" flexDirection="column">
-          <For each={store.state.revisions}>
-            {(revision, index) => (
-              <RevisionItem
-                state={store.state}
-                revision={revision}
-                index={index()}
-                previousRevisionId={store.state.revisions[index() - 1]?.changeId ?? null}
-                nextRevisionId={store.state.revisions[index() + 1]?.changeId ?? null}
-                config={config}
-                focusedRevisionId={getFocusedRevision(store.state)?.changeId ?? null}
-                selectedRevisionIds={getSelectedRevisionIds(store.state)}
-                expandedRevisionId={getExpandedRevision(store.state)?.changeId ?? null}
-                commandTargetId={getCommandTargetRevisionId(store.state)}
-              />
-            )}
-          </For>
-        </box>
-      </scrollbox>
-      <Show when={store.state.focusMode !== "revset"}>
-        <StatusArea
-          events={visibleEvents()}
-          shortcutSummary={shortcutSummary()}
-          shortcutGrid={shortcutGrid()}
-          expanded={store.state.shortcutPanelExpanded}
-          currentModeLabel={shortcutModeLabel(store.state.focusMode)}
-          panelHeight={shortcutPanelHeight()}
-          toggleHint={canToggleShortcutPanel() ? "? close" : null}
-          config={config}
-        />
-      </Show>
-      <Show when={store.state.focusMode === "revset"}>
-        <RevsetInput
-          revsetQuery={store.state.revsetQuery}
-          client={client}
-          config={config}
-          workspaceRoot={workspaceRoot()}
-          onApply={async (query) => {
-            if (workspaceRoot()) {
-              await new HistoryStore(workspaceRoot()!).record("revset-history", query);
-              await new HistoryStore(workspaceRoot()!).saveSetting("active-revset", query);
-            }
-            store.actions.setRevsetQuery(query);
-            store.actions.closeRevsetInput();
-            void refreshRepository(query || undefined);
+        <scrollbox
+          ref={logViewport}
+          width="100%"
+          flexGrow={1}
+          scrollY
+          scrollbarOptions={{
+            trackOptions: {
+              backgroundColor: config.colorScheme.semanticColors.chromeFillThree,
+              foregroundColor: config.colorScheme.semanticColors.chromeScrollbarThumb,
+            },
           }}
-          onCancel={() => {
-            store.actions.closeRevsetInput();
-          }}
+        >
+          <box width="100%" flexDirection="column">
+            <For each={store.state.revisions}>
+              {(revision, index) => (
+                <RevisionItem
+                  state={store.state}
+                  revision={revision}
+                  index={index()}
+                  previousRevisionId={store.state.revisions[index() - 1]?.changeId ?? null}
+                  nextRevisionId={store.state.revisions[index() + 1]?.changeId ?? null}
+                  config={config}
+                  focusedRevisionId={getFocusedRevision(store.state)?.changeId ?? null}
+                  selectedRevisionIds={getSelectedRevisionIds(store.state)}
+                  expandedRevisionId={getExpandedRevision(store.state)?.changeId ?? null}
+                  commandTargetId={getCommandTargetRevisionId(store.state)}
+                />
+              )}
+            </For>
+          </box>
+        </scrollbox>
+        <Show when={showsCommandPrompt()}>
+          <CommandPrompt
+            store={store}
+            config={config}
+            workspaceRoot={workspaceRoot()}
+            commandText={commandText()}
+            onSubmit={(value) => {
+              store.actions.setCommandBarText(value);
+              void executeCurrentCommand(value, { recordHistory: true });
+            }}
+            onHeightChange={setPromptSurfaceHeight}
+          />
+        </Show>
+        <Show when={showsRevsetPrompt()}>
+          <RevsetPrompt
+            revsetQuery={store.state.revsetQuery}
+            client={client}
+            config={config}
+            workspaceRoot={workspaceRoot()}
+            onApply={async (query) => {
+              if (workspaceRoot()) {
+                await new HistoryStore(workspaceRoot()!).record("revset-history", query);
+                await new HistoryStore(workspaceRoot()!).saveSetting("active-revset", query);
+              }
+              store.actions.setRevsetQuery(query);
+              store.actions.closeRevsetInput();
+              void refreshRepository(query || undefined);
+            }}
+            onCancel={() => {
+              store.actions.closeRevsetInput();
+            }}
+            onHeightChange={setPromptSurfaceHeight}
+          />
+        </Show>
+        <Show when={showsCommandPreview()}>
+          <CommandPreview
+            config={config}
+            commandSegments={commandSegments()!}
+            onHeightChange={setPromptSurfaceHeight}
+          />
+        </Show>
+        <Show when={!showsCommandPrompt() && !showsRevsetPrompt() && !showsCommandPreview()}>
+          <StatusArea
+            shortcutSummary={shortcutSummary()}
+            shortcutGrid={shortcutGrid()}
+            expanded={showsShortcutPanel()}
+            currentModeLabel={shortcutModeLabel(store.state.focusMode)}
+            panelBodyHeight={shortcutPanelBodyHeight()}
+            config={config}
+          />
+        </Show>
+        <MessageOverlay
+          messages={store.state.statusMessages}
+          loading={store.state.loading}
+          config={config}
+          bottomInset={bottomSurfaceHeight()}
+          onDismiss={(id) => store.actions.dismissStatusMessage(id)}
         />
-      </Show>
-      <MessageOverlay
-        messages={store.state.statusMessages}
-        loading={store.state.loading}
-        config={config}
-        onDismiss={(id) => store.actions.dismissStatusMessage(id)}
-      />
-    </box>
+      </box>
     </Show>
   );
 
@@ -604,27 +611,72 @@ export function JifView(props: {
   }
 }
 
-function CommandBar(props: {
+function PromptShell(props: {
+  config: ResolvedAppConfig;
+  items: readonly AutocompleteListItem[];
+  selectedIndex: number | null;
+  flow: AutocompleteFlow;
+  focused: boolean;
+  onHeightChange?: (height: number) => void;
+  children: any;
+}) {
+  const colors = props.config.colorScheme.semanticColors;
+  const autocompleteHeight = createMemo(() => Math.min(props.items.length, 10));
+  const totalHeight = createMemo(() => 3 + autocompleteHeight());
+
+  createEffect(() => {
+    props.onHeightChange?.(totalHeight());
+  });
+
+  return (
+    <box
+      width="100%"
+      height={totalHeight()}
+      flexDirection="column"
+    >
+      <Show when={props.items.length > 0}>
+        <AutocompleteList
+          items={props.items}
+          selectedIndex={props.selectedIndex}
+          flow={props.flow}
+          config={props.config}
+        />
+      </Show>
+      <box
+        width="100%"
+        height={3}
+        flexDirection="row"
+        paddingX={1}
+        border
+        borderStyle="single"
+        borderColor={props.focused ? colors.chromeBorderFocus : colors.chromeBorderIdle}
+        backgroundColor={props.focused ? colors.chromeFillTwo : colors.chromeFillOne}
+      >
+        {props.children}
+      </box>
+    </box>
+  );
+}
+
+function CommandPrompt(props: {
   store: AppStore;
   config: ResolvedAppConfig;
   workspaceRoot: string | null;
   commandText: string;
-  commandSegments: readonly CommandSegment[] | null;
   onSubmit: (value: string) => void;
+  onHeightChange?: (height: number) => void;
 }) {
   const { store, config } = props;
   const colors = config.colorScheme.semanticColors;
-  const commandBarFocused = createMemo(() => store.state.focusMode === "command");
-  const showSegments = () => props.commandSegments !== null && !commandBarFocused();
-  const flow: AutocompleteFlow = "top-to-bottom";
+  const flow: AutocompleteFlow = "bottom-to-top";
   const [historyEntries, setHistoryEntries] = createSignal<string[]>([]);
   const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null);
 
   createEffect(() => {
-    const focused = commandBarFocused();
     const workspaceRoot = props.workspaceRoot;
 
-    if (!focused || !workspaceRoot) {
+    if (!workspaceRoot) {
+      setHistoryEntries([]);
       setSelectedIndex(null);
       return;
     }
@@ -637,13 +689,7 @@ function CommandBar(props: {
     setSelectedIndex(null);
   });
 
-  const filteredHistory = createMemo(() => {
-    if (!commandBarFocused() || props.commandSegments !== null) {
-      return [];
-    }
-
-    return matchHistoryEntries(props.commandText, historyEntries());
-  });
+  const filteredHistory = createMemo(() => matchHistoryEntries(props.commandText, historyEntries()));
 
   const autocompleteItems = createMemo<AutocompleteListItem[]>(() =>
     filteredHistory().map((entry) => ({
@@ -651,10 +697,9 @@ function CommandBar(props: {
       text: entry,
     }))
   );
-  const autocompleteHeight = createMemo(() => Math.min(autocompleteItems().length, 10));
 
   useKeyboard((event) => {
-    if (event.eventType === "release" || !commandBarFocused() || props.commandSegments !== null) {
+    if (event.eventType === "release") {
       return;
     }
 
@@ -687,82 +732,74 @@ function CommandBar(props: {
   }, { release: true });
 
   return (
-    <box
-      width="100%"
-      height={3 + autocompleteHeight()}
-      flexDirection="column"
+    <PromptShell
+      config={config}
+      items={autocompleteItems()}
+      selectedIndex={selectedIndex()}
+      flow={flow}
+      focused
+      onHeightChange={props.onHeightChange}
     >
-      <box
-        width="100%"
-        height={3}
-        backgroundColor={
-          commandBarFocused()
-            ? colors.chromeFillTwo
-            : colors.chromeFillOne
-        }
-        flexDirection="column"
-      >
-        <box width="100%" height={1} />
-        <box
-          width="100%"
-          flexDirection="row"
-          backgroundColor={
-            commandBarFocused()
-              ? colors.chromeFillTwo
-              : colors.chromeFillOne
-          }
-        >
-          <box width={4} flexDirection="row" paddingLeft={1}>
-            <text fg={commandBarFocused() ? colors.textPrimary : colors.textTertiary}>jj </text>
-          </box>
-          {showSegments() ? (
-            <box flexGrow={1} flexDirection="row">
-              <For each={props.commandSegments!}>
-                {(segment) => (
-                  <text
-                    fg={segment.style === "selected"
-                      ? colors.rowSelectedAccent
-                      : segment.style === "target"
-                        ? colors.chromeBorderFocus
-                        : segment.style === "placeholder"
-                          ? colors.chromeBorderFocus
-                          : colors.textPrimary}
-                    attributes={segment.style !== "command" ? TextAttributes.BOLD : undefined}
-                  >
-                    {segment.text}
-                  </text>
-                )}
-              </For>
-            </box>
-          ) : (
-            <input
-              ref={(el: any) => el.editorView.setScrollMargin(0)}
-              flexGrow={1}
-              value={props.commandText}
-              placeholder={commandBarFocused() ? "subcommand" : "subcommand (':' to type)"}
-              focused={commandBarFocused()}
-              textColor={colors.textPrimary}
-              focusedTextColor={colors.textPrimary}
-              placeholderColor={commandBarFocused() ? colors.textQuaternary : colors.textTertiary}
-              cursorColor={colors.chromeBorderFocus}
-              onInput={(value) => {
-                store.actions.setCommandBarText(value);
-              }}
-              onSubmit={props.onSubmit as any}
-            />
-          )}
-        </box>
-        <box width="100%" height={1} />
+      <box width={4} flexDirection="row" flexShrink={0}>
+        <text fg={colors.textPrimary}>jj </text>
       </box>
-      <Show when={autocompleteItems().length > 0}>
-        <AutocompleteList
-          items={autocompleteItems()}
-          selectedIndex={selectedIndex()}
-          flow={flow}
-          config={config}
-        />
-      </Show>
-    </box>
+      <input
+        ref={(el: any) => el.editorView.setScrollMargin(0)}
+        flexGrow={1}
+        value={props.commandText}
+        placeholder="subcommand"
+        focused
+        textColor={colors.textPrimary}
+        focusedTextColor={colors.textPrimary}
+        placeholderColor={colors.textQuaternary}
+        cursorColor={colors.chromeBorderFocus}
+        onInput={(value) => {
+          store.actions.setCommandBarText(value);
+        }}
+        onSubmit={props.onSubmit as any}
+      />
+    </PromptShell>
+  );
+}
+
+function CommandPreview(props: {
+  config: ResolvedAppConfig;
+  commandSegments: readonly CommandSegment[];
+  onHeightChange?: (height: number) => void;
+}) {
+  const colors = props.config.colorScheme.semanticColors;
+
+  return (
+    <PromptShell
+      config={props.config}
+      items={[]}
+      selectedIndex={null}
+      flow="bottom-to-top"
+      focused={false}
+      onHeightChange={props.onHeightChange}
+    >
+      <box width={4} flexDirection="row" flexShrink={0}>
+        <text fg={colors.textTertiary}>jj </text>
+      </box>
+      <box flexGrow={1} flexDirection="row">
+        <For each={props.commandSegments}>
+          {(segment) => (
+            <text
+              fg={segment.style === "selected"
+                ? colors.rowSelectedAccent
+                : segment.style === "target"
+                  ? colors.chromeBorderFocus
+                  : segment.style === "placeholder"
+                    ? colors.chromeBorderFocus
+                    : colors.textPrimary}
+              attributes={segment.style !== "command" ? TextAttributes.BOLD : undefined}
+            >
+              {segment.text}
+            </text>
+          )}
+        </For>
+      </box>
+    </PromptShell>
   );
 }
 
@@ -795,16 +832,56 @@ export function RevisionItem(props: {
   const nextRowState = createMemo(() =>
     getRevisionRowState(props.nextRevisionId, props.focusedRevisionId, props.selectedRevisionIds),
   );
-  const coreGraphWidth = createMemo(() =>
-    measureCoreGraphWidth(props.revision.graphRows)
+  const detailRowCount = () => isExpanded() ? Math.max(props.revision.files.length, 1) : 0;
+  const layoutSpec = createMemo(() =>
+    buildRevisionLayoutSpec(props.revision, {
+      mode: props.state.condensedLayout ? "compact" : "expanded",
+      isCommandTarget: isCommandTarget(),
+      badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
+    }),
   );
-  const previousCoreGraphWidth = createMemo(() => {
+  const boxedGraphWidth = createMemo(() =>
+    measureBoxedGraphWidth({
+      graphRows: props.revision.graphRows,
+      baseGraphRowCount: layoutSpec().baseGraphRowCount,
+      visibleGraphMode: layoutSpec().visibleGraphMode,
+    })
+  );
+  const previousBoxedGraphWidth = createMemo(() => {
     const prev = props.index > 0 ? props.state.revisions[props.index - 1] : null;
-    return prev ? measureCoreGraphWidth(prev.graphRows) : null;
+    if (!prev) {
+      return null;
+    }
+
+    const previousLayoutSpec = buildRevisionLayoutSpec(prev, {
+      mode: props.state.condensedLayout ? "compact" : "expanded",
+      isCommandTarget: false,
+      badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
+    });
+
+    return measureBoxedGraphWidth({
+      graphRows: prev.graphRows,
+      baseGraphRowCount: previousLayoutSpec.baseGraphRowCount,
+      visibleGraphMode: previousLayoutSpec.visibleGraphMode,
+    });
   });
-  const nextCoreGraphWidth = createMemo(() => {
+  const nextBoxedGraphWidth = createMemo(() => {
     const next = props.state.revisions[props.index + 1] ?? null;
-    return next ? measureCoreGraphWidth(next.graphRows) : null;
+    if (!next) {
+      return null;
+    }
+
+    const nextLayoutSpec = buildRevisionLayoutSpec(next, {
+      mode: props.state.condensedLayout ? "compact" : "expanded",
+      isCommandTarget: false,
+      badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
+    });
+
+    return measureBoxedGraphWidth({
+      graphRows: next.graphRows,
+      baseGraphRowCount: nextLayoutSpec.baseGraphRowCount,
+      visibleGraphMode: nextLayoutSpec.visibleGraphMode,
+    });
   });
   const effectiveRowState = createMemo((): RevisionRowState => {
     const rs = rowState();
@@ -821,22 +898,31 @@ export function RevisionItem(props: {
     if (rs === "default" && props.nextRevisionId !== null && affectedIds().has(props.nextRevisionId)) return "affected";
     return rs;
   });
+  const usesExternalGraphSpacer = createMemo(() =>
+    layoutSpec().visibleGraphMode === "keep-second-row"
+  );
+  const previousUsesExternalGraphSpacer = createMemo(() => {
+    const previous = props.index > 0 ? props.state.revisions[props.index - 1] : null;
+    if (!previous || !props.state.condensedLayout) {
+      return false;
+    }
+
+    return buildRevisionLayoutSpec(previous, {
+      mode: "compact",
+      isCommandTarget: false,
+      badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
+    }).visibleGraphMode === "keep-second-row";
+  });
+  const sharesTopBorder = createMemo(() => !previousUsesExternalGraphSpacer());
+  const sharesBottomBorder = createMemo(() => !usesExternalGraphSpacer());
   const borderPolicy = createMemo(() => getRevisionBorderPolicy({
     rowState: effectiveRowState(),
-    previousRowState: previousEffectiveRowState(),
-    nextRowState: nextEffectiveRowState(),
-    currentGraphWidth: coreGraphWidth(),
-    previousGraphWidth: previousCoreGraphWidth(),
-    nextGraphWidth: nextCoreGraphWidth(),
+    previousRowState: sharesTopBorder() ? previousEffectiveRowState() : null,
+    nextRowState: sharesBottomBorder() ? nextEffectiveRowState() : null,
+    currentGraphWidth: boxedGraphWidth(),
+    previousGraphWidth: sharesTopBorder() ? previousBoxedGraphWidth() : null,
+    nextGraphWidth: sharesBottomBorder() ? nextBoxedGraphWidth() : null,
   }));
-  const detailRowCount = () => isExpanded() ? Math.max(props.revision.files.length, 1) : 0;
-  const layoutSpec = createMemo(() =>
-    buildRevisionLayoutSpec(props.revision, {
-      mode: props.state.condensedLayout ? "compact" : "expanded",
-      isCommandTarget: isCommandTarget(),
-      badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
-    }),
-  );
   const gutterPlan = createMemo(() => buildRevisionGutterPlan({
     graphRows: props.revision.graphRows,
     baseGraphRowCount: layoutSpec().baseGraphRowCount,
@@ -851,10 +937,26 @@ export function RevisionItem(props: {
     })(),
     hasNextRevision: props.index + 1 < props.state.revisions.length,
   }));
-  const effectiveGraphWidth = createMemo(() => measureGutterPlanWidth(gutterPlan()));
-  const currentLeftCol = () => coreGraphWidth() + 1;
-  const prevLeftCol = () => previousCoreGraphWidth() !== null ? previousCoreGraphWidth()! + 1 : null;
-  const nextLeftCol = () => nextCoreGraphWidth() !== null ? nextCoreGraphWidth()! + 1 : null;
+  const inlineGraphTail = createMemo(() =>
+    usesExternalGraphSpacer() ? [] : gutterPlan().tail
+  );
+  const externalGraphRows = createMemo(() => {
+    if (!usesExternalGraphSpacer()) {
+      return [];
+    }
+
+    return [...gutterPlan().tail];
+  });
+  const inlineBottomDivider = createMemo(() => gutterPlan().bottomDivider);
+  const fullGraphWidth = createMemo(() => measureGutterPlanWidth(gutterPlan()));
+  const inlineGraphWidth = createMemo(() =>
+    usesExternalGraphSpacer() ? boxedGraphWidth() : fullGraphWidth()
+  );
+  const currentLeftCol = () => boxedGraphWidth() + 1;
+  const prevLeftCol = () => previousBoxedGraphWidth() !== null ? previousBoxedGraphWidth()! + 1 : null;
+  const connectedPrevLeftCol = () => sharesTopBorder() ? prevLeftCol() : null;
+  const nextLeftCol = () => nextBoxedGraphWidth() !== null ? nextBoxedGraphWidth()! + 1 : null;
+  const connectedNextLeftCol = () => sharesBottomBorder() ? nextLeftCol() : null;
   const borderColor = createMemo(() =>
     rowState() === "selected"
       ? colors().rowBorderSelected
@@ -878,166 +980,179 @@ export function RevisionItem(props: {
     <box
       id={`revision-${props.revision.changeId}`}
       width="100%"
-      flexDirection="row"
+      flexDirection="column"
       opacity={anyExpanded() && !isExpanded() ? 0.6 : 1}
     >
-      <box width={effectiveGraphWidth()} flexDirection="column">
-        {gutterPlan().topDivider !== null ? (
-          <text fg={continuationGraphColor()}>
-            {padRight(gutterPlan().topDivider!, effectiveGraphWidth())}
-          </text>
-        ) : null}
-        <text fg={titleGraphColor()}>{padRight(gutterPlan().title, effectiveGraphWidth())}</text>
-        <Show when={layoutSpec().headerRowCount === 2 && props.revision.marker !== "elided"}>
-          <text fg={continuationGraphColor()}>
-            {padRight(gutterPlan().subtitle, effectiveGraphWidth())}
-          </text>
-        </Show>
-        <For each={gutterPlan().tail}>
-          {(graphLine) => (
+      <box width="100%" flexDirection="row" position="relative">
+        <box width={inlineGraphWidth()} flexDirection="column">
+          {gutterPlan().topDivider !== null ? (
             <text fg={continuationGraphColor()}>
-              {padRight(graphLine, effectiveGraphWidth())}
+              {padRight(gutterPlan().topDivider!, inlineGraphWidth())}
             </text>
-          )}
-        </For>
-        <For each={gutterPlan().detail}>
-          {(graphLine) => (
+          ) : null}
+          <text fg={titleGraphColor()}>{padRight(gutterPlan().title, inlineGraphWidth())}</text>
+          <Show when={layoutSpec().headerRowCount === 2 && props.revision.marker !== "elided"}>
             <text fg={continuationGraphColor()}>
-              {padRight(graphLine, effectiveGraphWidth())}
+              {padRight(gutterPlan().subtitle, inlineGraphWidth())}
             </text>
-          )}
-        </For>
-        {gutterPlan().bottomDivider !== null ? (
-          <text fg={continuationGraphColor()}>
-            {padRight(gutterPlan().bottomDivider!, effectiveGraphWidth())}
-          </text>
-        ) : null}
-      </box>
-      <box width={1} />
-      <box
-        flexGrow={1}
-        flexDirection="column"
-        paddingRight={1}
-        backgroundColor={
-          isSelected()
-            ? colors().rowSelectedFill
-            : isFocused()
-            ? colors().rowFocusedFill
-            : isAffected()
-              ? colors().rowAffectedFill
-              : undefined
-        }
-        border={borderPolicy().borderSides}
-        borderStyle="single"
-        borderColor={borderColor()}
-        customBorderChars={borderPolicy().borderChars}
-      >
-        <Show
-          when={props.revision.marker !== "elided"}
-          fallback={
-            <text fg={colors().textTertiary} truncate>
-              {props.revision.description}
+          </Show>
+          <For each={inlineGraphTail()}>
+            {(graphLine) => (
+              <text fg={continuationGraphColor()}>
+                {padRight(graphLine, inlineGraphWidth())}
+              </text>
+            )}
+          </For>
+          <For each={gutterPlan().detail}>
+            {(graphLine) => (
+              <text fg={continuationGraphColor()}>
+                {padRight(graphLine, inlineGraphWidth())}
+              </text>
+            )}
+          </For>
+          {inlineBottomDivider() !== null ? (
+            <text fg={continuationGraphColor()}>
+              {padRight(inlineBottomDivider()!, inlineGraphWidth())}
             </text>
+          ) : null}
+        </box>
+        <box width={1} />
+        <box
+          flexGrow={1}
+          flexDirection="column"
+          paddingRight={1}
+          backgroundColor={
+            isSelected()
+              ? colors().rowSelectedFill
+              : isFocused()
+              ? colors().rowFocusedFill
+              : isAffected()
+                ? colors().rowAffectedFill
+                : undefined
           }
+          border={borderPolicy().borderSides}
+          borderStyle="single"
+          borderColor={borderColor()}
+          customBorderChars={borderPolicy().borderChars}
         >
           <Show
-            when={layoutSpec().headerRowCount === 1}
+            when={props.revision.marker !== "elided"}
             fallback={
-              <>
-                <box width="100%" flexDirection="row" gap={1}>
+              <text fg={colors().textTertiary} truncate>
+                {props.revision.description}
+              </text>
+            }
+          >
+            <Show
+              when={layoutSpec().headerRowCount === 1}
+              fallback={
+                <>
+                  <box width="100%" flexDirection="row" gap={1}>
+                    <RevisionChangeId
+                      revision={props.revision}
+                      rowState={effectiveRowState()}
+                      colors={colors()}
+                      showTimestamp={showExpandedTimestamp()}
+                    />
+                    {layoutSpec().commandTarget ? (
+                      <CommandTargetChip
+                        text={layoutSpec().commandTarget!.text}
+                        colors={colors()}
+                      />
+                    ) : null}
+                    <box flexGrow={1} />
+                    <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
+                  </box>
+                  <box width="100%" flexDirection="row">
+                    <text fg={descriptionColor()} truncate>
+                      {props.revision.description}
+                    </text>
+                  </box>
+                </>
+              }
+            >
+              <box
+                width="100%"
+                height={layoutSpec().headerRowCount}
+                overflow={layoutSpec().headerRowCount === 1 ? "hidden" : undefined}
+                position="relative"
+              >
+                <box width="100%" height={1} flexDirection="row">
                   <RevisionChangeId
                     revision={props.revision}
                     rowState={effectiveRowState()}
                     colors={colors()}
                     showTimestamp={showExpandedTimestamp()}
                   />
-                  {layoutSpec().commandTarget ? (
-                    <CommandTargetChip
-                      text={layoutSpec().commandTarget!.text}
-                      colors={colors()}
-                    />
-                  ) : null}
-                  <box flexGrow={1} />
+                  <box width={1} />
+                  <box flexGrow={1} minWidth={0} height={1} overflow="hidden">
+                    <text
+                      fg={descriptionColor()}
+                      wrapMode="none"
+                      truncate
+                    >
+                      {props.revision.description}
+                    </text>
+                  </box>
+                  <Show when={layoutSpec().sideChips.length > 0}>
+                    <box width={1} />
+                  </Show>
                   <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
                 </box>
-                <box width="100%" flexDirection="row">
-                  <text fg={descriptionColor()} truncate>
-                    {props.revision.description}
-                  </text>
-                </box>
-              </>
-            }
-          >
-            <box
-              width="100%"
-              height={layoutSpec().headerRowCount}
-              overflow={layoutSpec().headerRowCount === 1 ? "hidden" : undefined}
-              position="relative"
-            >
-              <box width="100%" height={1} flexDirection="row">
-                <RevisionChangeId
-                  revision={props.revision}
-                  rowState={effectiveRowState()}
-                  colors={colors()}
-                  showTimestamp={showExpandedTimestamp()}
-                />
-                <box width={1} />
-                <box flexGrow={1} minWidth={0} height={1} overflow="hidden">
+                {layoutSpec().commandTarget?.placement === "overlay" ? (
                   <text
-                    fg={descriptionColor()}
-                    wrapMode="none"
-                    truncate
+                    position="absolute"
+                    left={layoutSpec().commandTarget!.leftOffset}
+                    top={0}
+                    zIndex={1}
+                    fg={colors().chromeFillOne}
+                    bg={colors().chromeBorderFocus}
                   >
-                    {props.revision.description}
+                    {` ${layoutSpec().commandTarget!.text} `}
                   </text>
-                </box>
-                <Show when={layoutSpec().sideChips.length > 0}>
-                  <box width={1} />
-                </Show>
-                <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
+                ) : null}
               </box>
-              {layoutSpec().commandTarget?.placement === "overlay" ? (
-                <text
-                  position="absolute"
-                  left={layoutSpec().commandTarget!.leftOffset}
-                  top={0}
-                  zIndex={1}
-                  fg={colors().chromeFillOne}
-                  bg={colors().chromeBorderFocus}
-                >
-                  {` ${layoutSpec().commandTarget!.text} `}
-                </text>
-              ) : null}
-            </box>
+            </Show>
+            <For each={inlineGraphTail()}>
+              {() => <box width="100%" height={1} />}
+            </For>
+            {isExpanded() ? (
+              <ChangedFiles
+                state={props.state}
+                revision={props.revision}
+                config={props.config}
+              />
+            ) : null}
           </Show>
-          <For each={gutterPlan().tail}>
-            {() => <box width="100%" height={1} />}
-          </For>
-          {isExpanded() ? (
-            <ChangedFiles
-              state={props.state}
-              revision={props.revision}
-              config={props.config}
-            />
-          ) : null}
-        </Show>
+        </box>
+        {borderPolicy().ownsTop && connectedPrevLeftCol() !== null && currentLeftCol() < connectedPrevLeftCol()! ? (
+          <text position="absolute" left={connectedPrevLeftCol()!} top={0} zIndex={1} fg={borderColor()}>┴</text>
+        ) : null}
+        {borderPolicy().ownsTop && connectedPrevLeftCol() !== null && currentLeftCol() > connectedPrevLeftCol()! ? (
+          <text position="absolute" left={connectedPrevLeftCol()!} top={0} zIndex={1} fg={borderColor()}>
+            {"└" + "─".repeat(currentLeftCol() - connectedPrevLeftCol()! - 1)}
+          </text>
+        ) : null}
+        {borderPolicy().ownsBottom && connectedNextLeftCol() !== null && currentLeftCol() < connectedNextLeftCol()! ? (
+          <text position="absolute" left={connectedNextLeftCol()!} bottom={0} zIndex={1} fg={borderColor()}>┬</text>
+        ) : null}
+        {borderPolicy().ownsBottom && connectedNextLeftCol() !== null && currentLeftCol() > connectedNextLeftCol()! ? (
+          <text position="absolute" left={connectedNextLeftCol()!} bottom={0} zIndex={1} fg={borderColor()}>
+            {"┌" + "─".repeat(currentLeftCol() - connectedNextLeftCol()! - 1)}
+          </text>
+        ) : null}
       </box>
-      {borderPolicy().ownsTop && prevLeftCol() !== null && currentLeftCol() < prevLeftCol()! ? (
-        <text position="absolute" left={prevLeftCol()!} top={0} zIndex={1} fg={borderColor()}>┴</text>
-      ) : null}
-      {borderPolicy().ownsTop && prevLeftCol() !== null && currentLeftCol() > prevLeftCol()! ? (
-        <text position="absolute" left={prevLeftCol()!} top={0} zIndex={1} fg={borderColor()}>
-          {"└" + "─".repeat(currentLeftCol() - prevLeftCol()! - 1)}
-        </text>
-      ) : null}
-      {borderPolicy().ownsBottom && nextLeftCol() !== null && currentLeftCol() < nextLeftCol()! ? (
-        <text position="absolute" left={nextLeftCol()!} bottom={0} zIndex={1} fg={borderColor()}>┬</text>
-      ) : null}
-      {borderPolicy().ownsBottom && nextLeftCol() !== null && currentLeftCol() > nextLeftCol()! ? (
-        <text position="absolute" left={nextLeftCol()!} bottom={0} zIndex={1} fg={borderColor()}>
-          {"┌" + "─".repeat(currentLeftCol() - nextLeftCol()! - 1)}
-        </text>
-      ) : null}
+      <For each={externalGraphRows()}>
+        {(graphLine) => (
+          <box width="100%" flexDirection="row">
+            <text fg={continuationGraphColor()}>
+              {padRight(graphLine, fullGraphWidth())}
+            </text>
+            <box width={1} />
+            <box flexGrow={1} height={1} />
+          </box>
+        )}
+      </For>
     </box>
   );
 }
@@ -1162,66 +1277,44 @@ function ChangedFiles(props: {
 }
 
 function StatusArea(props: {
-  events: readonly AppStore["state"]["eventLog"][number][];
   shortcutSummary: string;
   shortcutGrid: ShortcutGrid;
   expanded: boolean;
   currentModeLabel: string;
-  panelHeight: number;
-  toggleHint: string | null;
+  panelBodyHeight: number;
   config: ResolvedAppConfig;
 }) {
-  const { events, config } = props;
-  const colors = config.colorScheme.semanticColors;
-  const panelBodyHeight = () =>
-    Math.max(1, Math.min(props.shortcutGrid.rows.length, Math.max(1, props.panelHeight - 3)));
+  const colors = props.config.colorScheme.semanticColors;
+
   return (
     <Show
       when={props.expanded}
       fallback={
         <box
           width="100%"
+          height={3}
           border
           borderStyle="single"
           borderColor={colors.chromeBorderIdle}
           backgroundColor={colors.chromeFillOne}
           paddingX={1}
-          flexDirection="column"
+          flexDirection="row"
         >
-          <For each={events}>
-            {(event) => (
-              <box width="100%" flexDirection="row" minWidth={0}>
-                <text fg={statusColor(event.level, colors)}>
-                  {new Date(event.createdAt).toLocaleTimeString()}
-                </text>
-                <box flexGrow={1} minWidth={0}>
-                  <text fg={colors.textPrimary} truncate>
-                    {` ${event.text}`}
-                  </text>
-                </box>
-              </box>
-            )}
-          </For>
-          <box width="100%" backgroundColor={colors.chromeFillOne}>
-            <text fg={colors.textTertiary} truncate>
-              {props.shortcutSummary}
-            </text>
-          </box>
+          <text fg={colors.textTertiary} truncate>
+            {props.shortcutSummary}
+          </text>
         </box>
       }
     >
-        <box
-          width="100%"
-          position="absolute"
-          left={0}
-          bottom={0}
-        zIndex={5}
-          border
-          borderStyle="single"
-          borderColor={colors.chromeBorderFocus}
+      <box
+        width="100%"
+        height={props.panelBodyHeight + 4}
+        border
+        borderStyle="single"
+        borderColor={colors.chromeBorderFocus}
         backgroundColor={colors.chromeFillTwo}
-          flexDirection="column"
-        >
+        flexDirection="column"
+      >
         <box
           width="100%"
           flexDirection="row"
@@ -1233,14 +1326,12 @@ function StatusArea(props: {
           </text>
           <text fg={colors.textTertiary}>{` ${props.currentModeLabel}`}</text>
           <box flexGrow={1} />
-          <Show when={props.toggleHint !== null}>
-            <text fg={colors.textTertiary}>{props.toggleHint}</text>
-          </Show>
+          <text fg={colors.textTertiary}>? close</text>
         </box>
         <box width="100%" height={1} backgroundColor={colors.chromeFillTwo} />
         <scrollbox
           width="100%"
-          height={panelBodyHeight()}
+          height={props.panelBodyHeight}
           scrollY
           backgroundColor={colors.chromeFillTwo}
           scrollbarOptions={{
@@ -1297,13 +1388,14 @@ function StatusArea(props: {
   );
 }
 
-function RevsetInput(props: {
+function RevsetPrompt(props: {
   revsetQuery: string;
   client: JjClient;
   config: ResolvedAppConfig;
   workspaceRoot: string | null;
   onApply: (query: string) => void | Promise<void>;
   onCancel: () => void;
+  onHeightChange?: (height: number) => void;
 }) {
   const colors = props.config.colorScheme.semanticColors;
   const flow: AutocompleteFlow = "bottom-to-top";
@@ -1329,7 +1421,6 @@ function RevsetInput(props: {
       detail: item.detail,
     }));
   });
-  const autocompleteHeight = createMemo(() => Math.min(suggestions().length, 10));
 
   onMount(() => {
     void (async () => {
@@ -1402,45 +1493,30 @@ function RevsetInput(props: {
   }, { release: true });
 
   return (
-    <box
-      width="100%"
-      height={3 + autocompleteHeight()}
-      flexDirection="column"
+    <PromptShell
+      config={props.config}
+      items={suggestions()}
+      selectedIndex={selectedIndex()}
+      flow={flow}
+      focused
+      onHeightChange={props.onHeightChange}
     >
-      <Show when={suggestions().length > 0}>
-        <AutocompleteList
-          items={suggestions()}
-          selectedIndex={selectedIndex()}
-          flow={flow}
-          config={props.config}
-        />
+      <Show when={text().length === 0}>
+        <text fg={colors.textTertiary}>Revset: </text>
       </Show>
-      <box
-        width="100%"
-        height={3}
-        paddingX={1}
-        border
-        borderStyle="single"
-        borderColor={colors.chromeBorderFocus}
-        backgroundColor={colors.chromeFillTwo}
-      >
-        <Show when={text().length === 0}>
-          <text fg={colors.textTertiary}>Revset: </text>
-        </Show>
-        <input
-          flexGrow={1}
-          value={text()}
-          focused
-          textColor={colors.textPrimary}
-          focusedTextColor={colors.textPrimary}
-          cursorColor={colors.chromeBorderFocus}
-          onInput={(value) => {
-            setText(value);
-            setSelectedIndex(null);
-          }}
-        />
-      </box>
-    </box>
+      <input
+        flexGrow={1}
+        value={text()}
+        focused
+        textColor={colors.textPrimary}
+        focusedTextColor={colors.textPrimary}
+        cursorColor={colors.chromeBorderFocus}
+        onInput={(value) => {
+          setText(value);
+          setSelectedIndex(null);
+        }}
+      />
+    </PromptShell>
   );
 }
 
@@ -1448,6 +1524,7 @@ function MessageOverlay(props: {
   messages: readonly StatusMessage[];
   loading: boolean;
   config: ResolvedAppConfig;
+  bottomInset: number;
   onDismiss: (id?: string) => void;
 }) {
   const visible = () => props.messages.length > 0 || props.loading;
@@ -1456,7 +1533,7 @@ function MessageOverlay(props: {
     <Show when={visible()}>
       <box
         position="absolute"
-        bottom={0}
+        bottom={props.bottomInset}
         left={0}
         width="100%"
         zIndex={10}

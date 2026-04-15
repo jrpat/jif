@@ -1,4 +1,5 @@
 import type { RevisionSummary } from "../domain/types.ts";
+import { shouldCondenseGraphRows } from "./revisionGutter.ts";
 
 export type RevisionSideChip = Readonly<{
   kind: "bookmark" | "workspace";
@@ -11,7 +12,7 @@ export type RevisionLayoutSpec = Readonly<{
   mode: RevisionLayoutMode;
   headerRowCount: 1 | 2;
   baseGraphRowCount: number;
-  visibleGraphMode: "direct" | "fold-first-two";
+  visibleGraphMode: "direct" | "fold-first-two" | "keep-second-row";
   sideChips: readonly RevisionSideChip[];
   commandTarget: Readonly<{
     placement: "inline" | "overlay";
@@ -38,7 +39,7 @@ export function getMaxRevisionBaseGraphRowCount(): number {
 }
 
 export function buildRevisionLayoutSpec(
-  revision: Pick<RevisionSummary, "changeId" | "bookmarks" | "workspaces">,
+  revision: Pick<RevisionSummary, "changeId" | "bookmarks" | "workspaces" | "graphRows">,
   options: Readonly<{
     mode: RevisionLayoutMode;
     isCommandTarget: boolean;
@@ -54,6 +55,12 @@ export function buildRevisionLayoutSpec(
   return {
     mode: options.mode,
     ...base,
+    visibleGraphMode:
+      options.mode === "compact"
+        ? shouldCondenseGraphRows(revision.graphRows.slice(0, base.baseGraphRowCount))
+          ? "fold-first-two"
+          : "keep-second-row"
+        : base.visibleGraphMode,
     sideChips,
     commandTarget: options.isCommandTarget
       ? {

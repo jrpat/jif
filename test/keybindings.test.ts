@@ -69,6 +69,21 @@ test("dispatchGlobalKey routes ? to the shortcut panel toggle", () => {
   expect(calls).toEqual(["toggleShortcutPanel"]);
 });
 
+test("dispatchGlobalKey routes escape to cancelOrBlur", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "escape",
+    state,
+    visibleCommands: getVisibleCommands(state),
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["cancelOrBlur"]);
+});
+
 test("dispatchGlobalKey preserves h as collapse", () => {
   const calls: string[] = [];
   const state = createState();

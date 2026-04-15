@@ -10,6 +10,7 @@ import type {
 } from "../domain/types.ts";
 import {
   applyRepositoryData,
+  cancelOrBlurState,
   cancelCommandDraft,
   cancelCommandState,
   clearRevisionSelection,
@@ -105,6 +106,9 @@ export function createAppStore(
       },
       cancelCommand() {
         mutate((currentState) => cancelCommandState(currentState));
+      },
+      cancelOrBlur() {
+        mutate((currentState) => cancelOrBlurState(currentState));
       },
       clearStatusMessage() {
         mutate((currentState) => clearStatusMessage(currentState));
