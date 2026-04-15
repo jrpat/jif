@@ -7,6 +7,11 @@ export type RevisionGutterPlan = Readonly<{
   bottomDivider: string | null;
 }>;
 
+export type GraphTitleSegment = Readonly<{
+  text: string;
+  isMarker: boolean;
+}>;
+
 const GRAPH_VERTICAL = "│";
 const NODE_MARKERS = new Set(["@", "○", "◆", "*", "×"]);
 const DOWNWARD_CONTINUATION_CHARS = new Set([
@@ -118,6 +123,28 @@ export function deriveGraphContinuationLine(graphHead: string): string {
       })
       .join("")
   );
+}
+
+export function splitGraphTitleSegments(title: string): readonly GraphTitleSegment[] {
+  const segments: GraphTitleSegment[] = [];
+  let current = "";
+  let currentIsMarker = false;
+
+  for (const char of title) {
+    const isMarker = NODE_MARKERS.has(char);
+    if (current.length > 0 && isMarker !== currentIsMarker) {
+      segments.push({ text: current, isMarker: currentIsMarker });
+      current = "";
+    }
+    current += char;
+    currentIsMarker = isMarker;
+  }
+
+  if (current.length > 0) {
+    segments.push({ text: current, isMarker: currentIsMarker });
+  }
+
+  return segments;
 }
 
 function normalizeContinuationGlyphs(graphLine: string): string {

@@ -17,6 +17,7 @@ function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSumma
     workspaces: [],
     graphRows: ["@  "],
     isEmpty: false,
+    hasConflict: false,
     marker: "working-copy",
     filesLoaded: false,
     files: [],

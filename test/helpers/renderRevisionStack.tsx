@@ -20,6 +20,7 @@ function createRevision(
     workspaces: [],
     graphRows,
     isEmpty: false,
+    hasConflict: false,
     marker: "plain",
     filesLoaded: false,
     files: [],

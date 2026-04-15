@@ -183,3 +183,9 @@
 {"kind":"appendFile","workspace":"review","path":"docs/architecture.md","content":"\n- Fixture materialization is cached by content hash.\n"}
 {"kind":"jj","workspace":"review","args":["describe","-m","docs(review): note deterministic fixture expectations"]}
 {"kind":"jj","workspace":"review","args":["bookmark","set","review/notes"]}
+{"kind":"jj","args":["new","branch-point"]}
+{"kind":"appendFile","path":"src/graph.ts","content":"\nexport function measureGraph(rows) {\n  return rows.reduce((max, r) => Math.max(max, r.length), 0);\n}\n"}
+{"kind":"jj","args":["describe","-m","experiment: add alternate graph measurement"]}
+{"kind":"jj","args":["bookmark","create","experiment/graph"]}
+{"kind":"jj","args":["edit","main"]}
+{"kind":"jj","args":["rebase","-r","experiment/graph","-d","main"]}

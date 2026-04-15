@@ -5,6 +5,7 @@ export type FocusMode = "revisions" | "files" | "command" | "revset" | "search";
 export type ChangedFile = Readonly<{
   path: string;
   status: string;
+  hasConflict?: boolean;
 }>;
 
 export type RevisionSummary = Readonly<{
@@ -17,6 +18,7 @@ export type RevisionSummary = Readonly<{
   workspaces: readonly string[];
   graphRows: readonly string[];
   isEmpty: boolean;
+  hasConflict: boolean;
   marker: RevisionMarker;
   filesLoaded: boolean;
   files: readonly ChangedFile[];

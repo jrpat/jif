@@ -63,6 +63,30 @@ export class JjClient {
     return parseLogOutput(logOutput.stdout, workspaceNamesByChangeId);
   }
 
+  async loadConflictedFiles(revisionId: string): Promise<ReadonlySet<string>> {
+    try {
+      const result = await this.runJj([
+        "resolve",
+        "--list",
+        "-r",
+        revisionId,
+        "--color",
+        "never",
+      ]);
+
+      const paths = new Set<string>();
+      for (const line of result.stdout.split("\n")) {
+        const trimmed = line.trim();
+        if (trimmed.length === 0) continue;
+        const path = trimmed.replace(/\s+\d+-sided conflict$/, "").trim();
+        if (path.length > 0) paths.add(path);
+      }
+      return paths;
+    } catch {
+      return new Set();
+    }
+  }
+
   async loadChangedFiles(revisionId: string): Promise<readonly ChangedFile[]> {
     const result = await this.runJj([
       "diff",
@@ -234,6 +258,7 @@ export function parseLogOutput(
           workspaces: [],
           graphRows: [graphMatch?.groups?.graph ?? "~  "],
           isEmpty: false,
+          hasConflict: false,
           marker: "elided",
           filesLoaded: true,
           files: [],
@@ -260,6 +285,7 @@ export function parseLogOutput(
         rawChangeIdPrefix = "",
         rawEmpty = "",
         rawTimestamp = "",
+        rawConflict = "",
       ] = fields;
       if (changeId.length === 0) {
         continue;
@@ -267,6 +293,7 @@ export function parseLogOutput(
 
       const graphRow = extractGraphPrefix(visibleGraph, changeId);
       const isEmpty = rawEmpty.trim() === "true";
+      const hasConflict = rawConflict.trim() === "true";
       revisions.push({
         changeId,
         changeIdPrefixLength: rawChangeIdPrefix.trim().length || changeId.length,
@@ -277,6 +304,7 @@ export function parseLogOutput(
         workspaces: workspaceNamesByChangeId.get(changeId) ?? [],
         graphRows: [graphRow],
         isEmpty,
+        hasConflict,
         marker: deriveRevisionMarker(graphRow),
         filesLoaded: isEmpty,
         files: [],
@@ -301,7 +329,7 @@ export function parseLogOutput(
 
 function buildLogTemplate(baseGraphRowCount: number): string {
   const rows = [
-    `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ "${ROW_KIND_HEADER}" ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "\\n"`,
+    `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ "${ROW_KIND_HEADER}" ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ conflict ++ "\\n"`,
   ];
 
   for (let index = 1; index < baseGraphRowCount; index += 1) {
@@ -338,7 +366,7 @@ function extractGraphPrefix(visibleGraph: string, changeId: string): string {
 }
 
 function deriveRevisionMarker(graphRow: string): RevisionMarker {
-  if (graphRow.includes("@")) {
+  if (graphRow.includes("@") || graphRow.includes("×")) {
     return "working-copy";
   }
   if (graphRow.includes("◆")) {

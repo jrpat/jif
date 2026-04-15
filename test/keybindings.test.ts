@@ -19,6 +19,7 @@ function createState(): AppState {
         workspaces: [],
         graphRows: ["@  "],
         isEmpty: false,
+        hasConflict: false,
         marker: "working-copy",
         filesLoaded: false,
         files: [],

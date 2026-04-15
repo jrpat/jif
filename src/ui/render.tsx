@@ -41,6 +41,7 @@ import {
   buildRevisionGutterPlan,
   measureBoxedGraphWidth,
   measureGutterPlanWidth,
+  splitGraphTitleSegments,
 } from "./revisionGutter.ts";
 import { buildRevisionLayoutSpec, type RevisionSideChip } from "./revisionLayout.ts";
 import {
@@ -159,8 +160,16 @@ export function JifView(props: {
 
       void (async () => {
         try {
-          const files = await client.loadChangedFiles(revision.changeId);
-          store.actions.setRevisionFiles(revision.changeId, files);
+          const [files, conflictedPaths] = await Promise.all([
+            client.loadChangedFiles(revision.changeId),
+            revision.hasConflict
+              ? client.loadConflictedFiles(revision.changeId)
+              : Promise.resolve(new Set<string>()),
+          ]);
+          const enrichedFiles = conflictedPaths.size > 0
+            ? files.map((f) => ({ ...f, hasConflict: conflictedPaths.has(f.path) }))
+            : files;
+          store.actions.setRevisionFiles(revision.changeId, enrichedFiles);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           store.actions.pushEvent(message, "error");
@@ -1120,7 +1129,18 @@ export function RevisionItem(props: {
               {padRight(gutterPlan().topDivider!, inlineGraphWidth())}
             </text>
           ) : null}
-          <text fg={titleGraphColor()}>{padRight(gutterPlan().title, inlineGraphWidth())}</text>
+          <box flexDirection="row" height={1}>
+            <For each={splitGraphTitleSegments(padRight(gutterPlan().title, inlineGraphWidth()))}>
+              {(segment) => (
+                <text
+                  fg={segment.isMarker && props.revision.hasConflict ? colors().statusError : titleGraphColor()}
+                  attributes={segment.isMarker && props.revision.hasConflict ? TextAttributes.BOLD : undefined}
+                >
+                  {segment.text}
+                </text>
+              )}
+            </For>
+          </box>
           <Show when={layoutSpec().headerRowCount === 2 && props.revision.marker !== "elided"}>
             <text fg={continuationGraphColor()}>
               {padRight(gutterPlan().subtitle, inlineGraphWidth())}
@@ -1201,6 +1221,9 @@ export function RevisionItem(props: {
                     >
                       {props.revision.description}
                     </text>
+                    <Show when={props.revision.hasConflict}>
+                      <text fg={colors().statusError} attributes={TextAttributes.BOLD}> (conflict)</text>
+                    </Show>
                   </box>
                 </>
               }
@@ -1219,7 +1242,7 @@ export function RevisionItem(props: {
                     showTimestamp={showExpandedTimestamp()}
                   />
                   <box width={1} />
-                  <box flexGrow={1} minWidth={0} height={1} overflow="hidden">
+                  <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
                     <text
                       fg={descriptionColor()}
                       wrapMode="none"
@@ -1228,6 +1251,9 @@ export function RevisionItem(props: {
                     >
                       {props.revision.description}
                     </text>
+                    <Show when={props.revision.hasConflict}>
+                      <text fg={colors().statusError} attributes={TextAttributes.BOLD}> (conflict)</text>
+                    </Show>
                   </box>
                   <Show when={layoutSpec().sideChips.length > 0}>
                     <box width={1} />
@@ -1402,6 +1428,9 @@ function ChangedFiles(props: {
                 <text fg={rowState().selected || rowState().focused ? colors.textPrimary : colors.textSecondary} truncate>
                   {file.path}
                 </text>
+                <Show when={file.hasConflict}>
+                  <text fg={colors.statusError} attributes={TextAttributes.BOLD}> conflict</text>
+                </Show>
               </box>
             );
           }}

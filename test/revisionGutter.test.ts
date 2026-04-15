@@ -7,7 +7,25 @@ import {
   measureCoreGraphWidth,
   measureGutterPlanWidth,
   shouldCondenseGraphRows,
+  splitGraphTitleSegments,
 } from "../src/ui/revisionGutter.ts";
+
+test("splitGraphTitleSegments splits node markers from structural characters", () => {
+  expect(splitGraphTitleSegments("@  ")).toEqual([
+    { text: "@", isMarker: true },
+    { text: "  ", isMarker: false },
+  ]);
+  expect(splitGraphTitleSegments("│ ○  ")).toEqual([
+    { text: "│ ", isMarker: false },
+    { text: "○", isMarker: true },
+    { text: "  ", isMarker: false },
+  ]);
+  expect(splitGraphTitleSegments("×  ")).toEqual([
+    { text: "×", isMarker: true },
+    { text: "  ", isMarker: false },
+  ]);
+  expect(splitGraphTitleSegments("")).toEqual([]);
+});
 
 test("deriveGraphContinuationLine turns node markers into continuations", () => {
   expect(deriveGraphContinuationLine("@  ")).toBe("│");
