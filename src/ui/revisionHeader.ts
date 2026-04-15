@@ -35,17 +35,23 @@ export function buildRevisionChangeIdSegments(
 }
 
 export function getRevisionDescriptionColor(
-  revision: Pick<RevisionSummary, "isEmpty">,
+  revision: Pick<RevisionSummary, "description">,
   options: Readonly<{
     rowState: RevisionRowState;
     colors: Readonly<{
       textPrimary: string | undefined;
       textTertiary: string | undefined;
+      statusSuccess: string | undefined;
+      statusWarning: string | undefined;
     }>;
   }>,
 ): string | undefined {
-  if (revision.isEmpty) {
-    return options.colors.textTertiary;
+  if (revision.description.includes("(empty)")) {
+    return options.colors.statusSuccess;
+  }
+
+  if (revision.description.includes("(no description)")) {
+    return options.colors.statusWarning;
   }
 
   switch (options.rowState) {

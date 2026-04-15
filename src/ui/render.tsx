@@ -94,7 +94,23 @@ export function JifView(props: {
   }
 
   onMount(() => {
-    void detectAndApplyPalette().then(() => setReady(true));
+    void (async () => {
+      const [, resolvedWorkspaceRoot, defaultRevset] = await Promise.all([
+        detectAndApplyPalette(),
+        client.loadWorkspaceRoot().catch(() => null),
+        client.loadDefaultRevset(),
+      ]);
+      setWorkspaceRoot(resolvedWorkspaceRoot);
+      const savedRevset = resolvedWorkspaceRoot
+        ? await new HistoryStore(resolvedWorkspaceRoot).loadSetting("active-revset")
+        : "";
+      const initialRevset = savedRevset || defaultRevset;
+      if (initialRevset) {
+        store.actions.setRevsetQuery(initialRevset);
+      }
+      await refreshRepository(initialRevset || undefined);
+      setReady(true);
+    })();
 
     const handleThemeMode = () => {
       renderer.clearPaletteCache();
@@ -433,23 +449,6 @@ export function JifView(props: {
   });
 
 
-  onMount(() => {
-    void (async () => {
-      const [resolvedWorkspaceRoot, defaultRevset] = await Promise.all([
-        client.loadWorkspaceRoot().catch(() => null),
-        client.loadDefaultRevset(),
-      ]);
-      setWorkspaceRoot(resolvedWorkspaceRoot);
-      const savedRevset = resolvedWorkspaceRoot
-        ? await new HistoryStore(resolvedWorkspaceRoot).loadSetting("active-revset")
-        : "";
-      const initialRevset = savedRevset || defaultRevset;
-      if (initialRevset) {
-        store.actions.setRevsetQuery(initialRevset);
-      }
-      await refreshRepository(initialRevset || undefined);
-    })();
-  });
 
   return (
     <Show when={ready()}>

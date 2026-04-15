@@ -38,28 +38,38 @@ test("buildRevisionChangeIdSegments appends timestamps only in expanded layout",
   expect(condensedText).toBe("abcdefgh");
 });
 
+const descriptionColors = {
+  textPrimary: "primary",
+  textTertiary: "tertiary",
+  statusSuccess: "success",
+  statusWarning: "warning",
+};
+
 test("getRevisionDescriptionColor uses primary text for normal revisions", () => {
   const color = getRevisionDescriptionColor(createRevision(), {
     rowState: "default",
-    colors: {
-      textPrimary: "primary",
-      textTertiary: "tertiary",
-    },
+    colors: descriptionColors,
   });
 
   expect(color).toBe("primary");
 });
 
-test("getRevisionDescriptionColor keeps empty revisions dimmed", () => {
-  const color = getRevisionDescriptionColor(createRevision({ isEmpty: true }), {
+test("getRevisionDescriptionColor uses warning color for no-description placeholder", () => {
+  const color = getRevisionDescriptionColor(createRevision({ description: "(no description)" }), {
     rowState: "focused",
-    colors: {
-      textPrimary: "primary",
-      textTertiary: "tertiary",
-    },
+    colors: descriptionColors,
   });
 
-  expect(color).toBe("tertiary");
+  expect(color).toBe("warning");
+});
+
+test("getRevisionDescriptionColor uses success color for empty+no-description placeholder", () => {
+  const color = getRevisionDescriptionColor(createRevision({ description: "(empty) (no description)" }), {
+    rowState: "default",
+    colors: descriptionColors,
+  });
+
+  expect(color).toBe("success");
 });
 
 test("getRevisionChangeIdColors matches focused row chrome", () => {
