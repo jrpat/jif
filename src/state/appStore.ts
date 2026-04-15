@@ -23,6 +23,8 @@ import {
   setRevsetQuery,
   dismissStatusMessage,
   expandElidedRevision,
+  logEvent,
+  pushStatusMessage,
   startCommandDraft,
   toggleFileSelection,
   toggleShortFlags,
@@ -39,6 +41,7 @@ import {
   setRevisionFiles,
   toggleRebaseDescendants,
   toggleRevisionSelection,
+  updateStatusMessage,
 } from "./store.ts";
 
 export type AppStore = ReturnType<typeof createAppStore>;
@@ -79,6 +82,15 @@ export function createAppStore(
       },
       pushEvent(text: string, level: StatusLevel) {
         mutate((currentState) => pushEvent(currentState, text, level));
+      },
+      pushStatusMessage(id: string, text: string, level: StatusLevel) {
+        mutate((currentState) => pushStatusMessage(currentState, id, text, level));
+      },
+      updateStatusMessage(id: string, text: string, level: StatusLevel) {
+        mutate((currentState) => updateStatusMessage(currentState, id, text, level));
+      },
+      logEvent(text: string, level: StatusLevel) {
+        mutate((currentState) => logEvent(currentState, text, level));
       },
       applyRepositoryData(repositoryData: RepositoryData) {
         mutate((currentState) => applyRepositoryData(currentState, repositoryData));

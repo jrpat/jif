@@ -17,7 +17,10 @@ import {
   getDisplayedCommandSegments,
   getDisplayedCommandText,
   getSelectedRevisionIds,
+  logEvent,
   openShortcutPanel,
+  pushStatusMessage,
+  updateStatusMessage,
   pushEvent,
   setCommandBarText,
   moveFocus,
@@ -186,6 +189,55 @@ test("clearStatusMessage removes all visible status messages", () => {
 
   state = clearStatusMessage(state);
   expect(state.statusMessages).toEqual([]);
+});
+
+test("pushStatusMessage adds a status message without an event log entry", () => {
+  let state = createState();
+  state = pushStatusMessage(state, "toast-1", "running command", "info");
+
+  expect(state.statusMessages).toHaveLength(1);
+  expect(state.statusMessages[0]?.text).toBe("running command");
+  expect(state.eventLog).toHaveLength(0);
+});
+
+test("updateStatusMessage changes text and level of an existing toast", () => {
+  let state = createState();
+  state = pushStatusMessage(state, "toast-1", "running command", "info");
+  state = updateStatusMessage(state, "toast-1", "done", "success");
+
+  expect(state.statusMessages).toHaveLength(1);
+  expect(state.statusMessages[0]?.text).toBe("done");
+  expect(state.statusMessages[0]?.level).toBe("success");
+});
+
+test("logEvent adds to event log without creating a status message", () => {
+  let state = createState();
+  state = logEvent(state, "something happened", "success");
+
+  expect(state.statusMessages).toHaveLength(0);
+  expect(state.eventLog).toHaveLength(1);
+  expect(state.eventLog[0]?.text).toBe("something happened");
+});
+
+test("cancelOrBlurState skips info-level status messages", () => {
+  let state = createState();
+  state = pushStatusMessage(state, "running", "jj git push", "info");
+
+  state = cancelOrBlurState(state);
+
+  expect(state.statusMessages).toHaveLength(1);
+  expect(state.statusMessages[0]?.level).toBe("info");
+});
+
+test("cancelOrBlurState dismisses error status messages", () => {
+  let state = createState();
+  state = pushStatusMessage(state, "running", "jj git push", "info");
+  state = pushEvent(state, "command failed", "error");
+
+  state = cancelOrBlurState(state);
+
+  expect(state.statusMessages).toHaveLength(1);
+  expect(state.statusMessages[0]?.level).toBe("info");
 });
 
 test("pushEvent keeps a maximum of 100 entries in the event log", () => {

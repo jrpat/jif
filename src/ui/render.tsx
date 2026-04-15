@@ -561,20 +561,24 @@ export function JifView(props: {
       return;
     }
 
-    store.actions.setLoading(true);
+    if (options?.recordHistory && workspaceRoot()) {
+      void new HistoryStore(workspaceRoot()!).record("command-history", commandTextValue);
+    }
+
+    store.actions.cancelCommand();
+
+    const toastId = `cmd-${Date.now()}`;
+    store.actions.pushStatusMessage(toastId, commandTextValue, "info");
 
     try {
-      if (options?.recordHistory && workspaceRoot()) {
-        await new HistoryStore(workspaceRoot()!).record("command-history", commandTextValue);
-      }
       const resultMessage = await client.executeCommand(commandTextValue);
-      store.actions.cancelCommand();
-      store.actions.pushEvent(resultMessage, "success");
+      store.actions.updateStatusMessage(toastId, resultMessage, "success");
+      store.actions.logEvent(resultMessage, "success");
       await refreshRepository();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      store.actions.pushEvent(message, "error");
-      store.actions.setLoading(false);
+      store.actions.updateStatusMessage(toastId, message, "error");
+      store.actions.logEvent(message, "error");
     }
   }
 
@@ -1613,6 +1617,7 @@ function StatusToast(props: {
   const colors = props.config.colorScheme.semanticColors;
 
   createEffect(() => {
+    if (props.message.level !== "success") return;
     const timer = setTimeout(
       props.onDismiss,
       getStatusMessageDismissDelay(props.message.createdAt),

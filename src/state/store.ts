@@ -369,8 +369,9 @@ export function cancelCommandDraft(state: AppState): AppState {
 }
 
 export function cancelOrBlurState(state: AppState): AppState {
-  if (state.statusMessages.length > 0) {
-    return dismissStatusMessage(state);
+  const dismissable = state.statusMessages.find((m) => m.level !== "info");
+  if (dismissable) {
+    return dismissStatusMessage(state, dismissable.id);
   }
 
   if (state.focusMode === "command") {
@@ -524,6 +525,46 @@ export function pushEvent(
     statusMessages: [...state.statusMessages, statusMessage],
     eventLog: [...state.eventLog.slice(-99), event],
   };
+}
+
+export function pushStatusMessage(
+  state: AppState,
+  id: string,
+  text: string,
+  level: StatusLevel,
+): AppState {
+  const message: StatusMessage = { id, text, level, createdAt: Date.now() };
+  return { ...state, statusMessages: [...state.statusMessages, message] };
+}
+
+export function updateStatusMessage(
+  state: AppState,
+  id: string,
+  text: string,
+  level: StatusLevel,
+): AppState {
+  const now = Date.now();
+  return {
+    ...state,
+    statusMessages: state.statusMessages.map((m) =>
+      m.id === id ? { ...m, text, level, createdAt: now } : m,
+    ),
+  };
+}
+
+export function logEvent(
+  state: AppState,
+  text: string,
+  level: StatusLevel,
+): AppState {
+  const createdAt = Date.now();
+  const entry: EventLogEntry = {
+    id: `${createdAt}-${state.eventLog.length}`,
+    text,
+    level,
+    createdAt,
+  };
+  return { ...state, eventLog: [...state.eventLog.slice(-99), entry] };
 }
 
 export function dismissStatusMessage(state: AppState, id?: string): AppState {
