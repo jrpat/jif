@@ -107,10 +107,10 @@ test("resolveAppConfig defaults log.scrollMargin to 1", () => {
   expect(resolved.log.scrollMargin).toBe(1);
 });
 
-test("resolveAppConfig defaults condensed layout to false", () => {
+test("resolveAppConfig defaults condensed layout to true", () => {
   const resolved = resolveAppConfig(defaultAppConfig);
 
-  expect(resolved.commands.condensedLayout).toBeFalse();
+  expect(resolved.commands.condensedLayout).toBeTrue();
 });
 
 test("resolveAppConfig applies commands.condensedLayout", () => {

@@ -928,12 +928,12 @@ export function RevisionItem(props: {
   );
   const previousUsesExternalGraphSpacer = createMemo(() => {
     const previous = props.index > 0 ? props.state.revisions[props.index - 1] : null;
-    if (!previous || !props.state.condensedLayout) {
+    if (!previous) {
       return false;
     }
 
     return buildRevisionLayoutSpec(previous, {
-      mode: "compact",
+      mode: props.state.condensedLayout ? "compact" : "expanded",
       isCommandTarget: false,
       badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
     }).visibleGraphMode === "keep-second-row";

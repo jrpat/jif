@@ -56,11 +56,9 @@ export function buildRevisionLayoutSpec(
     mode: options.mode,
     ...base,
     visibleGraphMode:
-      options.mode === "compact"
-        ? shouldCondenseGraphRows(revision.graphRows.slice(0, base.baseGraphRowCount))
-          ? "fold-first-two"
-          : "keep-second-row"
-        : base.visibleGraphMode,
+      shouldCondenseGraphRows(revision.graphRows.slice(0, base.baseGraphRowCount))
+        ? base.visibleGraphMode
+        : "keep-second-row",
     sideChips,
     commandTarget: options.isCommandTarget
       ? {

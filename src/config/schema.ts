@@ -243,7 +243,7 @@ export function resolveAppConfig(
     },
     commands: {
       shortFlags: config.commands?.shortFlags ?? true,
-      condensedLayout: config.commands?.condensedLayout ?? false,
+      condensedLayout: config.commands?.condensedLayout ?? true,
     },
   };
 }

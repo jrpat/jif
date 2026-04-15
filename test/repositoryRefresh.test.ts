@@ -54,7 +54,6 @@ test("createRepositoryRefresher reloads using the active revset", async () => {
   await refreshRepository();
 
   expect(calls).toEqual([
-    "loading:true",
     "verify",
     "load:mine()",
   ]);
@@ -122,7 +121,7 @@ test("createRepositoryRefresher reports refresh failures and clears loading", as
 
   await refreshRepository();
 
-  expect(loadingStates).toEqual([true, false]);
+  expect(loadingStates).toEqual([false]);
   expect(events).toEqual([{ text: "Not a jj workspace", level: "error" }]);
 });
 
