@@ -14,12 +14,12 @@ describe("moveAutocompleteSelection", () => {
     expect(moveAutocompleteSelection(null, 3, "previous")).toBe(2);
   });
 
-  test("next wraps around", () => {
-    expect(moveAutocompleteSelection(2, 3, "next")).toBe(0);
+  test("next past last item deselects", () => {
+    expect(moveAutocompleteSelection(2, 3, "next")).toBeNull();
   });
 
-  test("previous wraps around", () => {
-    expect(moveAutocompleteSelection(0, 3, "previous")).toBe(2);
+  test("previous past first item deselects", () => {
+    expect(moveAutocompleteSelection(0, 3, "previous")).toBeNull();
   });
 
   test("returns null when there are no items", () => {

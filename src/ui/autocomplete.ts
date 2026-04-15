@@ -23,10 +23,10 @@ export function moveAutocompleteSelection(
   }
 
   if (action === "next") {
-    return (currentIndex + 1) % itemCount;
+    return currentIndex + 1 < itemCount ? currentIndex + 1 : null;
   }
 
-  return (currentIndex - 1 + itemCount) % itemCount;
+  return currentIndex > 0 ? currentIndex - 1 : null;
 }
 
 export function getAutocompleteAction(
