@@ -51,8 +51,9 @@ test("createRepositoryRefresher reloads using the active revset", async () => {
     getRevsetQuery: () => "mine()",
   });
 
-  await refreshRepository();
+  const result = await refreshRepository();
 
+  expect(result).toBe(true);
   expect(calls).toEqual([
     "verify",
     "load:mine()",
@@ -119,8 +120,9 @@ test("createRepositoryRefresher reports refresh failures and clears loading", as
     getRevsetQuery: () => "",
   });
 
-  await refreshRepository();
+  const result = await refreshRepository();
 
+  expect(result).toBe(false);
   expect(loadingStates).toEqual([false]);
   expect(events).toEqual([{ text: "Not a jj workspace", level: "error" }]);
 });
@@ -132,6 +134,7 @@ test("bindRefreshOnFocus refreshes on focus and unsubscribes cleanly", async () 
   let refreshCalls = 0;
   const dispose = bindRefreshOnFocus(renderer, async () => {
     refreshCalls += 1;
+    return true;
   });
 
   renderer.emit(CliRenderEvents.FOCUS);

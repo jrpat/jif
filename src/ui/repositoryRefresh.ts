@@ -17,9 +17,9 @@ export function createRepositoryRefresher(args: {
   actions: RepositoryRefreshActions;
   getRevsetQuery: () => string;
 }) {
-  let refreshInFlight: Promise<void> | null = null;
+  let refreshInFlight: Promise<boolean> | null = null;
 
-  return async function refreshRepository(revset?: string): Promise<void> {
+  return async function refreshRepository(revset?: string): Promise<boolean> {
     if (refreshInFlight) {
       return refreshInFlight;
     }
@@ -30,10 +30,12 @@ export function createRepositoryRefresher(args: {
         await args.client.verifyRepository();
         const repositoryData = await args.client.loadRepository(undefined, effectiveRevset);
         args.actions.applyRepositoryData(repositoryData);
+        return true;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         args.actions.pushEvent(message, "error");
         args.actions.setLoading(false);
+        return false;
       } finally {
         refreshInFlight = null;
       }
@@ -50,7 +52,7 @@ type FocusRefreshRenderer = {
 
 export function bindRefreshOnFocus(
   renderer: FocusRefreshRenderer,
-  refreshRepository: () => Promise<void>,
+  refreshRepository: () => Promise<boolean>,
 ): () => void {
   const handleFocus = () => {
     void refreshRepository();

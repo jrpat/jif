@@ -509,13 +509,19 @@ export function JifView(props: {
             config={config}
             workspaceRoot={workspaceRoot()}
             onApply={async (query) => {
-              if (workspaceRoot()) {
-                await new HistoryStore(workspaceRoot()!).record("revset-history", query);
-                await new HistoryStore(workspaceRoot()!).saveSetting("active-revset", query);
-              }
+              const previousQuery = store.state.revsetQuery;
               store.actions.setRevsetQuery(query);
               store.actions.closeRevsetInput();
-              void refreshRepository(query || undefined);
+              const success = await refreshRepository(query || undefined);
+              if (success) {
+                if (workspaceRoot()) {
+                  await new HistoryStore(workspaceRoot()!).record("revset-history", query);
+                  await new HistoryStore(workspaceRoot()!).saveSetting("active-revset", query);
+                }
+              } else {
+                store.actions.setRevsetQuery(previousQuery);
+                void refreshRepository(previousQuery || undefined);
+              }
             }}
             onCancel={() => {
               store.actions.closeRevsetInput();
