@@ -16,6 +16,7 @@ import {
   getExpandedRevision,
   getFocusedRevisionArg,
   getFocusedRevision,
+  isFileNavigationActive,
   getOperationAffectedRevisionIds,
   getSelectedRevisionIds,
   type CommandSegment,
@@ -226,6 +227,18 @@ export function JifView(props: {
       const revisionArg = getFocusedRevisionArg(store.snapshot());
       if (!revisionArg) return;
       void runInteractiveJjCommand(`describe -r ${revisionArg}`);
+    },
+    showDiff() {
+      const state = store.snapshot();
+      const revisionArg = getFocusedRevisionArg(state);
+      if (!revisionArg) return;
+      if (isFileNavigationActive(state)) {
+        const file = getExpandedRevision(state)?.files[state.focusedFileIndex];
+        if (!file) return;
+        void runInteractiveJjCommand(`diff -r ${revisionArg} ${file.path}`);
+      } else {
+        void runInteractiveJjCommand(`show -r ${revisionArg}`);
+      }
     },
     toggleSelection() {
       store.actions.toggleRevisionSelection();

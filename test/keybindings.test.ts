@@ -53,6 +53,7 @@ function createController(calls: string[]): CommandController {
     toggleShortcutPanel: () => calls.push("toggleShortcutPanel"),
     commit: () => calls.push("commit"),
     describe: () => calls.push("describe"),
+    showDiff: () => calls.push("showDiff"),
   };
 }
 

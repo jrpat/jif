@@ -69,6 +69,7 @@ export async function runInteractiveCommand(
   cwd: string,
   command: readonly string[],
 ): Promise<void> {
+  const stopObserve = observeTTYChanges();
   const proc = Bun.spawn({
     cmd: [...command],
     cwd,
@@ -78,7 +79,13 @@ export async function runInteractiveCommand(
     env: { ...process.env },
   });
   const exitCode = await proc.exited;
+  const rawModeChanged = stopObserve?.() ?? false;
+
   if (exitCode !== 0) {
+    if (!rawModeChanged) {
+      process.stderr.write("\nPress any key to continue... ");
+      await waitForKeypress();
+    }
     throw new CommandExecutionError({
       command,
       cwd,
@@ -86,6 +93,85 @@ export async function runInteractiveCommand(
       stderr: "",
     });
   }
+
+  if (!rawModeChanged) {
+    process.stderr.write("\nPress any key to continue... ");
+    await waitForKeypress();
+  }
+}
+
+function waitForKeypress(): Promise<void> {
+  return new Promise((resolve) => {
+    const stdin = process.stdin;
+    const wasRaw = stdin.isRaw;
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.once("data", () => {
+      stdin.setRawMode(wasRaw);
+      stdin.pause();
+      resolve();
+    });
+  });
+}
+
+function observeTTYChanges(): (() => boolean) | null {
+  if (!process.stdin.isTTY) return null;
+
+  const initial = getTerminalState();
+  if (!initial) return null;
+
+  let changed = false;
+  const interval = setInterval(() => {
+    const current = getTerminalState();
+    if (!current) return;
+    for (let i = 0; i < initial.length; i++) {
+      if (initial[i] !== current[i]) {
+        changed = true;
+        clearInterval(interval);
+        return;
+      }
+    }
+  }, 100);
+
+  return () => {
+    clearInterval(interval);
+    return changed;
+  };
+}
+
+// macOS struct termios is 72 bytes. tcgetattr reads the terminal state
+// so we can detect when a child process (like a pager) enters raw mode.
+const TERMIOS_SIZE = 72;
+const STDIN_FD = 0;
+
+let _tcgetattr: ((fd: number, buf: ReturnType<typeof import("bun:ffi").ptr>) => number) | null =
+  null;
+let _ffiLoaded = false;
+
+function loadFFI() {
+  if (_ffiLoaded) return;
+  _ffiLoaded = true;
+  try {
+    const ffi = require("bun:ffi");
+    const lib = ffi.dlopen("libSystem.B.dylib", {
+      tcgetattr: {
+        args: [ffi.FFIType.i32, ffi.FFIType.pointer],
+        returns: ffi.FFIType.i32,
+      },
+    });
+    _tcgetattr = (fd, bufPtr) => lib.symbols.tcgetattr(fd, bufPtr);
+  } catch {
+    // FFI unavailable — prompting will be skipped
+  }
+}
+
+function getTerminalState(): Uint8Array | null {
+  loadFFI();
+  if (!_tcgetattr) return null;
+  const ffi = require("bun:ffi");
+  const buf = new Uint8Array(TERMIOS_SIZE);
+  const result = _tcgetattr(STDIN_FD, ffi.ptr(buf));
+  return result === 0 ? buf : null;
 }
 
 export function quoteCommand(command: readonly string[]): string {

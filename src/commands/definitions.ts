@@ -25,6 +25,7 @@ export type CommandController = Readonly<{
   toggleShortcutPanel: () => void;
   commit: () => void;
   describe: () => void;
+  showDiff: () => void;
 }>;
 
 export type CommandDefinition = Readonly<{
@@ -196,6 +197,18 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     keys: ["D"],
     when: (state) => state.focusMode === "revisions" && !focusedIsElided(state),
     run: (controller) => controller.describe(),
+    group: "global",
+  },
+  {
+    id: "show-diff",
+    title: "Diff",
+    description: "Show diff for the focused revision or file",
+    canonicalKeys: ["d"],
+    keys: ["d"],
+    when: (state) =>
+      (state.focusMode === "revisions" || state.focusMode === "files") &&
+      !focusedIsElided(state),
+    run: (controller) => controller.showDiff(),
     group: "global",
   },
   {
