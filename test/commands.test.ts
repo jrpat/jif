@@ -80,10 +80,10 @@ test("undo and redo resolve in normal mode", () => {
   expect(resolveForState("U", state)).toBe("redo");
 });
 
-test("short flags and condensed layout use - and _ respectively", () => {
+test("short flags and layout cycling use - and _ respectively", () => {
   const state = createState();
   expect(resolveForState("-", state)).toBe("toggle-flags");
-  expect(resolveForState("_", state)).toBe("toggle-condensed-layout");
+  expect(resolveForState("_", state)).toBe("cycle-layout");
 });
 
 test("shortcut panel toggle uses ? in normal mode", () => {

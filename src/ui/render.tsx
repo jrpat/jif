@@ -26,7 +26,7 @@ import { logShortcutDebug } from "../debug.ts";
 import type { JjClient } from "../jj/client.ts";
 import { runInteractiveCommand } from "../jj/process.ts";
 import { buildCompletionItems, extractLastToken, matchCompletions, type CompletionItem } from "../revset/completions.ts";
-import type { RevisionSummary, StatusMessage } from "../domain/types.ts";
+import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/types.ts";
 import { AutocompleteList, type AutocompleteListItem } from "./AutocompleteList.tsx";
 import {
   getAutocompleteAction,
@@ -283,8 +283,8 @@ export function JifView(props: {
     toggleShortFlags() {
       store.actions.toggleShortFlags();
     },
-    toggleCondensedLayout() {
-      store.actions.toggleCondensedLayout();
+    cycleLayout() {
+      store.actions.cycleLayout();
     },
     undo() {
       void runJjCommand("undo");
@@ -962,6 +962,7 @@ export function RevisionItem(props: {
   const isAffected = () => affectedIds().has(props.revision.changeId);
   const isCommandTarget = () => props.commandTargetId === props.revision.changeId;
   const isSearchMatch = () => revisionMatchesSearch(props.revision, props.searchQuery);
+  const changedFileRows = createMemo(() => isExpanded() ? buildChangedFileDisplayRows(props.revision) : []);
   const rowState = createMemo(() =>
     getRevisionRowState(props.revision.changeId, props.focusedRevisionId, props.selectedRevisionIds) ?? "default",
   );
@@ -974,7 +975,7 @@ export function RevisionItem(props: {
   const detailRowCount = () => isExpanded() ? Math.max(props.revision.files.length, 1) : 0;
   const layoutSpec = createMemo(() =>
     buildRevisionLayoutSpec(props.revision, {
-      mode: props.state.condensedLayout ? "compact" : "expanded",
+      mode: props.state.layout,
       isCommandTarget: isCommandTarget(),
       badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
     }),
@@ -993,7 +994,7 @@ export function RevisionItem(props: {
     }
 
     const previousLayoutSpec = buildRevisionLayoutSpec(prev, {
-      mode: props.state.condensedLayout ? "compact" : "expanded",
+      mode: props.state.layout,
       isCommandTarget: false,
       badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
     });
@@ -1011,7 +1012,7 @@ export function RevisionItem(props: {
     }
 
     const nextLayoutSpec = buildRevisionLayoutSpec(next, {
-      mode: props.state.condensedLayout ? "compact" : "expanded",
+      mode: props.state.layout,
       isCommandTarget: false,
       badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
     });
@@ -1047,7 +1048,7 @@ export function RevisionItem(props: {
     }
 
     return buildRevisionLayoutSpec(previous, {
-      mode: props.state.condensedLayout ? "compact" : "expanded",
+      mode: props.state.layout,
       isCommandTarget: false,
       badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
     }).visibleGraphMode === "keep-second-row";
@@ -1113,7 +1114,27 @@ export function RevisionItem(props: {
       colors: colors(),
     })
   );
+  const rowBackgroundColor = createMemo(() =>
+    isSelected()
+      ? colors().rowSelectedFill
+      : isFocused()
+        ? colors().rowFocusedFill
+        : isAffected()
+          ? colors().rowAffectedFill
+          : undefined
+  );
   const showExpandedTimestamp = () => layoutSpec().mode === "expanded";
+  const superGutterPlan = createMemo(() => buildRevisionGutterPlan({
+    graphRows: props.revision.graphRows,
+    baseGraphRowCount: layoutSpec().baseGraphRowCount,
+    visibleGraphMode: layoutSpec().visibleGraphMode,
+    detailRowCount: changedFileRows().length,
+    ownsTop: false,
+    ownsBottom: false,
+    previousGraphBottom: null,
+    hasNextRevision: false,
+  }));
+  const superGraphWidth = createMemo(() => measureGutterPlanWidth(superGutterPlan()));
 
   return (
     <box
@@ -1122,15 +1143,187 @@ export function RevisionItem(props: {
       flexDirection="column"
       opacity={anyExpanded() && !isExpanded() ? 0.6 : 1}
     >
-      <box width="100%" flexDirection="row" position="relative">
-        <box width={inlineGraphWidth()} flexDirection="column">
-          {gutterPlan().topDivider !== null ? (
-            <text fg={continuationGraphColor()}>
-              {padRight(gutterPlan().topDivider!, inlineGraphWidth())}
-            </text>
-          ) : null}
-          <box flexDirection="row" height={1}>
-            <For each={splitGraphTitleSegments(padRight(gutterPlan().title, inlineGraphWidth()))}>
+      <Show
+        when={layoutSpec().mode === "super-condensed"}
+        fallback={
+          <box width="100%" flexDirection="row" position="relative">
+            <box width={inlineGraphWidth()} flexDirection="column">
+              {gutterPlan().topDivider !== null ? (
+                <text fg={continuationGraphColor()}>
+                  {padRight(gutterPlan().topDivider!, inlineGraphWidth())}
+                </text>
+              ) : null}
+              <box flexDirection="row" height={1}>
+                <For each={splitGraphTitleSegments(padRight(gutterPlan().title, inlineGraphWidth()))}>
+                  {(segment) => (
+                    <text
+                      fg={segment.isMarker && props.revision.hasConflict ? colors().statusError : titleGraphColor()}
+                      attributes={segment.isMarker && props.revision.hasConflict ? TextAttributes.BOLD : undefined}
+                    >
+                      {segment.text}
+                    </text>
+                  )}
+                </For>
+              </box>
+              <Show when={layoutSpec().headerRowCount === 2 && props.revision.marker !== "elided"}>
+                <text fg={continuationGraphColor()}>
+                  {padRight(gutterPlan().subtitle, inlineGraphWidth())}
+                </text>
+              </Show>
+              <For each={inlineGraphTail()}>
+                {(graphLine) => (
+                  <text fg={continuationGraphColor()}>
+                    {padRight(graphLine, inlineGraphWidth())}
+                  </text>
+                )}
+              </For>
+              <For each={gutterPlan().detail}>
+                {(graphLine) => (
+                  <text fg={continuationGraphColor()}>
+                    {padRight(graphLine, inlineGraphWidth())}
+                  </text>
+                )}
+              </For>
+              {inlineBottomDivider() !== null ? (
+                <text fg={continuationGraphColor()}>
+                  {padRight(inlineBottomDivider()!, inlineGraphWidth())}
+                </text>
+              ) : null}
+            </box>
+            <box width={1} />
+            <box
+              flexGrow={1}
+              flexDirection="column"
+              paddingRight={1}
+              backgroundColor={rowBackgroundColor()}
+              border={borderPolicy().borderSides}
+              borderStyle="single"
+              borderColor={borderColor()}
+              customBorderChars={borderPolicy().borderChars}
+            >
+              <Show
+                when={props.revision.marker !== "elided"}
+                fallback={
+                  <text fg={colors().textTertiary} truncate>
+                    {props.revision.description}
+                  </text>
+                }
+              >
+                <Show
+                  when={layoutSpec().headerRowCount === 1}
+                  fallback={
+                    <>
+                      <box width="100%" flexDirection="row" gap={1}>
+                        <RevisionChangeId
+                          revision={props.revision}
+                          rowState={effectiveRowState()}
+                          colors={colors()}
+                          showTimestamp={showExpandedTimestamp()}
+                        />
+                        {layoutSpec().commandTarget ? (
+                          <CommandTargetChip
+                            text={layoutSpec().commandTarget!.text}
+                            colors={colors()}
+                          />
+                        ) : null}
+                        <box flexGrow={1} />
+                        <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
+                      </box>
+                      <box width="100%" flexDirection="row">
+                        <text
+                          fg={descriptionColor()}
+                          truncate
+                          attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
+                        >
+                          {props.revision.description}
+                        </text>
+                        <Show when={props.revision.hasConflict}>
+                          <text fg={colors().statusError} attributes={TextAttributes.BOLD}> (conflict)</text>
+                        </Show>
+                      </box>
+                    </>
+                  }
+                >
+                  <box
+                    width="100%"
+                    height={layoutSpec().headerRowCount}
+                    overflow={layoutSpec().headerRowCount === 1 ? "hidden" : undefined}
+                    position="relative"
+                  >
+                    <box width="100%" height={1} flexDirection="row">
+                      <RevisionChangeId
+                        revision={props.revision}
+                        rowState={effectiveRowState()}
+                        colors={colors()}
+                        showTimestamp={showExpandedTimestamp()}
+                      />
+                      <box width={1} />
+                      <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
+                        <text
+                          fg={descriptionColor()}
+                          wrapMode="none"
+                          truncate
+                          attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
+                        >
+                          {props.revision.description}
+                        </text>
+                        <Show when={props.revision.hasConflict}>
+                          <text fg={colors().statusError} attributes={TextAttributes.BOLD}> (conflict)</text>
+                        </Show>
+                      </box>
+                      <Show when={layoutSpec().sideChips.length > 0}>
+                        <box width={1} />
+                      </Show>
+                      <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
+                    </box>
+                    {layoutSpec().commandTarget?.placement === "overlay" ? (
+                      <text
+                        position="absolute"
+                        left={layoutSpec().commandTarget!.leftOffset}
+                        top={0}
+                        zIndex={1}
+                        fg={colors().chromeFillOne}
+                        bg={colors().chromeBorderFocus}
+                      >
+                        {` ${layoutSpec().commandTarget!.text} `}
+                      </text>
+                    ) : null}
+                  </box>
+                </Show>
+                <For each={inlineGraphTail()}>
+                  {() => <box width="100%" height={1} />}
+                </For>
+                {isExpanded() ? (
+                  <ChangedFiles
+                    state={props.state}
+                    revision={props.revision}
+                    config={props.config}
+                  />
+                ) : null}
+              </Show>
+            </box>
+            {borderPolicy().ownsTop && connectedPrevLeftCol() !== null && currentLeftCol() < connectedPrevLeftCol()! ? (
+              <text position="absolute" left={connectedPrevLeftCol()!} top={0} zIndex={1} fg={borderColor()}>┴</text>
+            ) : null}
+            {borderPolicy().ownsTop && connectedPrevLeftCol() !== null && currentLeftCol() > connectedPrevLeftCol()! ? (
+              <text position="absolute" left={connectedPrevLeftCol()!} top={0} zIndex={1} fg={borderColor()}>
+                {"└" + "─".repeat(currentLeftCol() - connectedPrevLeftCol()! - 1)}
+              </text>
+            ) : null}
+            {borderPolicy().ownsBottom && connectedNextLeftCol() !== null && currentLeftCol() < connectedNextLeftCol()! ? (
+              <text position="absolute" left={connectedNextLeftCol()!} bottom={0} zIndex={1} fg={borderColor()}>┬</text>
+            ) : null}
+            {borderPolicy().ownsBottom && connectedNextLeftCol() !== null && currentLeftCol() > connectedNextLeftCol()! ? (
+              <text position="absolute" left={connectedNextLeftCol()!} bottom={0} zIndex={1} fg={borderColor()}>
+                {"┌" + "─".repeat(currentLeftCol() - connectedNextLeftCol()! - 1)}
+              </text>
+            ) : null}
+          </box>
+        }
+      >
+        <box width="100%" flexDirection="row">
+          <box width={superGraphWidth()} flexDirection="row" height={1}>
+            <For each={splitGraphTitleSegments(padRight(superGutterPlan().title, superGraphWidth()))}>
               {(segment) => (
                 <text
                   fg={segment.isMarker && props.revision.hasConflict ? colors().statusError : titleGraphColor()}
@@ -1141,179 +1334,96 @@ export function RevisionItem(props: {
               )}
             </For>
           </box>
-          <Show when={layoutSpec().headerRowCount === 2 && props.revision.marker !== "elided"}>
-            <text fg={continuationGraphColor()}>
-              {padRight(gutterPlan().subtitle, inlineGraphWidth())}
-            </text>
-          </Show>
-          <For each={inlineGraphTail()}>
-            {(graphLine) => (
-              <text fg={continuationGraphColor()}>
-                {padRight(graphLine, inlineGraphWidth())}
-              </text>
-            )}
-          </For>
-          <For each={gutterPlan().detail}>
-            {(graphLine) => (
-              <text fg={continuationGraphColor()}>
-                {padRight(graphLine, inlineGraphWidth())}
-              </text>
-            )}
-          </For>
-          {inlineBottomDivider() !== null ? (
-            <text fg={continuationGraphColor()}>
-              {padRight(inlineBottomDivider()!, inlineGraphWidth())}
-            </text>
-          ) : null}
-        </box>
-        <box width={1} />
-        <box
-          flexGrow={1}
-          flexDirection="column"
-          paddingRight={1}
-          backgroundColor={
-            isSelected()
-              ? colors().rowSelectedFill
-              : isFocused()
-              ? colors().rowFocusedFill
-              : isAffected()
-                ? colors().rowAffectedFill
-                : undefined
-          }
-          border={borderPolicy().borderSides}
-          borderStyle="single"
-          borderColor={borderColor()}
-          customBorderChars={borderPolicy().borderChars}
-        >
-          <Show
-            when={props.revision.marker !== "elided"}
-            fallback={
-              <text fg={colors().textTertiary} truncate>
-                {props.revision.description}
-              </text>
-            }
+          <box width={1} />
+          <box
+            flexGrow={1}
+            minWidth={0}
+            height={1}
+            overflow="hidden"
+            flexDirection="row"
+            gap={1}
+            backgroundColor={rowBackgroundColor()}
           >
             <Show
-              when={layoutSpec().headerRowCount === 1}
+              when={props.revision.marker !== "elided"}
               fallback={
-                <>
-                  <box width="100%" flexDirection="row" gap={1}>
-                    <RevisionChangeId
-                      revision={props.revision}
-                      rowState={effectiveRowState()}
-                      colors={colors()}
-                      showTimestamp={showExpandedTimestamp()}
-                    />
-                    {layoutSpec().commandTarget ? (
-                      <CommandTargetChip
-                        text={layoutSpec().commandTarget!.text}
-                        colors={colors()}
-                      />
-                    ) : null}
-                    <box flexGrow={1} />
-                    <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
-                  </box>
-                  <box width="100%" flexDirection="row">
-                    <text
-                      fg={descriptionColor()}
-                      truncate
-                      attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
-                    >
-                      {props.revision.description}
-                    </text>
-                    <Show when={props.revision.hasConflict}>
-                      <text fg={colors().statusError} attributes={TextAttributes.BOLD}> (conflict)</text>
-                    </Show>
-                  </box>
-                </>
+                <text fg={colors().textTertiary} wrapMode="none" truncate>
+                  {props.revision.description}
+                </text>
               }
             >
-              <box
-                width="100%"
-                height={layoutSpec().headerRowCount}
-                overflow={layoutSpec().headerRowCount === 1 ? "hidden" : undefined}
-                position="relative"
-              >
-                <box width="100%" height={1} flexDirection="row">
-                  <RevisionChangeId
-                    revision={props.revision}
-                    rowState={effectiveRowState()}
-                    colors={colors()}
-                    showTimestamp={showExpandedTimestamp()}
-                  />
-                  <box width={1} />
-                  <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
-                    <text
-                      fg={descriptionColor()}
-                      wrapMode="none"
-                      truncate
-                      attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
-                    >
-                      {props.revision.description}
-                    </text>
-                    <Show when={props.revision.hasConflict}>
-                      <text fg={colors().statusError} attributes={TextAttributes.BOLD}> (conflict)</text>
-                    </Show>
-                  </box>
-                  <Show when={layoutSpec().sideChips.length > 0}>
-                    <box width={1} />
-                  </Show>
-                  <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
-                </box>
-                {layoutSpec().commandTarget?.placement === "overlay" ? (
-                  <text
-                    position="absolute"
-                    left={layoutSpec().commandTarget!.leftOffset}
-                    top={0}
-                    zIndex={1}
-                    fg={colors().chromeFillOne}
-                    bg={colors().chromeBorderFocus}
-                  >
-                    {` ${layoutSpec().commandTarget!.text} `}
-                  </text>
-                ) : null}
-              </box>
-            </Show>
-            <For each={inlineGraphTail()}>
-              {() => <box width="100%" height={1} />}
-            </For>
-            {isExpanded() ? (
-              <ChangedFiles
-                state={props.state}
+              <RevisionChangeId
                 revision={props.revision}
-                config={props.config}
+                rowState={effectiveRowState()}
+                colors={colors()}
+                showTimestamp={false}
               />
-            ) : null}
-          </Show>
-        </box>
-        {borderPolicy().ownsTop && connectedPrevLeftCol() !== null && currentLeftCol() < connectedPrevLeftCol()! ? (
-          <text position="absolute" left={connectedPrevLeftCol()!} top={0} zIndex={1} fg={borderColor()}>┴</text>
-        ) : null}
-        {borderPolicy().ownsTop && connectedPrevLeftCol() !== null && currentLeftCol() > connectedPrevLeftCol()! ? (
-          <text position="absolute" left={connectedPrevLeftCol()!} top={0} zIndex={1} fg={borderColor()}>
-            {"└" + "─".repeat(currentLeftCol() - connectedPrevLeftCol()! - 1)}
-          </text>
-        ) : null}
-        {borderPolicy().ownsBottom && connectedNextLeftCol() !== null && currentLeftCol() < connectedNextLeftCol()! ? (
-          <text position="absolute" left={connectedNextLeftCol()!} bottom={0} zIndex={1} fg={borderColor()}>┬</text>
-        ) : null}
-        {borderPolicy().ownsBottom && connectedNextLeftCol() !== null && currentLeftCol() > connectedNextLeftCol()! ? (
-          <text position="absolute" left={connectedNextLeftCol()!} bottom={0} zIndex={1} fg={borderColor()}>
-            {"┌" + "─".repeat(currentLeftCol() - connectedNextLeftCol()! - 1)}
-          </text>
-        ) : null}
-      </box>
-      <For each={externalGraphRows()}>
-        {(graphLine) => (
-          <box width="100%" flexDirection="row">
-            <text fg={continuationGraphColor()}>
-              {padRight(graphLine, fullGraphWidth())}
-            </text>
-            <box width={1} />
-            <box flexGrow={1} height={1} />
+              {layoutSpec().commandTarget ? (
+                <CommandTargetChip
+                  text={layoutSpec().commandTarget!.text}
+                  colors={colors()}
+                />
+              ) : null}
+              <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
+                <text
+                  fg={descriptionColor()}
+                  wrapMode="none"
+                  truncate
+                  attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
+                >
+                  {props.revision.description}
+                </text>
+                <Show when={props.revision.hasConflict}>
+                  <text fg={colors().statusError} attributes={TextAttributes.BOLD}> (conflict)</text>
+                </Show>
+              </box>
+              <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
+            </Show>
           </box>
-        )}
-      </For>
+        </box>
+        <For each={superGutterPlan().tail}>
+          {(graphLine) => (
+            <box width="100%" flexDirection="row">
+              <text fg={continuationGraphColor()}>
+                {padRight(graphLine, superGraphWidth())}
+              </text>
+              <box width={1} />
+              <box flexGrow={1} height={1} />
+            </box>
+          )}
+        </For>
+        <For each={changedFileRows()}>
+          {(row, index) => (
+            <box width="100%" flexDirection="row">
+              <text fg={continuationGraphColor()}>
+                {padRight(superGutterPlan().detail[index()] ?? "", superGraphWidth())}
+              </text>
+              <box width={1} />
+              <box flexGrow={1}>
+                <ChangedFileRowContent
+                  state={props.state}
+                  revisionId={props.revision.changeId}
+                  row={row}
+                  config={props.config}
+                />
+              </box>
+            </box>
+          )}
+        </For>
+      </Show>
+      <Show when={layoutSpec().mode !== "super-condensed"}>
+        <For each={externalGraphRows()}>
+          {(graphLine) => (
+            <box width="100%" flexDirection="row">
+              <text fg={continuationGraphColor()}>
+                {padRight(graphLine, fullGraphWidth())}
+              </text>
+              <box width={1} />
+              <box flexGrow={1} height={1} />
+            </box>
+          )}
+        </For>
+      </Show>
     </box>
   );
 }
@@ -1361,6 +1471,21 @@ function CommandTargetChip(props: {
   );
 }
 
+type ChangedFileDisplayRow =
+  | Readonly<{ kind: "placeholder"; text: string }>
+  | Readonly<{ kind: "file"; file: ChangedFile; index: number }>;
+
+function buildChangedFileDisplayRows(
+  revision: Pick<RevisionSummary, "isEmpty" | "filesLoaded" | "files">,
+): readonly ChangedFileDisplayRow[] {
+  const placeholderText = getChangedFilesPlaceholderText(revision);
+  if (placeholderText) {
+    return [{ kind: "placeholder", text: placeholderText }];
+  }
+
+  return revision.files.map((file, index) => ({ kind: "file", file, index }));
+}
+
 function RevisionSideChips(props: {
   chips: readonly RevisionSideChip[];
   colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
@@ -1381,61 +1506,78 @@ function RevisionSideChips(props: {
   );
 }
 
+function ChangedFileRowContent(props: {
+  state: AppStore["state"];
+  revisionId: string;
+  row: ChangedFileDisplayRow;
+  config: ResolvedAppConfig;
+}) {
+  const colors = props.config.colorScheme.semanticColors;
+
+  if (props.row.kind === "placeholder") {
+    return <text fg={colors.textTertiary}>{props.row.text}</text>;
+  }
+
+  const row = props.row;
+
+  const rowState = createMemo(() =>
+    getChangedFileRowState(props.state, props.revisionId, row.index, row.file.path)
+  );
+
+  return (
+    <box
+      width="100%"
+      flexDirection="row"
+      gap={1}
+      backgroundColor={
+        rowState().selected
+          ? colors.rowSelectedFill
+          : rowState().focused
+            ? colors.rowFocusedFill
+            : undefined
+      }
+    >
+      <text
+        fg={
+          rowState().selected
+            ? colors.rowSelectedAccent
+            : rowState().focused
+              ? colors.fileFocusMarker
+              : colors.textTertiary
+        }
+      >
+        {rowState().marker}
+      </text>
+      <text fg={colors.fileStatusAccent}>{row.file.status}</text>
+      <text fg={rowState().selected || rowState().focused ? colors.textPrimary : colors.textSecondary} truncate>
+        {row.file.path}
+      </text>
+      <Show when={row.file.hasConflict}>
+        <text fg={colors.statusError} attributes={TextAttributes.BOLD}> conflict</text>
+      </Show>
+    </box>
+  );
+}
+
 function ChangedFiles(props: {
   state: AppStore["state"];
   revision: RevisionSummary;
   config: ResolvedAppConfig;
 }) {
-  const colors = props.config.colorScheme.semanticColors;
-  const placeholderText = createMemo(() => getChangedFilesPlaceholderText(props.revision));
+  const rows = createMemo(() => buildChangedFileDisplayRows(props.revision));
 
   return (
     <box width="100%" flexDirection="column">
-      {placeholderText() ? (
-        <text fg={colors.textTertiary}>{placeholderText()}</text>
-      ) : (
-        <For each={props.revision.files}>
-          {(file, index) => {
-            const rowState = createMemo(() =>
-              getChangedFileRowState(props.state, props.revision.changeId, index(), file.path)
-            );
-
-            return (
-              <box
-                width="100%"
-                flexDirection="row"
-                gap={1}
-                backgroundColor={
-                  rowState().selected
-                    ? colors.rowSelectedFill
-                    : rowState().focused
-                      ? colors.rowFocusedFill
-                      : undefined
-                }
-              >
-                <text
-                  fg={
-                    rowState().selected
-                      ? colors.rowSelectedAccent
-                      : rowState().focused
-                        ? colors.fileFocusMarker
-                        : colors.textTertiary
-                  }
-                >
-                  {rowState().marker}
-                </text>
-                <text fg={colors.fileStatusAccent}>{file.status}</text>
-                <text fg={rowState().selected || rowState().focused ? colors.textPrimary : colors.textSecondary} truncate>
-                  {file.path}
-                </text>
-                <Show when={file.hasConflict}>
-                  <text fg={colors.statusError} attributes={TextAttributes.BOLD}> conflict</text>
-                </Show>
-              </box>
-            );
-          }}
-        </For>
-      )}
+      <For each={rows()}>
+        {(row) => (
+          <ChangedFileRowContent
+            state={props.state}
+            revisionId={props.revision.changeId}
+            row={row}
+            config={props.config}
+          />
+        )}
+      </For>
     </box>
   );
 }

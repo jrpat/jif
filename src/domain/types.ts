@@ -1,6 +1,7 @@
 export type RevisionMarker = "working-copy" | "bookmark" | "plain" | "immutable" | "elided";
 
 export type FocusMode = "revisions" | "files" | "command" | "revset" | "search";
+export type AppLayout = "expanded" | "condensed" | "super-condensed";
 
 export type ChangedFile = Readonly<{
   path: string;
@@ -80,7 +81,7 @@ export type AppState = Readonly<{
   eventLog: readonly EventLogEntry[];
   loading: boolean;
   useShortFlags: boolean;
-  condensedLayout: boolean;
+  layout: AppLayout;
   revsetQuery: string;
   searchQuery: string;
 }>;

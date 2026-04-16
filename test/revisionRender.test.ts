@@ -16,14 +16,42 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
   expect(exitCode).toBe(0);
   expect(stderr).toBe("");
 
-  const { unfocused, focused } = JSON.parse(stdout) as {
-    unfocused: string;
-    focused: string;
+  const {
+    condensedUnfocused,
+    condensedFocused,
+    superCondensed,
+    superCondensedExpanded,
+    cycledToSuperCondensed,
+    longSuperCondensed,
+  } = JSON.parse(stdout) as {
+    condensedUnfocused: string;
+    condensedFocused: string;
+    superCondensed: string;
+    superCondensedExpanded: string;
+    cycledToSuperCondensed: string;
+    longSuperCondensed: string;
   };
 
-  expect(unfocused).toContain("│ │ └");
-  expect(unfocused).toContain("├─╯");
-  expect(focused).toContain("│ │ ┌");
-  expect(focused).toContain("│ │ └");
-  expect(focused).toContain("├─╯");
+  expect(condensedUnfocused).toContain("│ │ └");
+  expect(condensedUnfocused).toContain("├─╯");
+  expect(condensedFocused).toContain("│ │ ┌");
+  expect(condensedFocused).toContain("│ │ └");
+  expect(condensedFocused).toContain("├─╯");
+
+  expect(superCondensed).toContain("├─╯");
+  expect(superCondensed).not.toContain("┌");
+  expect(superCondensed).not.toContain("┐");
+  expect(superCondensed).not.toContain("└");
+  expect(superCondensed).not.toContain("┘");
+  expect(superCondensed).not.toContain("─┤");
+
+  expect(superCondensedExpanded).toContain("src/layout.ts");
+  expect(superCondensedExpanded).not.toContain("┌");
+  expect(superCondensedExpanded).not.toContain("┐");
+  expect(cycledToSuperCondensed).toContain("├─╯");
+  expect(cycledToSuperCondensed).not.toContain("┌");
+  expect(cycledToSuperCondensed).not.toContain("┐");
+  const longSuperCondensedLines = longSuperCondensed.trimEnd().split("\n");
+  expect(longSuperCondensedLines[0]).toContain("this is a ver...");
+  expect(longSuperCondensedLines[1]?.trim() ?? "").toBe("");
 }, 20000);

@@ -4,6 +4,7 @@ import { resolveAppConfig } from "../../src/config/index.ts";
 import { createAppStore } from "../../src/state/appStore.ts";
 import type { RevisionSummary } from "../../src/domain/types.ts";
 import { RevisionItem } from "../../src/ui/render.tsx";
+import type { AppLayout } from "../../src/domain/types.ts";
 
 function createRevision(
   changeId: string,
@@ -27,32 +28,39 @@ function createRevision(
   };
 }
 
-async function renderRevisionStack(focusedRevisionId: string | null) {
+async function renderRevisionStack(
+  layout: AppLayout,
+  focusedRevisionId: string | null,
+  expandedRevisionId: string | null = null,
+) {
   const revisions = [
     createRevision("prev", "above", ["│ ○  ", "│ │  "]),
     createRevision("curr", "branch", ["│ ○  ", "├─╯  "]),
     createRevision("next", "below", ["○  ", "│  "]),
   ] as const;
-  const store = createAppStore("/tmp/repo", { condensedLayout: true });
+  const store = createAppStore("/tmp/repo", { layout });
   store.actions.applyRepositoryData({
     repoPath: "/tmp/repo",
     revisions,
   });
+  if (expandedRevisionId === "curr") {
+    store.actions.setRevisionFiles("curr", [{ status: "M", path: "src/layout.ts" }]);
+  }
 
   const rendered = await testRender(() => (
     <box width={32} flexDirection="column">
-      <For each={revisions}>
+      <For each={store.state.revisions}>
         {(revision, index) => (
           <RevisionItem
             state={store.state}
             revision={revision}
             index={index()}
-            previousRevisionId={revisions[index() - 1]?.changeId ?? null}
-            nextRevisionId={revisions[index() + 1]?.changeId ?? null}
-            config={resolveAppConfig({ commands: { condensedLayout: true } })}
+            previousRevisionId={store.state.revisions[index() - 1]?.changeId ?? null}
+            nextRevisionId={store.state.revisions[index() + 1]?.changeId ?? null}
+            config={resolveAppConfig({ commands: { layout } })}
             focusedRevisionId={focusedRevisionId}
             selectedRevisionIds={new Set()}
-            expandedRevisionId={null}
+            expandedRevisionId={expandedRevisionId}
             commandTargetId={null}
             searchQuery=""
           />
@@ -67,7 +75,92 @@ async function renderRevisionStack(focusedRevisionId: string | null) {
   return frame;
 }
 
-const unfocused = await renderRevisionStack(null);
-const focused = await renderRevisionStack("curr");
+async function renderLayoutCycleAfterMount() {
+  const revisions = [
+    createRevision("curr", "branch", ["│ ○  ", "├─╯  "]),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout: "condensed" });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
 
-console.log(JSON.stringify({ unfocused, focused }));
+  const rendered = await testRender(() => (
+    <box width={32} flexDirection="column">
+      <RevisionItem
+        state={store.state}
+        revision={store.state.revisions[0]!}
+        index={0}
+        previousRevisionId={null}
+        nextRevisionId={null}
+        config={resolveAppConfig({ commands: { layout: "condensed" } })}
+        focusedRevisionId="curr"
+        selectedRevisionIds={new Set()}
+        expandedRevisionId={null}
+        commandTargetId={null}
+        searchQuery=""
+      />
+    </box>
+  ), { width: 32, height: 6 });
+
+  await rendered.renderOnce();
+  store.actions.cycleLayout();
+  await rendered.renderOnce();
+  const frame = rendered.captureCharFrame();
+  rendered.renderer.destroy();
+  return frame;
+}
+
+async function renderLongSuperCondensedDescription() {
+  const revisions = [
+    createRevision(
+      "curr",
+      "this is a very long commit message that should truncate instead of wrapping onto a second line",
+      ["○  "],
+    ),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout: "super-condensed" });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+
+  const rendered = await testRender(() => (
+    <box width={24} flexDirection="column">
+      <RevisionItem
+        state={store.state}
+        revision={store.state.revisions[0]!}
+        index={0}
+        previousRevisionId={null}
+        nextRevisionId={null}
+        config={resolveAppConfig({ commands: { layout: "super-condensed" } })}
+        focusedRevisionId="curr"
+        selectedRevisionIds={new Set()}
+        expandedRevisionId={null}
+        commandTargetId={null}
+        searchQuery=""
+      />
+    </box>
+  ), { width: 24, height: 4 });
+
+  await rendered.renderOnce();
+  const frame = rendered.captureCharFrame();
+  rendered.renderer.destroy();
+  return frame;
+}
+
+const condensedUnfocused = await renderRevisionStack("condensed", null);
+const condensedFocused = await renderRevisionStack("condensed", "curr");
+const superCondensed = await renderRevisionStack("super-condensed", "curr");
+const superCondensedExpanded = await renderRevisionStack("super-condensed", "curr", "curr");
+const cycledToSuperCondensed = await renderLayoutCycleAfterMount();
+const longSuperCondensed = await renderLongSuperCondensedDescription();
+
+console.log(JSON.stringify({
+  condensedUnfocused,
+  condensedFocused,
+  superCondensed,
+  superCondensedExpanded,
+  cycledToSuperCondensed,
+  longSuperCondensed,
+}));

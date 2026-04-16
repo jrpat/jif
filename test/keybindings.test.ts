@@ -45,7 +45,7 @@ function createController(calls: string[]): CommandController {
     toggleFileSelection: () => calls.push("toggleFileSelection"),
     restoreFiles: () => calls.push("restoreFiles"),
     toggleShortFlags: () => calls.push("toggleShortFlags"),
-    toggleCondensedLayout: () => calls.push("toggleCondensedLayout"),
+    cycleLayout: () => calls.push("cycleLayout"),
     toggleRebaseDescendants: () => calls.push("toggleRebaseDescendants"),
     undo: () => calls.push("undo"),
     redo: () => calls.push("redo"),

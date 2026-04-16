@@ -43,15 +43,15 @@ test("expanded layout uses direct two-row graph geometry", () => {
   ]);
 });
 
-test("compact layout folds the first two graph rows and overlays the target chip", () => {
+test("condensed layout folds the first two graph rows and overlays the target chip", () => {
   const revision = createRevision({ graphRows: ["@  ", "│"] });
   const layout = buildRevisionLayoutSpec(revision, {
-    mode: "compact",
+    mode: "condensed",
     isCommandTarget: true,
     badgeText: "onto",
   });
 
-  expect(layout.mode).toBe("compact");
+  expect(layout.mode).toBe("condensed");
   expect(layout.headerRowCount).toBe(1);
   expect(layout.baseGraphRowCount).toBe(2);
   expect(layout.visibleGraphMode).toBe("fold-first-two");
@@ -62,11 +62,11 @@ test("compact layout folds the first two graph rows and overlays the target chip
   });
 });
 
-test("compact layout preserves a second graph row when it carries branch topology", () => {
+test("condensed layout preserves a second graph row when it carries branch topology", () => {
   const layout = buildRevisionLayoutSpec(
     createRevision({ graphRows: ["│ ○  ", "├─╯"] }),
     {
-      mode: "compact",
+      mode: "condensed",
       isCommandTarget: false,
       badgeText: "onto",
     },
@@ -76,16 +76,24 @@ test("compact layout preserves a second graph row when it carries branch topolog
   expect(layout.visibleGraphMode).toBe("keep-second-row");
 });
 
-test("compact layout keeps chip metadata empty when there are no side chips", () => {
+test("super-condensed layout keeps the single-row header and inlined command target", () => {
   const layout = buildRevisionLayoutSpec(
     createRevision({ bookmarks: [], workspaces: [] }),
     {
-      mode: "compact",
-      isCommandTarget: false,
+      mode: "super-condensed",
+      isCommandTarget: true,
       badgeText: "onto",
     },
   );
 
+  expect(layout.mode).toBe("super-condensed");
+  expect(layout.headerRowCount).toBe(1);
+  expect(layout.baseGraphRowCount).toBe(2);
+  expect(layout.visibleGraphMode).toBe("fold-first-two");
   expect(layout.sideChips).toEqual([]);
-  expect(layout.commandTarget).toBeNull();
+  expect(layout.commandTarget).toEqual({
+    placement: "inline",
+    leftOffset: "abcdefgh".length + 1,
+    text: "onto",
+  });
 });

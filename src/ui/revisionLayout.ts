@@ -1,4 +1,4 @@
-import type { RevisionSummary } from "../domain/types.ts";
+import type { AppLayout, RevisionSummary } from "../domain/types.ts";
 import { shouldCondenseGraphRows } from "./revisionGutter.ts";
 
 export type RevisionSideChip = Readonly<{
@@ -6,7 +6,7 @@ export type RevisionSideChip = Readonly<{
   text: string;
 }>;
 
-export type RevisionLayoutMode = "expanded" | "compact";
+export type RevisionLayoutMode = AppLayout;
 
 export type RevisionLayoutSpec = Readonly<{
   mode: RevisionLayoutMode;
@@ -27,7 +27,12 @@ const BASE_LAYOUT_SPECS: Readonly<Record<RevisionLayoutMode, Omit<RevisionLayout
     baseGraphRowCount: 2,
     visibleGraphMode: "direct",
   },
-  compact: {
+  condensed: {
+    headerRowCount: 1,
+    baseGraphRowCount: 2,
+    visibleGraphMode: "fold-first-two",
+  },
+  "super-condensed": {
     headerRowCount: 1,
     baseGraphRowCount: 2,
     visibleGraphMode: "fold-first-two",
@@ -62,7 +67,7 @@ export function buildRevisionLayoutSpec(
     sideChips,
     commandTarget: options.isCommandTarget
       ? {
-          placement: options.mode === "expanded" ? "inline" : "overlay",
+          placement: options.mode === "condensed" ? "overlay" : "inline",
           leftOffset: revision.changeId.length + 1,
           text: options.badgeText,
         }

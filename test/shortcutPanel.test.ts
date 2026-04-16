@@ -192,7 +192,7 @@ test("getShortcutPanelCommands narrows rebase draft shortcuts to draft-relevant 
   expect(ids).toContain("shortcut-panel");
   expect(ids).not.toContain("quit");
   expect(ids).not.toContain("undo");
-  expect(ids).not.toContain("toggle-condensed-layout");
+  expect(ids).not.toContain("cycle-layout");
   expect(ids).not.toContain("edit-revset");
 });
 

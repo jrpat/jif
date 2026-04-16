@@ -57,7 +57,7 @@ export const defaultKeymap: Keymap = {
     d: "show-diff",
     " ": "toggle-revision-selection",
     "-": "toggle-flags",
-    _: "toggle-condensed-layout",
+    _: "cycle-layout",
     u: "undo",
     U: "redo",
     "@": "jump-to-working-copy",

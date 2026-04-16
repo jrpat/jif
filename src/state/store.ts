@@ -1,4 +1,5 @@
 import type {
+  AppLayout,
   AppState,
   ChangedFile,
   CommandBarState,
@@ -12,6 +13,7 @@ import type {
 } from "../domain/types.ts";
 
 export const DRAFT_PLACEHOLDER = "░░░░";
+const LAYOUT_CYCLE: readonly AppLayout[] = ["expanded", "condensed", "super-condensed"];
 
 export const draftConfigs = {
   rebase: {
@@ -89,7 +91,7 @@ export function buildCommandSegments(
 
 export function createInitialState(
   repoPath: string,
-  options?: { useShortFlags?: boolean; condensedLayout?: boolean },
+  options?: { useShortFlags?: boolean; layout?: AppLayout },
 ): AppState {
   return {
     repoPath,
@@ -107,7 +109,7 @@ export function createInitialState(
     eventLog: [],
     loading: true,
     useShortFlags: options?.useShortFlags ?? true,
-    condensedLayout: options?.condensedLayout ?? false,
+    layout: options?.layout ?? "expanded",
     revsetQuery: "",
     searchQuery: "",
   };
@@ -117,8 +119,10 @@ export function toggleShortFlags(state: AppState): AppState {
   return { ...state, useShortFlags: !state.useShortFlags };
 }
 
-export function toggleCondensedLayout(state: AppState): AppState {
-  return { ...state, condensedLayout: !state.condensedLayout };
+export function cycleLayout(state: AppState): AppState {
+  const currentIndex = LAYOUT_CYCLE.indexOf(state.layout);
+  const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % LAYOUT_CYCLE.length;
+  return { ...state, layout: LAYOUT_CYCLE[nextIndex]! };
 }
 
 export function openShortcutPanel(state: AppState): AppState {

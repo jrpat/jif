@@ -1,6 +1,7 @@
 import { createRoot } from "solid-js";
 import { createStore, reconcile, unwrap } from "solid-js/store";
 import type {
+  AppLayout,
   AppState,
   ChangedFile,
   CommandDraftConfig,
@@ -14,6 +15,7 @@ import {
   cancelCommandDraft,
   cancelCommandState,
   clearRevisionSelection,
+  cycleLayout,
   clearStatusMessage,
   closeFocusedRevision,
   focusWorkingCopy,
@@ -34,7 +36,6 @@ import {
   startCommandDraft,
   toggleFileSelection,
   toggleShortFlags,
-  toggleCondensedLayout,
   toggleShortcutPanel,
   createInitialState,
   focusCommandBar,
@@ -54,7 +55,7 @@ export type AppStore = ReturnType<typeof createAppStore>;
 
 export function createAppStore(
   repoPath: string,
-  options?: { useShortFlags?: boolean; condensedLayout?: boolean },
+  options?: { useShortFlags?: boolean; layout?: AppLayout },
 ) {
   let state!: AppState;
   let setState!: ReturnType<typeof createStore<AppState>>[1];
@@ -152,8 +153,8 @@ export function createAppStore(
       toggleShortFlags() {
         mutate((currentState) => toggleShortFlags(currentState));
       },
-      toggleCondensedLayout() {
-        mutate((currentState) => toggleCondensedLayout(currentState));
+      cycleLayout() {
+        mutate((currentState) => cycleLayout(currentState));
       },
       openShortcutPanel() {
         mutate((currentState) => openShortcutPanel(currentState));

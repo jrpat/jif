@@ -16,7 +16,7 @@ export type CommandController = Readonly<{
   toggleFileSelection: () => void;
   restoreFiles: () => void;
   toggleShortFlags: () => void;
-  toggleCondensedLayout: () => void;
+  cycleLayout: () => void;
   toggleRebaseDescendants: () => void;
   undo: () => void;
   redo: () => void;
@@ -213,11 +213,11 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     group: "global",
   },
   {
-    id: "toggle-condensed-layout",
-    title: "Condensed Layout",
-    description: "Toggle single-line revision rows",
+    id: "cycle-layout",
+    title: "Cycle Layout",
+    description: "Rotate expanded, condensed, and super-condensed layouts",
     canonicalKeys: ["_"],
-    run: (controller) => controller.toggleCondensedLayout(),
+    run: (controller) => controller.cycleLayout(),
     group: "global",
   },
   {

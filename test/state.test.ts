@@ -7,6 +7,7 @@ import {
   cancelCommandState,
   clearStatusMessage,
   clearRevisionSelection,
+  cycleLayout,
   closeFocusedRevision,
   createInitialState,
   dismissStatusMessage,
@@ -27,7 +28,6 @@ import {
   openFocusedRevision,
   closeShortcutPanel,
   toggleShortcutPanel,
-  toggleCondensedLayout,
   setRevisionFiles,
   startCommandDraft,
   toggleFileSelection,
@@ -447,12 +447,15 @@ test("arg helper selects long flags when useShortFlags is false", () => {
   expect(getDisplayedCommandText(state)).toBe("rebase --revisions a --destination b");
 });
 
-test("toggleCondensedLayout flips only condensed layout", () => {
+test("cycleLayout rotates layouts without changing unrelated state", () => {
   const state = createState();
-  const next = toggleCondensedLayout(state);
+  const next = cycleLayout(state);
+  const wrapped = cycleLayout(cycleLayout(next));
 
-  expect(state.condensedLayout).toBeFalse();
-  expect(next.condensedLayout).toBeTrue();
+  expect(state.layout).toBe("expanded");
+  expect(next.layout).toBe("condensed");
+  expect(cycleLayout(next).layout).toBe("super-condensed");
+  expect(wrapped.layout).toBe("expanded");
   expect(next.useShortFlags).toBe(state.useShortFlags);
   expect(next.focusedRevisionIndex).toBe(state.focusedRevisionIndex);
 });
