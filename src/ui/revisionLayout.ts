@@ -44,7 +44,7 @@ export function getMaxRevisionBaseGraphRowCount(): number {
 }
 
 export function buildRevisionLayoutSpec(
-  revision: Pick<RevisionSummary, "changeId" | "bookmarks" | "workspaces" | "graphRows">,
+  revision: Pick<RevisionSummary, "revisionId" | "bookmarks" | "workspaces" | "graphRows">,
   options: Readonly<{
     mode: RevisionLayoutMode;
     isCommandTarget: boolean;
@@ -68,7 +68,7 @@ export function buildRevisionLayoutSpec(
     commandTarget: options.isCommandTarget
       ? {
           placement: options.mode === "condensed" ? "overlay" : "inline",
-          leftOffset: revision.changeId.length + 1,
+          leftOffset: revision.revisionId.length + 1,
           text: options.badgeText,
         }
       : null,

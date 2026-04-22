@@ -7,14 +7,14 @@ import { RevisionItem } from "../../src/ui/render.tsx";
 import type { AppLayout } from "../../src/domain/types.ts";
 
 function createRevision(
-  changeId: string,
+  revisionId: string,
   description: string,
   graphRows: readonly string[],
 ): RevisionSummary {
   return {
-    changeId,
+    revisionId,
     changeIdPrefixLength: 2,
-    commitId: `${changeId}commit`,
+    commitId: `${revisionId.replace("/", "")}commit`,
     description,
     localTimestamp: "2026-04-15 12:00:00",
     bookmarks: [],
@@ -55,8 +55,8 @@ async function renderRevisionStack(
             state={store.state}
             revision={revision}
             index={index()}
-            previousRevisionId={store.state.revisions[index() - 1]?.changeId ?? null}
-            nextRevisionId={store.state.revisions[index() + 1]?.changeId ?? null}
+            previousRevisionId={store.state.revisions[index() - 1]?.revisionId ?? null}
+            nextRevisionId={store.state.revisions[index() + 1]?.revisionId ?? null}
             config={resolveAppConfig({ commands: { layout } })}
             focusedRevisionId={focusedRevisionId}
             selectedRevisionIds={new Set()}
@@ -149,12 +149,53 @@ async function renderLongSuperCondensedDescription() {
   return frame;
 }
 
+async function renderDivergentFocusedRevision() {
+  const revisions = [
+    createRevision("shared/0", "older divergent", ["│ ○  ", "│ │  "]),
+    createRevision("shared/1", "focused divergent", ["│ ○  ", "├─╯  "]),
+    createRevision("next", "below", ["○  ", "│  "]),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout: "condensed" });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+
+  const rendered = await testRender(() => (
+    <box width={32} flexDirection="column">
+      <For each={store.state.revisions}>
+        {(revision, index) => (
+          <RevisionItem
+            state={store.state}
+            revision={revision}
+            index={index()}
+            previousRevisionId={store.state.revisions[index() - 1]?.revisionId ?? null}
+            nextRevisionId={store.state.revisions[index() + 1]?.revisionId ?? null}
+            config={resolveAppConfig({ commands: { layout: "condensed" } })}
+            focusedRevisionId="shared/1"
+            selectedRevisionIds={new Set()}
+            expandedRevisionId={null}
+            commandTargetId={null}
+            searchQuery=""
+          />
+        )}
+      </For>
+    </box>
+  ), { width: 32, height: 12 });
+
+  await rendered.renderOnce();
+  const frame = rendered.captureCharFrame();
+  rendered.renderer.destroy();
+  return frame;
+}
+
 const condensedUnfocused = await renderRevisionStack("condensed", null);
 const condensedFocused = await renderRevisionStack("condensed", "curr");
 const superCondensed = await renderRevisionStack("super-condensed", "curr");
 const superCondensedExpanded = await renderRevisionStack("super-condensed", "curr", "curr");
 const cycledToSuperCondensed = await renderLayoutCycleAfterMount();
 const longSuperCondensed = await renderLongSuperCondensedDescription();
+const divergentFocused = await renderDivergentFocusedRevision();
 
 console.log(JSON.stringify({
   condensedUnfocused,
@@ -163,4 +204,5 @@ console.log(JSON.stringify({
   superCondensedExpanded,
   cycledToSuperCondensed,
   longSuperCondensed,
+  divergentFocused,
 }));

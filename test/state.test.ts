@@ -52,7 +52,7 @@ function createState(): AppState {
     loading: false,
     revisions: [
       {
-        changeId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
         changeIdPrefixLength: 1,
         commitId: "11111111",
         description: "first",
@@ -67,10 +67,49 @@ function createState(): AppState {
         files: [{ status: "M", path: "src/a.ts" }],
       },
       {
-        changeId: "bbbbbbbb",
+        revisionId: "bbbbbbbb",
         changeIdPrefixLength: 1,
         commitId: "22222222",
         description: "second",
+        localTimestamp: "2026-03-30 07:22:40",
+        bookmarks: [],
+        workspaces: [],
+        graphRows: ["○  "],
+        isEmpty: false,
+        hasConflict: false,
+        marker: "plain",
+        filesLoaded: true,
+        files: [{ status: "M", path: "src/b.ts" }],
+      },
+    ],
+  };
+}
+
+function createDivergentState(): AppState {
+  return {
+    ...createInitialState("/tmp/repo"),
+    loading: false,
+    revisions: [
+      {
+        revisionId: "abcdefgh/0",
+        changeIdPrefixLength: 3,
+        commitId: "11111111",
+        description: "first divergent",
+        localTimestamp: "2026-03-30 07:22:39",
+        bookmarks: [],
+        workspaces: [],
+        graphRows: ["@  "],
+        isEmpty: false,
+        hasConflict: false,
+        marker: "working-copy",
+        filesLoaded: true,
+        files: [{ status: "M", path: "src/a.ts" }],
+      },
+      {
+        revisionId: "abcdefgh/1",
+        changeIdPrefixLength: 3,
+        commitId: "22222222",
+        description: "second divergent",
         localTimestamp: "2026-03-30 07:22:40",
         bookmarks: [],
         workspaces: [],
@@ -141,6 +180,15 @@ test("startCommandDraft advances focus to parent revision", () => {
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
   expect(state.focusedRevisionIndex).toBe(1);
   expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+});
+
+test("startCommandDraft keeps divergent revision ids unambiguous in command text", () => {
+  let state = { ...createDivergentState(), focusedRevisionIndex: 1 };
+
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["abcdefgh/1"] });
+
+  expect(state.selectedRevisionIds).toEqual(["abcdefgh/1"]);
+  expect(getDisplayedCommandText(state)).toBe("rebase -r abcdefgh/1 -d ░░░░");
 });
 
 test("rebase command text updates when descendants are toggled", () => {
@@ -364,6 +412,30 @@ test("getFocusedRevisionArg uses the focused revision prefix length", () => {
   expect(getFocusedRevisionArg(state)).toBe("a");
 });
 
+test("getFocusedRevisionArg uses the concrete revision id for divergent revisions", () => {
+  const state = { ...createDivergentState(), focusedRevisionIndex: 1 };
+
+  expect(getFocusedRevisionArg(state)).toBe("abcdefgh/1");
+});
+
+test("openFocusedRevision and refresh keep the exact divergent sibling identity", () => {
+  let state = { ...createDivergentState(), focusedRevisionIndex: 1 };
+
+  state = openFocusedRevision(state);
+  expect(state.expandedRevisionId).toBe("abcdefgh/1");
+
+  const refreshed = applyRepositoryData(state, {
+    repoPath: state.repoPath,
+    revisions: state.revisions.map((revision) => ({
+      ...revision,
+      description: `${revision.description} refreshed`,
+    })),
+  });
+
+  expect(refreshed.focusedRevisionIndex).toBe(1);
+  expect(refreshed.expandedRevisionId).toBe("abcdefgh/1");
+});
+
 test("focusWorkingCopy selects the new working-copy revision after repository refresh", () => {
   const state = createState();
 
@@ -371,7 +443,7 @@ test("focusWorkingCopy selects the new working-copy revision after repository re
     repoPath: state.repoPath,
     revisions: [
       {
-        changeId: "cccccccc",
+        revisionId: "cccccccc",
         changeIdPrefixLength: 1,
         commitId: "33333333",
         description: "new child",
@@ -397,7 +469,7 @@ test("focusWorkingCopy selects the new working-copy revision after repository re
 
   const focusedWorkingCopy = focusWorkingCopy(refreshed);
   expect(focusedWorkingCopy.focusedRevisionIndex).toBe(0);
-  expect(focusedWorkingCopy.revisions[0]?.changeId).toBe("cccccccc");
+  expect(focusedWorkingCopy.revisions[0]?.revisionId).toBe("cccccccc");
 });
 
 test("startCommandDraft uses pre-selected revisions and does not advance focus", () => {
@@ -545,7 +617,7 @@ test("setRevsetQuery updates the query", () => {
 test("expandElidedRevision replaces elided entry with new revisions and updates focus", () => {
   let state = createState();
   const elidedEntry = {
-    changeId: "__elided_2",
+    revisionId: "__elided_2",
     changeIdPrefixLength: 0,
     commitId: "",
     description: "(elided revisions)",
@@ -563,14 +635,14 @@ test("expandElidedRevision replaces elided entry with new revisions and updates 
   expect(state.revisions).toHaveLength(3);
 
   const replacements = [
-    { ...elidedEntry, changeId: "cccccccc", marker: "plain" as const, description: "third" },
-    { ...elidedEntry, changeId: "dddddddd", marker: "plain" as const, description: "fourth" },
+    { ...elidedEntry, revisionId: "cccccccc", marker: "plain" as const, description: "third" },
+    { ...elidedEntry, revisionId: "dddddddd", marker: "plain" as const, description: "fourth" },
   ];
   state = expandElidedRevision(state, 2, replacements);
 
   expect(state.revisions).toHaveLength(4);
-  expect(state.revisions[2]?.changeId).toBe("cccccccc");
-  expect(state.revisions[3]?.changeId).toBe("dddddddd");
+  expect(state.revisions[2]?.revisionId).toBe("cccccccc");
+  expect(state.revisions[3]?.revisionId).toBe("dddddddd");
   expect(state.focusedRevisionIndex).toBe(2);
 });
 
@@ -581,7 +653,7 @@ test("applyRepositoryData clears stale loaded files when a revision becomes empt
     repoPath: state.repoPath,
     revisions: [
       {
-        changeId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
         changeIdPrefixLength: 1,
         commitId: "11111111",
         description: "(empty)",

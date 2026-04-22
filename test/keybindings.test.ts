@@ -10,7 +10,7 @@ function createState(): AppState {
     loading: false,
     revisions: [
       {
-        changeId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
         changeIdPrefixLength: 1,
         commitId: "11111111",
         description: "first",

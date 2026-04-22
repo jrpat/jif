@@ -10,7 +10,7 @@ function createState(): AppState {
     loading: false,
     revisions: [
       {
-        changeId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
         changeIdPrefixLength: 1,
         commitId: "11111111",
         description: "first",
@@ -113,7 +113,7 @@ test("canExecute blocks commands on elided revisions", () => {
     ...createState(),
     revisions: [
       {
-        changeId: "__elided_0",
+        revisionId: "__elided_0",
         changeIdPrefixLength: 0,
         commitId: "",
         description: "(elided revisions)",

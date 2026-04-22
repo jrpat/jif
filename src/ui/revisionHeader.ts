@@ -12,17 +12,17 @@ export type RevisionChangeIdColors = Readonly<{
 }>;
 
 export function buildRevisionChangeIdSegments(
-  revision: Pick<RevisionSummary, "changeId" | "changeIdPrefixLength" | "localTimestamp">,
+  revision: Pick<RevisionSummary, "revisionId" | "changeIdPrefixLength" | "localTimestamp">,
   options: Readonly<{ showTimestamp: boolean }>,
 ): readonly RevisionChangeIdSegment[] {
   const segments: RevisionChangeIdSegment[] = [
     {
       kind: "prefix",
-      text: revision.changeId.slice(0, revision.changeIdPrefixLength),
+      text: revision.revisionId.slice(0, revision.changeIdPrefixLength),
     },
     {
       kind: "suffix",
-      text: revision.changeId.slice(revision.changeIdPrefixLength),
+      text: revision.revisionId.slice(revision.changeIdPrefixLength),
     },
   ];
 

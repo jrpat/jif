@@ -10,7 +10,7 @@ export type ChangedFile = Readonly<{
 }>;
 
 export type RevisionSummary = Readonly<{
-  changeId: string;
+  revisionId: string;
   changeIdPrefixLength: number;
   commitId: string;
   description: string;

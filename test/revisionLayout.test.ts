@@ -7,7 +7,7 @@ import {
 
 function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSummary {
   return {
-    changeId: "abcdefgh",
+    revisionId: "abcdefgh",
     changeIdPrefixLength: 2,
     commitId: "12345678",
     description: "feat: tighten condensed layout packing",
@@ -57,9 +57,24 @@ test("condensed layout folds the first two graph rows and overlays the target ch
   expect(layout.visibleGraphMode).toBe("fold-first-two");
   expect(layout.commandTarget).toEqual({
     placement: "overlay",
-    leftOffset: revision.changeId.length + 1,
+    leftOffset: revision.revisionId.length + 1,
     text: "onto",
   });
+});
+
+test("command target offset accounts for the divergent revision suffix width", () => {
+  const revision = createRevision({
+    revisionId: "abcdefgh/1",
+    graphRows: ["@  ", "│"],
+  });
+
+  const layout = buildRevisionLayoutSpec(revision, {
+    mode: "condensed",
+    isCommandTarget: true,
+    badgeText: "onto",
+  });
+
+  expect(layout.commandTarget?.leftOffset).toBe(revision.revisionId.length + 1);
 });
 
 test("condensed layout preserves a second graph row when it carries branch topology", () => {

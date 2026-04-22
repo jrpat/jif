@@ -39,6 +39,23 @@ test("parseLogOutput preserves hybrid graph rows in emission order", () => {
   expect(revisions[1]?.hasConflict).toBeFalse();
 });
 
+test("parseLogOutput keeps divergent siblings distinct by revision id", () => {
+  const output = [
+    "@  abcdefgh/0\u001fheader\u001fabcdefgh/0\u001f11111111\u001ffirst divergent\u001fmain\u001fabc\u001ffalse\u001f2026-03-30 07:22:39\u001ffalse",
+    "│\u001fbody\u001fabcdefgh/0",
+    "○  abcdefgh/1\u001fheader\u001fabcdefgh/1\u001f22222222\u001fsecond divergent\u001f\u001fabc\u001ffalse\u001f2026-03-29 03:05:01\u001ffalse",
+    "│\u001fbody\u001fabcdefgh/1",
+  ].join("\n");
+
+  const revisions = parseLogOutput(output, new Map());
+
+  expect(revisions).toHaveLength(2);
+  expect(revisions[0]?.revisionId).toBe("abcdefgh/0");
+  expect(revisions[0]?.graphRows).toEqual(["@  ", "│"]);
+  expect(revisions[1]?.revisionId).toBe("abcdefgh/1");
+  expect(revisions[1]?.graphRows).toEqual(["○  ", "│"]);
+});
+
 test("parseLogOutput uses both empty and no description markers for blank empty revisions", () => {
   const output = [
     "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001f\u001f\u001f\u001fabc\u001ftrue\u001f2026-03-30 07:22:39\u001ffalse",
@@ -93,7 +110,7 @@ test("parseLogOutput creates a synthetic elided revision", () => {
   expect(revisions[1]?.marker).toBe("elided");
   expect(revisions[1]?.description).toBe("(elided revisions)");
   expect(revisions[1]?.graphRows).toEqual(["~  "]);
-  expect(revisions[1]?.changeId).toBe("__elided_1");
+  expect(revisions[1]?.revisionId).toBe("__elided_1");
   expect(revisions[1]?.filesLoaded).toBeTrue();
   expect(revisions[1]?.localTimestamp).toBe("");
 });
@@ -135,7 +152,7 @@ test("JjClient loads a real sample repository", async () => {
   expect(repository.revisions.some((revision) => revision.bookmarks.length > 0)).toBeTrue();
   expect(repository.revisions.some((revision) => revision.workspaces.length > 0)).toBeTrue();
 
-  const firstFiles = await client.loadChangedFiles(repository.revisions[0]!.changeId);
+  const firstFiles = await client.loadChangedFiles(repository.revisions[0]!.revisionId);
   expect(firstFiles.length).toBeGreaterThan(0);
 }, 20000);
 

@@ -11,6 +11,7 @@ import type {
   StatusMessage,
   StatusLevel,
 } from "../domain/types.ts";
+import { getRevisionArg } from "../domain/revisionIds.ts";
 
 export const DRAFT_PLACEHOLDER = "░░░░";
 const LAYOUT_CYCLE: readonly AppLayout[] = ["expanded", "condensed", "super-condensed"];
@@ -171,22 +172,22 @@ export function applyRepositoryData(
   repositoryData: RepositoryData,
 ): AppState {
   const previousRevisions = new Map(
-    state.revisions.map((revision) => [revision.changeId, revision] as const),
+    state.revisions.map((revision) => [revision.revisionId, revision] as const),
   );
   const revisions = repositoryData.revisions.map((revision) => ({
     ...revision,
-    ...resolveRevisionFiles(previousRevisions.get(revision.changeId), revision),
+    ...resolveRevisionFiles(previousRevisions.get(revision.revisionId), revision),
   }));
-  const focusedRevisionId = getFocusedRevision(state)?.changeId;
+  const focusedRevisionId = getFocusedRevision(state)?.revisionId;
   const focusedRevisionIndex = clampIndex(
     focusedRevisionId
-      ? revisions.findIndex((revision) => revision.changeId === focusedRevisionId)
+      ? revisions.findIndex((revision) => revision.revisionId === focusedRevisionId)
       : 0,
     revisions.length,
   );
   const expandedRevisionId =
     state.expandedRevisionId &&
-    revisions.some((revision) => revision.changeId === state.expandedRevisionId)
+    revisions.some((revision) => revision.revisionId === state.expandedRevisionId)
       ? state.expandedRevisionId
       : null;
   const nextFocusMode =
@@ -194,7 +195,7 @@ export function applyRepositoryData(
       ? "revisions"
       : state.focusMode;
 
-  const revisionIdSet = new Set(revisions.map((r) => r.changeId));
+  const revisionIdSet = new Set(revisions.map((r) => r.revisionId));
   const selectedRevisionIds = state.selectedRevisionIds.filter((id) => revisionIdSet.has(id));
   const selectedFilePaths =
     expandedRevisionId === state.expandedRevisionId
@@ -221,7 +222,7 @@ export function setRevisionFiles(
   files: readonly ChangedFile[],
 ): AppState {
   const revisions = state.revisions.map((revision) =>
-    revision.changeId === revisionId ? { ...revision, files, filesLoaded: true } : revision,
+    revision.revisionId === revisionId ? { ...revision, files, filesLoaded: true } : revision,
   );
 
   const filePaths = new Set(files.map((f) => f.path));
@@ -285,7 +286,7 @@ export function openFocusedRevision(state: AppState): AppState {
   return {
     ...state,
     focusMode: "files",
-    expandedRevisionId: revision.changeId,
+    expandedRevisionId: revision.revisionId,
     focusedFileIndex: 0,
     selectedFilePaths: [],
   };
@@ -437,7 +438,7 @@ export function revisionMatchesSearch(
   if (query === "") return false;
   const lowerQuery = query.toLowerCase();
   return (
-    revision.changeId.toLowerCase().includes(lowerQuery) ||
+    revision.revisionId.toLowerCase().includes(lowerQuery) ||
     revision.description.toLowerCase().includes(lowerQuery) ||
     revision.bookmarks.some((b) => b.toLowerCase().includes(lowerQuery)) ||
     revision.workspaces.some((w) => w.toLowerCase().includes(lowerQuery))
@@ -528,7 +529,7 @@ export function startCommandDraft(
   const hasPreSelection = state.selectedRevisionIds.length > 0;
   const sourceIds = hasPreSelection
     ? state.selectedRevisionIds
-    : [revision.changeId];
+    : [revision.revisionId];
 
   return {
     ...state,
@@ -570,13 +571,13 @@ export function toggleRevisionSelection(state: AppState): AppState {
   }
 
   const ids = state.selectedRevisionIds;
-  const isSelected = ids.includes(focusedRevision.changeId);
+  const isSelected = ids.includes(focusedRevision.revisionId);
 
   return {
     ...state,
     selectedRevisionIds: isSelected
-      ? ids.filter((id) => id !== focusedRevision.changeId)
-      : [...ids, focusedRevision.changeId],
+      ? ids.filter((id) => id !== focusedRevision.revisionId)
+      : [...ids, focusedRevision.revisionId],
   };
 }
 
@@ -689,7 +690,7 @@ export function getFocusedRevisionArg(state: AppState): string | null {
     return null;
   }
 
-  return revision.changeId.slice(0, revision.changeIdPrefixLength);
+  return getRevisionArg(revision.revisionId, revision.changeIdPrefixLength);
 }
 
 export function getExpandedRevision(state: AppState): RevisionSummary | null {
@@ -698,7 +699,7 @@ export function getExpandedRevision(state: AppState): RevisionSummary | null {
   }
 
   return (
-    state.revisions.find((revision) => revision.changeId === state.expandedRevisionId) ?? null
+    state.revisions.find((revision) => revision.revisionId === state.expandedRevisionId) ?? null
   );
 }
 
@@ -712,11 +713,11 @@ export function getCommandTargetRevisionId(state: AppState): string | null {
   }
 
   const focusedRevision = getFocusedRevision(state);
-  if (!focusedRevision || state.selectedRevisionIds.includes(focusedRevision.changeId)) {
+  if (!focusedRevision || state.selectedRevisionIds.includes(focusedRevision.revisionId)) {
     return null;
   }
 
-  return focusedRevision.changeId;
+  return focusedRevision.revisionId;
 }
 
 export function getSelectedRevisionIds(state: AppState): ReadonlySet<string> {
@@ -787,13 +788,17 @@ export function getDisplayedCommandSegments(state: AppState): readonly CommandSe
   return buildCommandSegments(resolved.template, resolved.context);
 }
 
-function revisionPrefix(state: AppState, changeId: string): string {
-  if (!changeId) {
+function revisionPrefix(state: AppState, revisionId: string): string {
+  if (!revisionId) {
     return "";
   }
 
-  const rev = state.revisions.find((r) => r.changeId === changeId);
-  return rev ? changeId.slice(0, rev.changeIdPrefixLength) : changeId;
+  const revision = state.revisions.find((r) => r.revisionId === revisionId);
+  if (!revision) {
+    return revisionId;
+  }
+
+  return getRevisionArg(revision.revisionId, revision.changeIdPrefixLength);
 }
 
 export function getOperationAffectedRevisionIds(state: AppState): ReadonlySet<string> {
@@ -832,7 +837,7 @@ function getExpandedFilesCount(
     return 0;
   }
 
-  return revisions.find((revision) => revision.changeId === expandedRevisionId)?.files.length ?? 0;
+  return revisions.find((revision) => revision.revisionId === expandedRevisionId)?.files.length ?? 0;
 }
 
 function resolveRevisionFiles(

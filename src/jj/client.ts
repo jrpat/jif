@@ -5,6 +5,7 @@ import type {
   RevisionMarker,
   RevisionSummary,
 } from "../domain/types.ts";
+import { getChangeIdFromRevisionId } from "../domain/revisionIds.ts";
 import { getMaxRevisionBaseGraphRowCount } from "../ui/revisionLayout.ts";
 
 const FIELD_SEPARATOR = "\u001f";
@@ -39,13 +40,13 @@ export class JjClient {
   }
 
   async loadElidedRevisions(
-    afterChangeId: string,
-    beforeChangeId: string | null,
+    afterRevisionId: string,
+    beforeRevisionId: string | null,
     limit = 20,
   ): Promise<readonly RevisionSummary[]> {
-    const revset = beforeChangeId
-      ? `${afterChangeId}::${beforeChangeId} ~ ${afterChangeId} ~ ${beforeChangeId}`
-      : `${afterChangeId}::`;
+    const revset = beforeRevisionId
+      ? `${afterRevisionId}::${beforeRevisionId} ~ ${afterRevisionId} ~ ${beforeRevisionId}`
+      : `${afterRevisionId}::`;
     const args = [
       "log",
       "--limit",
@@ -103,6 +104,7 @@ export class JjClient {
   }
 
   async resolveDescendants(revisionId: string): Promise<readonly string[]> {
+    const shortRevisionId = 'change_id.shortest(8) ++ surround("/", "", change_offset)';
     const result = await this.runJj([
       "log",
       "--revisions",
@@ -111,7 +113,7 @@ export class JjClient {
       "--color",
       "never",
       "--template",
-      'change_id.shortest(8) ++ "\\n"',
+      `${shortRevisionId} ++ "\\n"`,
     ]);
 
     return result.stdout
@@ -217,7 +219,7 @@ export function parseLogOutput(
       if (isElidedLine(rawLine)) {
         const graphMatch = /^(?<graph>.*?)(?=\()/.exec(rawLine);
         revisions.push({
-          changeId: `__elided_${revisions.length}`,
+          revisionId: `__elided_${revisions.length}`,
           changeIdPrefixLength: 0,
           commitId: "",
           description: "(elided revisions)",
@@ -246,7 +248,7 @@ export function parseLogOutput(
     const [visibleGraph = "", rowKind = "", ...fields] = rawLine.split(FIELD_SEPARATOR);
     if (rowKind === ROW_KIND_HEADER) {
       const [
-        changeId = "",
+        rawRevisionId = "",
         commitId = "",
         rawDescription = "",
         rawBookmarks = "",
@@ -256,16 +258,17 @@ export function parseLogOutput(
         rawTimestamp = "",
         rawConflict = "",
       ] = fields;
-      if (changeId.length === 0) {
+      if (rawRevisionId.length === 0) {
         continue;
       }
 
-      const graphRow = extractGraphPrefix(visibleGraph, changeId);
+      const revisionId = rawRevisionId.trim();
+      const graphRow = extractGraphPrefix(visibleGraph, revisionId);
       const isEmpty = rawEmpty.trim() === "true";
       const hasConflict = rawConflict.trim() === "true";
       revisions.push({
-        changeId,
-        changeIdPrefixLength: rawChangeIdPrefix.trim().length || changeId.length,
+        revisionId,
+        changeIdPrefixLength: rawChangeIdPrefix.trim().length || getChangeIdFromRevisionId(revisionId).length,
         commitId: commitId.trim(),
         description: rawDescription.trim() || (isEmpty ? "(empty) (no description)" : "(no description)"),
         localTimestamp: rawTimestamp.trim(),
@@ -282,9 +285,9 @@ export function parseLogOutput(
     }
 
     if (rowKind === ROW_KIND_BODY) {
-      const [changeId = ""] = fields;
+      const [revisionId = ""] = fields;
       const previous = revisions.at(-1);
-      if (previous && previous.changeId === changeId) {
+      if (previous && previous.revisionId === revisionId) {
         revisions[revisions.length - 1] = {
           ...previous,
           graphRows: [...previous.graphRows, visibleGraph],
@@ -297,12 +300,14 @@ export function parseLogOutput(
 }
 
 function buildLogTemplate(baseGraphRowCount: number): string {
+  const shortChangeId = "change_id.shortest(8)";
+  const shortRevisionId = `${shortChangeId} ++ surround("/", "", change_offset)`;
   const rows = [
-    `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ "${ROW_KIND_HEADER}" ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ working_copies.map(|wc| wc.name()).join(",") ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ conflict ++ "\\n"`,
+    `${shortRevisionId} ++ "${FIELD_SEPARATOR}" ++ "${ROW_KIND_HEADER}" ++ "${FIELD_SEPARATOR}" ++ ${shortRevisionId} ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ working_copies.map(|wc| wc.name()).join(",") ++ "${FIELD_SEPARATOR}" ++ ${shortChangeId}.prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ conflict ++ "\\n"`,
   ];
 
   for (let index = 1; index < baseGraphRowCount; index += 1) {
-    rows.push(`"${FIELD_SEPARATOR}" ++ "${ROW_KIND_BODY}" ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8) ++ "\\n"`);
+    rows.push(`"${FIELD_SEPARATOR}" ++ "${ROW_KIND_BODY}" ++ "${FIELD_SEPARATOR}" ++ ${shortRevisionId} ++ "\\n"`);
   }
 
   return rows.join(" ++ ");
@@ -330,13 +335,13 @@ function isElidedLine(line: string): boolean {
   return /~.*\(elided revisions\)/.test(line);
 }
 
-function extractGraphPrefix(visibleGraph: string, changeId: string): string {
-  if (visibleGraph.endsWith(changeId)) {
-    return visibleGraph.slice(0, -changeId.length);
+function extractGraphPrefix(visibleGraph: string, revisionId: string): string {
+  if (visibleGraph.endsWith(revisionId)) {
+    return visibleGraph.slice(0, -revisionId.length);
   }
 
-  const graphMatch = /^(?<graph>.*?)(?<change>[a-z0-9]+)$/.exec(visibleGraph);
-  if (graphMatch?.groups?.change === changeId) {
+  const graphMatch = /^(?<graph>.*?)(?<revision>[a-z0-9]+(?:\/\d+)?)$/.exec(visibleGraph);
+  if (graphMatch?.groups?.revision === revisionId) {
     return graphMatch.groups.graph ?? "";
   }
 

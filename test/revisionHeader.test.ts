@@ -8,7 +8,7 @@ import {
 
 function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSummary {
   return {
-    changeId: "abcdefgh",
+    revisionId: "abcdefgh",
     changeIdPrefixLength: 2,
     commitId: "12345678",
     description: "feat: tighten condensed layout packing",
@@ -37,6 +37,19 @@ test("buildRevisionChangeIdSegments appends timestamps only in expanded layout",
 
   expect(expandedText).toBe("abcdefgh · 2026-03-30 07:22:39");
   expect(condensedText).toBe("abcdefgh");
+});
+
+test("buildRevisionChangeIdSegments keeps the divergent suffix in the visible revision id", () => {
+  const revision = createRevision({
+    changeIdPrefixLength: 3,
+    revisionId: "abcdefgh/1",
+  });
+
+  const text = buildRevisionChangeIdSegments(revision, { showTimestamp: false })
+    .map((segment) => segment.text)
+    .join("");
+
+  expect(text).toBe("abcdefgh/1");
 });
 
 const descriptionColors = {

@@ -68,7 +68,7 @@ export function createAppStore(
   });
 
   function replaceState(nextState: AppState) {
-    setState(reconcile(nextState, { key: "changeId" }));
+    setState(reconcile(nextState, { key: "revisionId" }));
   }
 
   function mutate(recipe: (currentState: AppState) => AppState) {
