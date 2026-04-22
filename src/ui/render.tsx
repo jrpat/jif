@@ -187,7 +187,15 @@ export function JifView(props: {
       store.actions.cancelOrBlur();
     },
     confirm() {
-      void executeCurrentCommand();
+      const state = store.snapshot();
+      if (state.commandDraft?.config.kind === "squash" && squashNeedsEditor(state)) {
+        const commandText = getDisplayedCommandText(state).trim();
+        if (commandText.length > 0) {
+          void runInteractiveJjCommand(commandText);
+        }
+      } else {
+        void executeCurrentCommand();
+      }
     },
     focusCommandBar() {
       store.actions.focusCommandBar();
@@ -684,6 +692,15 @@ export function JifView(props: {
     } finally {
       renderer.resume();
     }
+  }
+
+  function squashNeedsEditor(state: ReturnType<typeof store.snapshot>): boolean {
+    const target = getFocusedRevision(state);
+    if (!target?.description) return false;
+    const selectedIds = state.selectedRevisionIds;
+    return state.revisions.some(
+      (r) => selectedIds.includes(r.revisionId) && r.description,
+    );
   }
 
   async function expandElidedRevisions(elidedIndex: number) {

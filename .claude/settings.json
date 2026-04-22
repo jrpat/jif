@@ -3,6 +3,7 @@
     "allow": [
       "Bash(bun add:*)",
       "Bash(bun test:*)",
+      "Bash(bun:*)",
       "Bash(bunx tsc:*)",
       "Bash(jj diff:*)",
       "Bash(jj log:*)",
@@ -10,13 +11,18 @@
       "Bash(jj rebase:*)",
       "Bash(jj restore:*)",
       "Bash(jj status:*)",
+      "Read(//private/tmp/**)",
       "Skill(commit)",
       "Skill(resolve)",
       "Skill(resolve:*)",
       "WebFetch(domain:deepwiki.com)",
       "WebFetch(domain:opentui.com)",
       "WebSearch",
-      "mcp__serena__get_symbols_overview"
+      "mcp__serena__check_onboarding_performed",
+      "mcp__serena__find_referencing_symbols",
+      "mcp__serena__find_symbol",
+      "mcp__serena__get_symbols_overview",
+      "mcp__serena__onboarding"
     ]
   },
   "enableAllProjectMcpServers": true,
@@ -24,4 +30,3 @@
     "serena"
   ]
 }
-
