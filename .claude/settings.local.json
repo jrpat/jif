@@ -16,11 +16,12 @@
       "Bash(jj new:*)",
       "Skill(resolve)",
       "Skill(resolve:*)",
-      "Bash(jj status:*)"
+      "Bash(jj status:*)",
+      "Bash(bun:*)"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "serena"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

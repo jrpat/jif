@@ -189,3 +189,7 @@
 {"kind":"jj","args":["bookmark","create","experiment/graph"]}
 {"kind":"jj","args":["edit","main"]}
 {"kind":"jj","args":["rebase","-r","experiment/graph","-d","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"jj","args":["describe","-m","experiment: optimize graph measurement via length"]}
+{"kind":"jj","args":["--at-op","@-","describe","-m","experiment: optimize graph measurement via reduce"]}
+{"kind":"jj","args":["edit","main"]}
