@@ -39,17 +39,33 @@ test("buildRevisionChangeIdSegments appends timestamps only in expanded layout",
   expect(condensedText).toBe("abcdefgh");
 });
 
-test("buildRevisionChangeIdSegments keeps the divergent suffix in the visible revision id", () => {
+test("buildRevisionChangeIdSegments styles divergent suffix like the prefix", () => {
   const revision = createRevision({
     changeIdPrefixLength: 3,
     revisionId: "abcdefgh/1",
   });
 
-  const text = buildRevisionChangeIdSegments(revision, { showTimestamp: false })
-    .map((segment) => segment.text)
-    .join("");
+  const segments = buildRevisionChangeIdSegments(revision, { showTimestamp: false });
 
-  expect(text).toBe("abcdefgh/1");
+  expect(segments).toEqual([
+    { kind: "prefix", text: "abc" },
+    { kind: "suffix", text: "defgh" },
+    { kind: "prefix", text: "/1" },
+  ]);
+});
+
+test("buildRevisionChangeIdSegments does not add a divergent suffix for non-divergent revisions", () => {
+  const revision = createRevision({
+    changeIdPrefixLength: 2,
+    revisionId: "abcdefgh",
+  });
+
+  const segments = buildRevisionChangeIdSegments(revision, { showTimestamp: false });
+
+  expect(segments).toEqual([
+    { kind: "prefix", text: "ab" },
+    { kind: "suffix", text: "cdefgh" },
+  ]);
 });
 
 const descriptionColors = {

@@ -104,7 +104,7 @@ export class JjClient {
   }
 
   async resolveDescendants(revisionId: string): Promise<readonly string[]> {
-    const shortRevisionId = 'change_id.shortest(8) ++ surround("/", "", change_offset)';
+    const shortRevisionId = 'change_id.shortest(8) ++ if(divergent, surround("/", "", change_offset))';
     const result = await this.runJj([
       "log",
       "--revisions",
@@ -301,7 +301,7 @@ export function parseLogOutput(
 
 function buildLogTemplate(baseGraphRowCount: number): string {
   const shortChangeId = "change_id.shortest(8)";
-  const shortRevisionId = `${shortChangeId} ++ surround("/", "", change_offset)`;
+  const shortRevisionId = `${shortChangeId} ++ if(divergent, surround("/", "", change_offset))`;
   const rows = [
     `${shortRevisionId} ++ "${FIELD_SEPARATOR}" ++ "${ROW_KIND_HEADER}" ++ "${FIELD_SEPARATOR}" ++ ${shortRevisionId} ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ working_copies.map(|wc| wc.name()).join(",") ++ "${FIELD_SEPARATOR}" ++ ${shortChangeId}.prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ conflict ++ "\\n"`,
   ];

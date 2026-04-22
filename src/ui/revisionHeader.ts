@@ -1,4 +1,5 @@
 import type { RevisionSummary } from "../domain/types.ts";
+import { getChangeIdFromRevisionId, isDivergentRevisionId } from "../domain/revisionIds.ts";
 import type { RevisionRowState } from "./revisionBorders.ts";
 
 export type RevisionChangeIdSegment = Readonly<{
@@ -15,16 +16,24 @@ export function buildRevisionChangeIdSegments(
   revision: Pick<RevisionSummary, "revisionId" | "changeIdPrefixLength" | "localTimestamp">,
   options: Readonly<{ showTimestamp: boolean }>,
 ): readonly RevisionChangeIdSegment[] {
+  const changeId = getChangeIdFromRevisionId(revision.revisionId);
   const segments: RevisionChangeIdSegment[] = [
     {
       kind: "prefix",
-      text: revision.revisionId.slice(0, revision.changeIdPrefixLength),
+      text: changeId.slice(0, revision.changeIdPrefixLength),
     },
     {
       kind: "suffix",
-      text: revision.revisionId.slice(revision.changeIdPrefixLength),
+      text: changeId.slice(revision.changeIdPrefixLength),
     },
   ];
+
+  if (isDivergentRevisionId(revision.revisionId)) {
+    segments.push({
+      kind: "prefix",
+      text: revision.revisionId.slice(changeId.length),
+    });
+  }
 
   if (options.showTimestamp && revision.localTimestamp.trim().length > 0) {
     segments.push({ kind: "separator", text: " · " });
