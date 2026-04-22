@@ -52,7 +52,7 @@ export function buildRevisionLayoutSpec(
   }>,
 ): RevisionLayoutSpec {
   const sideChips: RevisionSideChip[] = [
-    ...(revision.hasConflict ? [{ kind: "conflict" as const, text: "✕" }] : []),
+    ...(revision.hasConflict ? [{ kind: "conflict" as const, text: "×" }] : []),
     ...revision.bookmarks.map((text) => ({ kind: "bookmark" as const, text })),
     ...revision.workspaces.map((text) => ({ kind: "workspace" as const, text })),
   ];
