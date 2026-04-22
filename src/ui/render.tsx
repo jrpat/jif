@@ -68,6 +68,7 @@ import { saveGlobalSetting } from "../config/globalSettings.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { startInitialRepositoryLoad } from "./startup.ts";
 import { getStatusMessageDismissDelay } from "./statusMessages.ts";
+import { parseAnsiToStyledText } from "./ansiToStyledText.ts";
 
 export function JifView(props: {
   store: AppStore;
@@ -1908,6 +1909,14 @@ function StatusToast(props: {
     onCleanup(() => clearTimeout(timer));
   });
 
+  let textRef: any;
+
+  createEffect(() => {
+    if (textRef) {
+      textRef.content = parseAnsiToStyledText(props.message.text, props.config.terminalPalette);
+    }
+  });
+
   return (
     <box
       width="100%"
@@ -1917,9 +1926,7 @@ function StatusToast(props: {
       borderColor={statusColor(props.message.level, colors)}
       paddingX={1}
     >
-      <text fg={colors.textPrimary} wrapMode="word">
-        {props.message.text}
-      </text>
+      <text ref={textRef} fg={colors.textPrimary} wrapMode="word" />
     </box>
   );
 }

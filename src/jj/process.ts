@@ -30,6 +30,7 @@ export type CommandOutput = Readonly<{
 export async function runCommand(
   cwd: string,
   command: readonly string[],
+  options?: { color?: boolean },
 ): Promise<CommandOutput> {
   const proc = Bun.spawn({
     cmd: [...command],
@@ -39,7 +40,7 @@ export async function runCommand(
     stderr: "pipe",
     env: {
       ...process.env,
-      NO_COLOR: "1",
+      ...(options?.color ? {} : { NO_COLOR: "1" }),
     },
   });
 

@@ -128,7 +128,7 @@ export class JjClient {
       return "";
     }
 
-    const result = await this.runJj(args);
+    const result = await this.runJj(["--color", "always", ...args], { color: true });
     const stderr = result.stderr.trim();
     const stdout = result.stdout.trim();
     return stderr || stdout || `Executed: jj ${commandText.trim()}`;
@@ -193,9 +193,9 @@ export class JjClient {
     }
   }
 
-  private async runJj(args: readonly string[]) {
+  private async runJj(args: readonly string[], options?: { color?: boolean }) {
     try {
-      return await runCommand(this.repoPath, ["jj", ...args]);
+      return await runCommand(this.repoPath, ["jj", ...args], options);
     } catch (error) {
       if (error instanceof CommandExecutionError) {
         throw new Error(error.message);

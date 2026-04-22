@@ -72,6 +72,7 @@ export type ResolvedAppConfig = Readonly<{
   colorScheme: Readonly<{
     semanticColors: SemanticColorScheme;
   }>;
+  terminalPalette: readonly (string | null)[];
   log: Readonly<{
     scrollMargin: number;
   }>;
@@ -243,6 +244,7 @@ export function resolveAppConfig(
     colorScheme: {
       semanticColors,
     },
+    terminalPalette: palette?.palette ?? FALLBACK_PALETTE_DARK.palette,
     log: {
       scrollMargin: config.log?.scrollMargin ?? 1,
     },
