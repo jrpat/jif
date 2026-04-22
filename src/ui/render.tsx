@@ -3,7 +3,7 @@ import { For, Show, createEffect, createMemo, createRenderEffect, createSignal, 
 import { createStore, reconcile } from "solid-js/store";
 import { useKeyboard, useRenderer } from "@opentui/solid";
 import { commandDefinitions, type CommandController } from "../commands/definitions.ts";
-import { resolveAppConfig, type AppConfig, type ResolvedAppConfig } from "../config/index.ts";
+import { resolveAppConfig, type AppConfig, type ResolvedAppConfig } from "../config/schema.ts";
 import { HistoryStore, matchHistoryEntries } from "../history/store.ts";
 import type { AppStore } from "../state/appStore.ts";
 import {
@@ -64,6 +64,7 @@ import { dispatchGlobalKey } from "./keybindings.ts";
 import { getActiveMode, getCommandsForMode, defaultKeymap } from "../modes.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
+import { startInitialRepositoryLoad } from "./startup.ts";
 import { getStatusMessageDismissDelay } from "./statusMessages.ts";
 
 export function JifView(props: {
@@ -99,20 +100,17 @@ export function JifView(props: {
 
   onMount(() => {
     void (async () => {
-      const [, resolvedWorkspaceRoot, defaultRevset] = await Promise.all([
-        detectAndApplyPalette(),
-        client.loadWorkspaceRoot().catch(() => null),
-        client.loadDefaultRevset(),
-      ]);
-      setWorkspaceRoot(resolvedWorkspaceRoot);
-      const savedRevset = resolvedWorkspaceRoot
-        ? await new HistoryStore(resolvedWorkspaceRoot).loadSetting("active-revset")
-        : "";
-      const initialRevset = savedRevset || defaultRevset;
-      if (initialRevset) {
-        store.actions.setRevsetQuery(initialRevset);
-      }
-      await refreshRepository(initialRevset || undefined);
+      await startInitialRepositoryLoad({
+        detectAndApplyPalette,
+        loadWorkspaceRoot: () => client.loadWorkspaceRoot().catch(() => null),
+        loadDefaultRevset: () => client.loadDefaultRevset(),
+        loadSavedRevset: (resolvedWorkspaceRoot) => new HistoryStore(resolvedWorkspaceRoot).loadSetting("active-revset"),
+        refreshRepository,
+        setWorkspaceRoot,
+        setRevsetQuery: (query) => {
+          store.actions.setRevsetQuery(query);
+        },
+      });
       setReady(true);
     })();
 

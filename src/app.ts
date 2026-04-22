@@ -1,5 +1,5 @@
 import { render } from "@opentui/solid";
-import type { AppConfig, ResolvedAppConfig } from "./config/index.ts";
+import type { AppConfig, ResolvedAppConfig } from "./config/schema.ts";
 import { JjClient } from "./jj/client.ts";
 import { createAppStore } from "./state/appStore.ts";
 import { JifView } from "./ui/render.tsx";

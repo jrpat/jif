@@ -17,17 +17,18 @@ test("tokenizeCommandText keeps quoted segments together", () => {
 
 test("parseLogOutput preserves hybrid graph rows in emission order", () => {
   const output = [
-    "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001ffirst\u001fmain\u001fabc\u001ffalse\u001f2026-03-30 07:22:39\u001ffalse",
+    "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001ffirst\u001fmain\u001fdefault,review\u001fabc\u001ffalse\u001f2026-03-30 07:22:39\u001ffalse",
     "│\u001fbody\u001fabcdefgh",
     "|",
-    "○  bcdefghi\u001fheader\u001fbcdefghi\u001f22222222\u001fsecond\u001f\u001fbcd\u001ffalse\u001f2026-03-29 03:05:01\u001ffalse",
+    "○  bcdefghi\u001fheader\u001fbcdefghi\u001f22222222\u001fsecond\u001f\u001f\u001fbcd\u001ffalse\u001f2026-03-29 03:05:01\u001ffalse",
     "│\u001fbody\u001fbcdefghi",
   ].join("\n");
 
-  const revisions = parseLogOutput(output, new Map());
+  const revisions = parseLogOutput(output);
   expect(revisions).toHaveLength(2);
   expect(revisions[0]?.graphRows).toEqual(["@  ", "│", "|"]);
   expect(revisions[0]?.bookmarks).toEqual(["main"]);
+  expect(revisions[0]?.workspaces).toEqual(["default", "review"]);
   expect(revisions[0]?.changeIdPrefixLength).toBe(3);
   expect(revisions[0]?.isEmpty).toBeFalse();
   expect(revisions[0]?.hasConflict).toBeFalse();
@@ -40,11 +41,11 @@ test("parseLogOutput preserves hybrid graph rows in emission order", () => {
 
 test("parseLogOutput uses both empty and no description markers for blank empty revisions", () => {
   const output = [
-    "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001f\u001f\u001fabc\u001ftrue\u001f2026-03-30 07:22:39\u001ffalse",
+    "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001f\u001f\u001f\u001fabc\u001ftrue\u001f2026-03-30 07:22:39\u001ffalse",
     "│\u001fbody\u001fabcdefgh",
   ].join("\n");
 
-  const revisions = parseLogOutput(output, new Map());
+  const revisions = parseLogOutput(output);
 
   expect(revisions).toHaveLength(1);
   expect(revisions[0]?.description).toBe("(empty) (no description)");
@@ -55,11 +56,11 @@ test("parseLogOutput uses both empty and no description markers for blank empty 
 
 test("parseLogOutput keeps (no description) for blank descriptions on non-empty revisions", () => {
   const output = [
-    "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001f\u001f\u001fabc\u001ffalse\u001f2026-03-30 07:22:39\u001ffalse",
+    "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001f\u001f\u001f\u001fabc\u001ffalse\u001f2026-03-30 07:22:39\u001ffalse",
     "│\u001fbody\u001fabcdefgh",
   ].join("\n");
 
-  const revisions = parseLogOutput(output, new Map());
+  const revisions = parseLogOutput(output);
 
   expect(revisions).toHaveLength(1);
   expect(revisions[0]?.description).toBe("(no description)");
@@ -69,11 +70,11 @@ test("parseLogOutput keeps (no description) for blank descriptions on non-empty 
 
 test("parseLogOutput tolerates missing timestamp fields", () => {
   const output = [
-    "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001ffirst\u001f\u001fabc\u001ffalse\u001f\u001ffalse",
+    "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001ffirst\u001f\u001f\u001fabc\u001ffalse\u001f\u001ffalse",
     "│\u001fbody\u001fabcdefgh",
   ].join("\n");
 
-  const revisions = parseLogOutput(output, new Map());
+  const revisions = parseLogOutput(output);
 
   expect(revisions).toHaveLength(1);
   expect(revisions[0]?.localTimestamp).toBe("");
@@ -81,12 +82,12 @@ test("parseLogOutput tolerates missing timestamp fields", () => {
 
 test("parseLogOutput creates a synthetic elided revision", () => {
   const output = [
-    "◆  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001fsome commit\u001f\u001fab\u001ffalse\u001f2026-03-30 07:22:39\u001ffalse",
+    "◆  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001fsome commit\u001f\u001f\u001fab\u001ffalse\u001f2026-03-30 07:22:39\u001ffalse",
     "│\u001fbody\u001fabcdefgh",
     "~  (elided revisions)",
   ].join("\n");
 
-  const revisions = parseLogOutput(output, new Map());
+  const revisions = parseLogOutput(output);
   expect(revisions).toHaveLength(2);
   expect(revisions[0]?.graphRows).toEqual(["◆  ", "│"]);
   expect(revisions[1]?.marker).toBe("elided");
@@ -99,13 +100,13 @@ test("parseLogOutput creates a synthetic elided revision", () => {
 
 test("parseLogOutput sets hasConflict for conflicted revisions", () => {
   const output = [
-    "×  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001fmerge feature\u001f\u001fabc\u001ffalse\u001f2026-03-30 07:22:39\u001ftrue",
+    "×  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001fmerge feature\u001f\u001f\u001fabc\u001ffalse\u001f2026-03-30 07:22:39\u001ftrue",
     "│\u001fbody\u001fabcdefgh",
-    "○  bcdefghi\u001fheader\u001fbcdefghi\u001f22222222\u001fclean commit\u001f\u001fbcd\u001ffalse\u001f2026-03-29 03:05:01\u001ffalse",
+    "○  bcdefghi\u001fheader\u001fbcdefghi\u001f22222222\u001fclean commit\u001f\u001f\u001fbcd\u001ffalse\u001f2026-03-29 03:05:01\u001ffalse",
     "│\u001fbody\u001fbcdefghi",
   ].join("\n");
 
-  const revisions = parseLogOutput(output, new Map());
+  const revisions = parseLogOutput(output);
   expect(revisions).toHaveLength(2);
   expect(revisions[0]?.hasConflict).toBeTrue();
   expect(revisions[0]?.marker).toBe("working-copy");
@@ -114,11 +115,11 @@ test("parseLogOutput sets hasConflict for conflicted revisions", () => {
 
 test("parseLogOutput defaults hasConflict to false when field is missing", () => {
   const output = [
-    "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001ffirst\u001f\u001fabc\u001ffalse\u001f2026-03-30 07:22:39",
+    "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001ffirst\u001f\u001f\u001fabc\u001ffalse\u001f2026-03-30 07:22:39",
     "│\u001fbody\u001fabcdefgh",
   ].join("\n");
 
-  const revisions = parseLogOutput(output, new Map());
+  const revisions = parseLogOutput(output);
   expect(revisions[0]?.hasConflict).toBeFalse();
 });
 

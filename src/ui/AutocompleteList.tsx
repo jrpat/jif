@@ -1,6 +1,6 @@
 import type { ScrollBoxRenderable } from "@opentui/core";
 import { For, createMemo, createRenderEffect } from "solid-js";
-import type { ResolvedAppConfig } from "../config/index.ts";
+import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { AutocompleteFlow } from "./autocomplete.ts";
 
 export type AutocompleteListItem = Readonly<{

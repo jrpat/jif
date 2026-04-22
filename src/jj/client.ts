@@ -16,7 +16,6 @@ export class JjClient {
   constructor(readonly repoPath: string) {}
 
   async loadRepository(limit = 80, revset?: string): Promise<RepositoryData> {
-    const workspaceNamesByChangeId = await this.loadWorkspaceNamesByChangeId();
     const args = [
       "log",
       "--limit",
@@ -31,7 +30,7 @@ export class JjClient {
     }
     const logOutput = await this.runJj(args);
 
-    const revisions = parseLogOutput(logOutput.stdout, workspaceNamesByChangeId);
+    const revisions = parseLogOutput(logOutput.stdout);
 
     return {
       repoPath: this.repoPath,
@@ -44,7 +43,6 @@ export class JjClient {
     beforeChangeId: string | null,
     limit = 20,
   ): Promise<readonly RevisionSummary[]> {
-    const workspaceNamesByChangeId = await this.loadWorkspaceNamesByChangeId();
     const revset = beforeChangeId
       ? `${afterChangeId}::${beforeChangeId} ~ ${afterChangeId} ~ ${beforeChangeId}`
       : `${afterChangeId}::`;
@@ -60,7 +58,7 @@ export class JjClient {
       revset,
     ];
     const logOutput = await this.runJj(args);
-    return parseLogOutput(logOutput.stdout, workspaceNamesByChangeId);
+    return parseLogOutput(logOutput.stdout);
   }
 
   async loadConflictedFiles(revisionId: string): Promise<ReadonlySet<string>> {
@@ -193,35 +191,6 @@ export class JjClient {
     }
   }
 
-  private async loadWorkspaceNamesByChangeId(): Promise<ReadonlyMap<string, readonly string[]>> {
-    const result = await this.runJj(["workspace", "list", "--color", "never"]);
-    const mapping = new Map<string, string[]>();
-
-    for (const rawLine of result.stdout.split("\n")) {
-      const line = rawLine.trim();
-      if (line.length === 0) {
-        continue;
-      }
-
-      const match = /^(?<name>[^:]+):\s+(?<change>[a-z0-9]+)\s+[a-z0-9]+/.exec(line);
-      if (!match?.groups) {
-        continue;
-      }
-
-      const changeId = match.groups.change ?? "";
-      const workspaceName = match.groups.name ?? "";
-      if (changeId.length === 0 || workspaceName.length === 0) {
-        continue;
-      }
-
-      const existing = mapping.get(changeId) ?? [];
-      existing.push(workspaceName);
-      mapping.set(changeId, existing);
-    }
-
-    return mapping;
-  }
-
   private async runJj(args: readonly string[]) {
     try {
       return await runCommand(this.repoPath, ["jj", ...args]);
@@ -236,7 +205,6 @@ export class JjClient {
 
 export function parseLogOutput(
   output: string,
-  workspaceNamesByChangeId: ReadonlyMap<string, readonly string[]>,
 ): readonly RevisionSummary[] {
   const revisions: RevisionSummary[] = [];
 
@@ -282,6 +250,7 @@ export function parseLogOutput(
         commitId = "",
         rawDescription = "",
         rawBookmarks = "",
+        rawWorkspaces = "",
         rawChangeIdPrefix = "",
         rawEmpty = "",
         rawTimestamp = "",
@@ -301,7 +270,7 @@ export function parseLogOutput(
         description: rawDescription.trim() || (isEmpty ? "(empty) (no description)" : "(no description)"),
         localTimestamp: rawTimestamp.trim(),
         bookmarks: splitWords(rawBookmarks),
-        workspaces: workspaceNamesByChangeId.get(changeId) ?? [],
+        workspaces: splitCsv(rawWorkspaces),
         graphRows: [graphRow],
         isEmpty,
         hasConflict,
@@ -329,7 +298,7 @@ export function parseLogOutput(
 
 function buildLogTemplate(baseGraphRowCount: number): string {
   const rows = [
-    `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ "${ROW_KIND_HEADER}" ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ conflict ++ "\\n"`,
+    `change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ "${ROW_KIND_HEADER}" ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ working_copies.map(|wc| wc.name()).join(",") ++ "${FIELD_SEPARATOR}" ++ change_id.shortest(8).prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ conflict ++ "\\n"`,
   ];
 
   for (let index = 1; index < baseGraphRowCount; index += 1) {
@@ -346,6 +315,15 @@ function splitWords(rawValue: string): readonly string[] {
   }
 
   return trimmed.split(/\s+/);
+}
+
+function splitCsv(rawValue: string): readonly string[] {
+  const trimmed = rawValue.trim();
+  if (trimmed.length === 0) {
+    return [];
+  }
+
+  return trimmed.split(",").map((value) => value.trim()).filter((value) => value.length > 0);
 }
 
 function isElidedLine(line: string): boolean {
