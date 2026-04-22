@@ -1,21 +1,12 @@
 import { expect, test } from "bun:test";
 import { startInitialRepositoryLoad } from "../src/ui/startup.ts";
 
-test("startInitialRepositoryLoad does not block repository refresh on palette detection", async () => {
+test("startInitialRepositoryLoad awaits palette detection before refreshing", async () => {
   const events: string[] = [];
-  let resolvePalette!: () => void;
 
-  const paletteTask = new Promise<void>((resolve) => {
-    resolvePalette = () => {
-      events.push("palette.done");
-      resolve();
-    };
-  });
-
-  const resultPromise = startInitialRepositoryLoad({
+  const result = await startInitialRepositoryLoad({
     detectAndApplyPalette: async () => {
-      events.push("palette.start");
-      await paletteTask;
+      events.push("palette.done");
     },
     loadWorkspaceRoot: async () => {
       events.push("workspace.load");
@@ -41,26 +32,15 @@ test("startInitialRepositoryLoad does not block repository refresh on palette de
     },
   });
 
-  const result = await resultPromise;
-
   expect(result).toEqual({
     workspaceRoot: "/repo",
     initialRevset: "all()",
   });
-  expect(events).toEqual([
-    "palette.start",
-    "workspace.load",
-    "default-revset.load",
-    "workspace.set:/repo",
-    "saved-revset.load:/repo",
-    "revset.set:all()",
-    "refresh:all()",
-  ]);
-
-  resolvePalette();
-  await paletteTask;
-
-  expect(events.at(-1)).toBe("palette.done");
+  // palette.done must appear before refresh — it's awaited in Promise.all
+  const paletteIndex = events.indexOf("palette.done");
+  const refreshIndex = events.indexOf("refresh:all()");
+  expect(paletteIndex).toBeGreaterThanOrEqual(0);
+  expect(refreshIndex).toBeGreaterThan(paletteIndex);
 });
 
 test("startInitialRepositoryLoad prefers saved revset over default revset", async () => {

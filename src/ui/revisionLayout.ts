@@ -2,7 +2,7 @@ import type { AppLayout, RevisionSummary } from "../domain/types.ts";
 import { shouldCondenseGraphRows } from "./revisionGutter.ts";
 
 export type RevisionSideChip = Readonly<{
-  kind: "bookmark" | "workspace";
+  kind: "bookmark" | "workspace" | "conflict";
   text: string;
 }>;
 
@@ -44,7 +44,7 @@ export function getMaxRevisionBaseGraphRowCount(): number {
 }
 
 export function buildRevisionLayoutSpec(
-  revision: Pick<RevisionSummary, "revisionId" | "bookmarks" | "workspaces" | "graphRows">,
+  revision: Pick<RevisionSummary, "revisionId" | "bookmarks" | "workspaces" | "graphRows" | "hasConflict">,
   options: Readonly<{
     mode: RevisionLayoutMode;
     isCommandTarget: boolean;
@@ -52,6 +52,7 @@ export function buildRevisionLayoutSpec(
   }>,
 ): RevisionLayoutSpec {
   const sideChips: RevisionSideChip[] = [
+    ...(revision.hasConflict ? [{ kind: "conflict" as const, text: "✕" }] : []),
     ...revision.bookmarks.map((text) => ({ kind: "bookmark" as const, text })),
     ...revision.workspaces.map((text) => ({ kind: "workspace" as const, text })),
   ];

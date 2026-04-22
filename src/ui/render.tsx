@@ -64,6 +64,7 @@ import { normalizeKey } from "./keyboard.ts";
 import { dispatchGlobalKey } from "./keybindings.ts";
 import { getActiveMode, getCommandsForMode, defaultKeymap } from "../modes.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
+import { saveGlobalSetting } from "../config/globalSettings.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { startInitialRepositoryLoad } from "./startup.ts";
 import { getStatusMessageDismissDelay } from "./statusMessages.ts";
@@ -113,6 +114,8 @@ export function JifView(props: {
         },
       });
       setReady(true);
+      const disposeFocusRefresh = bindRefreshOnFocus(renderer, () => refreshRepository());
+      onCleanup(() => disposeFocusRefresh());
     })();
 
     const handleThemeMode = () => {
@@ -128,11 +131,9 @@ export function JifView(props: {
     handleResize();
     renderer.on(CliRenderEvents.THEME_MODE, handleThemeMode);
     renderer.on(CliRenderEvents.RESIZE, handleResize);
-    const disposeFocusRefresh = bindRefreshOnFocus(renderer, () => refreshRepository());
     onCleanup(() => {
       renderer.off(CliRenderEvents.THEME_MODE, handleThemeMode);
       renderer.off(CliRenderEvents.RESIZE, handleResize);
-      disposeFocusRefresh();
     });
   });
 
@@ -284,6 +285,7 @@ export function JifView(props: {
     },
     cycleLayout() {
       store.actions.cycleLayout();
+      void saveGlobalSetting("layout", store.snapshot().layout);
     },
     undo() {
       void runJjCommand("undo");
@@ -330,6 +332,14 @@ export function JifView(props: {
     },
     prevSearchMatch() {
       store.actions.prevSearchMatch();
+    },
+    refreshRepository() {
+      void refreshRepository();
+    },
+    abandonRevision() {
+      const revisionArg = getFocusedRevisionArg(store.snapshot());
+      if (!revisionArg) return;
+      void runJjCommand(`abandon ${revisionArg}`);
     },
   };
 
@@ -406,12 +416,12 @@ export function JifView(props: {
   });
 
   useKeyboard((event) => {
-    if (event.eventType === "release" || event.ctrl || event.meta || event.option) {
+    if (event.eventType === "release" || event.meta || event.option) {
       return;
     }
 
     const state = store.snapshot();
-    const normalizedKey = normalizeKey(event);
+    const normalizedKey = event.ctrl ? `ctrl-${event.name}` : normalizeKey(event);
     logShortcutDebug("key-event", {
       name: event.name,
       sequence: event.sequence,
@@ -1236,9 +1246,6 @@ export function RevisionItem(props: {
                         >
                           {props.revision.description}
                         </text>
-                        <Show when={props.revision.hasConflict}>
-                          <text fg={colors().statusError} attributes={TextAttributes.BOLD}> (conflict)</text>
-                        </Show>
                       </box>
                     </>
                   }
@@ -1256,6 +1263,10 @@ export function RevisionItem(props: {
                         colors={colors()}
                         showTimestamp={showExpandedTimestamp()}
                       />
+                      <Show when={layoutSpec().sideChips.length > 0}>
+                        <box width={1} />
+                      </Show>
+                      <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
                       <box width={1} />
                       <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
                         <text
@@ -1266,14 +1277,7 @@ export function RevisionItem(props: {
                         >
                           {props.revision.description}
                         </text>
-                        <Show when={props.revision.hasConflict}>
-                          <text fg={colors().statusError} attributes={TextAttributes.BOLD}> (conflict)</text>
-                        </Show>
                       </box>
-                      <Show when={layoutSpec().sideChips.length > 0}>
-                        <box width={1} />
-                      </Show>
-                      <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
                     </box>
                     {layoutSpec().commandTarget?.placement === "overlay" ? (
                       <text
@@ -1363,6 +1367,7 @@ export function RevisionItem(props: {
                   colors={colors()}
                 />
               ) : null}
+              <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
               <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
                 <text
                   fg={descriptionColor()}
@@ -1372,11 +1377,7 @@ export function RevisionItem(props: {
                 >
                   {props.revision.description}
                 </text>
-                <Show when={props.revision.hasConflict}>
-                  <text fg={colors().statusError} attributes={TextAttributes.BOLD}> (conflict)</text>
-                </Show>
               </box>
-              <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
             </Show>
           </box>
         </box>
@@ -1492,14 +1493,19 @@ function RevisionSideChips(props: {
   return (
     <box flexDirection="row" flexShrink={0} gap={1}>
       <For each={props.chips}>
-        {(chip) => (
-          <text
-            fg={chip.kind === "bookmark" ? props.colors.workspaceTagText : props.colors.bookmarkTagText}
-            bg={chip.kind === "bookmark" ? props.colors.workspaceTagFill : props.colors.bookmarkTagFill}
-          >
-            {` ${chip.text} `}
-          </text>
-        )}
+        {(chip) => {
+          const fg = chip.kind === "conflict" ? props.colors.conflictTagText
+            : chip.kind === "bookmark" ? props.colors.workspaceTagText
+            : props.colors.bookmarkTagText;
+          const bg = chip.kind === "conflict" ? props.colors.conflictTagFill
+            : chip.kind === "bookmark" ? props.colors.workspaceTagFill
+            : props.colors.bookmarkTagFill;
+          return (
+            <text fg={fg} bg={bg}>
+              {` ${chip.text} `}
+            </text>
+          );
+        }}
       </For>
     </box>
   );

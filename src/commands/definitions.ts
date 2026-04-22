@@ -29,6 +29,8 @@ export type CommandController = Readonly<{
   openSearch: () => void;
   nextSearchMatch: () => void;
   prevSearchMatch: () => void;
+  refreshRepository: () => void;
+  abandonRevision: () => void;
 }>;
 
 export type CommandDefinition = Readonly<{
@@ -281,5 +283,22 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     canonicalKeys: ["p"],
     run: (controller) => controller.prevSearchMatch(),
     group: "mode",
+  },
+  {
+    id: "refresh-repository",
+    title: "Refresh",
+    description: "Refresh the revision log",
+    canonicalKeys: ["ctrl-r"],
+    run: (controller) => controller.refreshRepository(),
+    group: "global",
+  },
+  {
+    id: "abandon",
+    title: "Abandon",
+    description: "Abandon the focused revision",
+    canonicalKeys: ["a"],
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.abandonRevision(),
+    group: "global",
   },
 ];

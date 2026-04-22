@@ -47,7 +47,7 @@ test("parseLogOutput keeps divergent siblings distinct by revision id", () => {
     "│\u001fbody\u001fabcdefgh/1",
   ].join("\n");
 
-  const revisions = parseLogOutput(output, new Map());
+  const revisions = parseLogOutput(output);
 
   expect(revisions).toHaveLength(2);
   expect(revisions[0]?.revisionId).toBe("abcdefgh/0");

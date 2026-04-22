@@ -12,10 +12,9 @@ export function startInitialRepositoryLoad(args: {
   setWorkspaceRoot: (workspaceRoot: string | null) => void;
   setRevsetQuery: (query: string) => void;
 }): Promise<InitialRepositoryLoad> {
-  void args.detectAndApplyPalette();
-
   return (async (): Promise<InitialRepositoryLoad> => {
-    const [workspaceRoot, defaultRevset] = await Promise.all([
+    const [, workspaceRoot, defaultRevset] = await Promise.all([
+      args.detectAndApplyPalette(),
       args.loadWorkspaceRoot(),
       args.loadDefaultRevset(),
     ]);

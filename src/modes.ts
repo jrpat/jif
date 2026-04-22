@@ -34,6 +34,7 @@ export type Keymap = Readonly<Record<"_global" | Mode, Readonly<Record<string, s
 export const defaultKeymap: Keymap = {
   _global: {
     escape: "cancel",
+    "ctrl-r": "refresh-repository",
   },
   normal: {
     j: "move-down",
@@ -63,6 +64,7 @@ export const defaultKeymap: Keymap = {
     "@": "jump-to-working-copy",
     L: "edit-revset",
     "/": "search",
+    a: "abandon",
   },
   files: {
     r: "restore",

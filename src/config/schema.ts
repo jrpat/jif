@@ -38,6 +38,8 @@ export type SemanticColorScheme = Readonly<{
   bookmarkTagText: SemanticColorValue;
   workspaceTagFill: SemanticColorValue;
   workspaceTagText: SemanticColorValue;
+  conflictTagFill: SemanticColorValue;
+  conflictTagText: SemanticColorValue;
   textPrimary: SemanticColorValue;
   textSecondary: SemanticColorValue;
   textTertiary: SemanticColorValue;
@@ -112,6 +114,8 @@ const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   bookmarkTagText:        { source: "yellow",      opacity: 1.0  },
   workspaceTagFill:       { source: "cyan",        opacity: 0.15 },
   workspaceTagText:       { source: "cyan",        opacity: 1.0  },
+  conflictTagFill:        { source: "red",         opacity: 0.15 },
+  conflictTagText:        { source: "red",         opacity: 1.0  },
 
   // Text hierarchy
   textPrimary:            { source: "foreground",  opacity: 0.93 },

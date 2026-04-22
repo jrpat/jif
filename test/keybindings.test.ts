@@ -58,6 +58,8 @@ function createController(calls: string[]): CommandController {
     openSearch: () => calls.push("openSearch"),
     nextSearchMatch: () => calls.push("nextSearchMatch"),
     prevSearchMatch: () => calls.push("prevSearchMatch"),
+    refreshRepository: () => calls.push("refreshRepository"),
+    abandonRevision: () => calls.push("abandonRevision"),
   };
 }
 
