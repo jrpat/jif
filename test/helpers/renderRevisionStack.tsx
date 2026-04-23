@@ -10,6 +10,7 @@ function createRevision(
   revisionId: string,
   description: string,
   graphRows: readonly string[],
+  overrides: Partial<RevisionSummary> = {},
 ): RevisionSummary {
   return {
     revisionId,
@@ -25,6 +26,7 @@ function createRevision(
     marker: "plain",
     filesLoaded: false,
     files: [],
+    ...overrides,
   };
 }
 
@@ -189,6 +191,43 @@ async function renderDivergentFocusedRevision() {
   return frame;
 }
 
+async function renderExpandedRevisionWithChips() {
+  const revisions = [
+    createRevision("curr", "branch", ["@  ", "│  "], {
+      bookmarks: ["main"],
+      workspaces: ["review"],
+    }),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout: "expanded" });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+
+  const rendered = await testRender(() => (
+    <box width={64} flexDirection="column">
+      <RevisionItem
+        state={store.state}
+        revision={store.state.revisions[0]!}
+        index={0}
+        previousRevisionId={null}
+        nextRevisionId={null}
+        config={resolveAppConfig({ commands: { layout: "expanded" } })}
+        focusedRevisionId={null}
+        selectedRevisionIds={new Set()}
+        expandedRevisionId={null}
+        commandTargetId={null}
+        searchQuery=""
+      />
+    </box>
+  ), { width: 64, height: 6 });
+
+  await rendered.renderOnce();
+  const frame = rendered.captureCharFrame();
+  rendered.renderer.destroy();
+  return frame;
+}
+
 const condensedUnfocused = await renderRevisionStack("condensed", null);
 const condensedFocused = await renderRevisionStack("condensed", "curr");
 const superCondensed = await renderRevisionStack("super-condensed", "curr");
@@ -196,6 +235,7 @@ const superCondensedExpanded = await renderRevisionStack("super-condensed", "cur
 const cycledToSuperCondensed = await renderLayoutCycleAfterMount();
 const longSuperCondensed = await renderLongSuperCondensedDescription();
 const divergentFocused = await renderDivergentFocusedRevision();
+const expandedChipsInline = await renderExpandedRevisionWithChips();
 
 console.log(JSON.stringify({
   condensedUnfocused,
@@ -205,4 +245,5 @@ console.log(JSON.stringify({
   cycledToSuperCondensed,
   longSuperCondensed,
   divergentFocused,
+  expandedChipsInline,
 }));

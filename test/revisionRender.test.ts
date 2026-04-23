@@ -24,6 +24,7 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
     cycledToSuperCondensed,
     longSuperCondensed,
     divergentFocused,
+    expandedChipsInline,
   } = JSON.parse(stdout) as {
     condensedUnfocused: string;
     condensedFocused: string;
@@ -32,6 +33,7 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
     cycledToSuperCondensed: string;
     longSuperCondensed: string;
     divergentFocused: string;
+    expandedChipsInline: string;
   };
 
   expect(condensedUnfocused).toContain("│ │ └");
@@ -61,4 +63,13 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
   expect(divergentFocused).toContain("shared/1 focused divergen");
   expect(divergentFocused).toContain("│ │ ┌──────────────────────────┐");
   expect(divergentFocused.split("│ │ ┌──────────────────────────┐").length - 1).toBe(1);
+
+  const expandedChipLine = expandedChipsInline
+    .trimEnd()
+    .split("\n")
+    .find((line) => line.includes("main") && line.includes("review") && line.includes("branch"));
+
+  expect(expandedChipLine).toBeDefined();
+  expect(expandedChipLine!.indexOf("main")).toBeLessThan(expandedChipLine!.indexOf("review"));
+  expect(expandedChipLine!.indexOf("review")).toBeLessThan(expandedChipLine!.indexOf("branch"));
 }, 20000);

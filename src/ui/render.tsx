@@ -1253,17 +1253,22 @@ export function RevisionItem(props: {
                             colors={colors()}
                           />
                         ) : null}
-                        <box flexGrow={1} />
-                        <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
                       </box>
                       <box width="100%" flexDirection="row">
-                        <text
-                          fg={descriptionColor()}
-                          truncate
-                          attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
-                        >
-                          {props.revision.description}
-                        </text>
+                        <Show when={layoutSpec().sideChips.length > 0}>
+                          <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
+                          <box width={1} />
+                        </Show>
+                        <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
+                          <text
+                            fg={descriptionColor()}
+                            wrapMode="none"
+                            truncate
+                            attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
+                          >
+                            {props.revision.description}
+                          </text>
+                        </box>
                       </box>
                     </>
                   }
