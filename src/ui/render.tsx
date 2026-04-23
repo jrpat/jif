@@ -347,6 +347,9 @@ export function JifView(props: {
     refreshRepository() {
       void refreshRepository();
     },
+    absorb() {
+      void runJjCommand("absorb");
+    },
     abandonRevision() {
       const revisionArg = getFocusedRevisionArg(store.snapshot());
       if (!revisionArg) return;

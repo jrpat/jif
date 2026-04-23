@@ -173,6 +173,7 @@ test("getShortcutPanelCommands includes immediate revision actions in revision m
   const commands = getShortcutPanelCommands(createState(), getCommandsForMode(getActiveMode(createState()), defaultKeymap, commandDefinitions));
   const ids = commands.map((command) => command.id);
 
+  expect(ids).toContain("absorb");
   expect(ids).toContain("new-revision");
   expect(ids).toContain("edit-revision");
 });

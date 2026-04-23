@@ -64,6 +64,7 @@ export const defaultKeymap: Keymap = {
     "@": "jump-to-working-copy",
     L: "edit-revset",
     "/": "search",
+    A: "absorb",
     a: "abandon",
   },
   files: {

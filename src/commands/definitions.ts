@@ -30,6 +30,7 @@ export type CommandController = Readonly<{
   nextSearchMatch: () => void;
   prevSearchMatch: () => void;
   refreshRepository: () => void;
+  absorb: () => void;
   abandonRevision: () => void;
 }>;
 
@@ -290,6 +291,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Refresh the revision log",
     canonicalKeys: ["ctrl-r"],
     run: (controller) => controller.refreshRepository(),
+    group: "global",
+  },
+  {
+    id: "absorb",
+    title: "Absorb",
+    description: "Run jj absorb",
+    canonicalKeys: ["A"],
+    run: (controller) => controller.absorb(),
     group: "global",
   },
   {

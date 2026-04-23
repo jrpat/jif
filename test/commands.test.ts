@@ -80,6 +80,11 @@ test("undo and redo resolve in normal mode", () => {
   expect(resolveForState("U", state)).toBe("redo");
 });
 
+test("absorb resolves on shift-a in normal mode", () => {
+  const state = createState();
+  expect(resolveForState("A", state)).toBe("absorb");
+});
+
 test("short flags and layout cycling use - and _ respectively", () => {
   const state = createState();
   expect(resolveForState("-", state)).toBe("toggle-flags");

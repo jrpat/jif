@@ -59,6 +59,7 @@ function createController(calls: string[]): CommandController {
     nextSearchMatch: () => calls.push("nextSearchMatch"),
     prevSearchMatch: () => calls.push("prevSearchMatch"),
     refreshRepository: () => calls.push("refreshRepository"),
+    absorb: () => calls.push("absorb"),
     abandonRevision: () => calls.push("abandonRevision"),
   };
 }
@@ -150,6 +151,21 @@ test("dispatchGlobalKey routes n and e to immediate revision actions", () => {
 
   expect(editHandled).toBeTrue();
   expect(editCalls).toEqual(["editRevision"]);
+});
+
+test("dispatchGlobalKey routes shift-a to absorb", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "A",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["absorb"]);
 });
 
 test("dispatchGlobalKey routes s to rebase-descendants in rebase mode", () => {
