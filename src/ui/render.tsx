@@ -836,7 +836,7 @@ function CommandPrompt(props: {
       focused
       onHeightChange={props.onHeightChange}
     >
-      <box width={4} flexDirection="row" flexShrink={0}>
+      <box width={3} flexDirection="row" flexShrink={0}>
         <text fg={colors.textPrimary}>jj </text>
       </box>
       <input
@@ -874,7 +874,7 @@ function CommandPreview(props: {
       focused={false}
       onHeightChange={props.onHeightChange}
     >
-      <box width={4} flexDirection="row" flexShrink={0}>
+      <box width={3} flexDirection="row" flexShrink={0}>
         <text fg={colors.textTertiary}>jj </text>
       </box>
       <box flexGrow={1} flexDirection="row">
