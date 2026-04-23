@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import type { RevisionSummary } from "../src/domain/types.ts";
 import {
   buildRevisionChangeIdSegments,
+  getRevisionCommandChipBgColor,
   getRevisionChangeIdColors,
   getRevisionDescriptionColor,
 } from "../src/ui/revisionHeader.ts";
@@ -151,4 +152,28 @@ test("getRevisionChangeIdColors keeps default suffix dimmed", () => {
     prefix: "prefix",
     suffix: "suffix",
   });
+});
+
+test("getRevisionCommandChipBgColor matches selected row accent", () => {
+  const color = getRevisionCommandChipBgColor({
+    rowState: "selected",
+    colors: {
+      rowSelectedAccent: "selected",
+      chromeBorderFocus: "focus",
+    },
+  });
+
+  expect(color).toBe("selected");
+});
+
+test("getRevisionCommandChipBgColor keeps focused rows on focus chrome", () => {
+  const color = getRevisionCommandChipBgColor({
+    rowState: "focused",
+    colors: {
+      rowSelectedAccent: "selected",
+      chromeBorderFocus: "focus",
+    },
+  });
+
+  expect(color).toBe("focus");
 });

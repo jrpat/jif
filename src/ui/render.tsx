@@ -10,6 +10,7 @@ import { getRevisionArg } from "../domain/revisionIds.ts";
 import {
   commandCanExecute,
   DRAFT_PLACEHOLDER,
+  getCommandChipTextForRevision,
   draftConfigs,
   getCommandTargetRevisionId,
   getDisplayedCommandSegments,
@@ -47,6 +48,7 @@ import {
 import { buildRevisionLayoutSpec, type RevisionSideChip } from "./revisionLayout.ts";
 import {
   buildRevisionChangeIdSegments,
+  getRevisionCommandChipBgColor,
   getRevisionChangeIdColors,
   getRevisionDescriptionColor,
 } from "./revisionHeader.ts";
@@ -988,6 +990,7 @@ export function RevisionItem(props: {
   const anyExpanded = () => props.expandedRevisionId !== null;
   const isAffected = () => affectedIds().has(props.revision.revisionId);
   const isCommandTarget = () => props.commandTargetId === props.revision.revisionId;
+  const commandChipText = createMemo(() => getCommandChipTextForRevision(props.state, props.revision.revisionId));
   const isSearchMatch = () => revisionMatchesSearch(props.revision, props.searchQuery);
   const changedFileRows = createMemo(() => isExpanded() ? buildChangedFileDisplayRows(props.revision) : []);
   const rowState = createMemo(() =>
@@ -1003,8 +1006,7 @@ export function RevisionItem(props: {
   const layoutSpec = createMemo(() =>
     buildRevisionLayoutSpec(props.revision, {
       mode: props.state.layout,
-      isCommandTarget: isCommandTarget(),
-      badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
+      commandChipText: commandChipText(),
     }),
   );
   const boxedGraphWidth = createMemo(() =>
@@ -1022,8 +1024,7 @@ export function RevisionItem(props: {
 
     const previousLayoutSpec = buildRevisionLayoutSpec(prev, {
       mode: props.state.layout,
-      isCommandTarget: false,
-      badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
+      commandChipText: null,
     });
 
     return measureBoxedGraphWidth({
@@ -1040,8 +1041,7 @@ export function RevisionItem(props: {
 
     const nextLayoutSpec = buildRevisionLayoutSpec(next, {
       mode: props.state.layout,
-      isCommandTarget: false,
-      badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
+      commandChipText: null,
     });
 
     return measureBoxedGraphWidth({
@@ -1076,8 +1076,7 @@ export function RevisionItem(props: {
 
     return buildRevisionLayoutSpec(previous, {
       mode: props.state.layout,
-      isCommandTarget: false,
-      badgeText: props.state.commandDraft?.config.badgeText ?? "onto",
+      commandChipText: null,
     }).visibleGraphMode === "keep-second-row";
   });
   const sharesTopBorder = createMemo(() => !previousUsesExternalGraphSpacer());
@@ -1149,6 +1148,12 @@ export function RevisionItem(props: {
         : isAffected()
           ? colors().rowAffectedFill
           : undefined
+  );
+  const commandChipBackgroundColor = createMemo(() =>
+    getRevisionCommandChipBgColor({
+      rowState: effectiveRowState(),
+      colors: colors(),
+    })
   );
   const showExpandedTimestamp = () => layoutSpec().mode === "expanded";
   const superGutterPlan = createMemo(() => buildRevisionGutterPlan({
@@ -1240,16 +1245,18 @@ export function RevisionItem(props: {
                   when={layoutSpec().headerRowCount === 1}
                   fallback={
                     <>
-                      <box width="100%" flexDirection="row" gap={1}>
+                      <box width="100%" flexDirection="row">
                         <RevisionChangeId
                           revision={props.revision}
                           rowState={effectiveRowState()}
                           colors={colors()}
                           showTimestamp={showExpandedTimestamp()}
                         />
-                        {layoutSpec().commandTarget ? (
-                          <CommandTargetChip
-                            text={layoutSpec().commandTarget!.text}
+                        <box flexGrow={1} />
+                        {layoutSpec().commandChip ? (
+                          <CommandChip
+                            text={layoutSpec().commandChip!.text}
+                            backgroundColor={commandChipBackgroundColor()}
                             colors={colors()}
                           />
                         ) : null}
@@ -1302,16 +1309,16 @@ export function RevisionItem(props: {
                         </text>
                       </box>
                     </box>
-                    {layoutSpec().commandTarget?.placement === "overlay" ? (
+                    {layoutSpec().commandChip?.placement === "overlay" ? (
                       <text
                         position="absolute"
-                        left={layoutSpec().commandTarget!.leftOffset}
+                        right={0}
                         top={0}
                         zIndex={1}
                         fg={colors().chromeFillOne}
-                        bg={colors().chromeBorderFocus}
+                        bg={commandChipBackgroundColor()}
                       >
-                        {` ${layoutSpec().commandTarget!.text} `}
+                        {` ${layoutSpec().commandChip!.text} `}
                       </text>
                     ) : null}
                   </box>
@@ -1384,14 +1391,11 @@ export function RevisionItem(props: {
                 colors={colors()}
                 showTimestamp={false}
               />
-              {layoutSpec().commandTarget ? (
-                <CommandTargetChip
-                  text={layoutSpec().commandTarget!.text}
-                  colors={colors()}
-                />
-              ) : null}
-              <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
               <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
+                <Show when={layoutSpec().sideChips.length > 0}>
+                  <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
+                  <box width={1} />
+                </Show>
                 <text
                   fg={descriptionColor()}
                   wrapMode="none"
@@ -1401,6 +1405,13 @@ export function RevisionItem(props: {
                   {props.revision.description}
                 </text>
               </box>
+              {layoutSpec().commandChip ? (
+                <CommandChip
+                  text={layoutSpec().commandChip!.text}
+                  backgroundColor={commandChipBackgroundColor()}
+                  colors={colors()}
+                />
+              ) : null}
             </Show>
           </box>
         </box>
@@ -1483,12 +1494,13 @@ function RevisionChangeId(props: {
   );
 }
 
-function CommandTargetChip(props: {
+function CommandChip(props: {
   text: string;
+  backgroundColor: string | undefined;
   colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
 }) {
   return (
-    <text fg={props.colors.chromeFillOne} bg={props.colors.chromeBorderFocus}>
+    <text fg={props.colors.chromeFillOne} bg={props.backgroundColor}>
       {` ${props.text} `}
     </text>
   );

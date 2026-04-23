@@ -2,6 +2,7 @@ import { For } from "solid-js";
 import { testRender } from "@opentui/solid";
 import { resolveAppConfig } from "../../src/config/index.ts";
 import { createAppStore } from "../../src/state/appStore.ts";
+import { draftConfigs } from "../../src/state/store.ts";
 import type { RevisionSummary } from "../../src/domain/types.ts";
 import { RevisionItem } from "../../src/ui/render.tsx";
 import type { AppLayout } from "../../src/domain/types.ts";
@@ -228,6 +229,58 @@ async function renderExpandedRevisionWithChips() {
   return frame;
 }
 
+async function renderCommandDraftChips(
+  layout: AppLayout,
+  kind: "rebase" | "squash",
+  includeDescendants = false,
+) {
+  const revisions = [
+    createRevision("src", "source revision", ["@  ", "│  "]),
+    createRevision("desc", "descendant revision", ["│ ○  ", "│ │  "]),
+    createRevision("dst", "destination", ["○  ", "│  "]),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+  store.actions.startCommandDraft(
+    kind === "rebase" ? draftConfigs.rebase : draftConfigs.squash,
+    kind === "rebase" ? { descendantRevisionIds: ["src", "desc"] } : undefined,
+  );
+  store.actions.moveFocus(2);
+  if (kind === "rebase" && includeDescendants) {
+    store.actions.toggleRebaseDescendants(["src", "desc"]);
+  }
+
+  const rendered = await testRender(() => (
+    <box width={48} flexDirection="column">
+      <For each={store.state.revisions}>
+        {(revision, index) => (
+          <RevisionItem
+            state={store.state}
+            revision={revision}
+            index={index()}
+            previousRevisionId={store.state.revisions[index() - 1]?.revisionId ?? null}
+            nextRevisionId={store.state.revisions[index() + 1]?.revisionId ?? null}
+            config={resolveAppConfig({ commands: { layout } })}
+            focusedRevisionId={store.state.revisions[store.state.focusedRevisionIndex]?.revisionId ?? null}
+            selectedRevisionIds={new Set(store.state.selectedRevisionIds)}
+            expandedRevisionId={null}
+            commandTargetId={store.state.revisions[store.state.focusedRevisionIndex]?.revisionId ?? null}
+            searchQuery=""
+          />
+        )}
+      </For>
+    </box>
+  ), { width: 48, height: 12 });
+
+  await rendered.renderOnce();
+  const frame = rendered.captureCharFrame();
+  rendered.renderer.destroy();
+  return frame;
+}
+
 const condensedUnfocused = await renderRevisionStack("condensed", null);
 const condensedFocused = await renderRevisionStack("condensed", "curr");
 const superCondensed = await renderRevisionStack("super-condensed", "curr");
@@ -236,6 +289,11 @@ const cycledToSuperCondensed = await renderLayoutCycleAfterMount();
 const longSuperCondensed = await renderLongSuperCondensedDescription();
 const divergentFocused = await renderDivergentFocusedRevision();
 const expandedChipsInline = await renderExpandedRevisionWithChips();
+const rebaseCommandChips = await renderCommandDraftChips("expanded", "rebase");
+const rebaseCommandChipsCondensed = await renderCommandDraftChips("condensed", "rebase");
+const rebaseCommandChipsSuperCondensed = await renderCommandDraftChips("super-condensed", "rebase");
+const rebaseCommandChipsWithDescendants = await renderCommandDraftChips("expanded", "rebase", true);
+const squashCommandChips = await renderCommandDraftChips("expanded", "squash");
 
 console.log(JSON.stringify({
   condensedUnfocused,
@@ -246,4 +304,9 @@ console.log(JSON.stringify({
   longSuperCondensed,
   divergentFocused,
   expandedChipsInline,
+  rebaseCommandChips,
+  rebaseCommandChipsCondensed,
+  rebaseCommandChipsSuperCondensed,
+  rebaseCommandChipsWithDescendants,
+  squashCommandChips,
 }));

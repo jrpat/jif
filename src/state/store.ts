@@ -21,11 +21,13 @@ export const draftConfigs = {
     kind: "rebase" as const,
     template: "rebase ${selected.map(s => `${arg(descendants ? '-s --source' : '-r --revisions')} ${s}`).join(' ')} ${arg('-d --destination')} ${target}",
     badgeText: "onto",
+    sourceBadgeText: "move",
   },
   squash: {
     kind: "squash" as const,
     template: "squash ${selected.map(s => `${arg('-f --from')} ${s}`).join(' ')} ${arg('-t --into')} ${target}",
     badgeText: "into",
+    sourceBadgeText: "from",
   },
 } satisfies Record<string, CommandDraftConfig>;
 
@@ -718,6 +720,25 @@ export function getCommandTargetRevisionId(state: AppState): string | null {
   }
 
   return focusedRevision.revisionId;
+}
+
+export function getCommandChipTextForRevision(
+  state: AppState,
+  revisionId: string,
+): string | null {
+  if (!state.commandDraft) {
+    return null;
+  }
+
+  if (getCommandTargetRevisionId(state) === revisionId) {
+    return state.commandDraft.config.badgeText;
+  }
+
+  if (state.selectedRevisionIds.includes(revisionId)) {
+    return state.commandDraft.config.sourceBadgeText;
+  }
+
+  return null;
 }
 
 export function getSelectedRevisionIds(state: AppState): ReadonlySet<string> {

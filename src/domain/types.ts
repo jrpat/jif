@@ -36,6 +36,7 @@ export type CommandDraftConfig = Readonly<{
   kind: CommandDraftKind;
   template: string;
   badgeText: string;
+  sourceBadgeText: string;
 }>;
 
 export type CommandDraft = Readonly<{

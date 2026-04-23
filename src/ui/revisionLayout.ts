@@ -14,14 +14,13 @@ export type RevisionLayoutSpec = Readonly<{
   baseGraphRowCount: number;
   visibleGraphMode: "direct" | "fold-first-two" | "keep-second-row";
   sideChips: readonly RevisionSideChip[];
-  commandTarget: Readonly<{
+  commandChip: Readonly<{
     placement: "inline" | "overlay";
-    leftOffset: number;
     text: string;
   }> | null;
 }>;
 
-const BASE_LAYOUT_SPECS: Readonly<Record<RevisionLayoutMode, Omit<RevisionLayoutSpec, "mode" | "sideChips" | "commandTarget">>> = {
+const BASE_LAYOUT_SPECS: Readonly<Record<RevisionLayoutMode, Omit<RevisionLayoutSpec, "mode" | "sideChips" | "commandChip">>> = {
   expanded: {
     headerRowCount: 2,
     baseGraphRowCount: 2,
@@ -47,8 +46,7 @@ export function buildRevisionLayoutSpec(
   revision: Pick<RevisionSummary, "revisionId" | "bookmarks" | "workspaces" | "graphRows" | "hasConflict">,
   options: Readonly<{
     mode: RevisionLayoutMode;
-    isCommandTarget: boolean;
-    badgeText: string;
+    commandChipText: string | null;
   }>,
 ): RevisionLayoutSpec {
   const sideChips: RevisionSideChip[] = [
@@ -66,11 +64,10 @@ export function buildRevisionLayoutSpec(
         ? base.visibleGraphMode
         : "keep-second-row",
     sideChips,
-    commandTarget: options.isCommandTarget
+    commandChip: options.commandChipText
       ? {
           placement: options.mode === "condensed" ? "overlay" : "inline",
-          leftOffset: revision.revisionId.length + 1,
-          text: options.badgeText,
+          text: options.commandChipText,
         }
       : null,
   };

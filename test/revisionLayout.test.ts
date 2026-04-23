@@ -27,8 +27,7 @@ function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSumma
 test("expanded layout uses direct two-row graph geometry", () => {
   const layout = buildRevisionLayoutSpec(createRevision(), {
     mode: "expanded",
-    isCommandTarget: true,
-    badgeText: "onto",
+    commandChipText: "onto",
   });
 
   expect(getMaxRevisionBaseGraphRowCount()).toBe(2);
@@ -36,7 +35,7 @@ test("expanded layout uses direct two-row graph geometry", () => {
   expect(layout.headerRowCount).toBe(2);
   expect(layout.baseGraphRowCount).toBe(2);
   expect(layout.visibleGraphMode).toBe("direct");
-  expect(layout.commandTarget?.placement).toBe("inline");
+  expect(layout.commandChip?.placement).toBe("inline");
   expect(layout.sideChips).toEqual([
     { kind: "bookmark", text: "main" },
     { kind: "workspace", text: "review" },
@@ -47,22 +46,20 @@ test("condensed layout folds the first two graph rows and overlays the target ch
   const revision = createRevision({ graphRows: ["@  ", "│"] });
   const layout = buildRevisionLayoutSpec(revision, {
     mode: "condensed",
-    isCommandTarget: true,
-    badgeText: "onto",
+    commandChipText: "onto",
   });
 
   expect(layout.mode).toBe("condensed");
   expect(layout.headerRowCount).toBe(1);
   expect(layout.baseGraphRowCount).toBe(2);
   expect(layout.visibleGraphMode).toBe("fold-first-two");
-  expect(layout.commandTarget).toEqual({
+  expect(layout.commandChip).toEqual({
     placement: "overlay",
-    leftOffset: revision.revisionId.length + 1,
     text: "onto",
   });
 });
 
-test("command target offset accounts for the divergent revision suffix width", () => {
+test("command chips do not change condensed layout for divergent revision ids", () => {
   const revision = createRevision({
     revisionId: "abcdefgh/1",
     graphRows: ["@  ", "│"],
@@ -70,11 +67,13 @@ test("command target offset accounts for the divergent revision suffix width", (
 
   const layout = buildRevisionLayoutSpec(revision, {
     mode: "condensed",
-    isCommandTarget: true,
-    badgeText: "onto",
+    commandChipText: "onto",
   });
 
-  expect(layout.commandTarget?.leftOffset).toBe(revision.revisionId.length + 1);
+  expect(layout.commandChip).toEqual({
+    placement: "overlay",
+    text: "onto",
+  });
 });
 
 test("condensed layout preserves a second graph row when it carries branch topology", () => {
@@ -82,8 +81,7 @@ test("condensed layout preserves a second graph row when it carries branch topol
     createRevision({ graphRows: ["│ ○  ", "├─╯"] }),
     {
       mode: "condensed",
-      isCommandTarget: false,
-      badgeText: "onto",
+      commandChipText: null,
     },
   );
 
@@ -96,8 +94,7 @@ test("super-condensed layout keeps the single-row header and inlined command tar
     createRevision({ bookmarks: [], workspaces: [] }),
     {
       mode: "super-condensed",
-      isCommandTarget: true,
-      badgeText: "onto",
+      commandChipText: "onto",
     },
   );
 
@@ -106,9 +103,20 @@ test("super-condensed layout keeps the single-row header and inlined command tar
   expect(layout.baseGraphRowCount).toBe(2);
   expect(layout.visibleGraphMode).toBe("fold-first-two");
   expect(layout.sideChips).toEqual([]);
-  expect(layout.commandTarget).toEqual({
+  expect(layout.commandChip).toEqual({
     placement: "inline",
-    leftOffset: "abcdefgh".length + 1,
     text: "onto",
+  });
+});
+
+test("expanded layout inlines any command chip text, including source chips", () => {
+  const layout = buildRevisionLayoutSpec(createRevision(), {
+    mode: "expanded",
+    commandChipText: "move",
+  });
+
+  expect(layout.commandChip).toEqual({
+    placement: "inline",
+    text: "move",
   });
 });

@@ -12,6 +12,21 @@ export type RevisionChangeIdColors = Readonly<{
   suffix: string | undefined;
 }>;
 
+export function getRevisionCommandChipBgColor(options: Readonly<{
+  rowState: RevisionRowState;
+  colors: Readonly<{
+    rowSelectedAccent: string | undefined;
+    chromeBorderFocus: string | undefined;
+  }>;
+}>): string | undefined {
+  switch (options.rowState) {
+    case "selected":
+      return options.colors.rowSelectedAccent;
+    default:
+      return options.colors.chromeBorderFocus;
+  }
+}
+
 export function buildRevisionChangeIdSegments(
   revision: Pick<RevisionSummary, "revisionId" | "changeIdPrefixLength" | "localTimestamp">,
   options: Readonly<{ showTimestamp: boolean }>,

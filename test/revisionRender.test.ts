@@ -25,6 +25,11 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
     longSuperCondensed,
     divergentFocused,
     expandedChipsInline,
+    rebaseCommandChips,
+    rebaseCommandChipsCondensed,
+    rebaseCommandChipsSuperCondensed,
+    rebaseCommandChipsWithDescendants,
+    squashCommandChips,
   } = JSON.parse(stdout) as {
     condensedUnfocused: string;
     condensedFocused: string;
@@ -34,6 +39,11 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
     longSuperCondensed: string;
     divergentFocused: string;
     expandedChipsInline: string;
+    rebaseCommandChips: string;
+    rebaseCommandChipsCondensed: string;
+    rebaseCommandChipsSuperCondensed: string;
+    rebaseCommandChipsWithDescendants: string;
+    squashCommandChips: string;
   };
 
   expect(condensedUnfocused).toContain("│ │ └");
@@ -72,4 +82,46 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
   expect(expandedChipLine).toBeDefined();
   expect(expandedChipLine!.indexOf("main")).toBeLessThan(expandedChipLine!.indexOf("review"));
   expect(expandedChipLine!.indexOf("review")).toBeLessThan(expandedChipLine!.indexOf("branch"));
+
+  expect(rebaseCommandChips).toContain("move");
+  expect(rebaseCommandChips).toContain("onto");
+  expect(rebaseCommandChips.indexOf("move")).toBeLessThan(rebaseCommandChips.indexOf("onto"));
+
+  const expandedSourceChipLine = rebaseCommandChips
+    .trimEnd()
+    .split("\n")
+    .find((line) => line.includes("src") && line.includes("move"));
+  expect(expandedSourceChipLine).toBeDefined();
+  expect(expandedSourceChipLine!).toMatch(/move\s*│$/);
+
+  const condensedSourceChipLine = rebaseCommandChipsCondensed
+    .trimEnd()
+    .split("\n")
+    .find((line) => line.includes("src") && line.includes("move"));
+  expect(condensedSourceChipLine).toBeDefined();
+  expect(condensedSourceChipLine!).toMatch(/move\s*│$/);
+  expect(condensedSourceChipLine!.indexOf("move")).toBeGreaterThan(condensedSourceChipLine!.indexOf("revision"));
+
+  const condensedTargetChipLine = rebaseCommandChipsCondensed
+    .trimEnd()
+    .split("\n")
+    .find((line) => line.includes("dst") && line.includes("onto"));
+  expect(condensedTargetChipLine).toBeDefined();
+  expect(condensedTargetChipLine!).toMatch(/onto\s*│$/);
+  expect(condensedTargetChipLine!.indexOf("onto")).toBeGreaterThan(condensedTargetChipLine!.indexOf("ation"));
+
+  const superCondensedSourceChipLine = rebaseCommandChipsSuperCondensed
+    .trimEnd()
+    .split("\n")
+    .find((line) => line.includes("source revision") && line.includes("move"));
+  expect(superCondensedSourceChipLine).toBeDefined();
+  expect(superCondensedSourceChipLine!).toMatch(/move\s*$/);
+  expect(superCondensedSourceChipLine!.indexOf("move")).toBeGreaterThan(superCondensedSourceChipLine!.indexOf("source revision"));
+
+  expect(rebaseCommandChipsWithDescendants).toContain("move");
+  expect(rebaseCommandChipsWithDescendants).toContain("onto");
+  expect(rebaseCommandChipsWithDescendants).not.toContain("descendant move");
+
+  expect(squashCommandChips).toContain("from");
+  expect(squashCommandChips).toContain("into");
 }, 20000);
