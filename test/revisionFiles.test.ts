@@ -26,7 +26,7 @@ test("getChangedFileRowState marks the focused file with a triangular marker", (
     getChangedFileRowState(
       {
         focusMode: "files",
-        expandedRevisionId: "rev-1",
+        expandedRowId: "rev-1",
         focusedFileIndex: 1,
         selectedFilePaths: [],
       },
@@ -46,7 +46,7 @@ test("getChangedFileRowState prefers the selection marker over the focus marker"
     getChangedFileRowState(
       {
         focusMode: "files",
-        expandedRevisionId: "rev-1",
+        expandedRowId: "rev-1",
         focusedFileIndex: 1,
         selectedFilePaths: ["src/app.ts"],
       },

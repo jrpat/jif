@@ -144,8 +144,12 @@ describe("materializeSampleRepoCached", () => {
     // Cached run should be significantly faster
     expect(secondDuration).toBeLessThan(firstDuration * 0.5);
 
-    // Both should produce valid jj repos
-    const log = await runCommand(second.repoPath, ["jj", "log", "--no-pager", "--limit", "3"]);
-    expect(log.stdout).toContain("docs(review)");
+    // Both should produce the same valid jj repo contents.
+    const [firstLog, secondLog] = await Promise.all([
+      runCommand(first.repoPath, ["jj", "log", "--no-pager", "--limit", "10"]),
+      runCommand(second.repoPath, ["jj", "log", "--no-pager", "--limit", "10"]),
+    ]);
+    expect(secondLog.stdout.trim().length).toBeGreaterThan(0);
+    expect(secondLog.stdout).toBe(firstLog.stdout);
   }, 30_000);
 });

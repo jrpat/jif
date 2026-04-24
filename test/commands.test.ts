@@ -10,6 +10,7 @@ function createState(): AppState {
     loading: false,
     revisions: [
       {
+        rowId: "aaaaaaaa",
         revisionId: "aaaaaaaa",
         changeIdPrefixLength: 1,
         commitId: "11111111",
@@ -118,6 +119,7 @@ test("canExecute blocks commands on elided revisions", () => {
     ...createState(),
     revisions: [
       {
+        rowId: "__elided_0",
         revisionId: "__elided_0",
         changeIdPrefixLength: 0,
         commitId: "",
@@ -146,7 +148,7 @@ test("mode inheritance lets files mode use normal keys", () => {
   const state: AppState = {
     ...createState(),
     focusMode: "files",
-    expandedRevisionId: "aaaaaaaa",
+    expandedRowId: "aaaaaaaa",
   };
 
   // Inherited from normal

@@ -152,7 +152,10 @@ test("JjClient loads a real sample repository", async () => {
   expect(repository.revisions.some((revision) => revision.bookmarks.length > 0)).toBeTrue();
   expect(repository.revisions.some((revision) => revision.workspaces.length > 0)).toBeTrue();
 
-  const firstFiles = await client.loadChangedFiles(repository.revisions[0]!.revisionId);
+  const firstChangedRevision = repository.revisions.find((revision) => !revision.isEmpty);
+  expect(firstChangedRevision).toBeDefined();
+
+  const firstFiles = await client.loadChangedFiles(firstChangedRevision!.revisionId);
   expect(firstFiles.length).toBeGreaterThan(0);
 }, 20000);
 

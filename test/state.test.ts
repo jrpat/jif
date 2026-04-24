@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { AppState } from "../src/domain/types.ts";
+import { createRowId } from "../src/domain/rowIds.ts";
 import {
   applyRepositoryData,
   cancelOrBlurState,
@@ -17,7 +18,7 @@ import {
   focusWorkingCopy,
   getDisplayedCommandSegments,
   getDisplayedCommandText,
-  getSelectedRevisionIds,
+  getSelectedRowIds,
   logEvent,
   openShortcutPanel,
   pushStatusMessage,
@@ -46,12 +47,18 @@ import {
   getSearchMatchIndices,
 } from "../src/state/store.ts";
 
+const FIRST_ROW_ID = createRowId("11111111", "aaaaaaaa");
+const SECOND_ROW_ID = createRowId("22222222", "bbbbbbbb");
+const FIRST_DIVERGENT_ROW_ID = createRowId("11111111", "abcdefgh/0");
+const SECOND_DIVERGENT_ROW_ID = createRowId("22222222", "abcdefgh/1");
+
 function createState(): AppState {
   return {
     ...createInitialState("/tmp/repo"),
     loading: false,
     revisions: [
       {
+        rowId: FIRST_ROW_ID,
         revisionId: "aaaaaaaa",
         changeIdPrefixLength: 1,
         commitId: "11111111",
@@ -67,6 +74,7 @@ function createState(): AppState {
         files: [{ status: "M", path: "src/a.ts" }],
       },
       {
+        rowId: SECOND_ROW_ID,
         revisionId: "bbbbbbbb",
         changeIdPrefixLength: 1,
         commitId: "22222222",
@@ -91,6 +99,7 @@ function createDivergentState(): AppState {
     loading: false,
     revisions: [
       {
+        rowId: FIRST_DIVERGENT_ROW_ID,
         revisionId: "abcdefgh/0",
         changeIdPrefixLength: 3,
         commitId: "11111111",
@@ -106,6 +115,7 @@ function createDivergentState(): AppState {
         files: [{ status: "M", path: "src/a.ts" }],
       },
       {
+        rowId: SECOND_DIVERGENT_ROW_ID,
         revisionId: "abcdefgh/1",
         changeIdPrefixLength: 3,
         commitId: "22222222",
@@ -124,13 +134,55 @@ function createDivergentState(): AppState {
   };
 }
 
+function createDuplicateRevisionIdState(): AppState {
+  return {
+    ...createInitialState("/tmp/repo"),
+    loading: false,
+    focusedRevisionIndex: 1,
+    revisions: [
+      {
+        rowId: "11111111:shared",
+        revisionId: "shared",
+        changeIdPrefixLength: 3,
+        commitId: "11111111",
+        description: "first shared revision",
+        localTimestamp: "2026-03-30 07:22:39",
+        bookmarks: [],
+        workspaces: [],
+        graphRows: ["@  "],
+        isEmpty: false,
+        hasConflict: false,
+        marker: "working-copy",
+        filesLoaded: true,
+        files: [{ status: "M", path: "src/a.ts" }],
+      },
+      {
+        rowId: "22222222:shared",
+        revisionId: "shared",
+        changeIdPrefixLength: 3,
+        commitId: "22222222",
+        description: "second shared revision",
+        localTimestamp: "2026-03-30 07:22:40",
+        bookmarks: [],
+        workspaces: [],
+        graphRows: ["○  "],
+        isEmpty: false,
+        hasConflict: false,
+        marker: "plain",
+        filesLoaded: true,
+        files: [{ status: "M", path: "src/b.ts" }],
+      },
+    ],
+  } as AppState;
+}
+
 test("moveFocus enters file navigation when details are open", () => {
   let state = createState();
   state = openFocusedRevision(state);
   state = moveFocus(state, 1);
   expect(state.focusedFileIndex).toBe(0);
 
-  state = setRevisionFiles(state, "aaaaaaaa", [
+  state = setRevisionFiles(state, FIRST_ROW_ID, [
     { status: "M", path: "src/a.ts" },
     { status: "M", path: "src/b.ts" },
   ]);
@@ -159,7 +211,7 @@ test("cancelCommandState returns to file navigation when a revision is expanded"
   state = cancelCommandState(state);
 
   expect(state.focusMode).toBe("files");
-  expect(state.expandedRevisionId).toBe("aaaaaaaa");
+  expect(state.expandedRowId).toBe(FIRST_ROW_ID);
 });
 
 test("cancelOrBlurState closes the shortcut panel before other browse-mode state", () => {
@@ -171,7 +223,7 @@ test("cancelOrBlurState closes the shortcut panel before other browse-mode state
 
   expect(state.shortcutPanelExpanded).toBeFalse();
   expect(state.focusMode).toBe("files");
-  expect(state.expandedRevisionId).toBe("aaaaaaaa");
+  expect(state.expandedRowId).toBe(FIRST_ROW_ID);
 });
 
 test("startCommandDraft advances focus to parent revision", () => {
@@ -187,7 +239,7 @@ test("startCommandDraft keeps divergent revision ids unambiguous in command text
 
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["abcdefgh/1"] });
 
-  expect(state.selectedRevisionIds).toEqual(["abcdefgh/1"]);
+  expect(state.selectedRowIds).toEqual([SECOND_DIVERGENT_ROW_ID]);
   expect(getDisplayedCommandText(state)).toBe("rebase -r abcdefgh/1 -d ░░░░");
 });
 
@@ -309,34 +361,34 @@ test("pushEvent keeps a maximum of 100 entries in the event log", () => {
 
 test("selected revision ids are populated when starting a command draft", () => {
   let state = createState();
-  expect(getSelectedRevisionIds(state).size).toBe(0);
+  expect(getSelectedRowIds(state).size).toBe(0);
 
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
-  expect(getSelectedRevisionIds(state).has("aaaaaaaa")).toBeTrue();
+  expect(getSelectedRowIds(state).has(FIRST_ROW_ID)).toBeTrue();
 });
 
 test("squash command text updates when target is selected", () => {
   let state = createState();
   state = startCommandDraft(state, draftConfigs.squash);
   expect(getDisplayedCommandText(state)).toBe("squash -f a -t b");
-  expect(getSelectedRevisionIds(state).has("aaaaaaaa")).toBeTrue();
+  expect(getSelectedRowIds(state).has(FIRST_ROW_ID)).toBeTrue();
 });
 
 test("toggleRevisionSelection works without a command draft", () => {
   let state = createState();
-  expect(state.selectedRevisionIds).toEqual([]);
+  expect(state.selectedRowIds).toEqual([]);
 
   state = toggleRevisionSelection(state);
-  expect(state.selectedRevisionIds).toEqual(["aaaaaaaa"]);
+  expect(state.selectedRowIds).toEqual([FIRST_ROW_ID]);
 
   state = toggleRevisionSelection(state);
-  expect(state.selectedRevisionIds).toEqual([]);
+  expect(state.selectedRowIds).toEqual([]);
 });
 
 test("toggleFileSelection adds and removes file paths", () => {
   let state = createState();
   state = openFocusedRevision(state);
-  state = setRevisionFiles(state, "aaaaaaaa", [
+  state = setRevisionFiles(state, FIRST_ROW_ID, [
     { status: "M", path: "src/a.ts" },
     { status: "A", path: "src/b.ts" },
   ]);
@@ -367,21 +419,21 @@ test("closeFocusedRevision clears file selections", () => {
 test("clearRevisionSelection clears only revision selections", () => {
   let state = createState();
   state = toggleRevisionSelection(state);
-  expect(state.selectedRevisionIds).toEqual(["aaaaaaaa"]);
+  expect(state.selectedRowIds).toEqual([FIRST_ROW_ID]);
 
   state = clearRevisionSelection(state);
-  expect(state.selectedRevisionIds).toEqual([]);
+  expect(state.selectedRowIds).toEqual([]);
 });
 
 test("cancelCommandDraft clears draft and selections but keeps focus mode", () => {
   let state = createState();
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
   expect(state.commandDraft).not.toBeNull();
-  expect(state.selectedRevisionIds.length).toBeGreaterThan(0);
+  expect(state.selectedRowIds.length).toBeGreaterThan(0);
 
   state = cancelCommandDraft(state);
   expect(state.commandDraft).toBeNull();
-  expect(state.selectedRevisionIds).toEqual([]);
+  expect(state.selectedRowIds).toEqual([]);
 });
 
 test("focusWorkingCopy jumps to the working-copy revision", () => {
@@ -422,7 +474,7 @@ test("openFocusedRevision and refresh keep the exact divergent sibling identity"
   let state = { ...createDivergentState(), focusedRevisionIndex: 1 };
 
   state = openFocusedRevision(state);
-  expect(state.expandedRevisionId).toBe("abcdefgh/1");
+  expect(state.expandedRowId).toBe(SECOND_DIVERGENT_ROW_ID);
 
   const refreshed = applyRepositoryData(state, {
     repoPath: state.repoPath,
@@ -433,7 +485,33 @@ test("openFocusedRevision and refresh keep the exact divergent sibling identity"
   });
 
   expect(refreshed.focusedRevisionIndex).toBe(1);
-  expect(refreshed.expandedRevisionId).toBe("abcdefgh/1");
+  expect(refreshed.expandedRowId).toBe(SECOND_DIVERGENT_ROW_ID);
+});
+
+test("applyRepositoryData preserves the focused row by rowId when revision ids collide", () => {
+  const state = createDuplicateRevisionIdState();
+
+  const refreshed = applyRepositoryData(state, {
+    repoPath: state.repoPath,
+    revisions: state.revisions.map((revision) => ({
+      ...revision,
+      description: `${revision.description} refreshed`,
+    })),
+  });
+
+  expect(refreshed.focusedRevisionIndex).toBe(1);
+  expect(refreshed.revisions[1]?.description).toContain("second shared revision");
+});
+
+test("setRevisionFiles targets a single row by rowId when revision ids collide", () => {
+  const state = createDuplicateRevisionIdState();
+
+  const next = setRevisionFiles(state, "22222222:shared", [
+    { status: "A", path: "src/only-second.ts" },
+  ]);
+
+  expect(next.revisions[0]?.files).toEqual([{ status: "M", path: "src/a.ts" }]);
+  expect(next.revisions[1]?.files).toEqual([{ status: "A", path: "src/only-second.ts" }]);
 });
 
 test("focusWorkingCopy selects the new working-copy revision after repository refresh", () => {
@@ -443,6 +521,7 @@ test("focusWorkingCopy selects the new working-copy revision after repository re
     repoPath: state.repoPath,
     revisions: [
       {
+        rowId: createRowId("33333333", "cccccccc"),
         revisionId: "cccccccc",
         changeIdPrefixLength: 1,
         commitId: "33333333",
@@ -477,12 +556,12 @@ test("startCommandDraft uses pre-selected revisions and does not advance focus",
   state = toggleRevisionSelection(state);
   state = moveFocus(state, 1);
   state = toggleRevisionSelection(state);
-  expect(state.selectedRevisionIds).toEqual(["aaaaaaaa", "bbbbbbbb"]);
+  expect(state.selectedRowIds).toEqual([FIRST_ROW_ID, SECOND_ROW_ID]);
 
   const prevFocusIndex = state.focusedRevisionIndex;
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
   expect(state.focusedRevisionIndex).toBe(prevFocusIndex);
-  expect(state.selectedRevisionIds).toEqual(["aaaaaaaa", "bbbbbbbb"]);
+  expect(state.selectedRowIds).toEqual([FIRST_ROW_ID, SECOND_ROW_ID]);
 });
 
 test("multiple selected revisions produce repeated flags", () => {
@@ -604,7 +683,7 @@ test("closeRevsetInput returns to file navigation when a revision is expanded", 
   state = closeRevsetInput(state);
 
   expect(state.focusMode).toBe("files");
-  expect(state.expandedRevisionId).toBe("aaaaaaaa");
+  expect(state.expandedRowId).toBe(FIRST_ROW_ID);
 });
 
 test("setRevsetQuery updates the query", () => {
@@ -617,6 +696,7 @@ test("setRevsetQuery updates the query", () => {
 test("expandElidedRevision replaces elided entry with new revisions and updates focus", () => {
   let state = createState();
   const elidedEntry = {
+    rowId: "synthetic:elided:2",
     revisionId: "__elided_2",
     changeIdPrefixLength: 0,
     commitId: "",
@@ -635,8 +715,8 @@ test("expandElidedRevision replaces elided entry with new revisions and updates 
   expect(state.revisions).toHaveLength(3);
 
   const replacements = [
-    { ...elidedEntry, revisionId: "cccccccc", marker: "plain" as const, description: "third" },
-    { ...elidedEntry, revisionId: "dddddddd", marker: "plain" as const, description: "fourth" },
+    { ...elidedEntry, rowId: createRowId("33333333", "cccccccc"), revisionId: "cccccccc", marker: "plain" as const, description: "third", commitId: "33333333" },
+    { ...elidedEntry, rowId: createRowId("44444444", "dddddddd"), revisionId: "dddddddd", marker: "plain" as const, description: "fourth", commitId: "44444444" },
   ];
   state = expandElidedRevision(state, 2, replacements);
 
@@ -653,6 +733,7 @@ test("applyRepositoryData clears stale loaded files when a revision becomes empt
     repoPath: state.repoPath,
     revisions: [
       {
+        rowId: FIRST_ROW_ID,
         revisionId: "aaaaaaaa",
         changeIdPrefixLength: 1,
         commitId: "11111111",

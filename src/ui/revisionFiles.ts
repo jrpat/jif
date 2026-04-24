@@ -19,8 +19,8 @@ export function getChangedFilesPlaceholderText(
 }
 
 export function getChangedFileRowState(
-  state: Pick<AppState, "focusMode" | "expandedRevisionId" | "focusedFileIndex" | "selectedFilePaths">,
-  revisionId: string,
+  state: Pick<AppState, "focusMode" | "expandedRowId" | "focusedFileIndex" | "selectedFilePaths">,
+  rowId: string,
   rowIndex: number,
   filePath: string,
 ): Readonly<{
@@ -30,7 +30,7 @@ export function getChangedFileRowState(
 }> {
   const focused =
     state.focusMode === "files" &&
-    state.expandedRevisionId === revisionId &&
+    state.expandedRowId === rowId &&
     state.focusedFileIndex === rowIndex;
   const selected = state.selectedFilePaths.includes(filePath);
 

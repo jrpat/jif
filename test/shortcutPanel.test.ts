@@ -28,6 +28,7 @@ function createState(): AppState {
     loading: false,
     revisions: [
       {
+        rowId: "aaaaaaaa",
         revisionId: "aaaaaaaa",
         changeIdPrefixLength: 1,
         commitId: "11111111",
@@ -43,6 +44,7 @@ function createState(): AppState {
         files: [{ status: "M", path: "src/a.ts" }],
       },
       {
+        rowId: "bbbbbbbb",
         revisionId: "bbbbbbbb",
         changeIdPrefixLength: 1,
         commitId: "22222222",

@@ -68,7 +68,7 @@ export function createAppStore(
   });
 
   function replaceState(nextState: AppState) {
-    setState(reconcile(nextState, { key: "revisionId" }));
+    setState(reconcile(nextState, { key: "rowId" }));
   }
 
   function mutate(recipe: (currentState: AppState) => AppState) {
@@ -102,8 +102,8 @@ export function createAppStore(
       applyRepositoryData(repositoryData: RepositoryData) {
         mutate((currentState) => applyRepositoryData(currentState, repositoryData));
       },
-      setRevisionFiles(revisionId: string, files: readonly ChangedFile[]) {
-        mutate((currentState) => setRevisionFiles(currentState, revisionId, files));
+      setRevisionFiles(rowId: string, files: readonly ChangedFile[]) {
+        mutate((currentState) => setRevisionFiles(currentState, rowId, files));
       },
       moveFocus(delta: number) {
         mutate((currentState) => moveFocus(currentState, delta));

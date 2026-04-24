@@ -10,6 +10,7 @@ export type ChangedFile = Readonly<{
 }>;
 
 export type RevisionSummary = Readonly<{
+  rowId: string;
   revisionId: string;
   changeIdPrefixLength: number;
   commitId: string;
@@ -72,9 +73,9 @@ export type AppState = Readonly<{
   focusMode: FocusMode;
   shortcutPanelExpanded: boolean;
   focusedRevisionIndex: number;
-  expandedRevisionId: string | null;
+  expandedRowId: string | null;
   focusedFileIndex: number;
-  selectedRevisionIds: readonly string[];
+  selectedRowIds: readonly string[];
   selectedFilePaths: readonly string[];
   commandBar: CommandBarState;
   commandDraft: CommandDraft | null;

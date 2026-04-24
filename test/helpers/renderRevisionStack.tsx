@@ -2,7 +2,7 @@ import { For } from "solid-js";
 import { testRender } from "@opentui/solid";
 import { resolveAppConfig } from "../../src/config/index.ts";
 import { createAppStore } from "../../src/state/appStore.ts";
-import { draftConfigs } from "../../src/state/store.ts";
+import { draftConfigs, getCommandTargetRowId, getSelectedRowIds } from "../../src/state/store.ts";
 import type { RevisionSummary } from "../../src/domain/types.ts";
 import { RevisionItem } from "../../src/ui/render.tsx";
 import type { AppLayout } from "../../src/domain/types.ts";
@@ -14,6 +14,7 @@ function createRevision(
   overrides: Partial<RevisionSummary> = {},
 ): RevisionSummary {
   return {
+    rowId: revisionId,
     revisionId,
     changeIdPrefixLength: 2,
     commitId: `${revisionId.replace("/", "")}commit`,
@@ -33,8 +34,8 @@ function createRevision(
 
 async function renderRevisionStack(
   layout: AppLayout,
-  focusedRevisionId: string | null,
-  expandedRevisionId: string | null = null,
+  focusedRowId: string | null,
+  expandedRowId: string | null = null,
 ) {
   const revisions = [
     createRevision("prev", "above", ["│ ○  ", "│ │  "]),
@@ -46,7 +47,7 @@ async function renderRevisionStack(
     repoPath: "/tmp/repo",
     revisions,
   });
-  if (expandedRevisionId === "curr") {
+  if (expandedRowId === "curr") {
     store.actions.setRevisionFiles("curr", [{ status: "M", path: "src/layout.ts" }]);
   }
 
@@ -58,13 +59,13 @@ async function renderRevisionStack(
             state={store.state}
             revision={revision}
             index={index()}
-            previousRevisionId={store.state.revisions[index() - 1]?.revisionId ?? null}
-            nextRevisionId={store.state.revisions[index() + 1]?.revisionId ?? null}
+            previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
+            nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
             config={resolveAppConfig({ commands: { layout } })}
-            focusedRevisionId={focusedRevisionId}
-            selectedRevisionIds={new Set()}
-            expandedRevisionId={expandedRevisionId}
-            commandTargetId={null}
+            focusedRowId={focusedRowId}
+            selectedRowIds={new Set()}
+            expandedRowId={expandedRowId}
+            commandTargetRowId={null}
             searchQuery=""
           />
         )}
@@ -94,13 +95,13 @@ async function renderLayoutCycleAfterMount() {
         state={store.state}
         revision={store.state.revisions[0]!}
         index={0}
-        previousRevisionId={null}
-        nextRevisionId={null}
+        previousRowId={null}
+        nextRowId={null}
         config={resolveAppConfig({ commands: { layout: "condensed" } })}
-        focusedRevisionId="curr"
-        selectedRevisionIds={new Set()}
-        expandedRevisionId={null}
-        commandTargetId={null}
+        focusedRowId="curr"
+        selectedRowIds={new Set()}
+        expandedRowId={null}
+        commandTargetRowId={null}
         searchQuery=""
       />
     </box>
@@ -134,13 +135,13 @@ async function renderLongSuperCondensedDescription() {
         state={store.state}
         revision={store.state.revisions[0]!}
         index={0}
-        previousRevisionId={null}
-        nextRevisionId={null}
+        previousRowId={null}
+        nextRowId={null}
         config={resolveAppConfig({ commands: { layout: "super-condensed" } })}
-        focusedRevisionId="curr"
-        selectedRevisionIds={new Set()}
-        expandedRevisionId={null}
-        commandTargetId={null}
+        focusedRowId="curr"
+        selectedRowIds={new Set()}
+        expandedRowId={null}
+        commandTargetRowId={null}
         searchQuery=""
       />
     </box>
@@ -172,13 +173,13 @@ async function renderDivergentFocusedRevision() {
             state={store.state}
             revision={revision}
             index={index()}
-            previousRevisionId={store.state.revisions[index() - 1]?.revisionId ?? null}
-            nextRevisionId={store.state.revisions[index() + 1]?.revisionId ?? null}
+            previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
+            nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
             config={resolveAppConfig({ commands: { layout: "condensed" } })}
-            focusedRevisionId="shared/1"
-            selectedRevisionIds={new Set()}
-            expandedRevisionId={null}
-            commandTargetId={null}
+            focusedRowId="shared/1"
+            selectedRowIds={new Set()}
+            expandedRowId={null}
+            commandTargetRowId={null}
             searchQuery=""
           />
         )}
@@ -211,13 +212,13 @@ async function renderExpandedRevisionWithChips() {
         state={store.state}
         revision={store.state.revisions[0]!}
         index={0}
-        previousRevisionId={null}
-        nextRevisionId={null}
+        previousRowId={null}
+        nextRowId={null}
         config={resolveAppConfig({ commands: { layout: "expanded" } })}
-        focusedRevisionId={null}
-        selectedRevisionIds={new Set()}
-        expandedRevisionId={null}
-        commandTargetId={null}
+        focusedRowId={null}
+        selectedRowIds={new Set()}
+        expandedRowId={null}
+        commandTargetRowId={null}
         searchQuery=""
       />
     </box>
@@ -261,13 +262,13 @@ async function renderCommandDraftChips(
             state={store.state}
             revision={revision}
             index={index()}
-            previousRevisionId={store.state.revisions[index() - 1]?.revisionId ?? null}
-            nextRevisionId={store.state.revisions[index() + 1]?.revisionId ?? null}
+            previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
+            nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
             config={resolveAppConfig({ commands: { layout } })}
-            focusedRevisionId={store.state.revisions[store.state.focusedRevisionIndex]?.revisionId ?? null}
-            selectedRevisionIds={new Set(store.state.selectedRevisionIds)}
-            expandedRevisionId={null}
-            commandTargetId={store.state.revisions[store.state.focusedRevisionIndex]?.revisionId ?? null}
+            focusedRowId={store.state.revisions[store.state.focusedRevisionIndex]?.rowId ?? null}
+            selectedRowIds={getSelectedRowIds(store.state)}
+            expandedRowId={null}
+            commandTargetRowId={getCommandTargetRowId(store.state)}
             searchQuery=""
           />
         )}

@@ -8,8 +8,9 @@ import {
 } from "../src/ui/revisionHeader.ts";
 
 function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSummary {
+  const revisionId = overrides.revisionId ?? "abcdefgh";
+
   return {
-    revisionId: "abcdefgh",
     changeIdPrefixLength: 2,
     commitId: "12345678",
     description: "feat: tighten condensed layout packing",
@@ -23,6 +24,8 @@ function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSumma
     filesLoaded: false,
     files: [],
     ...overrides,
+    rowId: overrides.rowId ?? revisionId,
+    revisionId,
   };
 }
 

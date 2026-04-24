@@ -5,6 +5,7 @@ import type {
   RevisionMarker,
   RevisionSummary,
 } from "../domain/types.ts";
+import { createRowId, createSyntheticRowId } from "../domain/rowIds.ts";
 import { getChangeIdFromRevisionId } from "../domain/revisionIds.ts";
 import { getMaxRevisionBaseGraphRowCount } from "../ui/revisionLayout.ts";
 
@@ -219,6 +220,7 @@ export function parseLogOutput(
       if (isElidedLine(rawLine)) {
         const graphMatch = /^(?<graph>.*?)(?=\()/.exec(rawLine);
         revisions.push({
+          rowId: createSyntheticRowId("elided", String(revisions.length)),
           revisionId: `__elided_${revisions.length}`,
           changeIdPrefixLength: 0,
           commitId: "",
@@ -263,13 +265,15 @@ export function parseLogOutput(
       }
 
       const revisionId = rawRevisionId.trim();
+      const commitIdentity = commitId.trim();
       const graphRow = extractGraphPrefix(visibleGraph, revisionId);
       const isEmpty = rawEmpty.trim() === "true";
       const hasConflict = rawConflict.trim() === "true";
       revisions.push({
+        rowId: createRowId(commitIdentity, revisionId),
         revisionId,
         changeIdPrefixLength: rawChangeIdPrefix.trim().length || getChangeIdFromRevisionId(revisionId).length,
-        commitId: commitId.trim(),
+        commitId: commitIdentity,
         description: rawDescription.trim() || (isEmpty ? "(empty) (no description)" : "(no description)"),
         localTimestamp: rawTimestamp.trim(),
         bookmarks: splitWords(rawBookmarks),
@@ -303,7 +307,7 @@ function buildLogTemplate(baseGraphRowCount: number): string {
   const shortChangeId = "change_id.shortest(8)";
   const shortRevisionId = `${shortChangeId} ++ if(divergent, surround("/", "", change_offset))`;
   const rows = [
-    `${shortRevisionId} ++ "${FIELD_SEPARATOR}" ++ "${ROW_KIND_HEADER}" ++ "${FIELD_SEPARATOR}" ++ ${shortRevisionId} ++ "${FIELD_SEPARATOR}" ++ commit_id.shortest(8) ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ working_copies.map(|wc| wc.name()).join(",") ++ "${FIELD_SEPARATOR}" ++ ${shortChangeId}.prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ conflict ++ "\\n"`,
+    `${shortRevisionId} ++ "${FIELD_SEPARATOR}" ++ "${ROW_KIND_HEADER}" ++ "${FIELD_SEPARATOR}" ++ ${shortRevisionId} ++ "${FIELD_SEPARATOR}" ++ commit_id ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ working_copies.map(|wc| wc.name()).join(",") ++ "${FIELD_SEPARATOR}" ++ ${shortChangeId}.prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ conflict ++ "\\n"`,
   ];
 
   for (let index = 1; index < baseGraphRowCount; index += 1) {

@@ -12,6 +12,7 @@ import {
   DRAFT_PLACEHOLDER,
   getCommandChipTextForRevision,
   draftConfigs,
+  getCommandTargetRowId,
   getCommandTargetRevisionId,
   getDisplayedCommandSegments,
   getDisplayedCommandText,
@@ -19,7 +20,8 @@ import {
   getFocusedRevisionArg,
   getFocusedRevision,
   isFileNavigationActive,
-  getOperationAffectedRevisionIds,
+  getOperationAffectedRowIds,
+  getSelectedRowIds,
   getSelectedRevisionIds,
   revisionMatchesSearch,
   type CommandSegment,
@@ -172,7 +174,7 @@ export function JifView(props: {
           const enrichedFiles = conflictedPaths.size > 0
             ? files.map((f) => ({ ...f, hasConflict: conflictedPaths.has(f.path) }))
             : files;
-          store.actions.setRevisionFiles(revision.revisionId, enrichedFiles);
+          store.actions.setRevisionFiles(revision.rowId, enrichedFiles);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           store.actions.pushEvent(message, "error");
@@ -270,7 +272,7 @@ export function JifView(props: {
     },
     restoreFiles() {
       const state = store.snapshot();
-      if (state.focusMode !== "files" || !state.expandedRevisionId) {
+      if (state.focusMode !== "files" || !state.expandedRowId) {
         return;
       }
 
@@ -327,7 +329,7 @@ export function JifView(props: {
 
       void (async () => {
         try {
-          const descendants = await client.resolveDescendants(state.selectedRevisionIds[0] ?? "");
+          const descendants = await client.resolveDescendants(getSelectedRevisionIds(state)[0] ?? "");
           store.actions.toggleRebaseDescendants(descendants);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
@@ -362,7 +364,7 @@ export function JifView(props: {
     store.state.commandDraft;
     store.state.commandBar;
     store.state.useShortFlags;
-    store.state.selectedRevisionIds;
+    store.state.selectedRowIds;
     return getDisplayedCommandText(store.state);
   });
   const commandSegments = createMemo((): readonly CommandSegment[] | null => {
@@ -370,7 +372,7 @@ export function JifView(props: {
     store.state.commandDraft;
     store.state.commandBar;
     store.state.useShortFlags;
-    store.state.selectedRevisionIds;
+    store.state.selectedRowIds;
     return getDisplayedCommandSegments(store.state);
   });
   const activeMode = createMemo(() => getActiveMode(store.state));
@@ -480,19 +482,19 @@ export function JifView(props: {
     const direction = focusedIndex >= prevFocusedIndex ? "down" : "up";
     prevFocusedIndex = focusedIndex;
 
-    const marginRevisionId = (() => {
+    const marginRowId = (() => {
       const margin = config.log.scrollMargin;
       const idx = direction === "down"
         ? Math.min(focusedIndex + margin, store.state.revisions.length - 1)
         : Math.max(focusedIndex - margin, 0);
-      return (store.state.revisions[idx] ?? focusedRevision).revisionId;
+      return (store.state.revisions[idx] ?? focusedRevision).rowId;
     })();
 
-    scrollToKeepChildVisible(logViewport, `revision-${marginRevisionId}`, direction);
+    scrollToKeepChildVisible(logViewport, `revision-${marginRowId}`, direction);
   });
 
   createRenderEffect(() => {
-    const expandedId = store.state.expandedRevisionId;
+    const expandedId = store.state.expandedRowId;
     if (!expandedId || !logViewport) {
       return;
     }
@@ -542,13 +544,13 @@ export function JifView(props: {
                   state={store.state}
                   revision={revision}
                   index={index()}
-                  previousRevisionId={store.state.revisions[index() - 1]?.revisionId ?? null}
-                  nextRevisionId={store.state.revisions[index() + 1]?.revisionId ?? null}
+                  previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
+                  nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
                   config={config}
-                  focusedRevisionId={getFocusedRevision(store.state)?.revisionId ?? null}
-                  selectedRevisionIds={getSelectedRevisionIds(store.state)}
-                  expandedRevisionId={getExpandedRevision(store.state)?.revisionId ?? null}
-                  commandTargetId={getCommandTargetRevisionId(store.state)}
+                  focusedRowId={getFocusedRevision(store.state)?.rowId ?? null}
+                  selectedRowIds={getSelectedRowIds(store.state)}
+                  expandedRowId={getExpandedRevision(store.state)?.rowId ?? null}
+                  commandTargetRowId={getCommandTargetRowId(store.state)}
                   searchQuery={store.state.searchQuery}
                 />
               )}
@@ -702,9 +704,9 @@ export function JifView(props: {
   function squashNeedsEditor(state: ReturnType<typeof store.snapshot>): boolean {
     const target = getFocusedRevision(state);
     if (!target?.description) return false;
-    const selectedIds = state.selectedRevisionIds;
+    const selectedIds = state.selectedRowIds;
     return state.revisions.some(
-      (r) => selectedIds.includes(r.revisionId) && r.description,
+      (r) => selectedIds.includes(r.rowId) && r.description,
     );
   }
 
@@ -976,34 +978,34 @@ export function RevisionItem(props: {
   state: AppStore["state"];
   revision: RevisionSummary;
   index: number;
-  previousRevisionId: string | null;
-  nextRevisionId: string | null;
+  previousRowId: string | null;
+  nextRowId: string | null;
   config: ResolvedAppConfig;
-  focusedRevisionId: string | null;
-  selectedRevisionIds: ReadonlySet<string>;
-  expandedRevisionId: string | null;
-  commandTargetId: string | null;
+  focusedRowId: string | null;
+  selectedRowIds: ReadonlySet<string>;
+  expandedRowId: string | null;
+  commandTargetRowId: string | null;
   searchQuery: string;
 }) {
   const colors = () => props.config.colorScheme.semanticColors;
-  const affectedIds = createMemo(() => getOperationAffectedRevisionIds(props.state));
-  const isFocused = () => props.revision.revisionId === props.focusedRevisionId;
-  const isSelected = () => props.selectedRevisionIds.has(props.revision.revisionId);
-  const isExpanded = () => props.revision.revisionId === props.expandedRevisionId;
-  const anyExpanded = () => props.expandedRevisionId !== null;
-  const isAffected = () => affectedIds().has(props.revision.revisionId);
-  const isCommandTarget = () => props.commandTargetId === props.revision.revisionId;
-  const commandChipText = createMemo(() => getCommandChipTextForRevision(props.state, props.revision.revisionId));
+  const affectedIds = createMemo(() => getOperationAffectedRowIds(props.state));
+  const isFocused = () => props.revision.rowId === props.focusedRowId;
+  const isSelected = () => props.selectedRowIds.has(props.revision.rowId);
+  const isExpanded = () => props.revision.rowId === props.expandedRowId;
+  const anyExpanded = () => props.expandedRowId !== null;
+  const isAffected = () => affectedIds().has(props.revision.rowId);
+  const isCommandTarget = () => props.commandTargetRowId === props.revision.rowId;
+  const commandChipText = createMemo(() => getCommandChipTextForRevision(props.state, props.revision.rowId));
   const isSearchMatch = () => revisionMatchesSearch(props.revision, props.searchQuery);
   const changedFileRows = createMemo(() => isExpanded() ? buildChangedFileDisplayRows(props.revision) : []);
   const rowState = createMemo(() =>
-    getRevisionRowState(props.revision.revisionId, props.focusedRevisionId, props.selectedRevisionIds) ?? "default",
+    getRevisionRowState(props.revision.rowId, props.focusedRowId, props.selectedRowIds) ?? "default",
   );
   const previousRowState = createMemo(() =>
-    getRevisionRowState(props.previousRevisionId, props.focusedRevisionId, props.selectedRevisionIds),
+    getRevisionRowState(props.previousRowId, props.focusedRowId, props.selectedRowIds),
   );
   const nextRowState = createMemo(() =>
-    getRevisionRowState(props.nextRevisionId, props.focusedRevisionId, props.selectedRevisionIds),
+    getRevisionRowState(props.nextRowId, props.focusedRowId, props.selectedRowIds),
   );
   const detailRowCount = () => isExpanded() ? Math.max(props.revision.files.length, 1) : 0;
   const layoutSpec = createMemo(() =>
@@ -1060,12 +1062,12 @@ export function RevisionItem(props: {
   });
   const previousEffectiveRowState = createMemo((): RevisionRowState | null => {
     const rs = previousRowState();
-    if (rs === "default" && props.previousRevisionId !== null && affectedIds().has(props.previousRevisionId)) return "affected";
+    if (rs === "default" && props.previousRowId !== null && affectedIds().has(props.previousRowId)) return "affected";
     return rs;
   });
   const nextEffectiveRowState = createMemo((): RevisionRowState | null => {
     const rs = nextRowState();
-    if (rs === "default" && props.nextRevisionId !== null && affectedIds().has(props.nextRevisionId)) return "affected";
+    if (rs === "default" && props.nextRowId !== null && affectedIds().has(props.nextRowId)) return "affected";
     return rs;
   });
   const usesExternalGraphSpacer = createMemo(() =>
@@ -1173,7 +1175,7 @@ export function RevisionItem(props: {
 
   return (
     <box
-      id={`revision-${props.revision.revisionId}`}
+      id={`revision-${props.revision.rowId}`}
       width="100%"
       flexDirection="column"
       opacity={anyExpanded() && !isExpanded() ? 0.6 : 1}
@@ -1439,7 +1441,7 @@ export function RevisionItem(props: {
               <box flexGrow={1}>
                 <ChangedFileRowContent
                   state={props.state}
-                  revisionId={props.revision.revisionId}
+                  rowId={props.revision.rowId}
                   row={row}
                   config={props.config}
                 />
@@ -1551,7 +1553,7 @@ function RevisionSideChips(props: {
 
 function ChangedFileRowContent(props: {
   state: AppStore["state"];
-  revisionId: string;
+  rowId: string;
   row: ChangedFileDisplayRow;
   config: ResolvedAppConfig;
 }) {
@@ -1564,7 +1566,7 @@ function ChangedFileRowContent(props: {
   const row = props.row;
 
   const rowState = createMemo(() =>
-    getChangedFileRowState(props.state, props.revisionId, row.index, row.file.path)
+    getChangedFileRowState(props.state, props.rowId, row.index, row.file.path)
   );
 
   return (
@@ -1615,7 +1617,7 @@ function ChangedFiles(props: {
         {(row) => (
           <ChangedFileRowContent
             state={props.state}
-            revisionId={props.revision.revisionId}
+            rowId={props.revision.rowId}
             row={row}
             config={props.config}
           />
@@ -1993,19 +1995,19 @@ function markerColor(
 }
 
 function getRevisionRowState(
-  revisionId: string | null,
-  focusedRevisionId: string | null,
-  selectedRevisionIds: ReadonlySet<string>,
+  rowId: string | null,
+  focusedRowId: string | null,
+  selectedRowIds: ReadonlySet<string>,
 ): RevisionRowState | null {
-  if (revisionId === null) {
+  if (rowId === null) {
     return null;
   }
 
-  if (selectedRevisionIds.has(revisionId)) {
+  if (selectedRowIds.has(rowId)) {
     return "selected";
   }
 
-  if (revisionId === focusedRevisionId) {
+  if (rowId === focusedRowId) {
     return "focused";
   }
 

@@ -219,7 +219,7 @@ function commandHasImmediateEffect(
     case "expand":
       return state.focusMode === "revisions" && getFocusedRevision(state) !== null;
     case "collapse":
-      return state.expandedRevisionId !== null;
+      return state.expandedRowId !== null;
     case "toggle-revision-selection":
       return state.focusMode === "revisions" && getFocusedRevision(state) !== null;
     case "toggle-file-selection":
@@ -241,7 +241,7 @@ function hasCancelableState(state: AppState): boolean {
     state.statusMessages.length > 0 ||
     state.focusMode === "command" ||
     state.commandDraft !== null ||
-    state.selectedRevisionIds.length > 0 ||
+    state.selectedRowIds.length > 0 ||
     state.focusMode === "files"
   );
 }
