@@ -40,6 +40,7 @@ import {
   createInitialState,
   focusCommandBar,
   moveFocus,
+  moveFocusToParent,
   openShortcutPanel,
   openFocusedRevision,
   pushEvent,
@@ -107,6 +108,9 @@ export function createAppStore(
       },
       moveFocus(delta: number) {
         mutate((currentState) => moveFocus(currentState, delta));
+      },
+      moveFocusToParent() {
+        mutate((currentState) => moveFocusToParent(currentState));
       },
       openFocusedRevision() {
         mutate((currentState) => openFocusedRevision(currentState));

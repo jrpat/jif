@@ -12,6 +12,7 @@ function createState(): AppState {
       {
         rowId: "aaaaaaaa",
         revisionId: "aaaaaaaa",
+        parentRevisionIds: ["bbbbbbbb"],
         changeIdPrefixLength: 1,
         commitId: "11111111",
         description: "first",
@@ -22,6 +23,23 @@ function createState(): AppState {
         isEmpty: false,
         hasConflict: false,
         marker: "working-copy",
+        filesLoaded: false,
+        files: [],
+      },
+      {
+        rowId: "bbbbbbbb",
+        revisionId: "bbbbbbbb",
+        parentRevisionIds: [],
+        changeIdPrefixLength: 1,
+        commitId: "22222222",
+        description: "second",
+        localTimestamp: "2026-03-30 07:22:40",
+        bookmarks: [],
+        workspaces: [],
+        graphRows: ["○  "],
+        isEmpty: false,
+        hasConflict: false,
+        marker: "plain",
         filesLoaded: false,
         files: [],
       },
@@ -46,6 +64,8 @@ test("resolveCommand resolves vim navigation in normal mode", () => {
 
   expect(resolveForState("j", state)).toBe("move-down");
   expect(resolveForState("k", state)).toBe("move-up");
+  expect(resolveForState("J", state)).toBe("move-parent");
+  expect(resolveForState("K", state)).toBe("move-parent");
   expect(resolveForState("h", state)).toBe("collapse");
   expect(resolveForState("l", state)).toBe("expand");
   expect(resolveForState("q", state)).toBe("quit");

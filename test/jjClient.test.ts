@@ -39,6 +39,18 @@ test("parseLogOutput preserves hybrid graph rows in emission order", () => {
   expect(revisions[1]?.hasConflict).toBeFalse();
 });
 
+test("parseLogOutput captures parent revision ids", () => {
+  const output = [
+    "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001ffirst\u001fmain\u001fdefault,review\u001fabc\u001ffalse\u001f2026-03-30 07:22:39\u001ffalse\u001fbcdefghi,cdefghij",
+    "│\u001fbody\u001fabcdefgh",
+  ].join("\n");
+
+  const revisions = parseLogOutput(output);
+
+  expect(revisions).toHaveLength(1);
+  expect(revisions[0]?.parentRevisionIds).toEqual(["bcdefghi", "cdefghij"]);
+});
+
 test("parseLogOutput keeps divergent siblings distinct by revision id", () => {
   const output = [
     "@  abcdefgh/0\u001fheader\u001fabcdefgh/0\u001f11111111\u001ffirst divergent\u001fmain\u001fabc\u001ffalse\u001f2026-03-30 07:22:39\u001ffalse",

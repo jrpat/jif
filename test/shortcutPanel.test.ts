@@ -30,6 +30,7 @@ function createState(): AppState {
       {
         rowId: "aaaaaaaa",
         revisionId: "aaaaaaaa",
+        parentRevisionIds: ["bbbbbbbb"],
         changeIdPrefixLength: 1,
         commitId: "11111111",
         description: "first",
@@ -46,6 +47,7 @@ function createState(): AppState {
       {
         rowId: "bbbbbbbb",
         revisionId: "bbbbbbbb",
+        parentRevisionIds: [],
         changeIdPrefixLength: 1,
         commitId: "22222222",
         description: "second",
@@ -98,7 +100,7 @@ test("buildShortcutSummary creates a collapsed single-line help string", () => {
     ]),
   );
 
-  expect(summary).toBe(": command   ? help   j/k move");
+  expect(summary).toBe(": command   ? help   j/k move   J/K parent");
 });
 
 test("buildShortcutSummary uses abbreviated key labels from canonical keys", () => {
@@ -108,7 +110,7 @@ test("buildShortcutSummary uses abbreviated key labels from canonical keys", () 
     ]),
   );
 
-  expect(summary).toBe(": command   ? help   j/k move");
+  expect(summary).toBe(": command   ? help   j/k move   J/K parent");
 });
 
 test("formatShortcutKeyLabel keeps key descriptions to three letters or fewer", () => {
@@ -176,6 +178,7 @@ test("getShortcutPanelCommands includes immediate revision actions in revision m
   const ids = commands.map((command) => command.id);
 
   expect(ids).toContain("absorb");
+  expect(ids).toContain("move-parent");
   expect(ids).toContain("new-revision");
   expect(ids).toContain("edit-revision");
 });

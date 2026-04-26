@@ -12,6 +12,7 @@ function createState(): AppState {
       {
         rowId: "aaaaaaaa",
         revisionId: "aaaaaaaa",
+        parentRevisionIds: ["bbbbbbbb"],
         changeIdPrefixLength: 1,
         commitId: "11111111",
         description: "first",
@@ -25,6 +26,23 @@ function createState(): AppState {
         filesLoaded: false,
         files: [],
       },
+      {
+        rowId: "bbbbbbbb",
+        revisionId: "bbbbbbbb",
+        parentRevisionIds: [],
+        changeIdPrefixLength: 1,
+        commitId: "22222222",
+        description: "second",
+        localTimestamp: "2026-03-30 07:22:40",
+        bookmarks: [],
+        workspaces: [],
+        graphRows: ["○  "],
+        isEmpty: false,
+        hasConflict: false,
+        marker: "plain",
+        filesLoaded: false,
+        files: [],
+      },
     ],
   };
 }
@@ -32,6 +50,7 @@ function createState(): AppState {
 function createController(calls: string[]): CommandController {
   return {
     moveFocus: () => calls.push("moveFocus"),
+    moveFocusToParent: () => calls.push("moveFocusToParent"),
     openFocusedRevision: () => calls.push("openFocusedRevision"),
     closeFocusedRevision: () => calls.push("closeFocusedRevision"),
     quit: () => calls.push("quit"),
@@ -108,6 +127,21 @@ test("dispatchGlobalKey preserves h as collapse", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["closeFocusedRevision"]);
+});
+
+test("dispatchGlobalKey routes uppercase parent navigation to moveFocusToParent", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "J",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["moveFocusToParent"]);
 });
 
 test("dispatchGlobalKey ignores ? in revset mode", () => {

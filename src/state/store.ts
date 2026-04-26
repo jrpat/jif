@@ -267,6 +267,26 @@ export function moveFocus(state: AppState, delta: number): AppState {
   };
 }
 
+export function moveFocusToParent(state: AppState): AppState {
+  if (state.focusMode === "command") {
+    return state;
+  }
+
+  const parentRevision = getFocusedParentRevision(state);
+  if (!parentRevision) {
+    return state;
+  }
+
+  return {
+    ...state,
+    focusMode: "revisions",
+    expandedRowId: null,
+    focusedRevisionIndex: state.revisions.findIndex((revision) => revision.rowId === parentRevision.rowId),
+    focusedFileIndex: 0,
+    selectedFilePaths: [],
+  };
+}
+
 export function focusWorkingCopy(state: AppState): AppState {
   const index = state.revisions.findIndex((r) => r.marker === "working-copy");
   if (index === -1) {
@@ -684,6 +704,30 @@ export function clearStatusMessage(state: AppState): AppState {
 
 export function getFocusedRevision(state: AppState): RevisionSummary | null {
   return state.revisions[state.focusedRevisionIndex] ?? null;
+}
+
+export function getFocusedParentRevision(state: AppState): RevisionSummary | null {
+  const focusedRevision = getFocusedRevision(state);
+  if (!focusedRevision) {
+    return null;
+  }
+
+  let closestParent: RevisionSummary | null = null;
+  let closestDistance = Number.POSITIVE_INFINITY;
+  for (const parentRevisionId of focusedRevision.parentRevisionIds ?? []) {
+    const candidateIndex = state.revisions.findIndex((revision) => revision.revisionId === parentRevisionId);
+    if (candidateIndex === -1) {
+      continue;
+    }
+
+    const distance = Math.abs(candidateIndex - state.focusedRevisionIndex);
+    if (distance < closestDistance) {
+      closestParent = state.revisions[candidateIndex] ?? null;
+      closestDistance = distance;
+    }
+  }
+
+  return closestParent;
 }
 
 export function getFocusedRevisionArg(state: AppState): string | null {

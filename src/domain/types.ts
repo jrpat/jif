@@ -12,6 +12,7 @@ export type ChangedFile = Readonly<{
 export type RevisionSummary = Readonly<{
   rowId: string;
   revisionId: string;
+  parentRevisionIds?: readonly string[];
   changeIdPrefixLength: number;
   commitId: string;
   description: string;

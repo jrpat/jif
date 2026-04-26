@@ -26,6 +26,7 @@ import {
   pushEvent,
   setCommandBarText,
   moveFocus,
+  moveFocusToParent,
   openFocusedRevision,
   closeShortcutPanel,
   toggleShortcutPanel,
@@ -60,6 +61,7 @@ function createState(): AppState {
       {
         rowId: FIRST_ROW_ID,
         revisionId: "aaaaaaaa",
+        parentRevisionIds: ["bbbbbbbb"],
         changeIdPrefixLength: 1,
         commitId: "11111111",
         description: "first",
@@ -76,6 +78,7 @@ function createState(): AppState {
       {
         rowId: SECOND_ROW_ID,
         revisionId: "bbbbbbbb",
+        parentRevisionIds: [],
         changeIdPrefixLength: 1,
         commitId: "22222222",
         description: "second",
@@ -189,6 +192,29 @@ test("moveFocus enters file navigation when details are open", () => {
   state = moveFocus(state, 1);
   expect(state.focusedFileIndex).toBe(1);
   expect(state.focusedRevisionIndex).toBe(0);
+});
+
+test("moveFocusToParent focuses the nearest visible parent revision", () => {
+  let state = createState();
+
+  state = moveFocusToParent(state);
+  expect(state.focusedRevisionIndex).toBe(1);
+  expect(state.focusMode).toBe("revisions");
+
+  state = moveFocusToParent(state);
+  expect(state.focusedRevisionIndex).toBe(1);
+});
+
+test("moveFocusToParent exits file navigation before focusing the parent revision", () => {
+  let state = createState();
+  state = openFocusedRevision(state);
+
+  state = moveFocusToParent(state);
+
+  expect(state.focusMode).toBe("revisions");
+  expect(state.expandedRowId).toBeNull();
+  expect(state.focusedRevisionIndex).toBe(1);
+  expect(state.focusedFileIndex).toBe(0);
 });
 
 test("command bar editing is controlled by reducer state", () => {
