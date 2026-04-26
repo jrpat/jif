@@ -10,7 +10,7 @@ import {
 const argv = process.argv.slice(2);
 const targetArg = readFlagValue(argv, "--target");
 const outfileArg = readFlagValue(argv, "--outfile");
-const minify = argv.includes("--minify");
+const minify = !argv.includes("--no-minify");
 const bytecode = !argv.includes("--no-bytecode");
 
 const target = (targetArg ?? currentBunTarget()) as CompileTarget;

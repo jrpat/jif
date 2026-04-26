@@ -23,6 +23,26 @@ type BuildBinaryOptions = {
   bytecode?: boolean;
 };
 
+export async function buildBinary(options: BuildBinaryOptions = {}): Promise<{
+  outfile: string;
+  target: CompileTarget;
+}> {
+  const config = createBuildConfig(options);
+  const target = config.compile.target;
+  const outfile = config.compile.outfile;
+
+  await mkdir(dirname(outfile), { recursive: true });
+
+  const result = await Bun.build(config);
+
+  if (!result.success) {
+    const messages = result.logs.map((log) => log.message).join("\n");
+    throw new Error(messages || `Failed to build ${basename(outfile)}`);
+  }
+
+  return { outfile, target };
+}
+
 export function createBuildConfig(options: BuildBinaryOptions = {}) {
   const target = options.target ?? currentBunTarget();
   const outfile = resolve(options.outfile ?? defaultOutfile(target));
@@ -43,26 +63,6 @@ export function createBuildConfig(options: BuildBinaryOptions = {}) {
       autoloadBunfig: false,
     },
   };
-}
-
-export async function buildBinary(options: BuildBinaryOptions = {}): Promise<{
-  outfile: string;
-  target: CompileTarget;
-}> {
-  const config = createBuildConfig(options);
-  const target = config.compile.target;
-  const outfile = config.compile.outfile;
-
-  await mkdir(dirname(outfile), { recursive: true });
-
-  const result = await Bun.build(config);
-
-  if (!result.success) {
-    const messages = result.logs.map((log) => log.message).join("\n");
-    throw new Error(messages || `Failed to build ${basename(outfile)}`);
-  }
-
-  return { outfile, target };
 }
 
 export function readFlagValue(args: readonly string[], flag: string): string | undefined {
