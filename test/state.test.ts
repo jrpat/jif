@@ -26,6 +26,7 @@ import {
   pushEvent,
   setCommandBarText,
   moveFocus,
+  moveFocusToChild,
   moveFocusToParent,
   openFocusedRevision,
   closeShortcutPanel,
@@ -54,6 +55,11 @@ const FIRST_ROW_ID = createRowId("11111111", "aaaaaaaa");
 const SECOND_ROW_ID = createRowId("22222222", "bbbbbbbb");
 const FIRST_DIVERGENT_ROW_ID = createRowId("11111111", "abcdefgh/0");
 const SECOND_DIVERGENT_ROW_ID = createRowId("22222222", "abcdefgh/1");
+const BRANCH_CHILD_ROW_ID = createRowId("33333333", "cccccccc");
+const BRANCH_SIDE_ROW_ID = createRowId("44444444", "dddddddd");
+const BRANCH_PARENT_ROW_ID = createRowId("55555555", "eeeeeeee");
+const BRANCH_BASE_ROW_ID = createRowId("66666666", "ffffffff");
+const BRANCH_ROOT_ROW_ID = createRowId("77777777", "gggggggg");
 
 function createState(): AppState {
   return {
@@ -181,6 +187,101 @@ function createDuplicateRevisionIdState(): AppState {
   } as AppState;
 }
 
+function createBranchedNavigationState(): AppState {
+  return {
+    ...createInitialState("/tmp/repo"),
+    loading: false,
+    focusedRevisionIndex: 3,
+    revisions: [
+      {
+        rowId: BRANCH_CHILD_ROW_ID,
+        revisionId: "cccccccc",
+        parentRevisionIds: ["eeeeeeee"],
+        changeIdPrefixLength: 1,
+        commitId: "33333333",
+        description: "mainline child",
+        localTimestamp: "2026-03-30 07:22:39",
+        bookmarks: [],
+        workspaces: [],
+        graphRows: ["○  ", "│  "],
+        isEmpty: false,
+        hasConflict: false,
+        marker: "working-copy",
+        filesLoaded: true,
+        files: [],
+      },
+      {
+        rowId: BRANCH_SIDE_ROW_ID,
+        revisionId: "dddddddd",
+        parentRevisionIds: ["eeeeeeee"],
+        changeIdPrefixLength: 1,
+        commitId: "44444444",
+        description: "side branch",
+        localTimestamp: "2026-03-30 07:22:38",
+        bookmarks: [],
+        workspaces: [],
+        graphRows: ["│ ○  ", "├─╯  "],
+        isEmpty: false,
+        hasConflict: false,
+        marker: "plain",
+        filesLoaded: true,
+        files: [],
+      },
+      {
+        rowId: BRANCH_BASE_ROW_ID,
+        revisionId: "ffffffff",
+        parentRevisionIds: ["eeeeeeee"],
+        changeIdPrefixLength: 1,
+        commitId: "66666666",
+        description: "other branch",
+        localTimestamp: "2026-03-30 07:22:37",
+        bookmarks: [],
+        workspaces: [],
+        graphRows: ["│ ○  ", "├─╯  "],
+        isEmpty: false,
+        hasConflict: false,
+        marker: "plain",
+        filesLoaded: true,
+        files: [],
+      },
+      {
+        rowId: BRANCH_PARENT_ROW_ID,
+        revisionId: "eeeeeeee",
+        parentRevisionIds: ["gggggggg"],
+        changeIdPrefixLength: 1,
+        commitId: "55555555",
+        description: "parent",
+        localTimestamp: "2026-03-30 07:22:36",
+        bookmarks: [],
+        workspaces: [],
+        graphRows: ["○  ", "│  "],
+        isEmpty: false,
+        hasConflict: false,
+        marker: "plain",
+        filesLoaded: true,
+        files: [],
+      },
+      {
+        rowId: BRANCH_ROOT_ROW_ID,
+        revisionId: "gggggggg",
+        parentRevisionIds: [],
+        changeIdPrefixLength: 1,
+        commitId: "77777777",
+        description: "root",
+        localTimestamp: "2026-03-30 07:22:35",
+        bookmarks: [],
+        workspaces: [],
+        graphRows: ["○  ", "│  "],
+        isEmpty: false,
+        hasConflict: false,
+        marker: "plain",
+        filesLoaded: true,
+        files: [],
+      },
+    ],
+  };
+}
+
 test("moveFocus enters file navigation when details are open", () => {
   let state = createState();
   state = openFocusedRevision(state);
@@ -216,6 +317,31 @@ test("moveFocusToParent exits file navigation before focusing the parent revisio
   expect(state.focusMode).toBe("revisions");
   expect(state.expandedRowId).toBeNull();
   expect(state.focusedRevisionIndex).toBe(1);
+  expect(state.focusedFileIndex).toBe(0);
+});
+
+test("moveFocusToChild focuses the first visible child revision in log order", () => {
+  let state = createBranchedNavigationState();
+
+  state = moveFocusToChild(state);
+
+  expect(state.focusedRevisionIndex).toBe(0);
+
+  state = moveFocusToChild(state);
+
+  expect(state.focusedRevisionIndex).toBe(0);
+  expect(state.focusMode).toBe("revisions");
+});
+
+test("moveFocusToChild exits file navigation before focusing the child revision", () => {
+  let state = createBranchedNavigationState();
+  state = openFocusedRevision(state);
+
+  state = moveFocusToChild(state);
+
+  expect(state.focusMode).toBe("revisions");
+  expect(state.expandedRowId).toBeNull();
+  expect(state.focusedRevisionIndex).toBe(0);
   expect(state.focusedFileIndex).toBe(0);
 });
 

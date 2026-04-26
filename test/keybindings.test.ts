@@ -51,6 +51,7 @@ function createController(calls: string[]): CommandController {
   return {
     moveFocus: () => calls.push("moveFocus"),
     moveFocusToParent: () => calls.push("moveFocusToParent"),
+    moveFocusToChild: () => calls.push("moveFocusToChild"),
     openFocusedRevision: () => calls.push("openFocusedRevision"),
     closeFocusedRevision: () => calls.push("closeFocusedRevision"),
     quit: () => calls.push("quit"),
@@ -158,6 +159,21 @@ test("dispatchGlobalKey routes uppercase parent navigation to moveFocusToParent"
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["moveFocusToParent"]);
+});
+
+test("dispatchGlobalKey routes uppercase reverse navigation to moveFocusToChild", () => {
+  const calls: string[] = [];
+  const state: AppState = { ...createState(), focusedRevisionIndex: 1 };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "K",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["moveFocusToChild"]);
 });
 
 test("dispatchGlobalKey ignores ? in revset mode", () => {

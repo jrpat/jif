@@ -61,11 +61,12 @@ function resolveForState(key: string, state: AppState): string | null {
 
 test("resolveCommand resolves vim navigation in normal mode", () => {
   const state = createState();
+  const parentState: AppState = { ...state, focusedRevisionIndex: 1 };
 
   expect(resolveForState("j", state)).toBe("move-down");
   expect(resolveForState("k", state)).toBe("move-up");
   expect(resolveForState("J", state)).toBe("move-parent");
-  expect(resolveForState("K", state)).toBe("move-parent");
+  expect(resolveForState("K", parentState)).toBe("move-child");
   expect(resolveForState("h", state)).toBe("collapse");
   expect(resolveForState("l", state)).toBe("expand");
   expect(resolveForState("q", state)).toBe("quit");

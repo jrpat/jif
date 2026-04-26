@@ -1,9 +1,10 @@
-import { getFocusedParentRevision } from "../state/store.ts";
+import { getFocusedChildRevision, getFocusedParentRevision } from "../state/store.ts";
 import type { AppState } from "../domain/types.ts";
 
 export type CommandController = Readonly<{
   moveFocus: (delta: number) => void;
   moveFocusToParent: () => void;
+  moveFocusToChild: () => void;
   openFocusedRevision: () => void;
   closeFocusedRevision: () => void;
   quit: () => void;
@@ -71,9 +72,17 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     id: "move-parent",
     title: "Move to Parent",
     description: "Focus the nearest visible parent revision",
-    canonicalKeys: ["J", "K"],
+    canonicalKeys: ["J"],
     canExecute: (state) => getFocusedParentRevision(state) !== null,
     run: (controller) => controller.moveFocusToParent(),
+  },
+  {
+    id: "move-child",
+    title: "Move Up Graph",
+    description: "Focus the first visible child revision above the current selection",
+    canonicalKeys: ["K"],
+    canExecute: (state) => getFocusedChildRevision(state) !== null,
+    run: (controller) => controller.moveFocusToChild(),
   },
   {
     id: "expand",

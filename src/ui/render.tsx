@@ -153,6 +153,9 @@ export function JifView(props: {
     moveFocusToParent() {
       store.actions.moveFocusToParent();
     },
+    moveFocusToChild() {
+      store.actions.moveFocusToChild();
+    },
     openFocusedRevision() {
       const state = store.snapshot();
       const revision = getFocusedRevision(state);

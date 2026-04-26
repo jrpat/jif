@@ -289,6 +289,26 @@ export function moveFocusToParent(state: AppState): AppState {
   };
 }
 
+export function moveFocusToChild(state: AppState): AppState {
+  if (state.focusMode === "command") {
+    return state;
+  }
+
+  const childRevision = getFocusedChildRevision(state);
+  if (!childRevision) {
+    return state;
+  }
+
+  return {
+    ...state,
+    focusMode: "revisions",
+    expandedRowId: null,
+    focusedRevisionIndex: state.revisions.findIndex((revision) => revision.rowId === childRevision.rowId),
+    focusedFileIndex: 0,
+    selectedFilePaths: [],
+  };
+}
+
 export function focusWorkingCopy(state: AppState): AppState {
   const index = state.revisions.findIndex((r) => r.marker === "working-copy");
   if (index === -1) {
@@ -729,8 +749,8 @@ export function getFocusedRevision(state: AppState): RevisionSummary | null {
   return state.revisions[state.focusedRevisionIndex] ?? null;
 }
 
-export function getFocusedParentRevision(state: AppState): RevisionSummary | null {
-  const focusedRevision = getFocusedRevision(state);
+function getParentRevisionForIndex(state: AppState, revisionIndex: number): RevisionSummary | null {
+  const focusedRevision = state.revisions[revisionIndex] ?? null;
   if (!focusedRevision) {
     return null;
   }
@@ -743,7 +763,7 @@ export function getFocusedParentRevision(state: AppState): RevisionSummary | nul
       continue;
     }
 
-    const distance = Math.abs(candidateIndex - state.focusedRevisionIndex);
+    const distance = Math.abs(candidateIndex - revisionIndex);
     if (distance < closestDistance) {
       closestParent = state.revisions[candidateIndex] ?? null;
       closestDistance = distance;
@@ -751,6 +771,26 @@ export function getFocusedParentRevision(state: AppState): RevisionSummary | nul
   }
 
   return closestParent;
+}
+
+export function getFocusedParentRevision(state: AppState): RevisionSummary | null {
+  return getParentRevisionForIndex(state, state.focusedRevisionIndex);
+}
+
+export function getFocusedChildRevision(state: AppState): RevisionSummary | null {
+  const focusedRevision = getFocusedRevision(state);
+  if (!focusedRevision) {
+    return null;
+  }
+
+  for (let candidateIndex = 0; candidateIndex < state.focusedRevisionIndex; candidateIndex += 1) {
+    const candidateRevision = state.revisions[candidateIndex] ?? null;
+    if (candidateRevision?.parentRevisionIds?.includes(focusedRevision.revisionId)) {
+      return candidateRevision;
+    }
+  }
+
+  return null;
 }
 
 export function getFocusedRevisionArg(state: AppState): string | null {
