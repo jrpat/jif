@@ -61,10 +61,12 @@ import {
   buildShortcutEntries,
   buildShortcutGrid,
   buildShortcutSummary,
+  buildShortcutSummarySegments,
   computeShortcutPanelHeight,
   getShortcutPanelCommands,
   shortcutModeLabel,
   type ShortcutGrid,
+  type ShortcutSummarySegment,
 } from "./shortcutPanel.ts";
 import { normalizeKey } from "./keyboard.ts";
 import { dispatchGlobalKey } from "./keybindings.ts";
@@ -412,9 +414,15 @@ export function JifView(props: {
     getShortcutPanelCommands(store.state, visibleCommands())
   );
   const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutCommands()));
-  const shortcutSummary = createMemo(() => buildShortcutSummary(shortcutEntries()));
+  const shortcutContentWidth = createMemo(() => Math.max(1, terminalSize().width - 4));
+  const shortcutSummarySegments = createMemo(() =>
+    buildShortcutSummarySegments(shortcutEntries(), shortcutContentWidth())
+  );
+  const shortcutSummary = createMemo(() =>
+    buildShortcutSummary(shortcutEntries(), shortcutContentWidth())
+  );
   const shortcutGrid = createMemo(() =>
-    buildShortcutGrid(shortcutEntries(), Math.max(1, terminalSize().width - 4))
+    buildShortcutGrid(shortcutEntries(), shortcutContentWidth())
   );
   const shortcutPanelHeight = createMemo(() =>
     computeShortcutPanelHeight(terminalSize().height)
@@ -645,6 +653,7 @@ export function JifView(props: {
         <Show when={!showsCommandPrompt() && !showsRevsetPrompt() && !showsSearchPrompt() && !showsCommandPreview()}>
           <StatusArea
             shortcutSummary={shortcutSummary()}
+            shortcutSummarySegments={shortcutSummarySegments()}
             shortcutGrid={shortcutGrid()}
             expanded={showsShortcutPanel()}
             currentModeLabel={shortcutModeLabel(activeMode())}
@@ -1704,6 +1713,7 @@ function ChangedFiles(props: {
 
 function StatusArea(props: {
   shortcutSummary: string;
+  shortcutSummarySegments: readonly ShortcutSummarySegment[];
   shortcutGrid: ShortcutGrid;
   expanded: boolean;
   currentModeLabel: string;
@@ -1726,9 +1736,28 @@ function StatusArea(props: {
           paddingX={1}
           flexDirection="row"
         >
-          <text fg={colors.textTertiary} truncate>
-            {props.shortcutSummary}
-          </text>
+          <Show
+            when={props.shortcutSummarySegments.length > 0}
+            fallback={
+              <text fg={colors.textTertiary} truncate>
+                {props.shortcutSummary}
+              </text>
+            }
+          >
+            <For each={props.shortcutSummarySegments}>
+              {(segment, index) => (
+                <>
+                  <Show when={index() > 0}>
+                    <text fg={colors.textTertiary}>{"   "}</text>
+                  </Show>
+                  <text fg={colors.textTertiary} attributes={TextAttributes.BOLD}>
+                    {segment.keyLabel}
+                  </text>
+                  <text fg={colors.textTertiary}>{` ${segment.label}`}</text>
+                </>
+              )}
+            </For>
+          </Show>
         </box>
       }
     >

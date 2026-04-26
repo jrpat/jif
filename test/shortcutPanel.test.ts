@@ -7,6 +7,7 @@ import {
   buildShortcutEntries,
   buildShortcutGrid,
   buildShortcutSummary,
+  buildShortcutSummarySegments,
   computeShortcutPanelHeight,
   formatShortcutKeyLabel,
   getShortcutPanelCommands,
@@ -93,24 +94,71 @@ test("buildShortcutEntries expands multiple canonical keys into separate entries
 });
 
 test("buildShortcutSummary creates a collapsed single-line help string", () => {
-  const summary = buildShortcutSummary(
-    buildShortcutEntries([
-      createCommand("shortcuts", "Shortcuts", ["?"]),
-      createCommand("quit", "Quit", ["q"]),
-    ]),
-  );
+  const entries = buildShortcutEntries([
+    createCommand("command-bar", "Command Bar", [":"]),
+    createCommand("shortcut-panel", "Shortcuts", ["?"]),
+    createCommand("move-down", "Move Down", ["j"]),
+    createCommand("move-up", "Move Up", ["k"]),
+    createCommand("move-parent", "Move to Parent", ["J", "K"]),
+    createCommand("edit-revision", "Edit Revision", ["e"]),
+    createCommand("new-revision", "New Revision", ["n"]),
+    createCommand("show-diff", "Diff", ["d"]),
+    createCommand("commit", "Commit", ["c"]),
+  ]);
+  const baseSummary = ": command   ? help   j/k move";
+  const summaryWithEdit = `${baseSummary}   e edit`;
+  const fullSummary = `${summaryWithEdit}   n new   d diff   c commit`;
 
-  expect(summary).toBe(": command   ? help   j/k move   J/K parent");
+  expect(buildShortcutSummary(entries, baseSummary.length)).toBe(baseSummary);
+  expect(buildShortcutSummary(entries, summaryWithEdit.length)).toBe(summaryWithEdit);
+  expect(buildShortcutSummary(entries, fullSummary.length)).toBe(fullSummary);
 });
 
-test("buildShortcutSummary uses abbreviated key labels from canonical keys", () => {
-  const summary = buildShortcutSummary(
-    buildShortcutEntries([
-      createCommand("cancel", "Cancel", ["escape"]),
-    ]),
-  );
+test("buildShortcutSummary skips missing higher-priority actions and keeps fitting later ones", () => {
+  const entries = buildShortcutEntries([
+    createCommand("command-bar", "Command Bar", [":"]),
+    createCommand("shortcut-panel", "Shortcuts", ["?"]),
+    createCommand("move-down", "Move Down", ["j"]),
+    createCommand("move-up", "Move Up", ["k"]),
+    createCommand("edit-revision", "Edit Revision", ["e"]),
+    createCommand("new-revision", "New Revision", ["n"]),
+    createCommand("show-diff", "Diff", ["d"]),
+  ]);
+  const expected = ": command   ? help   j/k move   e edit   n new   d diff";
 
-  expect(summary).toBe(": command   ? help   j/k move   J/K parent");
+  expect(buildShortcutSummary(entries, expected.length)).toBe(expected);
+});
+
+test("buildShortcutSummary ignores move-parent in the collapsed status bar", () => {
+  const entries = buildShortcutEntries([
+    createCommand("command-bar", "Command Bar", [":"]),
+    createCommand("shortcut-panel", "Shortcuts", ["?"]),
+    createCommand("move-down", "Move Down", ["j"]),
+    createCommand("move-up", "Move Up", ["k"]),
+    createCommand("move-parent", "Move to Parent", ["J", "K"]),
+    createCommand("edit-revision", "Edit Revision", ["e"]),
+  ]);
+  const expected = ": command   ? help   j/k move   e edit";
+
+  expect(buildShortcutSummary(entries, expected.length)).toBe(expected);
+});
+
+test("buildShortcutSummarySegments keeps key labels separate for bold rendering", () => {
+  const entries = buildShortcutEntries([
+    createCommand("command-bar", "Command Bar", [":"]),
+    createCommand("shortcut-panel", "Shortcuts", ["?"]),
+    createCommand("move-down", "Move Down", ["j"]),
+    createCommand("move-up", "Move Up", ["k"]),
+    createCommand("move-parent", "Move to Parent", ["J", "K"]),
+    createCommand("edit-revision", "Edit Revision", ["e"]),
+  ]);
+
+  expect(buildShortcutSummarySegments(entries, 38)).toEqual([
+    { keyLabel: ":", label: "command" },
+    { keyLabel: "?", label: "help" },
+    { keyLabel: "j/k", label: "move" },
+    { keyLabel: "e", label: "edit" },
+  ]);
 });
 
 test("formatShortcutKeyLabel uses symbolic labels for space and modifiers", () => {

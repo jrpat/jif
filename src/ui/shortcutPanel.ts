@@ -18,6 +18,7 @@ const MODIFIER_PREFIXES = new Set([
 const GRID_GAP = 2;
 const MIN_COLUMN_WIDTH = 24;
 const MAX_KEY_WIDTH = 12;
+const SUMMARY_GAP = "   ";
 const MODIFIER_LABELS: Readonly<Record<string, string>> = {
   a: "⌥",
   alt: "⌥",
@@ -38,6 +39,18 @@ const KEY_LABEL_ABBREVIATIONS: Readonly<Record<string, string>> = {
   down: "↓",
   up: "↑",
 };
+const SHORTCUT_SUMMARY_SEGMENTS: readonly Readonly<{
+  commandIds: readonly string[];
+  label: string;
+}>[] = [
+  { commandIds: ["command-bar"], label: "command" },
+  { commandIds: ["shortcut-panel"], label: "help" },
+  { commandIds: ["move-down", "move-up"], label: "move" },
+  { commandIds: ["edit-revision"], label: "edit" },
+  { commandIds: ["new-revision"], label: "new" },
+  { commandIds: ["show-diff"], label: "diff" },
+  { commandIds: ["commit"], label: "commit" },
+];
 
 export type ShortcutEntry = Readonly<{
   id: string;
@@ -54,6 +67,11 @@ export type ShortcutGrid = Readonly<{
   columnWidth: number;
   keyWidth: number;
   gap: number;
+}>;
+
+export type ShortcutSummarySegment = Readonly<{
+  keyLabel: string;
+  label: string;
 }>;
 
 export function normalizeShortcutSortKey(keyLabel: string): string {
@@ -81,9 +99,49 @@ export function buildShortcutEntries(
     .sort(compareShortcutEntries);
 }
 
-export function buildShortcutSummary(entries: readonly ShortcutEntry[]): string {
-  void entries;
-  return ": command   ? help   j/k move   J/K parent";
+export function buildShortcutSummary(
+  entries: readonly ShortcutEntry[],
+  availableWidth = Number.POSITIVE_INFINITY,
+): string {
+  return buildShortcutSummarySegments(entries, availableWidth)
+    .map((segment) => `${segment.keyLabel} ${segment.label}`)
+    .join(SUMMARY_GAP);
+}
+
+export function buildShortcutSummarySegments(
+  entries: readonly ShortcutEntry[],
+  availableWidth = Number.POSITIVE_INFINITY,
+): readonly ShortcutSummarySegment[] {
+  const keyLabelsByCommand = groupShortcutLabelsByCommand(entries);
+  const safeWidth = Math.max(1, availableWidth);
+  const summarySegments: ShortcutSummarySegment[] = [];
+  let summaryWidth = 0;
+
+  for (const segment of SHORTCUT_SUMMARY_SEGMENTS) {
+    const keyLabels = collectSummaryKeyLabels(keyLabelsByCommand, segment.commandIds);
+    if (keyLabels.length === 0) {
+      continue;
+    }
+
+    const summarySegment = {
+      keyLabel: keyLabels.join("/"),
+      label: segment.label,
+    } satisfies ShortcutSummarySegment;
+    const segmentWidth = summarySegment.keyLabel.length + 1 + summarySegment.label.length;
+
+    if (summarySegments.length === 0) {
+      summarySegments.push(summarySegment);
+      summaryWidth = segmentWidth;
+      continue;
+    }
+
+    if (summaryWidth + SUMMARY_GAP.length + segmentWidth <= safeWidth) {
+      summarySegments.push(summarySegment);
+      summaryWidth += SUMMARY_GAP.length + segmentWidth;
+    }
+  }
+
+  return summarySegments;
 }
 
 export function buildShortcutGrid(
@@ -211,6 +269,39 @@ function compareShortcutEntries(a: ShortcutEntry, b: ShortcutEntry): number {
 
 function modifierWeight(entry: ShortcutEntry): number {
   return entry.hasModifier ? 1 : 0;
+}
+
+function collectSummaryKeyLabels(
+  keyLabelsByCommand: ReadonlyMap<string, readonly string[]>,
+  commandIds: readonly string[],
+): readonly string[] {
+  const keyLabels: string[] = [];
+
+  for (const commandId of commandIds) {
+    for (const keyLabel of keyLabelsByCommand.get(commandId) ?? []) {
+      if (!keyLabels.includes(keyLabel)) {
+        keyLabels.push(keyLabel);
+      }
+    }
+  }
+
+  return keyLabels;
+}
+
+function groupShortcutLabelsByCommand(
+  entries: readonly ShortcutEntry[],
+): ReadonlyMap<string, readonly string[]> {
+  const keyLabelsByCommand = new Map<string, string[]>();
+
+  for (const entry of entries) {
+    const keyLabels = keyLabelsByCommand.get(entry.commandId) ?? [];
+    if (!keyLabels.includes(entry.keyLabel)) {
+      keyLabels.push(entry.keyLabel);
+      keyLabelsByCommand.set(entry.commandId, keyLabels);
+    }
+  }
+
+  return keyLabelsByCommand;
 }
 
 function formatBaseKeyLabel(keyLabel: string): string {
