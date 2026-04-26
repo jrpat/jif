@@ -35,7 +35,7 @@ const rendered = await testRender(
       maxVisibleItems={5}
     />
   ),
-  { width: 40, height: 5 },
+  { width: 40, height: 6 },
 );
 
 await rendered.renderOnce();

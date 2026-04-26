@@ -27,6 +27,8 @@
 - Prompt handling uses local `useKeyboard` hooks inside prompt components (`CommandPrompt`, `SearchPrompt`) rather than a single input state machine, so the app has both global key routing and component-local input behavior paths.
 - `CommandPrompt` constructs `HistoryStore` instances directly and fetches command history reactively from within the view. This is a small but repeated example of persistence responsibilities living in the rendering layer.
 - The rendering helper cluster under `src/ui/` is mostly well-factored and presentational. The architectural pressure is concentrated less in row rendering and more in orchestration and prompt/command behavior.
+- The autocomplete popup chrome is localized cleanly: `src/ui/AutocompleteList.tsx` owns the suggestion surface, while `PromptShell` only needs to budget one extra row when that surface has its own top border.
+- OpenTUI does honor `placeholderColor` in its textarea renderer; the temporary `textQuinary` experiment was therefore actually live, and it was reverted once the user confirmed they preferred the original `textQuaternary` tone.
 - Tests reflect this split: there is strong direct coverage of store, keymap, and helper behavior, but the highest-level integration behavior still appears to be centered around `render.tsx` composition rather than a thinner application layer.
 
 ## Current Mental Model
@@ -93,6 +95,11 @@
 - Kept `src/ui/statusMessages.ts` as the non-JSX status helper module, now housing both toast-dismiss timing and status-level-to-color mapping.
 - Added focused tests for the new seams in `test/persistenceService.test.ts`, `test/runtime.test.ts`, and `test/uiStartup.test.ts`, and revalidated prompt behavior through the existing autocomplete/completion/history tests.
 - Added focused status validation in `test/statusArea.test.ts` and preserved the existing `test/statusMessages.test.ts` timing coverage.
+- Updated `src/ui/AutocompleteList.tsx` so suggestions render inside a fixed top/left/right border frame, with the scrollbox nested inside that frame rather than acting as the frame itself.
+- Updated `PromptShell` height accounting so command and revset prompts allocate one additional row only when the bordered autocomplete popup is visible.
+- Tightened `test/autocompleteRender.test.ts` and its helper to assert the new popup frame shape while preserving the bottom-to-top scroll expectation.
+- Verified in the OpenTUI textarea implementation that `placeholderColor` is applied through the placeholder styled-text path.
+- Reverted the temporary `textQuinary` command-bar placeholder experiment, restoring the command bar to `textQuaternary` and removing the extra semantic-color surface from config and tests.
 - This leaves `JifView` much closer to a root composition layer: it assembles dependencies, binds startup helpers, and renders presentation-oriented surfaces while delegating most effectful orchestration outward.
 
 ## Validation Results
@@ -116,6 +123,15 @@
 	- `bunx tsc --noEmit`
 - Status extraction validation passed:
 	- `bun test test/statusArea.test.ts test/statusMessages.test.ts`
+	- `bunx tsc --noEmit`
+- Autocomplete popup validation passed:
+	- `bun test test/autocomplete.test.ts test/autocompleteRender.test.ts test/completions.test.ts test/historyStore.test.ts`
+	- `bunx tsc --noEmit`
+- Command-bar placeholder validation passed:
+	- `bun test test/config.test.ts test/autocomplete.test.ts test/autocompleteRender.test.ts test/completions.test.ts test/historyStore.test.ts`
+	- `bunx tsc --noEmit`
+- Placeholder revert validation passed:
+	- `bun test test/config.test.ts test/autocomplete.test.ts test/autocompleteRender.test.ts test/completions.test.ts test/historyStore.test.ts`
 	- `bunx tsc --noEmit`
 - Broad validation after the full extraction wave passed:
 	- `bun test` (317 pass)

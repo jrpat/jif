@@ -18,6 +18,7 @@ export function AutocompleteList(props: {
   maxVisibleItems?: number;
 }) {
   const colors = props.config.colorScheme.semanticColors;
+  const borderColor = colors.chromeBorderIdle ?? colors.textTertiary ?? colors.textPrimary;
   let viewport: ScrollBoxRenderable | undefined;
 
   const visibleItems = createMemo(() => {
@@ -55,56 +56,66 @@ export function AutocompleteList(props: {
   });
 
   return (
-    <scrollbox
-      ref={(el: ScrollBoxRenderable) => {
-        viewport = el;
-      }}
+    <box
       width="100%"
-      height={visibleHeight()}
-      scrollY
-      stickyScroll={props.flow !== "top-to-bottom"}
-      stickyStart={props.flow !== "top-to-bottom" ? "bottom" : undefined}
+      height={visibleHeight() + 1}
+      flexDirection="column"
+      border={["top", "left", "right"]}
+      borderStyle="single"
+      borderColor={borderColor}
       backgroundColor={colors.chromeFillTwo}
-      scrollbarOptions={{
-        trackOptions: {
-          backgroundColor: colors.chromeFillThree,
-          foregroundColor: colors.chromeScrollbarThumb,
-        },
-      }}
     >
-      <box width="100%" flexDirection="column" paddingX={1}>
-        <For each={visibleItems()}>
-          {({ item, logicalIndex }) => {
-            const isSelected = () => logicalIndex === props.selectedIndex;
-            const backgroundColor = () => isSelected() ? colors.rowFocusedFill : colors.chromeFillTwo;
-            return (
-              <box
-                id={`autocomplete-${logicalIndex}`}
-                width="100%"
-                flexDirection="row"
-                backgroundColor={backgroundColor()}
-              >
-                {item.tag ? (
-                  <text fg={colors.textTertiary} bg={backgroundColor()}>
-                    {item.tag}{" "}
-                  </text>
-                ) : null}
-                <text
-                  fg={isSelected() ? colors.chromeBorderFocus : colors.textPrimary}
-                  bg={backgroundColor()}
+      <scrollbox
+        ref={(el: ScrollBoxRenderable) => {
+          viewport = el;
+        }}
+        width="100%"
+        height={visibleHeight()}
+        scrollY
+        stickyScroll={props.flow !== "top-to-bottom"}
+        stickyStart={props.flow !== "top-to-bottom" ? "bottom" : undefined}
+        backgroundColor={colors.chromeFillTwo}
+        scrollbarOptions={{
+          trackOptions: {
+            backgroundColor: colors.chromeFillThree,
+            foregroundColor: colors.chromeScrollbarThumb,
+          },
+        }}
+      >
+        <box width="100%" flexDirection="column" paddingX={1}>
+          <For each={visibleItems()}>
+            {({ item, logicalIndex }) => {
+              const isSelected = () => logicalIndex === props.selectedIndex;
+              const backgroundColor = () => isSelected() ? colors.rowFocusedFill : colors.chromeFillTwo;
+              return (
+                <box
+                  id={`autocomplete-${logicalIndex}`}
+                  width="100%"
+                  flexDirection="row"
+                  backgroundColor={backgroundColor()}
                 >
-                  {item.text}
-                </text>
-                {item.detail ? (
-                  <text fg={colors.textTertiary} bg={backgroundColor()}>
-                    {" "}{item.detail}
+                  {item.tag ? (
+                    <text fg={colors.textTertiary} bg={backgroundColor()}>
+                      {item.tag}{" "}
+                    </text>
+                  ) : null}
+                  <text
+                    fg={isSelected() ? colors.chromeBorderFocus : colors.textPrimary}
+                    bg={backgroundColor()}
+                  >
+                    {item.text}
                   </text>
-                ) : null}
-              </box>
-            );
-          }}
-        </For>
-      </box>
-    </scrollbox>
+                  {item.detail ? (
+                    <text fg={colors.textTertiary} bg={backgroundColor()}>
+                      {" "}{item.detail}
+                    </text>
+                  ) : null}
+                </box>
+              );
+            }}
+          </For>
+        </box>
+      </scrollbox>
+    </box>
   );
 }

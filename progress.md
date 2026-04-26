@@ -148,6 +148,52 @@
   - findings.md (updated)
   - progress.md (updated)
 
+### Phase 11: Autocomplete Popup Chrome Tweak
+- **Status:** complete
+- Actions taken:
+  - Updated `test/helpers/renderAutocompleteList.tsx` and `test/autocompleteRender.test.ts` first so the popup render now has to show a top border and side rails.
+  - Wrapped `src/ui/AutocompleteList.tsx` in a partial-border container and kept the scrollbox inside it so the frame stays fixed while the suggestions scroll.
+  - Adjusted `PromptShell` height accounting in `src/ui/prompts.tsx` to include the autocomplete frame row only when suggestions are present.
+  - Ran focused autocomplete validation and a TypeScript check successfully after the change.
+- Files created/modified:
+  - test/helpers/renderAutocompleteList.tsx (updated)
+  - test/autocompleteRender.test.ts (updated)
+  - src/ui/AutocompleteList.tsx (updated)
+  - src/ui/prompts.tsx (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+
+### Phase 12: Command Bar Placeholder Tone Adjustment
+- **Status:** complete
+- Actions taken:
+  - Added config tests first in `test/config.test.ts` to pin a new `textQuinary` semantic color tier and its fallback palette values.
+  - Added `textQuinary` to `src/config/schema.ts` with a dimmer opacity than `textQuaternary`.
+  - Updated only the command-bar placeholder in `src/ui/prompts.tsx` to use `colors.textQuinary`, leaving the search prompt unchanged.
+  - Ran focused config, autocomplete, and TypeScript validation successfully after the change.
+- Files created/modified:
+  - test/config.test.ts (updated)
+  - src/config/schema.ts (updated)
+  - src/ui/prompts.tsx (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+
+### Phase 13: Revert Placeholder Tone Experiment
+- **Status:** complete
+- Actions taken:
+  - Verified in the OpenTUI textarea implementation that `placeholderColor` is consumed and used to style the placeholder text.
+  - Reverted the temporary `textQuinary` semantic color and restored the command-bar placeholder in `src/ui/prompts.tsx` to `colors.textQuaternary`.
+  - Removed the temporary `textQuinary` schema and config-test coverage from `src/config/schema.ts` and `test/config.test.ts`.
+  - Ran focused config, autocomplete, and TypeScript validation successfully after the revert.
+- Files created/modified:
+  - src/ui/prompts.tsx (updated)
+  - src/config/schema.ts (updated)
+  - test/config.test.ts (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -162,6 +208,9 @@
 | Full regression suite after runtime/startup extraction | `bun test` | No repository-wide regressions from the full extraction wave | 316 tests passed | pass |
 | Focused status validation | `bun test test/statusArea.test.ts test/statusMessages.test.ts && bunx tsc --noEmit` | Extracted status render cluster and pure helpers compile and preserve expected status behavior | 4 tests passed | pass |
 | Full regression suite after status extraction | `bun test` | No repository-wide regressions from the status extraction | 317 tests passed | pass |
+| Focused autocomplete popup validation | `bun test test/autocomplete.test.ts test/autocompleteRender.test.ts test/completions.test.ts test/historyStore.test.ts && bunx tsc --noEmit` | Bordered autocomplete popup renders correctly and the autocomplete slice still compiles | 38 tests passed | pass |
+| Focused command-bar placeholder validation | `bun test test/config.test.ts test/autocomplete.test.ts test/autocompleteRender.test.ts test/completions.test.ts test/historyStore.test.ts && bunx tsc --noEmit` | New `textQuinary` semantic color compiles and the command-bar prompt slice remains healthy | 49 tests passed | pass |
+| Focused placeholder revert validation | `bun test test/config.test.ts test/autocomplete.test.ts test/autocompleteRender.test.ts test/completions.test.ts test/historyStore.test.ts && bunx tsc --noEmit` | Command-bar placeholder is restored to `textQuaternary` and the prompt/config slice still compiles | 48 tests passed | pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
@@ -171,7 +220,7 @@
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Complete through Phase 10: status rendering is also extracted into its own cluster |
+| Where am I? | Complete through Phase 13: OpenTUI does honor `placeholderColor`, and the command-bar placeholder is restored to `textQuaternary` |
 | Where am I going? | The next major architectural pressure is still concern-based splitting of `state/store.ts`, with further render extraction only when a similarly coherent cluster emerges |
 | What's the goal? | Refactor jif toward clearer one-way-flow subsystems without destabilizing behavior |
 | What have I learned? | Cluster-shaped render extraction works best when the extracted JSX shares one visual/runtime concern and the pure helpers stay on a non-JSX boundary |

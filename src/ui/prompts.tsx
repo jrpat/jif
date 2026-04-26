@@ -355,7 +355,9 @@ function PromptShell(props: {
 }) {
   const colors = props.config.colorScheme.semanticColors;
   const autocompleteHeight = createMemo(() => Math.min(props.items.length, 10));
-  const totalHeight = createMemo(() => 3 + autocompleteHeight());
+  const totalHeight = createMemo(() =>
+    3 + autocompleteHeight() + (props.items.length > 0 ? 1 : 0)
+  );
 
   createEffect(() => {
     props.onHeightChange?.(totalHeight());

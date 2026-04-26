@@ -18,6 +18,11 @@ test("bottom-to-top autocomplete list starts scrolled to show first item at bott
 
   const { frame } = JSON.parse(stdout) as { frame: string };
   const lines = frame.split("\n").filter(Boolean);
+  const firstLine = lines[0];
   const lastLine = lines[lines.length - 1];
+  expect(firstLine).toStartWith("┌");
+  expect(firstLine).toEndWith("┐");
+  expect(lastLine).toStartWith("│");
+  expect(lastLine).toEndWith("│");
   expect(lastLine).toContain("all");
 }, 20000);

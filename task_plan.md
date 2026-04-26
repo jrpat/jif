@@ -4,7 +4,7 @@
 Build a grounded mental model of how jif currently works, identify subsystem boundaries and architectural rough edges, and produce a refactor plan aimed at orthogonal, reusable, understandable abstractions.
 
 ## Current Phase
-Complete through Phase 10
+Complete through Phase 13
 
 ## Phases
 
@@ -68,6 +68,24 @@ Complete through Phase 10
 - [x] Add focused validation and rerun broad regression validation
 - **Status:** complete
 
+### Phase 11: Autocomplete Popup Chrome Tweak
+- [x] Add an explicit popup frame around autocomplete suggestions
+- [x] Keep the scrollbox inside the frame while preserving direct attachment to the prompt border
+- [x] Add focused render validation for the bordered popup treatment
+- **Status:** complete
+
+### Phase 12: Command Bar Placeholder Tone Adjustment
+- [x] Add one dimmer semantic text level for low-emphasis prompt copy
+- [x] Apply the new level to the command-bar placeholder without changing other prompt placeholders
+- [x] Add focused config validation for the new semantic color tier and rerun prompt-slice validation
+- **Status:** complete
+
+### Phase 13: Revert Placeholder Tone Experiment
+- [x] Verify whether OpenTUI is actually consuming the command-bar `placeholderColor`
+- [x] Revert the temporary `textQuinary` experiment and restore the command-bar placeholder to `textQuaternary`
+- [x] Rerun focused config and prompt validation after the revert
+- **Status:** complete
+
 ## Key Questions
 1. What is the controlling runtime model of the app: command-driven state machine, view-driven renderer, or a hybrid?
 2. Which responsibilities are currently spread across multiple modules that should instead be centralized?
@@ -86,6 +104,9 @@ Complete through Phase 10
 | Extract persistence and prompt seams before the last runtime/startup helpers | Removing view-owned history/settings and prompt-local behavior first made the remaining render-layer orchestration small and easier to isolate cleanly. |
 | Finish this refactor wave by extracting runtime/startup helpers instead of splitting state next | That leaves `JifView` primarily as a composition root without opening the wider `state/store.ts` migration in the same pass. |
 | Extract the status surface as a cluster, not as individual atoms | `StatusArea`, `MessageOverlay`, and `StatusToast` share one visual/runtime concern, while the pure timing/color helpers are better left in a `.ts` utility module. |
+| Keep autocomplete popup chrome local to `AutocompleteList` plus prompt height accounting | The visual imbalance came from a missing frame rather than prompt semantics, so the safest change was a bordered parent container around the existing scrollbox. |
+| Add a fifth text tier instead of reusing a chrome token for the command-bar placeholder | The placeholder was already on `textQuaternary`, so the only semantically coherent way to dim it one more step was to extend the text hierarchy with `textQuinary`. |
+| Revert the temporary command-bar placeholder experiment after verifying the render path | OpenTUI does apply `placeholderColor`, so once the user confirmed they preferred the original tone, the right fix was to remove `textQuinary` entirely instead of debating whether the prop was ignored. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
