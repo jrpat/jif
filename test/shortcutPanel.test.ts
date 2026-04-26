@@ -78,7 +78,7 @@ test("buildShortcutEntries sorts plain keys before modified keys with the same b
     createCommand("quit", "Quit", ["q"]),
   ]);
 
-  expect(entries.map((entry) => entry.keyLabel)).toEqual(["f", "c-f", "q"]);
+  expect(entries.map((entry) => entry.keyLabel)).toEqual(["f", "⌃f", "q"]);
 });
 
 test("buildShortcutEntries expands multiple canonical keys into separate entries", () => {
@@ -113,8 +113,10 @@ test("buildShortcutSummary uses abbreviated key labels from canonical keys", () 
   expect(summary).toBe(": command   ? help   j/k move   J/K parent");
 });
 
-test("formatShortcutKeyLabel keeps key descriptions to three letters or fewer", () => {
-  expect(formatShortcutKeyLabel("space")).toBe("spc");
+test("formatShortcutKeyLabel uses symbolic labels for space and modifiers", () => {
+  expect(formatShortcutKeyLabel("space")).toBe("⎵");
+  expect(formatShortcutKeyLabel("ctrl-r")).toBe("⌃r");
+  expect(formatShortcutKeyLabel("ctrl-alt-space")).toBe("⌃⌥⎵");
   expect(formatShortcutKeyLabel("enter")).toBe("ret");
   expect(formatShortcutKeyLabel("left")).toBe("←");
   expect(formatShortcutKeyLabel("right")).toBe("→");

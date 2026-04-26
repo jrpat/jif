@@ -18,10 +18,21 @@ const MODIFIER_PREFIXES = new Set([
 const GRID_GAP = 2;
 const MIN_COLUMN_WIDTH = 24;
 const MAX_KEY_WIDTH = 12;
+const MODIFIER_LABELS: Readonly<Record<string, string>> = {
+  a: "⌥",
+  alt: "⌥",
+  c: "⌃",
+  cmd: "⌘",
+  ctrl: "⌃",
+  m: "⌘",
+  meta: "⌘",
+  s: "⇧",
+  shift: "⇧",
+};
 const KEY_LABEL_ABBREVIATIONS: Readonly<Record<string, string>> = {
   escape: "esc",
   enter: "ret",
-  space: "spc",
+  space: "⎵",
   left: "←",
   right: "→",
   down: "↓",
@@ -31,6 +42,7 @@ const KEY_LABEL_ABBREVIATIONS: Readonly<Record<string, string>> = {
 export type ShortcutEntry = Readonly<{
   id: string;
   commandId: string;
+  hasModifier: boolean;
   keyLabel: string;
   title: string;
   sortKey: string;
@@ -45,15 +57,8 @@ export type ShortcutGrid = Readonly<{
 }>;
 
 export function normalizeShortcutSortKey(keyLabel: string): string {
-  const parts = keyLabel.split("-");
-  let index = 0;
-
-  while (index < parts.length - 1 && MODIFIER_PREFIXES.has(parts[index]!.toLowerCase())) {
-    index += 1;
-  }
-
-  const normalized = parts.slice(index).join("-");
-  return normalized.length > 0 ? normalized : keyLabel;
+  const shortcut = splitShortcutKey(keyLabel);
+  return shortcut?.baseKey ?? keyLabel;
 }
 
 export function buildShortcutEntries(
@@ -65,10 +70,11 @@ export function buildShortcutEntries(
         const keyLabel = formatShortcutKeyLabel(rawKeyLabel);
         return {
           id: `${command.id}:${rawKeyLabel}`,
-        commandId: command.id,
-        keyLabel,
-        title: command.title,
-        sortKey: normalizeShortcutSortKey(keyLabel),
+          commandId: command.id,
+          hasModifier: hasShortcutModifier(rawKeyLabel),
+          keyLabel,
+          title: command.title,
+          sortKey: normalizeShortcutSortKey(rawKeyLabel),
         };
       })
     )
@@ -176,7 +182,12 @@ export function shortcutModeLabel(mode: Mode): string {
 }
 
 export function formatShortcutKeyLabel(keyLabel: string): string {
-  return KEY_LABEL_ABBREVIATIONS[keyLabel] ?? keyLabel;
+  const shortcut = splitShortcutKey(keyLabel);
+  if (shortcut === null) {
+    return formatBaseKeyLabel(keyLabel);
+  }
+
+  return `${shortcut.modifiers.map((modifier) => MODIFIER_LABELS[modifier]!).join("")}${formatBaseKeyLabel(shortcut.baseKey)}`;
 }
 
 function compareShortcutEntries(a: ShortcutEntry, b: ShortcutEntry): number {
@@ -185,7 +196,7 @@ function compareShortcutEntries(a: ShortcutEntry, b: ShortcutEntry): number {
     return keyComparison;
   }
 
-  const modifierComparison = modifierWeight(a.keyLabel) - modifierWeight(b.keyLabel);
+  const modifierComparison = modifierWeight(a) - modifierWeight(b);
   if (modifierComparison !== 0) {
     return modifierComparison;
   }
@@ -198,8 +209,37 @@ function compareShortcutEntries(a: ShortcutEntry, b: ShortcutEntry): number {
   return a.title.localeCompare(b.title);
 }
 
-function modifierWeight(keyLabel: string): number {
-  return normalizeShortcutSortKey(keyLabel) === keyLabel ? 0 : 1;
+function modifierWeight(entry: ShortcutEntry): number {
+  return entry.hasModifier ? 1 : 0;
+}
+
+function formatBaseKeyLabel(keyLabel: string): string {
+  return KEY_LABEL_ABBREVIATIONS[keyLabel] ?? keyLabel;
+}
+
+function hasShortcutModifier(keyLabel: string): boolean {
+  return splitShortcutKey(keyLabel) !== null;
+}
+
+function splitShortcutKey(keyLabel: string): Readonly<{
+  modifiers: readonly string[];
+  baseKey: string;
+}> | null {
+  const parts = keyLabel.split("-");
+  if (parts.length < 2) {
+    return null;
+  }
+
+  const baseKey = parts.at(-1);
+  const modifiers = parts.slice(0, -1).map((part) => part.toLowerCase());
+  if (baseKey === undefined || modifiers.length === 0 || modifiers.some((part) => !MODIFIER_PREFIXES.has(part))) {
+    return null;
+  }
+
+  return {
+    modifiers,
+    baseKey,
+  };
 }
 
 const NAVIGATION_COMMAND_IDS = new Set([
