@@ -54,6 +54,7 @@ import {
   getRevisionCommandChipBgColor,
   getRevisionChangeIdColors,
   getRevisionDescriptionColor,
+  hasUserDescription,
 } from "./revisionHeader.ts";
 import { scrollToKeepChildVisible } from "./scroll.ts";
 import {
@@ -196,7 +197,7 @@ export function JifView(props: {
     },
     confirm() {
       const state = store.snapshot();
-      if (state.commandDraft?.config.kind === "squash" && squashNeedsEditor(state)) {
+      if (state.commandDraft?.config.kind === "squash" && squashNeedsInteractiveShell(state)) {
         const commandText = getDisplayedCommandText(state).trim();
         if (commandText.length > 0) {
           void runInteractiveJjCommand(commandText);
@@ -771,12 +772,12 @@ export function JifView(props: {
     return message;
   }
 
-  function squashNeedsEditor(state: ReturnType<typeof store.snapshot>): boolean {
+  function squashNeedsInteractiveShell(state: ReturnType<typeof store.snapshot>): boolean {
     const target = getFocusedRevision(state);
-    if (!target?.description) return false;
+    if (!target || !hasUserDescription(target)) return false;
     const selectedIds = state.selectedRowIds;
     return state.revisions.some(
-      (r) => selectedIds.includes(r.rowId) && r.description,
+      (r) => selectedIds.includes(r.rowId) && hasUserDescription(r),
     );
   }
 

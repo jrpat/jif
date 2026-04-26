@@ -5,6 +5,7 @@ import {
   getRevisionCommandChipBgColor,
   getRevisionChangeIdColors,
   getRevisionDescriptionColor,
+  hasUserDescription,
 } from "../src/ui/revisionHeader.ts";
 
 function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSummary {
@@ -104,6 +105,15 @@ test("getRevisionDescriptionColor uses success color for empty+no-description pl
   });
 
   expect(color).toBe("success");
+});
+
+test("hasUserDescription treats generated placeholders as missing descriptions", () => {
+  expect(hasUserDescription(createRevision({ description: "(no description)" }))).toBeFalse();
+  expect(hasUserDescription(createRevision({ description: "(empty) (no description)" }))).toBeFalse();
+});
+
+test("hasUserDescription keeps literal user text that mentions no description", () => {
+  expect(hasUserDescription(createRevision({ description: "docs: explain the (no description) marker" }))).toBeTrue();
 });
 
 test("getRevisionChangeIdColors matches focused row chrome", () => {

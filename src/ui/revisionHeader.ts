@@ -2,6 +2,9 @@ import type { RevisionSummary } from "../domain/types.ts";
 import { getChangeIdFromRevisionId, isDivergentRevisionId } from "../domain/revisionIds.ts";
 import type { RevisionRowState } from "./revisionBorders.ts";
 
+const NO_DESCRIPTION_PLACEHOLDER = "(no description)";
+const EMPTY_NO_DESCRIPTION_PLACEHOLDER = "(empty) (no description)";
+
 export type RevisionChangeIdSegment = Readonly<{
   kind: "prefix" | "suffix" | "separator" | "timestamp";
   text: string;
@@ -74,7 +77,7 @@ export function getRevisionDescriptionColor(
     return options.colors.statusSuccess;
   }
 
-  if (revision.description.includes("(no description)")) {
+  if (!hasUserDescription(revision)) {
     return options.colors.statusWarning;
   }
 
@@ -85,6 +88,13 @@ export function getRevisionDescriptionColor(
     case "default":
       return options.colors.textPrimary;
   }
+}
+
+export function hasUserDescription(
+  revision: Pick<RevisionSummary, "description">,
+): boolean {
+  return revision.description !== NO_DESCRIPTION_PLACEHOLDER
+    && revision.description !== EMPTY_NO_DESCRIPTION_PLACEHOLDER;
 }
 
 export function getRevisionChangeIdColors(options: Readonly<{
