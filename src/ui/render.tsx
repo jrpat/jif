@@ -1,47 +1,38 @@
-import { TextAttributes, CliRenderEvents, type ScrollBoxRenderable } from "@opentui/core";
+import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core";
 import { For, Show, createEffect, createMemo, createRenderEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { useKeyboard, useRenderer } from "@opentui/solid";
-import { commandDefinitions, type CommandController } from "../commands/definitions.ts";
-import { resolveAppConfig, type AppConfig, type ResolvedAppConfig } from "../config/schema.ts";
-import { HistoryStore, matchHistoryEntries } from "../history/store.ts";
+import { createCommandRunner } from "../commands/runner.ts";
+import { commandDefinitions } from "../commands/definitions.ts";
+import type { AppConfig, ResolvedAppConfig } from "../config/schema.ts";
 import type { AppStore } from "../state/appStore.ts";
-import { getRevisionArg } from "../domain/revisionIds.ts";
+import { createPersistenceService } from "../persistence/service.ts";
 import {
-  commandCanExecute,
   DRAFT_PLACEHOLDER,
   getCommandChipTextForRevision,
-  draftConfigs,
   getCommandTargetRowId,
   getCommandTargetRevisionId,
   getDisplayedCommandSegments,
   getDisplayedCommandText,
   getExpandedRevision,
-  getFocusedRevisionArg,
   getFocusedRevision,
-  isFileNavigationActive,
   getOperationAffectedRowIds,
   getSelectedRowIds,
-  getSelectedRevisionIds,
   revisionMatchesSearch,
   type CommandSegment,
 } from "../state/store.ts";
 import { logShortcutDebug } from "../debug.ts";
-import { buildForceRetryPlan } from "../jj/forceRetry.ts";
-import { tokenizeCommandText, type JjClient } from "../jj/client.ts";
-import { quoteCommand, runInteractiveCommand } from "../jj/process.ts";
-import { buildCompletionItems, extractLastToken, matchCompletions, type CompletionItem } from "../revset/completions.ts";
-import type { ChangedFile, FailedCommand, RevisionSummary, StatusMessage } from "../domain/types.ts";
-import { AutocompleteList, type AutocompleteListItem } from "./AutocompleteList.tsx";
-import {
-  getAutocompleteAction,
-  moveAutocompleteSelection,
-  type AutocompleteFlow,
-} from "./autocomplete.ts";
+import type { JjClient } from "../jj/client.ts";
+import { runInteractiveCommand } from "../jj/process.ts";
+import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/types.ts";
+import { createJifCommandController } from "./controller.ts";
+import { CommandPreview, CommandPrompt, RevsetPrompt, SearchPrompt } from "./prompts.tsx";
 import {
   getRevisionBorderPolicy,
   type RevisionRowState,
 } from "./revisionBorders.ts";
+import { MessageOverlay, StatusArea } from "./statusArea.tsx";
+import { createJifRuntime } from "./runtime.ts";
 import {
   buildRevisionGutterPlan,
   measureBoxedGraphWidth,
@@ -54,7 +45,6 @@ import {
   getRevisionCommandChipBgColor,
   getRevisionChangeIdColors,
   getRevisionDescriptionColor,
-  hasUserDescription,
 } from "./revisionHeader.ts";
 import { scrollToKeepChildVisible } from "./scroll.ts";
 import {
@@ -72,11 +62,8 @@ import { normalizeKey } from "./keyboard.ts";
 import { dispatchGlobalKey } from "./keybindings.ts";
 import { getActiveMode, getCommandsForMode, defaultKeymap } from "../modes.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
-import { saveGlobalSetting } from "../config/globalSettings.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
-import { startInitialRepositoryLoad } from "./startup.ts";
-import { getStatusMessageDismissDelay } from "./statusMessages.ts";
-import { parseAnsiToStyledText } from "./ansiToStyledText.ts";
+import { bindViewRendererEvents, createPaletteDetector, startInitialRepositoryLoad } from "./startup.ts";
 
 export function JifView(props: {
   store: AppStore;
@@ -93,21 +80,46 @@ export function JifView(props: {
     width: Math.max(renderer.width, 1),
     height: Math.max(renderer.height, 1),
   });
+  const persistence = createPersistenceService();
   const refreshRepository = createRepositoryRefresher({
     client,
     actions: store.actions,
     getRevsetQuery: () => store.snapshot().revsetQuery,
   });
-  let logViewport: ScrollBoxRenderable | undefined;
+  const commandRunner = createCommandRunner({
+    actions: store.actions,
+    executeCommandArgs: (commandArgs) => client.executeCommandArgs(commandArgs),
+    executeInteractiveCommandArgs: async (commandArgs) => {
+      const root = workspaceRoot();
+      if (!root) {
+        throw new Error("Workspace root is unavailable.");
+      }
 
-  async function detectAndApplyPalette() {
-    try {
-      const palette = await renderer.getPalette({ size: 16 });
-      setConfig(reconcile(resolveAppConfig(rawConfig, { palette })));
-    } catch {
-      // Keep current (fallback) colors
-    }
-  }
+      renderer.suspend();
+      try {
+        await runInteractiveCommand(root, ["jj", ...commandArgs]);
+      } finally {
+        renderer.resume();
+      }
+    },
+    refreshRepository,
+  });
+  const runtime = createJifRuntime({
+    store,
+    client,
+    commandRunner,
+    persistence,
+    getWorkspaceRoot: workspaceRoot,
+    refreshRepository,
+  });
+  let logViewport: ScrollBoxRenderable | undefined;
+  const detectAndApplyPalette = createPaletteDetector({
+    renderer,
+    rawConfig,
+    applyResolvedConfig: (nextConfig) => {
+      setConfig(reconcile(nextConfig));
+    },
+  });
 
   onMount(() => {
     void (async () => {
@@ -115,7 +127,7 @@ export function JifView(props: {
         detectAndApplyPalette,
         loadWorkspaceRoot: () => client.loadWorkspaceRoot().catch(() => null),
         loadDefaultRevset: () => client.loadDefaultRevset(),
-        loadSavedRevset: (resolvedWorkspaceRoot) => new HistoryStore(resolvedWorkspaceRoot).loadSetting("active-revset"),
+        loadSavedRevset: (resolvedWorkspaceRoot) => persistence.loadActiveRevset(resolvedWorkspaceRoot),
         refreshRepository,
         setWorkspaceRoot,
         setRevsetQuery: (query) => {
@@ -127,271 +139,32 @@ export function JifView(props: {
       onCleanup(() => disposeFocusRefresh());
     })();
 
-    const handleThemeMode = () => {
-      renderer.clearPaletteCache();
-      void detectAndApplyPalette();
-    };
-    const handleResize = () => {
-      setTerminalSize({
-        width: Math.max(renderer.width, 1),
-        height: Math.max(renderer.height, 1),
-      });
-    };
-    handleResize();
-    renderer.on(CliRenderEvents.THEME_MODE, handleThemeMode);
-    renderer.on(CliRenderEvents.RESIZE, handleResize);
-    onCleanup(() => {
-      renderer.off(CliRenderEvents.THEME_MODE, handleThemeMode);
-      renderer.off(CliRenderEvents.RESIZE, handleResize);
+    const disposeRendererEvents = bindViewRendererEvents({
+      renderer,
+      detectAndApplyPalette,
+      setTerminalSize,
     });
+    onCleanup(() => disposeRendererEvents());
   });
 
-  const controller: CommandController = {
-    moveFocus(delta: number) {
-      store.actions.moveFocus(delta);
-    },
-    moveFocusToParent() {
-      store.actions.moveFocusToParent();
-    },
-    moveFocusToChild() {
-      store.actions.moveFocusToChild();
-    },
-    openFocusedRevision() {
-      const state = store.snapshot();
-      const revision = getFocusedRevision(state);
-      if (!revision) {
-        return;
-      }
-
-      if (revision.marker === "elided") {
-        void expandElidedRevisions(state.focusedRevisionIndex);
-        return;
-      }
-
-      store.actions.openFocusedRevision();
-      if (revision.filesLoaded) {
-        return;
-      }
-
-      void (async () => {
-        try {
-          const [files, conflictedPaths] = await Promise.all([
-            client.loadChangedFiles(revision.revisionId),
-            revision.hasConflict
-              ? client.loadConflictedFiles(revision.revisionId)
-              : Promise.resolve(new Set<string>()),
-          ]);
-          const enrichedFiles = conflictedPaths.size > 0
-            ? files.map((f) => ({ ...f, hasConflict: conflictedPaths.has(f.path) }))
-            : files;
-          store.actions.setRevisionFiles(revision.rowId, enrichedFiles);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          store.actions.pushEvent(message, "error");
-        }
-      })();
-    },
-    closeFocusedRevision() {
-      store.actions.closeFocusedRevision();
-    },
-    quit() {
-      renderer.destroy();
-    },
-    cancelOrBlur() {
-      store.actions.cancelOrBlur();
-    },
-    confirm() {
-      const state = store.snapshot();
-      if (state.commandDraft?.config.kind === "squash" && squashNeedsInteractiveShell(state)) {
-        const commandText = getDisplayedCommandText(state).trim();
-        if (commandText.length > 0) {
-          void runInteractiveJjCommand(commandText);
-        }
-      } else {
-        void executeCurrentCommand();
-      }
-    },
-    focusCommandBar() {
-      store.actions.focusCommandBar();
-    },
-    forceLastCommand() {
-      const failedCommand = store.snapshot().lastFailedCommand;
-      if (!failedCommand) {
-        store.actions.pushEvent("No retryable failed command.", "error");
-        return;
-      }
-
-      const retryPlan = buildForceRetryPlan({
-        commandArgs: failedCommand.commandArgs,
-        stderr: failedCommand.stderr || failedCommand.errorText,
-      });
-      if (!retryPlan) {
-        store.actions.pushEvent("Last failed command cannot be forced.", "error");
-        return;
-      }
-
-      const retryCommandText = quoteCommand(retryPlan.commandArgs);
-      if (failedCommand.interactive) {
-        void runInteractiveJjCommand(retryCommandText);
-        return;
-      }
-
-      void runJjCommand(retryCommandText);
-    },
-    startSquash() {
-      const revision = getFocusedRevision(store.snapshot());
-      if (!revision) {
-        return;
-      }
-
-      store.actions.startCommandDraft(draftConfigs.squash);
-    },
-    startRebase() {
-      const revision = getFocusedRevision(store.snapshot());
-      if (!revision) {
-        return;
-      }
-
-      void (async () => {
-        try {
-          const descendants = await client.resolveDescendants(revision.revisionId);
-          store.actions.startCommandDraft(draftConfigs.rebase, { descendantRevisionIds: descendants });
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          store.actions.pushEvent(message, "error");
-        }
-      })();
-    },
-    startNewRevision() {
-      const revisionArg = getFocusedRevisionArg(store.snapshot());
-      if (!revisionArg) {
-        return;
-      }
-
-      void runJjCommand(`new ${revisionArg}`, { focusWorkingCopyAfterRefresh: true });
-    },
-    editRevision() {
-      const revisionArg = getFocusedRevisionArg(store.snapshot());
-      if (!revisionArg) {
-        return;
-      }
-
-      void runJjCommand(`edit ${revisionArg}`);
-    },
-    commit() {
-      void runInteractiveJjCommand("commit");
-    },
-    describe() {
-      const revisionArg = getFocusedRevisionArg(store.snapshot());
-      if (!revisionArg) return;
-      void runInteractiveJjCommand(`describe -r ${revisionArg}`);
-    },
-    showDiff() {
-      const state = store.snapshot();
-      const revisionArg = getFocusedRevisionArg(state);
-      if (!revisionArg) return;
-      if (isFileNavigationActive(state)) {
-        const file = getExpandedRevision(state)?.files[state.focusedFileIndex];
-        if (!file) return;
-        void runInteractiveJjCommand(`diff -r ${revisionArg} ${file.path}`);
-      } else {
-        void runInteractiveJjCommand(`show -r ${revisionArg}`);
-      }
-    },
-    toggleSelection() {
-      store.actions.toggleRevisionSelection();
-    },
-    toggleFileSelection() {
-      store.actions.toggleFileSelection();
-    },
-    restoreFiles() {
-      const state = store.snapshot();
-      if (state.focusMode !== "files" || !state.expandedRowId) {
-        return;
-      }
-
-      const revision = getExpandedRevision(state);
-      if (!revision) {
-        return;
-      }
-
-      const revisionArg = getRevisionArg(revision.revisionId, revision.changeIdPrefixLength);
-      const filePaths = state.selectedFilePaths.length > 0
-        ? state.selectedFilePaths
-        : [revision.files[state.focusedFileIndex]?.path].filter(Boolean);
-
-      if (filePaths.length === 0) {
-        return;
-      }
-
-      const commandText = `restore -c ${revisionArg} ${filePaths.join(" ")}`;
-      void runJjCommand(commandText);
-    },
-    toggleShortFlags() {
-      store.actions.toggleShortFlags();
-    },
-    cycleLayout() {
-      store.actions.cycleLayout();
-      void saveGlobalSetting("layout", store.snapshot().layout);
-    },
-    undo() {
-      void runJjCommand("undo");
-    },
-    redo() {
-      void runJjCommand("redo");
-    },
-    focusWorkingCopy() {
-      store.actions.focusWorkingCopy();
-    },
-    openRevsetInput() {
-      store.actions.openRevsetInput();
-    },
-    toggleShortcutPanel() {
-      const before = store.snapshot().shortcutPanelExpanded;
-      store.actions.toggleShortcutPanel();
+  const controller = createJifCommandController({
+    store,
+    client,
+    destroy: () => renderer.destroy(),
+    executeCurrentCommand: runtime.executeCurrentCommand,
+    runJjCommand: runtime.runJjCommand,
+    runInteractiveJjCommand: runtime.runInteractiveJjCommand,
+    refreshRepository,
+    expandElidedRevisions: runtime.expandElidedRevisions,
+    persistLayout: (layout) => persistence.saveLayoutPreference(layout),
+    logShortcutPanelToggle: ({ before, after, focusMode }) => {
       logShortcutDebug("toggle-shortcut-panel", {
         before,
-        after: store.state.shortcutPanelExpanded,
-        focusMode: store.state.focusMode,
+        after,
+        focusMode,
       });
     },
-    toggleRebaseDescendants() {
-      const state = store.snapshot();
-      if (state.commandDraft?.config.kind !== "rebase") {
-        return;
-      }
-
-      void (async () => {
-        try {
-          const descendants = await client.resolveDescendants(getSelectedRevisionIds(state)[0] ?? "");
-          store.actions.toggleRebaseDescendants(descendants);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          store.actions.pushEvent(message, "error");
-        }
-      })();
-    },
-    openSearch() {
-      store.actions.openSearch();
-    },
-    nextSearchMatch() {
-      store.actions.nextSearchMatch();
-    },
-    prevSearchMatch() {
-      store.actions.prevSearchMatch();
-    },
-    refreshRepository() {
-      void refreshRepository();
-    },
-    absorb() {
-      void runJjCommand("absorb");
-    },
-    abandonRevision() {
-      const revisionArg = getFocusedRevisionArg(store.snapshot());
-      if (!revisionArg) return;
-      void runJjCommand(`abandon ${revisionArg}`);
-    },
-  };
+  });
 
   const commandText = createMemo(() => {
     store.state.focusedRevisionIndex;
@@ -602,10 +375,11 @@ export function JifView(props: {
             store={store}
             config={config}
             workspaceRoot={workspaceRoot()}
+            loadHistory={(root) => persistence.loadCommandHistory(root)}
             commandText={commandText()}
             onSubmit={(value) => {
               store.actions.setCommandBarText(value);
-              void executeCurrentCommand(value, { recordHistory: true });
+              void runtime.executeCurrentCommand(value, { recordHistory: true });
             }}
             onHeightChange={setPromptSurfaceHeight}
           />
@@ -616,21 +390,8 @@ export function JifView(props: {
             client={client}
             config={config}
             workspaceRoot={workspaceRoot()}
-            onApply={async (query) => {
-              const previousQuery = store.state.revsetQuery;
-              store.actions.setRevsetQuery(query);
-              store.actions.closeRevsetInput();
-              const success = await refreshRepository(query || undefined);
-              if (success) {
-                if (workspaceRoot()) {
-                  await new HistoryStore(workspaceRoot()!).record("revset-history", query);
-                  await new HistoryStore(workspaceRoot()!).saveSetting("active-revset", query);
-                }
-              } else {
-                store.actions.setRevsetQuery(previousQuery);
-                void refreshRepository(previousQuery || undefined);
-              }
-            }}
+            loadHistory={(root) => persistence.loadRevsetHistory(root)}
+            onApply={runtime.applyRevsetQuery}
             onCancel={() => {
               store.actions.closeRevsetInput();
             }}
@@ -675,386 +436,6 @@ export function JifView(props: {
     </Show>
   );
 
-  async function executeCurrentCommand(
-    commandOverride?: string,
-    options?: { recordHistory?: boolean },
-  ) {
-    const state = store.snapshot();
-    const commandTextValue = (commandOverride ?? getDisplayedCommandText(state)).trim();
-    const command = createTrackedCommand(commandTextValue, false);
-    if (!commandCanExecute(state) || !command) {
-      return;
-    }
-
-    if (options?.recordHistory && workspaceRoot()) {
-      void new HistoryStore(workspaceRoot()!).record("command-history", commandTextValue);
-    }
-
-    store.actions.cancelCommand();
-
-    const toastId = `cmd-${Date.now()}`;
-    store.actions.pushStatusMessage(toastId, commandTextValue, "info");
-
-    try {
-      const resultMessage = await client.executeCommandArgs(command.commandArgs);
-      store.actions.clearLastFailedCommand();
-      store.actions.updateStatusMessage(toastId, resultMessage, "success");
-      store.actions.logEvent(resultMessage, "success");
-      await refreshRepository();
-    } catch (error) {
-      const message = recordFailedCommand(command, error);
-      store.actions.updateStatusMessage(toastId, message, "error");
-      store.actions.logEvent(message, "error");
-    }
-  }
-
-  async function runJjCommand(
-    commandText: string,
-    options?: { focusWorkingCopyAfterRefresh?: boolean },
-  ) {
-    const command = createTrackedCommand(commandText, false);
-    if (!command) {
-      return;
-    }
-
-    store.actions.setLoading(true);
-    try {
-      const resultMessage = await client.executeCommandArgs(command.commandArgs);
-      store.actions.clearLastFailedCommand();
-      store.actions.cancelCommand();
-      store.actions.pushEvent(resultMessage, "success");
-      await refreshRepository();
-      if (options?.focusWorkingCopyAfterRefresh) {
-        store.actions.focusWorkingCopy();
-      }
-    } catch (error) {
-      const message = recordFailedCommand(command, error);
-      store.actions.pushEvent(message, "error");
-      store.actions.setLoading(false);
-    }
-  }
-
-  async function runInteractiveJjCommand(commandText: string) {
-    const command = createTrackedCommand(commandText, true);
-    if (!command) {
-      return;
-    }
-
-    const root = workspaceRoot();
-    if (!root) return;
-    renderer.suspend();
-    try {
-      await runInteractiveCommand(root, ["jj", ...command.commandArgs]);
-      store.actions.clearLastFailedCommand();
-      store.actions.cancelCommand();
-      await refreshRepository();
-    } catch (error) {
-      const message = recordFailedCommand(command, error);
-      store.actions.pushEvent(message, "error");
-    } finally {
-      renderer.resume();
-    }
-  }
-
-  function createTrackedCommand(commandText: string, interactive: boolean): FailedCommand | null {
-    const normalizedText = commandText.trim();
-    const commandArgs = tokenizeCommandText(normalizedText);
-    if (normalizedText.length === 0 || commandArgs.length === 0) {
-      return null;
-    }
-
-    return {
-      commandText: normalizedText,
-      commandArgs,
-      interactive,
-      errorText: "",
-      stderr: "",
-    };
-  }
-
-  function recordFailedCommand(command: FailedCommand, error: unknown): string {
-    const message = error instanceof Error ? error.message : String(error);
-    store.actions.setLastFailedCommand({
-      ...command,
-      errorText: message,
-      stderr: error instanceof Error && "stderr" in error && typeof error.stderr === "string"
-        ? error.stderr.trim()
-        : message,
-    });
-    return message;
-  }
-
-  function squashNeedsInteractiveShell(state: ReturnType<typeof store.snapshot>): boolean {
-    const target = getFocusedRevision(state);
-    if (!target || !hasUserDescription(target)) return false;
-    const selectedIds = state.selectedRowIds;
-    return state.revisions.some(
-      (r) => selectedIds.includes(r.rowId) && hasUserDescription(r),
-    );
-  }
-
-  async function expandElidedRevisions(elidedIndex: number) {
-    const state = store.snapshot();
-    const afterRevision = state.revisions[elidedIndex + 1];
-    const beforeRevision = state.revisions[elidedIndex - 1];
-    if (!afterRevision) {
-      return;
-    }
-    try {
-      const revisions = await client.loadElidedRevisions(
-        afterRevision.revisionId,
-        beforeRevision?.revisionId ?? null,
-        20,
-      );
-      store.actions.expandElidedRevision(elidedIndex, revisions);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      store.actions.pushEvent(message, "error");
-    }
-  }
-}
-
-function PromptShell(props: {
-  config: ResolvedAppConfig;
-  items: readonly AutocompleteListItem[];
-  selectedIndex: number | null;
-  flow: AutocompleteFlow;
-  focused: boolean;
-  onHeightChange?: (height: number) => void;
-  children: any;
-}) {
-  const colors = props.config.colorScheme.semanticColors;
-  const autocompleteHeight = createMemo(() => Math.min(props.items.length, 10));
-  const totalHeight = createMemo(() => 3 + autocompleteHeight());
-
-  createEffect(() => {
-    props.onHeightChange?.(totalHeight());
-  });
-
-  return (
-    <box
-      width="100%"
-      height={totalHeight()}
-      flexDirection="column"
-    >
-      <Show when={props.items.length > 0}>
-        <AutocompleteList
-          items={props.items}
-          selectedIndex={props.selectedIndex}
-          flow={props.flow}
-          config={props.config}
-        />
-      </Show>
-      <box
-        width="100%"
-        height={3}
-        flexDirection="row"
-        paddingX={1}
-        border
-        borderStyle="single"
-        borderColor={props.focused ? colors.chromeBorderFocus : colors.chromeBorderIdle}
-        backgroundColor={props.focused ? colors.chromeFillTwo : colors.chromeFillOne}
-      >
-        {props.children}
-      </box>
-    </box>
-  );
-}
-
-function CommandPrompt(props: {
-  store: AppStore;
-  config: ResolvedAppConfig;
-  workspaceRoot: string | null;
-  commandText: string;
-  onSubmit: (value: string) => void;
-  onHeightChange?: (height: number) => void;
-}) {
-  const { store, config } = props;
-  const colors = config.colorScheme.semanticColors;
-  const flow: AutocompleteFlow = "bottom-to-top";
-  const [historyEntries, setHistoryEntries] = createSignal<string[]>([]);
-  const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null);
-
-  createEffect(() => {
-    const workspaceRoot = props.workspaceRoot;
-
-    if (!workspaceRoot) {
-      setHistoryEntries([]);
-      setSelectedIndex(null);
-      return;
-    }
-
-    void new HistoryStore(workspaceRoot).load("command-history").then(setHistoryEntries);
-  });
-
-  createEffect(() => {
-    props.commandText;
-    setSelectedIndex(null);
-  });
-
-  const filteredHistory = createMemo(() => matchHistoryEntries(props.commandText, historyEntries()));
-
-  const autocompleteItems = createMemo<AutocompleteListItem[]>(() =>
-    filteredHistory().map((entry) => ({
-      id: entry,
-      text: entry,
-    }))
-  );
-
-  useKeyboard((event) => {
-    if (event.eventType === "release") {
-      return;
-    }
-
-    const action = getAutocompleteAction(event, flow);
-    if (action !== null) {
-      event.preventDefault();
-      setSelectedIndex((currentIndex) =>
-        moveAutocompleteSelection(currentIndex, filteredHistory().length, action)
-      );
-      return;
-    }
-
-    if (event.name !== "return") {
-      return;
-    }
-
-    const index = selectedIndex();
-    if (index === null) {
-      return;
-    }
-
-    const entry = filteredHistory()[index];
-    if (!entry) {
-      return;
-    }
-
-    event.preventDefault();
-    store.actions.setCommandBarText(entry);
-    setSelectedIndex(null);
-  }, { release: true });
-
-  return (
-    <PromptShell
-      config={config}
-      items={autocompleteItems()}
-      selectedIndex={selectedIndex()}
-      flow={flow}
-      focused
-      onHeightChange={props.onHeightChange}
-    >
-      <box width={3} flexDirection="row" flexShrink={0}>
-        <text fg={colors.textPrimary}>jj </text>
-      </box>
-      <input
-        ref={(el: any) => el.editorView.setScrollMargin(0)}
-        flexGrow={1}
-        value={props.commandText}
-        placeholder="subcommand"
-        focused
-        textColor={colors.textPrimary}
-        focusedTextColor={colors.textPrimary}
-        placeholderColor={colors.textQuaternary}
-        cursorColor={colors.chromeBorderFocus}
-        onInput={(value) => {
-          store.actions.setCommandBarText(value);
-        }}
-        onSubmit={props.onSubmit as any}
-      />
-    </PromptShell>
-  );
-}
-
-function CommandPreview(props: {
-  config: ResolvedAppConfig;
-  commandSegments: readonly CommandSegment[];
-  onHeightChange?: (height: number) => void;
-}) {
-  const colors = props.config.colorScheme.semanticColors;
-
-  return (
-    <PromptShell
-      config={props.config}
-      items={[]}
-      selectedIndex={null}
-      flow="bottom-to-top"
-      focused={false}
-      onHeightChange={props.onHeightChange}
-    >
-      <box width={3} flexDirection="row" flexShrink={0}>
-        <text fg={colors.textTertiary}>jj </text>
-      </box>
-      <box flexGrow={1} flexDirection="row">
-        <For each={props.commandSegments}>
-          {(segment) => (
-            <text
-              fg={segment.style === "selected"
-                ? colors.rowSelectedAccent
-                : segment.style === "target"
-                  ? colors.chromeBorderFocus
-                  : segment.style === "placeholder"
-                    ? colors.chromeBorderFocus
-                    : colors.textPrimary}
-              attributes={segment.style !== "command" ? TextAttributes.BOLD : undefined}
-            >
-              {segment.text}
-            </text>
-          )}
-        </For>
-      </box>
-    </PromptShell>
-  );
-}
-
-function SearchPrompt(props: {
-  store: AppStore;
-  config: ResolvedAppConfig;
-  focused: boolean;
-  searchQuery: string;
-  onHeightChange?: (height: number) => void;
-}) {
-  const { store, config } = props;
-  const colors = config.colorScheme.semanticColors;
-
-  useKeyboard((event) => {
-    if (event.eventType === "release") {
-      return;
-    }
-
-    if (event.name === "return") {
-      event.preventDefault();
-      store.actions.finalizeSearch();
-      return;
-    }
-  }, { release: true });
-
-  return (
-    <PromptShell
-      config={config}
-      items={[]}
-      selectedIndex={null}
-      flow="bottom-to-top"
-      focused={props.focused}
-      onHeightChange={props.onHeightChange}
-    >
-      <box width={2} flexDirection="row" flexShrink={0}>
-        <text fg={colors.textPrimary}>/ </text>
-      </box>
-      <input
-        flexGrow={1}
-        value={props.searchQuery}
-        placeholder="search"
-        focused={props.focused}
-        textColor={colors.textPrimary}
-        focusedTextColor={colors.textPrimary}
-        placeholderColor={colors.textQuaternary}
-        cursorColor={colors.chromeBorderFocus}
-        onInput={(value) => {
-          store.actions.setSearchText(value);
-        }}
-      />
-    </PromptShell>
-  );
 }
 
 export function RevisionItem(props: {
@@ -1714,377 +1095,6 @@ function ChangedFiles(props: {
   );
 }
 
-function StatusArea(props: {
-  shortcutSummary: string;
-  shortcutSummarySegments: readonly ShortcutSummarySegment[];
-  shortcutGrid: ShortcutGrid;
-  expanded: boolean;
-  currentModeLabel: string;
-  panelBodyHeight: number;
-  config: ResolvedAppConfig;
-}) {
-  const colors = props.config.colorScheme.semanticColors;
-
-  return (
-    <Show
-      when={props.expanded}
-      fallback={
-        <box
-          width="100%"
-          height={3}
-          border
-          borderStyle="single"
-          borderColor={colors.chromeBorderIdle}
-          backgroundColor={colors.chromeFillOne}
-          paddingX={1}
-          flexDirection="row"
-        >
-          <Show
-            when={props.shortcutSummarySegments.length > 0}
-            fallback={
-              <text fg={colors.textTertiary} truncate>
-                {props.shortcutSummary}
-              </text>
-            }
-          >
-            <For each={props.shortcutSummarySegments}>
-              {(segment, index) => (
-                <>
-                  <Show when={index() > 0}>
-                    <text fg={colors.textTertiary}>{"   "}</text>
-                  </Show>
-                  <text fg={colors.textTertiary} attributes={TextAttributes.BOLD}>
-                    {segment.keyLabel}
-                  </text>
-                  <text fg={colors.textTertiary}>{` ${segment.label}`}</text>
-                </>
-              )}
-            </For>
-          </Show>
-        </box>
-      }
-    >
-      <box
-        width="100%"
-        height={props.panelBodyHeight + 4}
-        border
-        borderStyle="single"
-        borderColor={colors.chromeBorderFocus}
-        backgroundColor={colors.chromeFillTwo}
-        flexDirection="column"
-      >
-        <box
-          width="100%"
-          flexDirection="row"
-          paddingX={1}
-          backgroundColor={colors.chromeFillTwo}
-        >
-          <text fg={colors.textPrimary} attributes={TextAttributes.BOLD}>
-            Shortcuts
-          </text>
-          <text fg={colors.textTertiary}>{` ${props.currentModeLabel}`}</text>
-          <box flexGrow={1} />
-          <text fg={colors.textTertiary}>? close</text>
-        </box>
-        <box width="100%" height={1} backgroundColor={colors.chromeFillTwo} />
-        <scrollbox
-          width="100%"
-          height={props.panelBodyHeight}
-          scrollY
-          backgroundColor={colors.chromeFillTwo}
-          scrollbarOptions={{
-            trackOptions: {
-              backgroundColor: colors.chromeFillThree,
-              foregroundColor: colors.chromeScrollbarThumb,
-            },
-          }}
-        >
-          <Show
-            when={props.shortcutGrid.rows.length > 0}
-            fallback={
-              <box width="100%" paddingX={1}>
-                <text fg={colors.textTertiary}>No shortcuts for this mode.</text>
-              </box>
-            }
-          >
-            <box width="100%" flexDirection="column" paddingX={1}>
-              <For each={props.shortcutGrid.rows}>
-                {(row) => (
-                  <box width="100%" flexDirection="row" gap={props.shortcutGrid.gap}>
-                    <For each={row}>
-                      {(entry) => (
-                        <box
-                          width={props.shortcutGrid.columnWidth}
-                          minWidth={0}
-                          flexDirection="row"
-                        >
-                          <box width={props.shortcutGrid.keyWidth} flexShrink={0}>
-                            <text
-                              fg={colors.chromeBorderFocus}
-                              attributes={TextAttributes.BOLD}
-                              truncate
-                            >
-                              {entry.keyLabel}
-                            </text>
-                          </box>
-                          <box flexGrow={1} minWidth={0}>
-                            <text fg={colors.textSecondary} truncate>
-                              {` ${entry.title}`}
-                            </text>
-                          </box>
-                        </box>
-                      )}
-                    </For>
-                  </box>
-                )}
-              </For>
-            </box>
-          </Show>
-        </scrollbox>
-      </box>
-    </Show>
-  );
-}
-
-function RevsetPrompt(props: {
-  revsetQuery: string;
-  client: JjClient;
-  config: ResolvedAppConfig;
-  workspaceRoot: string | null;
-  onApply: (query: string) => void | Promise<void>;
-  onCancel: () => void;
-  onHeightChange?: (height: number) => void;
-}) {
-  const colors = props.config.colorScheme.semanticColors;
-  const flow: AutocompleteFlow = "bottom-to-top";
-  const [text, setText] = createSignal(props.revsetQuery);
-  const [completionItems, setCompletionItems] = createSignal<CompletionItem[]>([]);
-  const [historyEntries, setHistoryEntries] = createSignal<string[]>([]);
-  const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null);
-
-  const suggestions = createMemo<AutocompleteListItem[]>(() => {
-    if (text().trim().length === 0) {
-      return historyEntries().map((entry) => ({
-        id: `history:${entry}`,
-        tag: "hs",
-        text: entry,
-      }));
-    }
-
-    const { token } = extractLastToken(text());
-    return matchCompletions(token, completionItems()).map((item) => ({
-      id: `completion:${item.kind}:${item.name}`,
-      tag: completionKindLabel(item.kind),
-      text: item.name,
-      detail: item.detail,
-    }));
-  });
-
-  onMount(() => {
-    void (async () => {
-      const [bookmarks, tags, aliases, history] = await Promise.all([
-        props.client.loadBookmarks(),
-        props.client.loadTags(),
-        props.client.loadAliases(),
-        props.workspaceRoot
-          ? new HistoryStore(props.workspaceRoot).load("revset-history")
-          : Promise.resolve([]),
-      ]);
-      setCompletionItems(buildCompletionItems(bookmarks, tags, aliases));
-      setHistoryEntries(history);
-    })();
-  });
-
-  const applySuggestion = (item: AutocompleteListItem) => {
-    if (item.tag === "hs") {
-      setText(item.text);
-      setSelectedIndex(null);
-      return;
-    }
-
-    const completion = completionItems().find((candidate) => candidate.name === item.text);
-    if (!completion) {
-      return;
-    }
-
-    const current = text();
-    const { start } = extractLastToken(current);
-    let nextValue = completion.name;
-    if (completion.kind === "function") {
-      nextValue += completion.hasParameters ? "(" : "()";
-    }
-    setText(current.slice(0, start) + nextValue);
-    setSelectedIndex(null);
-  };
-
-  useKeyboard((event) => {
-    if (event.eventType === "release" || event.meta || event.option) {
-      return;
-    }
-
-    const action = getAutocompleteAction(event, flow);
-    if (action !== null) {
-      event.preventDefault();
-      setSelectedIndex((currentIndex) =>
-        moveAutocompleteSelection(currentIndex, suggestions().length, action)
-      );
-      return;
-    }
-
-    if (event.name === "return") {
-      event.preventDefault();
-      const idx = selectedIndex();
-      const items = suggestions();
-      if (idx !== null && idx < items.length) {
-        applySuggestion(items[idx]!);
-      } else {
-        void props.onApply(text());
-      }
-      return;
-    }
-
-    if (event.name === "escape") {
-      event.preventDefault();
-      props.onCancel();
-      return;
-    }
-  }, { release: true });
-
-  return (
-    <PromptShell
-      config={props.config}
-      items={suggestions()}
-      selectedIndex={selectedIndex()}
-      flow={flow}
-      focused
-      onHeightChange={props.onHeightChange}
-    >
-      <Show when={text().length === 0}>
-        <text fg={colors.textTertiary}>Revset: </text>
-      </Show>
-      <input
-        flexGrow={1}
-        value={text()}
-        focused
-        textColor={colors.textPrimary}
-        focusedTextColor={colors.textPrimary}
-        cursorColor={colors.chromeBorderFocus}
-        onInput={(value) => {
-          setText(value);
-          setSelectedIndex(null);
-        }}
-      />
-    </PromptShell>
-  );
-}
-
-function MessageOverlay(props: {
-  messages: readonly StatusMessage[];
-  loading: boolean;
-  config: ResolvedAppConfig;
-  bottomInset: number;
-  onDismiss: (id?: string) => void;
-}) {
-  const visible = () => props.messages.length > 0 || props.loading;
-
-  return (
-    <Show when={visible()}>
-      <box
-        position="absolute"
-        bottom={props.bottomInset}
-        left={0}
-        width="100%"
-        zIndex={10}
-        flexDirection="column-reverse"
-      >
-        <Show when={props.loading}>
-          <LoadingOverlay config={props.config} />
-        </Show>
-        <Show when={props.messages.length > 0}>
-          <box width="100%" flexDirection="column-reverse">
-            <For each={props.messages}>
-              {(message) => (
-                <StatusToast
-                  message={message}
-                  config={props.config}
-                  onDismiss={() => props.onDismiss(message.id)}
-                />
-              )}
-            </For>
-          </box>
-        </Show>
-      </box>
-    </Show>
-  );
-}
-
-function LoadingOverlay(props: {
-  config: ResolvedAppConfig;
-}) {
-  const colors = props.config.colorScheme.semanticColors;
-
-  return (
-    <box
-      width="100%"
-      backgroundColor={colors.chromeFillOne}
-      border
-      borderStyle="single"
-      borderColor={statusColor("info", colors)}
-      paddingX={1}
-    >
-      <text fg={statusColor("info", colors)} wrapMode="word">
-        Refreshing repository state...
-      </text>
-    </box>
-  );
-}
-
-function StatusToast(props: {
-  message: StatusMessage;
-  config: ResolvedAppConfig;
-  onDismiss: () => void;
-}) {
-  const colors = props.config.colorScheme.semanticColors;
-
-  createEffect(() => {
-    if (props.message.level !== "success") return;
-    const timer = setTimeout(
-      props.onDismiss,
-      getStatusMessageDismissDelay(props.message.createdAt),
-    );
-    onCleanup(() => clearTimeout(timer));
-  });
-
-  let textRef: any;
-
-  createEffect(() => {
-    if (textRef) {
-      textRef.content = parseAnsiToStyledText(props.message.text, props.config.terminalPalette);
-    }
-  });
-
-  return (
-    <box
-      width="100%"
-      backgroundColor={colors.chromeFillOne}
-      border
-      borderStyle="single"
-      borderColor={statusColor(props.message.level, colors)}
-      paddingX={1}
-    >
-      <text ref={textRef} fg={colors.textPrimary} wrapMode="word" />
-    </box>
-  );
-}
-function completionKindLabel(kind: CompletionItem["kind"]): string {
-  switch (kind) {
-    case "function": return "fn";
-    case "bookmark": return "bm";
-    case "tag": return "tg";
-    case "alias": return "al";
-  }
-}
-
 function markerColor(
   revision: RevisionSummary,
   colors: ResolvedAppConfig["colorScheme"]["semanticColors"],
@@ -2119,22 +1129,6 @@ function getRevisionRowState(
   }
 
   return "default";
-}
-
-function statusColor(
-  level: "info" | "success" | "warning" | "error",
-  colors: ResolvedAppConfig["colorScheme"]["semanticColors"],
-): string | undefined {
-  switch (level) {
-    case "success":
-      return colors.statusSuccess;
-    case "warning":
-      return colors.statusWarning;
-    case "error":
-      return colors.statusError;
-    default:
-      return colors.statusInfo;
-  }
 }
 
 function padRight(value: string, length: number): string {
