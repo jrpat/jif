@@ -1337,10 +1337,12 @@ export function RevisionItem(props: {
                         ) : null}
                       </box>
                       <box width="100%" flexDirection="row">
-                        <Show when={layoutSpec().sideChips.length > 0}>
-                          <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
-                          <box width={1} />
-                        </Show>
+                        <box flexDirection="row" flexShrink={0}>
+                          <Show when={layoutSpec().sideChips.length > 0}>
+                            <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
+                            <box width={1} />
+                          </Show>
+                        </box>
                         <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
                           <text
                             fg={descriptionColor()}
@@ -1467,10 +1469,12 @@ export function RevisionItem(props: {
                 showTimestamp={false}
               />
               <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
-                <Show when={layoutSpec().sideChips.length > 0}>
-                  <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
-                  <box width={1} />
-                </Show>
+                <box flexDirection="row" flexShrink={0}>
+                  <Show when={layoutSpec().sideChips.length > 0}>
+                    <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
+                    <box width={1} />
+                  </Show>
+                </box>
                 <text
                   fg={descriptionColor()}
                   wrapMode="none"

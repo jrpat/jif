@@ -230,6 +230,65 @@ async function renderExpandedRevisionWithChips() {
   return frame;
 }
 
+async function renderBookmarkChipAfterRefresh(layout: AppLayout) {
+  const initialRevisions = [
+    createRevision("src", "source revision", ["│ ○  ", "│ │  "], {
+      bookmarks: ["main"],
+    }),
+    createRevision("dst", "destination revision", ["○  ", "│  "]),
+  ] as const;
+  const refreshedRevisions = [
+    createRevision("src", "source revision", ["│ ○  ", "│ │  "], {
+      bookmarks: [],
+    }),
+    createRevision("dst", "destination revision", ["○  ", "│  "], {
+      bookmarks: ["main"],
+    }),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions: initialRevisions,
+  });
+
+  const rendered = await testRender(() => (
+    <box width={48} flexDirection="column">
+      <For each={store.state.revisions}>
+        {(revision, index) => (
+          <RevisionItem
+            state={store.state}
+            revision={revision}
+            index={index()}
+            previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
+            nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
+            config={resolveAppConfig({ commands: { layout } })}
+            focusedRowId={null}
+            selectedRowIds={new Set()}
+            expandedRowId={null}
+            commandTargetRowId={null}
+            searchQuery=""
+          />
+        )}
+      </For>
+    </box>
+  ), { width: 48, height: 8 });
+
+  await rendered.renderOnce();
+  const initialFrame = rendered.captureCharFrame();
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions: refreshedRevisions,
+  });
+  await rendered.renderOnce();
+  const refreshedFrame = rendered.captureCharFrame();
+  rendered.renderer.destroy();
+
+  return {
+    initialFrame,
+    refreshedFrame,
+  };
+}
+
 async function renderCommandDraftChips(
   layout: AppLayout,
   kind: "rebase" | "squash",
@@ -290,6 +349,7 @@ const cycledToSuperCondensed = await renderLayoutCycleAfterMount();
 const longSuperCondensed = await renderLongSuperCondensedDescription();
 const divergentFocused = await renderDivergentFocusedRevision();
 const expandedChipsInline = await renderExpandedRevisionWithChips();
+const expandedBookmarkChipRefresh = await renderBookmarkChipAfterRefresh("expanded");
 const rebaseCommandChips = await renderCommandDraftChips("expanded", "rebase");
 const rebaseCommandChipsCondensed = await renderCommandDraftChips("condensed", "rebase");
 const rebaseCommandChipsSuperCondensed = await renderCommandDraftChips("super-condensed", "rebase");
@@ -305,6 +365,7 @@ console.log(JSON.stringify({
   longSuperCondensed,
   divergentFocused,
   expandedChipsInline,
+  expandedBookmarkChipRefresh,
   rebaseCommandChips,
   rebaseCommandChipsCondensed,
   rebaseCommandChipsSuperCondensed,

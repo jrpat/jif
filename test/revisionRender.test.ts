@@ -25,6 +25,7 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
     longSuperCondensed,
     divergentFocused,
     expandedChipsInline,
+    expandedBookmarkChipRefresh,
     rebaseCommandChips,
     rebaseCommandChipsCondensed,
     rebaseCommandChipsSuperCondensed,
@@ -39,6 +40,10 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
     longSuperCondensed: string;
     divergentFocused: string;
     expandedChipsInline: string;
+    expandedBookmarkChipRefresh: {
+      initialFrame: string;
+      refreshedFrame: string;
+    };
     rebaseCommandChips: string;
     rebaseCommandChipsCondensed: string;
     rebaseCommandChipsSuperCondensed: string;
@@ -82,6 +87,21 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
   expect(expandedChipLine).toBeDefined();
   expect(expandedChipLine!.indexOf("main")).toBeLessThan(expandedChipLine!.indexOf("review"));
   expect(expandedChipLine!.indexOf("review")).toBeLessThan(expandedChipLine!.indexOf("branch"));
+
+  const initialBookmarkLine = expandedBookmarkChipRefresh.initialFrame
+    .trimEnd()
+    .split("\n")
+    .find((line) => line.includes("source revision") && line.includes("main"));
+  expect(initialBookmarkLine).toBeDefined();
+  expect(initialBookmarkLine!.indexOf("main")).toBeLessThan(initialBookmarkLine!.indexOf("source revision"));
+
+  const refreshedBookmarkLine = expandedBookmarkChipRefresh.refreshedFrame
+    .trimEnd()
+    .split("\n")
+    .find((line) => line.includes("destination revision") && line.includes("main"));
+  expect(refreshedBookmarkLine).toBeDefined();
+  expect(refreshedBookmarkLine!.indexOf("main")).toBeLessThan(refreshedBookmarkLine!.indexOf("destination revision"));
+  expect(expandedBookmarkChipRefresh.refreshedFrame).not.toContain("source revision                              main");
 
   expect(rebaseCommandChips).toContain("move");
   expect(rebaseCommandChips).toContain("onto");
