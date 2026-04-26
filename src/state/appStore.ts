@@ -5,6 +5,7 @@ import type {
   AppState,
   ChangedFile,
   CommandDraftConfig,
+  FailedCommand,
   RepositoryData,
   RevisionSummary,
   StatusLevel,
@@ -14,6 +15,7 @@ import {
   cancelOrBlurState,
   cancelCommandDraft,
   cancelCommandState,
+  clearLastFailedCommand,
   clearRevisionSelection,
   cycleLayout,
   clearStatusMessage,
@@ -44,6 +46,7 @@ import {
   openShortcutPanel,
   openFocusedRevision,
   pushEvent,
+  setLastFailedCommand,
   setCommandBarText,
   setLoading,
   setRevisionFiles,
@@ -126,6 +129,12 @@ export function createAppStore(
       },
       setCommandBarText(text: string) {
         mutate((currentState) => setCommandBarText(currentState, text));
+      },
+      setLastFailedCommand(failedCommand: FailedCommand) {
+        mutate((currentState) => setLastFailedCommand(currentState, failedCommand));
+      },
+      clearLastFailedCommand() {
+        mutate((currentState) => clearLastFailedCommand(currentState));
       },
       cancelCommand() {
         mutate((currentState) => cancelCommandState(currentState));

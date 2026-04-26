@@ -5,6 +5,7 @@ import type {
   CommandBarState,
   CommandDraftConfig,
   EventLogEntry,
+  FailedCommand,
   FocusMode,
   RepositoryData,
   RevisionSummary,
@@ -108,6 +109,7 @@ export function createInitialState(
     selectedFilePaths: [],
     commandBar: createEmptyCommandBar(),
     commandDraft: null,
+    lastFailedCommand: null,
     statusMessages: [],
     eventLog: [],
     loading: true,
@@ -393,6 +395,27 @@ export function cancelCommandDraft(state: AppState): AppState {
     commandDraft: null,
     selectedRowIds: [],
     statusMessages: state.commandDraft ? [] : state.statusMessages,
+  };
+}
+
+export function setLastFailedCommand(
+  state: AppState,
+  failedCommand: FailedCommand,
+): AppState {
+  return {
+    ...state,
+    lastFailedCommand: failedCommand,
+  };
+}
+
+export function clearLastFailedCommand(state: AppState): AppState {
+  if (state.lastFailedCommand === null) {
+    return state;
+  }
+
+  return {
+    ...state,
+    lastFailedCommand: null,
   };
 }
 

@@ -48,6 +48,7 @@ export const defaultKeymap: Keymap = {
     h: "collapse",
     left: "collapse",
     ":": "command-bar",
+    "!": "force-last-command",
     "?": "shortcut-panel",
     q: "quit",
     enter: "confirm",

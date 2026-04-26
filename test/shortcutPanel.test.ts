@@ -178,6 +178,7 @@ test("getShortcutPanelCommands includes immediate revision actions in revision m
   const ids = commands.map((command) => command.id);
 
   expect(ids).toContain("absorb");
+  expect(ids).toContain("force-last-command");
   expect(ids).toContain("move-parent");
   expect(ids).toContain("new-revision");
   expect(ids).toContain("edit-revision");
@@ -194,6 +195,7 @@ test("getShortcutPanelCommands narrows rebase draft shortcuts to draft-relevant 
   expect(ids).toContain("move-up");
   expect(ids).toContain("confirm");
   expect(ids).toContain("cancel");
+  expect(ids).toContain("force-last-command");
   expect(ids).toContain("rebase-descendants");
   expect(ids).toContain("shortcut-panel");
   expect(ids).not.toContain("quit");
@@ -212,6 +214,7 @@ test("getShortcutPanelCommands narrows file mode shortcuts to file-relevant acti
   expect(ids).toContain("restore");
   expect(ids).toContain("toggle-file-selection");
   expect(ids).toContain("collapse");
+  expect(ids).toContain("force-last-command");
   expect(ids).toContain("shortcut-panel");
   expect(ids).not.toContain("rebase");
   expect(ids).not.toContain("squash");

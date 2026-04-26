@@ -41,3 +41,21 @@ test("AppStore exposes shortcut panel actions", () => {
 
   store.dispose();
 });
+
+test("AppStore exposes last failed command actions", () => {
+  const store = createAppStore("/tmp/repo");
+
+  store.actions.setLastFailedCommand({
+    commandText: "bookmark set main -r main-",
+    commandArgs: ["bookmark", "set", "main", "-r", "main-"],
+    interactive: false,
+    errorText: "Error: Refusing to move bookmark backwards or sideways: main",
+    stderr: "Error: Refusing to move bookmark backwards or sideways: main\nHint: Use --allow-backwards to allow it.",
+  });
+  expect(store.state.lastFailedCommand?.commandText).toBe("bookmark set main -r main-");
+
+  store.actions.clearLastFailedCommand();
+  expect(store.state.lastFailedCommand).toBeNull();
+
+  store.dispose();
+});

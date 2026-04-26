@@ -127,7 +127,8 @@ export function getShortcutPanelCommands(
       NAVIGATION_COMMAND_IDS.has(command.id) ||
       command.group === "mode" ||
       command.group === "cancel" ||
-      command.id === "shortcut-panel"
+      command.id === "shortcut-panel" ||
+      command.id === "force-last-command"
     );
   }
 
@@ -136,7 +137,8 @@ export function getShortcutPanelCommands(
       NAVIGATION_COMMAND_IDS.has(command.id) ||
       command.group === "mode" ||
       command.group === "cancel" ||
-      command.id === "shortcut-panel"
+      command.id === "shortcut-panel" ||
+      command.id === "force-last-command"
     );
   }
 

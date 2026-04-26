@@ -1,3 +1,7 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 export class CommandExecutionError extends Error {
   readonly command: readonly string[];
   readonly cwd: string;
@@ -70,9 +74,10 @@ export async function runInteractiveCommand(
   cwd: string,
   command: readonly string[],
 ): Promise<void> {
+  const capture = await createInteractiveTranscriptCapture();
   const stopObserve = observeTTYChanges();
   const proc = Bun.spawn({
-    cmd: [...command],
+    cmd: capture ? [capture.scriptPath, "-q", capture.outputPath, ...command] : [...command],
     cwd,
     stdin: "inherit",
     stdout: "inherit",
@@ -81,6 +86,10 @@ export async function runInteractiveCommand(
   });
   const exitCode = await proc.exited;
   const rawModeChanged = stopObserve?.() ?? false;
+  const transcript = capture ? await readInteractiveTranscript(capture.outputPath) : "";
+  if (capture) {
+    await rm(capture.tempDir, { recursive: true, force: true }).catch(() => {});
+  }
 
   if (exitCode !== 0) {
     if (!rawModeChanged) {
@@ -91,13 +100,41 @@ export async function runInteractiveCommand(
       command,
       cwd,
       exitCode,
-      stderr: "",
+      stderr: transcript,
     });
   }
 
   if (!rawModeChanged) {
     process.stderr.write("\nPress any key to continue... ");
     await waitForKeypress();
+  }
+}
+
+async function createInteractiveTranscriptCapture(): Promise<{
+  scriptPath: string;
+  tempDir: string;
+  outputPath: string;
+} | null> {
+  const scriptPath = typeof Bun.which === "function" ? Bun.which("script") : null;
+  if (!scriptPath) {
+    return null;
+  }
+
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-script-"));
+  return {
+    scriptPath,
+    tempDir,
+    outputPath: join(tempDir, "transcript"),
+  };
+}
+
+async function readInteractiveTranscript(outputPath: string): Promise<string> {
+  try {
+    return (await readFile(outputPath, "utf8"))
+      .replace(/\r/g, "\n")
+      .trim();
+  } catch {
+    return "";
   }
 }
 

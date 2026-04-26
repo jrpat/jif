@@ -68,6 +68,14 @@ export type CommandBarState = Readonly<{
   manual: boolean;
 }>;
 
+export type FailedCommand = Readonly<{
+  commandText: string;
+  commandArgs: readonly string[];
+  interactive: boolean;
+  errorText: string;
+  stderr: string;
+}>;
+
 export type AppState = Readonly<{
   repoPath: string;
   revisions: readonly RevisionSummary[];
@@ -80,6 +88,7 @@ export type AppState = Readonly<{
   selectedFilePaths: readonly string[];
   commandBar: CommandBarState;
   commandDraft: CommandDraft | null;
+  lastFailedCommand: FailedCommand | null;
   statusMessages: readonly StatusMessage[];
   eventLog: readonly EventLogEntry[];
   loading: boolean;

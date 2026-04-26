@@ -129,10 +129,18 @@ export class JjClient {
       return "";
     }
 
+    return await this.executeCommandArgs(args);
+  }
+
+  async executeCommandArgs(args: readonly string[]): Promise<string> {
+    if (args.length === 0) {
+      return "";
+    }
+
     const result = await this.runJj(["--color", "always", ...args], { color: true });
     const stderr = result.stderr.trim();
     const stdout = result.stdout.trim();
-    return stderr || stdout || `Executed: jj ${commandText.trim()}`;
+    return stderr || stdout || `Executed: jj ${quoteCommand(args)}`;
   }
 
   async verifyRepository(): Promise<void> {
@@ -195,14 +203,7 @@ export class JjClient {
   }
 
   private async runJj(args: readonly string[], options?: { color?: boolean }) {
-    try {
-      return await runCommand(this.repoPath, ["jj", ...args], options);
-    } catch (error) {
-      if (error instanceof CommandExecutionError) {
-        throw new Error(error.message);
-      }
-      throw error;
-    }
+    return await runCommand(this.repoPath, ["jj", ...args], options);
   }
 }
 
@@ -423,4 +424,16 @@ export function tokenizeCommandText(commandText: string): string[] {
   }
 
   return tokens;
+}
+
+function quoteCommand(command: readonly string[]): string {
+  return command
+    .map((part) => {
+      if (/^[A-Za-z0-9_./:-]+$/.test(part)) {
+        return part;
+      }
+
+      return JSON.stringify(part);
+    })
+    .join(" ");
 }

@@ -115,9 +115,11 @@ test("short flags and layout cycling use - and _ respectively", () => {
 test("shortcut panel toggle uses ? in normal mode", () => {
   const state = createState();
   expect(resolveForState("?", state)).toBe("shortcut-panel");
+  expect(resolveForState("!", state)).toBe("force-last-command");
 
   const revsetState: AppState = { ...state, focusMode: "revset" };
   expect(resolveForState("?", revsetState)).toBeNull();
+  expect(resolveForState("!", revsetState)).toBeNull();
 });
 
 test("new and edit resolve in normal mode only", () => {

@@ -46,6 +46,8 @@ import {
   nextSearchMatch,
   prevSearchMatch,
   getSearchMatchIndices,
+  clearLastFailedCommand,
+  setLastFailedCommand,
 } from "../src/state/store.ts";
 
 const FIRST_ROW_ID = createRowId("11111111", "aaaaaaaa");
@@ -383,6 +385,37 @@ test("pushEvent keeps a maximum of 100 entries in the event log", () => {
   expect(state.eventLog.length).toBe(100);
   expect(state.eventLog[0]?.text).toBe("event 5");
   expect(state.eventLog[99]?.text).toBe("event 104");
+});
+
+test("setLastFailedCommand stores retry metadata independently of status messages", () => {
+  let state = createState();
+  state = pushEvent(state, "command failed", "error");
+
+  state = setLastFailedCommand(state, {
+    commandText: "bookmark set main -r main-",
+    commandArgs: ["bookmark", "set", "main", "-r", "main-"],
+    interactive: false,
+    errorText: "Error: Refusing to move bookmark backwards or sideways: main",
+    stderr: "Error: Refusing to move bookmark backwards or sideways: main\nHint: Use --allow-backwards to allow it.",
+  });
+
+  expect(state.lastFailedCommand?.commandText).toBe("bookmark set main -r main-");
+  expect(state.statusMessages).toHaveLength(1);
+});
+
+test("clearLastFailedCommand resets stored retry metadata", () => {
+  let state = createState();
+
+  state = setLastFailedCommand(state, {
+    commandText: "describe -r @- -m changed",
+    commandArgs: ["describe", "-r", "@-", "-m", "changed"],
+    interactive: false,
+    errorText: "Error: Commit @- is immutable",
+    stderr: "Error: Commit @- is immutable\nHint: Use --ignore-immutable to allow it.",
+  });
+  state = clearLastFailedCommand(state);
+
+  expect(state.lastFailedCommand).toBeNull();
 });
 
 test("selected revision ids are populated when starting a command draft", () => {

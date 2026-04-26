@@ -27,10 +27,11 @@ import {
   type CommandSegment,
 } from "../state/store.ts";
 import { logShortcutDebug } from "../debug.ts";
-import type { JjClient } from "../jj/client.ts";
-import { runInteractiveCommand } from "../jj/process.ts";
+import { buildForceRetryPlan } from "../jj/forceRetry.ts";
+import { tokenizeCommandText, type JjClient } from "../jj/client.ts";
+import { quoteCommand, runInteractiveCommand } from "../jj/process.ts";
 import { buildCompletionItems, extractLastToken, matchCompletions, type CompletionItem } from "../revset/completions.ts";
-import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/types.ts";
+import type { ChangedFile, FailedCommand, RevisionSummary, StatusMessage } from "../domain/types.ts";
 import { AutocompleteList, type AutocompleteListItem } from "./AutocompleteList.tsx";
 import {
   getAutocompleteAction,
@@ -206,6 +207,30 @@ export function JifView(props: {
     },
     focusCommandBar() {
       store.actions.focusCommandBar();
+    },
+    forceLastCommand() {
+      const failedCommand = store.snapshot().lastFailedCommand;
+      if (!failedCommand) {
+        store.actions.pushEvent("No retryable failed command.", "error");
+        return;
+      }
+
+      const retryPlan = buildForceRetryPlan({
+        commandArgs: failedCommand.commandArgs,
+        stderr: failedCommand.stderr || failedCommand.errorText,
+      });
+      if (!retryPlan) {
+        store.actions.pushEvent("Last failed command cannot be forced.", "error");
+        return;
+      }
+
+      const retryCommandText = quoteCommand(retryPlan.commandArgs);
+      if (failedCommand.interactive) {
+        void runInteractiveJjCommand(retryCommandText);
+        return;
+      }
+
+      void runJjCommand(retryCommandText);
     },
     startSquash() {
       const revision = getFocusedRevision(store.snapshot());
@@ -643,7 +668,8 @@ export function JifView(props: {
   ) {
     const state = store.snapshot();
     const commandTextValue = (commandOverride ?? getDisplayedCommandText(state)).trim();
-    if (!commandCanExecute(state) || commandTextValue.length === 0) {
+    const command = createTrackedCommand(commandTextValue, false);
+    if (!commandCanExecute(state) || !command) {
       return;
     }
 
@@ -657,12 +683,13 @@ export function JifView(props: {
     store.actions.pushStatusMessage(toastId, commandTextValue, "info");
 
     try {
-      const resultMessage = await client.executeCommand(commandTextValue);
+      const resultMessage = await client.executeCommandArgs(command.commandArgs);
+      store.actions.clearLastFailedCommand();
       store.actions.updateStatusMessage(toastId, resultMessage, "success");
       store.actions.logEvent(resultMessage, "success");
       await refreshRepository();
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = recordFailedCommand(command, error);
       store.actions.updateStatusMessage(toastId, message, "error");
       store.actions.logEvent(message, "error");
     }
@@ -672,9 +699,15 @@ export function JifView(props: {
     commandText: string,
     options?: { focusWorkingCopyAfterRefresh?: boolean },
   ) {
+    const command = createTrackedCommand(commandText, false);
+    if (!command) {
+      return;
+    }
+
     store.actions.setLoading(true);
     try {
-      const resultMessage = await client.executeCommand(commandText);
+      const resultMessage = await client.executeCommandArgs(command.commandArgs);
+      store.actions.clearLastFailedCommand();
       store.actions.cancelCommand();
       store.actions.pushEvent(resultMessage, "success");
       await refreshRepository();
@@ -682,26 +715,60 @@ export function JifView(props: {
         store.actions.focusWorkingCopy();
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = recordFailedCommand(command, error);
       store.actions.pushEvent(message, "error");
       store.actions.setLoading(false);
     }
   }
 
   async function runInteractiveJjCommand(commandText: string) {
+    const command = createTrackedCommand(commandText, true);
+    if (!command) {
+      return;
+    }
+
     const root = workspaceRoot();
     if (!root) return;
     renderer.suspend();
     try {
-      await runInteractiveCommand(root, ["jj", ...commandText.split(" ")]);
+      await runInteractiveCommand(root, ["jj", ...command.commandArgs]);
+      store.actions.clearLastFailedCommand();
       store.actions.cancelCommand();
       await refreshRepository();
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = recordFailedCommand(command, error);
       store.actions.pushEvent(message, "error");
     } finally {
       renderer.resume();
     }
+  }
+
+  function createTrackedCommand(commandText: string, interactive: boolean): FailedCommand | null {
+    const normalizedText = commandText.trim();
+    const commandArgs = tokenizeCommandText(normalizedText);
+    if (normalizedText.length === 0 || commandArgs.length === 0) {
+      return null;
+    }
+
+    return {
+      commandText: normalizedText,
+      commandArgs,
+      interactive,
+      errorText: "",
+      stderr: "",
+    };
+  }
+
+  function recordFailedCommand(command: FailedCommand, error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    store.actions.setLastFailedCommand({
+      ...command,
+      errorText: message,
+      stderr: error instanceof Error && "stderr" in error && typeof error.stderr === "string"
+        ? error.stderr.trim()
+        : message,
+    });
+    return message;
   }
 
   function squashNeedsEditor(state: ReturnType<typeof store.snapshot>): boolean {

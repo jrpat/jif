@@ -10,6 +10,7 @@ export type CommandController = Readonly<{
   cancelOrBlur: () => void;
   confirm: () => void;
   focusCommandBar: () => void;
+  forceLastCommand: () => void;
   startRebase: () => void;
   startSquash: () => void;
   startNewRevision: () => void;
@@ -96,6 +97,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     canonicalKeys: [":"],
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.focusCommandBar(),
+    group: "global",
+  },
+  {
+    id: "force-last-command",
+    title: "Force",
+    description: "Retry the latest failed command with a force flag when supported",
+    canonicalKeys: ["!"],
+    run: (controller) => controller.forceLastCommand(),
     group: "global",
   },
   {

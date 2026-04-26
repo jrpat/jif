@@ -72,6 +72,7 @@ function createController(calls: string[]): CommandController {
     focusWorkingCopy: () => calls.push("focusWorkingCopy"),
     openRevsetInput: () => calls.push("openRevsetInput"),
     toggleShortcutPanel: () => calls.push("toggleShortcutPanel"),
+    forceLastCommand: () => calls.push("forceLastCommand"),
     commit: () => calls.push("commit"),
     describe: () => calls.push("describe"),
     showDiff: () => calls.push("showDiff"),
@@ -97,6 +98,21 @@ test("dispatchGlobalKey routes ? to the shortcut panel toggle", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["toggleShortcutPanel"]);
+});
+
+test("dispatchGlobalKey routes ! to forceLastCommand", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "!",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["forceLastCommand"]);
 });
 
 test("dispatchGlobalKey routes escape to cancelOrBlur", () => {
