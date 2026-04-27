@@ -1052,14 +1052,15 @@ function RevisionSideChips(props: {
     <box flexDirection="row" flexShrink={0} gap={1}>
       <For each={props.chips}>
         {(chip) => {
-          const fg = chip.kind === "conflict" ? props.colors.conflictTagText
-            : chip.kind === "bookmark" ? props.colors.workspaceTagText
-            : props.colors.bookmarkTagText;
-          const bg = chip.kind === "conflict" ? props.colors.conflictTagFill
-            : chip.kind === "bookmark" ? props.colors.workspaceTagFill
-            : props.colors.bookmarkTagFill;
           return (
-            <text fg={fg} bg={bg}>
+            <text
+              fg={chip.kind === "conflict" ? props.colors.conflictTagText
+                : chip.kind === "bookmark" ? props.colors.bookmarkTagText
+                : props.colors.workspaceTagText}
+              bg={chip.kind === "conflict" ? props.colors.conflictTagFill
+                : chip.kind === "bookmark" ? props.colors.bookmarkTagFill
+                : props.colors.workspaceTagFill}
+            >
               {` ${chip.text} `}
             </text>
           );

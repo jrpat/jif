@@ -111,10 +111,10 @@ const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   graphBookmark:          { source: "yellow",      opacity: 1.0  },
 
   // Tags
-  bookmarkTagFill:        { source: "yellow",      opacity: 0.15 },
-  bookmarkTagText:        { source: "yellow",      opacity: 1.0  },
-  workspaceTagFill:       { source: "cyan",        opacity: 0.15 },
-  workspaceTagText:       { source: "cyan",        opacity: 1.0  },
+  bookmarkTagFill:        { source: "cyan",        opacity: 0.15 },
+  bookmarkTagText:        { source: "cyan",        opacity: 1.0  },
+  workspaceTagFill:       { source: "yellow",      opacity: 0.15 },
+  workspaceTagText:       { source: "yellow",      opacity: 1.0  },
   conflictTagFill:        { source: "red",         opacity: 0.15 },
   conflictTagText:        { source: "red",         opacity: 1.0  },
 
