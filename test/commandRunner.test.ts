@@ -92,8 +92,68 @@ test("command runner records history and updates a status toast on success", asy
   expect(refreshCount).toBe(1);
   expect(entries).toEqual([
     "cancelCommand",
-    "pushStatusMessage:toast-1:info:describe -r abc",
+    "pushStatusMessage:toast-1:info:⠋ describe -r abc",
     "execute:describe -r abc",
+    "clearLastFailedCommand",
+    "updateStatusMessage:toast-1:success:ok",
+    "logEvent:success:ok",
+    "refreshRepository",
+  ]);
+});
+
+test("command runner animates the status toast while a command is running", async () => {
+  const { entries, actions } = createActionLog();
+  let tickSpinner = () => {};
+  let clearCount = 0;
+  let resolveCommand = () => {};
+
+  const runner = createCommandRunner({
+    actions,
+    executeCommandArgs: () =>
+      new Promise<string>((resolve) => {
+        resolveCommand = () => resolve("ok");
+      }),
+    refreshRepository: async () => {
+      entries.push("refreshRepository");
+      return true;
+    },
+    createToastId: () => "toast-1",
+    spinnerScheduler: {
+      setInterval(callback) {
+        tickSpinner = callback;
+        return 1;
+      },
+      clearInterval() {
+        clearCount += 1;
+      },
+    },
+  });
+
+  const runPromise = runner.run({
+    commandText: "describe -r abc",
+    canExecute: true,
+    successFeedback: "status-toast",
+    failureFeedback: "status-toast",
+  });
+
+  expect(entries).toEqual([
+    "pushStatusMessage:toast-1:info:⠋ describe -r abc",
+  ]);
+
+  tickSpinner();
+
+  expect(entries).toEqual([
+    "pushStatusMessage:toast-1:info:⠋ describe -r abc",
+    "updateStatusMessage:toast-1:info:⠙ describe -r abc",
+  ]);
+
+  resolveCommand();
+  await runPromise;
+
+  expect(clearCount).toBe(1);
+  expect(entries).toEqual([
+    "pushStatusMessage:toast-1:info:⠋ describe -r abc",
+    "updateStatusMessage:toast-1:info:⠙ describe -r abc",
     "clearLastFailedCommand",
     "updateStatusMessage:toast-1:success:ok",
     "logEvent:success:ok",

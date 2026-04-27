@@ -3,6 +3,9 @@ import { tokenizeCommandText } from "../jj/client.ts";
 
 export type CommandFeedbackMode = "status-toast" | "event" | "none";
 
+const COMMAND_SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const COMMAND_SPINNER_INTERVAL_MS = 80;
+
 export type CommandRunnerActions = Readonly<{
   clearLastFailedCommand(): void;
   cancelCommand(): void;
@@ -16,6 +19,20 @@ export type CommandRunnerActions = Readonly<{
 }>;
 
 type RecordHistory = (commandText: string) => void | Promise<unknown>;
+
+type SpinnerScheduler = Readonly<{
+  setInterval(callback: () => void, delayMs: number): ReturnType<typeof globalThis.setInterval>;
+  clearInterval(handle: ReturnType<typeof globalThis.setInterval>): void;
+}>;
+
+const defaultSpinnerScheduler: SpinnerScheduler = {
+  setInterval(callback, delayMs) {
+    return globalThis.setInterval(callback, delayMs);
+  },
+  clearInterval(handle) {
+    globalThis.clearInterval(handle);
+  },
+};
 
 export type CommandRunOptions = Readonly<{
   commandText: string;
@@ -55,6 +72,7 @@ export function createCommandRunner(args: Readonly<{
   executeInteractiveCommandArgs?(commandArgs: readonly string[]): Promise<void>;
   refreshRepository(): Promise<boolean>;
   createToastId?(): string;
+  spinnerScheduler?: SpinnerScheduler;
 }>) {
   return {
     async run(options: CommandRunOptions): Promise<boolean> {
@@ -76,9 +94,12 @@ export function createCommandRunner(args: Readonly<{
           ? (args.createToastId?.() ?? `cmd-${Date.now()}`)
           : null;
 
-      if (toastId !== null) {
-        args.actions.pushStatusMessage(toastId, command.commandText, "info");
-      }
+      const stopToastSpinner = startStatusToastSpinner(
+        args.actions,
+        toastId,
+        command.commandText,
+        args.spinnerScheduler ?? defaultSpinnerScheduler,
+      );
 
       if (options.showLoading) {
         args.actions.setLoading(true);
@@ -88,6 +109,7 @@ export function createCommandRunner(args: Readonly<{
         const resultMessage = command.interactive
           ? await executeInteractive(args, command.commandArgs)
           : await args.executeCommandArgs(command.commandArgs);
+        stopToastSpinner();
         args.actions.clearLastFailedCommand();
         if (options.cancelOnSuccess) {
           args.actions.cancelCommand();
@@ -99,6 +121,7 @@ export function createCommandRunner(args: Readonly<{
         }
         return true;
       } catch (error) {
+        stopToastSpinner();
         const message = recordFailedCommand(args.actions, command, error);
         publishFailure(args.actions, toastId, message, options.failureFeedback);
         if (options.showLoading) {
@@ -108,6 +131,32 @@ export function createCommandRunner(args: Readonly<{
       }
     },
   };
+}
+
+function startStatusToastSpinner(
+  actions: CommandRunnerActions,
+  toastId: string | null,
+  commandText: string,
+  spinnerScheduler: SpinnerScheduler,
+): () => void {
+  if (toastId === null) {
+    return () => {};
+  }
+
+  let frameIndex = 0;
+  actions.pushStatusMessage(toastId, formatRunningCommandText(commandText, frameIndex), "info");
+  const handle = spinnerScheduler.setInterval(() => {
+    frameIndex = (frameIndex + 1) % COMMAND_SPINNER_FRAMES.length;
+    actions.updateStatusMessage(toastId, formatRunningCommandText(commandText, frameIndex), "info");
+  }, COMMAND_SPINNER_INTERVAL_MS);
+
+  return () => {
+    spinnerScheduler.clearInterval(handle);
+  };
+}
+
+function formatRunningCommandText(commandText: string, frameIndex: number): string {
+  return `${COMMAND_SPINNER_FRAMES[frameIndex]} ${commandText}`;
 }
 
 async function executeInteractive(
