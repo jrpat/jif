@@ -26,7 +26,7 @@ export function getChangedFileRowState(
 ): Readonly<{
   focused: boolean;
   selected: boolean;
-  marker: "*" | "⏵" | " ";
+  marker: "⏵" | " ";
 }> {
   const focused =
     state.focusMode === "files" &&
@@ -37,6 +37,6 @@ export function getChangedFileRowState(
   return {
     focused,
     selected,
-    marker: selected ? "*" : focused ? "⏵" : " ",
+    marker: focused ? "⏵" : " ",
   };
 }

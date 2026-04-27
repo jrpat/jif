@@ -15,6 +15,10 @@ export type RevisionChangeIdColors = Readonly<{
   suffix: string | undefined;
 }>;
 
+export function getRevisionSelectionMarker(rowState: RevisionRowState): "✓ " | "" {
+  return rowState === "selected" ? "✓ " : "";
+}
+
 export function getRevisionCommandChipBgColor(options: Readonly<{
   rowState: RevisionRowState;
   colors: Readonly<{

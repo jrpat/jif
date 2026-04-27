@@ -562,12 +562,19 @@ test("squash command text updates when target is selected", () => {
 test("toggleRevisionSelection works without a command draft", () => {
   let state = createState();
   expect(state.selectedRowIds).toEqual([]);
+  expect(state.focusedRevisionIndex).toBe(0);
 
   state = toggleRevisionSelection(state);
   expect(state.selectedRowIds).toEqual([FIRST_ROW_ID]);
+  expect(state.focusedRevisionIndex).toBe(1);
 
   state = toggleRevisionSelection(state);
-  expect(state.selectedRowIds).toEqual([]);
+  expect(state.selectedRowIds).toEqual([FIRST_ROW_ID, SECOND_ROW_ID]);
+  expect(state.focusedRevisionIndex).toBe(1);
+
+  state = toggleRevisionSelection(state);
+  expect(state.selectedRowIds).toEqual([FIRST_ROW_ID]);
+  expect(state.focusedRevisionIndex).toBe(1);
 });
 
 test("toggleFileSelection adds and removes file paths", () => {
@@ -578,16 +585,19 @@ test("toggleFileSelection adds and removes file paths", () => {
     { status: "A", path: "src/b.ts" },
   ]);
   expect(state.selectedFilePaths).toEqual([]);
+  expect(state.focusedFileIndex).toBe(0);
 
   state = toggleFileSelection(state);
   expect(state.selectedFilePaths).toEqual(["src/a.ts"]);
+  expect(state.focusedFileIndex).toBe(1);
 
-  state = moveFocus(state, 1);
   state = toggleFileSelection(state);
   expect(state.selectedFilePaths).toEqual(["src/a.ts", "src/b.ts"]);
+  expect(state.focusedFileIndex).toBe(1);
 
   state = toggleFileSelection(state);
   expect(state.selectedFilePaths).toEqual(["src/a.ts"]);
+  expect(state.focusedFileIndex).toBe(1);
 });
 
 test("closeFocusedRevision clears file selections", () => {

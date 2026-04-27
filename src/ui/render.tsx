@@ -45,7 +45,9 @@ import {
   getRevisionCommandChipBgColor,
   getRevisionChangeIdColors,
   getRevisionDescriptionColor,
+  getRevisionSelectionMarker,
 } from "./revisionHeader.ts";
+import { getChangedFileRowBackgroundColor, getRevisionRowBackgroundColor } from "./rowBackgrounds.ts";
 import { scrollToKeepChildVisible } from "./scroll.ts";
 import {
   buildShortcutEntries,
@@ -611,13 +613,12 @@ export function RevisionItem(props: {
     })
   );
   const rowBackgroundColor = createMemo(() =>
-    isSelected()
-      ? colors().rowSelectedFill
-      : isFocused()
-        ? colors().rowFocusedFill
-        : isAffected()
-          ? colors().rowAffectedFill
-          : undefined
+    getRevisionRowBackgroundColor({
+      focused: isFocused(),
+      selected: isSelected(),
+      affected: isAffected(),
+      colors: colors(),
+    })
   );
   const commandChipBackgroundColor = createMemo(() =>
     getRevisionCommandChipBgColor({
@@ -640,7 +641,7 @@ export function RevisionItem(props: {
   const rowWidth = createMemo(() => Math.max(renderer.width, 1));
   const sideChipWidth = createMemo(() => measureRevisionSideChipsWidth(layoutSpec().sideChips));
   const changeIdWidth = createMemo(() =>
-    measureRevisionChangeIdWidth(props.revision, showExpandedTimestamp())
+    measureRevisionChangeIdWidth(props.revision, effectiveRowState(), showExpandedTimestamp())
   );
   const borderedPanelWidth = createMemo(() => Math.max(rowWidth() - inlineGraphWidth() - 1, 0));
   const borderedContentWidth = createMemo(() => Math.max(borderedPanelWidth() - 3, 0));
@@ -661,7 +662,7 @@ export function RevisionItem(props: {
       + 1
       + (layoutSpec().sideChips.length > 0 ? sideChipWidth() + 1 : 0);
     const overlayCommandChipWidth = layoutSpec().commandChip?.placement === "overlay"
-      ? measureCommandChipWidth(layoutSpec().commandChip.text)
+      ? measureCommandChipWidth(layoutSpec().commandChip!.text)
       : 0;
 
     return Math.max(borderedContentWidth() - leadingWidth - overlayCommandChipWidth, 0);
@@ -675,10 +676,13 @@ export function RevisionItem(props: {
   );
   const superDescriptionContainerWidth = createMemo(() => {
     const trailingCommandChipWidth = layoutSpec().commandChip
-      ? measureCommandChipWidth(layoutSpec().commandChip.text) + 1
+      ? measureCommandChipWidth(layoutSpec().commandChip!.text) + 1
       : 0;
 
-    return Math.max(superPanelWidth() - measureRevisionChangeIdWidth(props.revision, false) - 1 - trailingCommandChipWidth, 0);
+    return Math.max(
+      superPanelWidth() - measureRevisionChangeIdWidth(props.revision, effectiveRowState(), false) - 1 - trailingCommandChipWidth,
+      0,
+    );
   });
   const superDescriptionWidth = createMemo(() =>
     Math.max(
@@ -1000,9 +1004,15 @@ function RevisionChangeId(props: {
       colors: props.colors,
     })
   );
+  const selectionMarker = createMemo(() => getRevisionSelectionMarker(props.rowState));
 
   return (
     <box flexDirection="row" flexShrink={0}>
+      <Show when={selectionMarker().length > 0}>
+        <text fg={changeIdColors().prefix} attributes={TextAttributes.BOLD}>
+          {selectionMarker()}
+        </text>
+      </Show>
       <For each={segments()}>
         {(segment) => (
           <text
@@ -1093,24 +1103,23 @@ function ChangedFileRowContent(props: {
       width="100%"
       flexDirection="row"
       gap={1}
-      backgroundColor={
-        rowState().selected
-          ? colors.rowSelectedFill
-          : rowState().focused
-            ? colors.rowFocusedFill
-            : undefined
-      }
+      backgroundColor={getChangedFileRowBackgroundColor({
+        focused: rowState().focused,
+        selected: rowState().selected,
+        colors,
+      })}
     >
       <text
         fg={
-          rowState().selected
-            ? colors.rowSelectedAccent
-            : rowState().focused
-              ? colors.fileFocusMarker
-              : colors.textTertiary
+          rowState().focused
+            ? colors.fileFocusMarker
+            : colors.textTertiary
         }
       >
         {rowState().marker}
+      </text>
+      <text fg={rowState().selected ? colors.rowSelectedAccent : colors.textTertiary}>
+        {rowState().selected ? "✓" : " "}
       </text>
       <text fg={colors.fileStatusAccent}>{row.file.status}</text>
       <text fg={rowState().selected || rowState().focused ? colors.textPrimary : colors.textSecondary} truncate>
@@ -1212,9 +1221,10 @@ function measureCommandChipWidth(text: string): number {
 
 function measureRevisionChangeIdWidth(
   revision: Pick<RevisionSummary, "revisionId" | "changeIdPrefixLength" | "localTimestamp">,
+  rowState: RevisionRowState,
   showTimestamp: boolean,
 ): number {
-  return buildRevisionChangeIdSegments(revision, { showTimestamp })
+  return getRevisionSelectionMarker(rowState).length + buildRevisionChangeIdSegments(revision, { showTimestamp })
     .reduce((total, segment) => total + segment.text.length, 0);
 }
 

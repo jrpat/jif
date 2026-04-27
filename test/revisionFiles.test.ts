@@ -41,7 +41,7 @@ test("getChangedFileRowState marks the focused file with a triangular marker", (
   });
 });
 
-test("getChangedFileRowState prefers the selection marker over the focus marker", () => {
+test("getChangedFileRowState keeps the focus marker when a selected file is focused", () => {
   expect(
     getChangedFileRowState(
       {
@@ -57,6 +57,6 @@ test("getChangedFileRowState prefers the selection marker over the focus marker"
   ).toEqual({
     focused: true,
     selected: true,
-    marker: "*",
+    marker: "⏵",
   });
 });

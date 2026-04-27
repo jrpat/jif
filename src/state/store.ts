@@ -575,6 +575,9 @@ export function toggleFileSelection(state: AppState): AppState {
   const isSelected = state.selectedFilePaths.includes(file.path);
   return {
     ...state,
+    focusedFileIndex: isSelected
+      ? state.focusedFileIndex
+      : clampIndex(state.focusedFileIndex + 1, revision.files.length),
     selectedFilePaths: isSelected
       ? state.selectedFilePaths.filter((p) => p !== file.path)
       : [...state.selectedFilePaths, file.path],
@@ -640,6 +643,9 @@ export function toggleRevisionSelection(state: AppState): AppState {
 
   return {
     ...state,
+    focusedRevisionIndex: isSelected
+      ? state.focusedRevisionIndex
+      : clampIndex(state.focusedRevisionIndex + 1, state.revisions.length),
     selectedRowIds: isSelected
       ? ids.filter((id) => id !== focusedRevision.rowId)
       : [...ids, focusedRevision.rowId],

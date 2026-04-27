@@ -4,6 +4,7 @@ import {
   buildRevisionChangeIdSegments,
   getRevisionCommandChipBgColor,
   getRevisionChangeIdColors,
+  getRevisionSelectionMarker,
   getRevisionDescriptionColor,
   hasUserDescription,
 } from "../src/ui/revisionHeader.ts";
@@ -165,6 +166,11 @@ test("getRevisionChangeIdColors keeps default suffix dimmed", () => {
     prefix: "prefix",
     suffix: "suffix",
   });
+});
+
+test("getRevisionSelectionMarker shows a light check for selected rows", () => {
+  expect(getRevisionSelectionMarker("selected")).toBe("✓ ");
+  expect(getRevisionSelectionMarker("focused")).toBe("");
 });
 
 test("getRevisionCommandChipBgColor matches selected row accent", () => {
