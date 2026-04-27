@@ -4,7 +4,7 @@
 Build a grounded mental model of how jif currently works, identify subsystem boundaries and architectural rough edges, and produce a refactor plan aimed at orthogonal, reusable, understandable abstractions.
 
 ## Current Phase
-Complete through Phase 13
+Complete through Phase 15
 
 ## Phases
 
@@ -86,6 +86,19 @@ Complete through Phase 13
 - [x] Rerun focused config and prompt validation after the revert
 - **Status:** complete
 
+### Phase 14: Prompt Border Junction Tweak
+- [x] Add focused prompt rendering coverage for the command-bar top border when autocomplete is visible
+- [x] Switch the command-bar top corners to T-junctions only while suggestions are present
+- [x] Rerun focused prompt and autocomplete validation after the tweak
+- **Status:** complete
+
+### Phase 15: Revert Autocomplete Chrome Experiments
+- [x] Remove the temporary command-bar T-junction treatment and delete its focused render test
+- [x] Remove the autocomplete frame and replace it with one non-scrolling blank row in the parent container
+- [x] Move row padding into the suggestion rows so selection highlight covers the visible blank columns
+- [x] Rerun focused autocomplete validation after the revert
+- **Status:** complete
+
 ## Key Questions
 1. What is the controlling runtime model of the app: command-driven state machine, view-driven renderer, or a hybrid?
 2. Which responsibilities are currently spread across multiple modules that should instead be centralized?
@@ -107,6 +120,8 @@ Complete through Phase 13
 | Keep autocomplete popup chrome local to `AutocompleteList` plus prompt height accounting | The visual imbalance came from a missing frame rather than prompt semantics, so the safest change was a bordered parent container around the existing scrollbox. |
 | Add a fifth text tier instead of reusing a chrome token for the command-bar placeholder | The placeholder was already on `textQuaternary`, so the only semantically coherent way to dim it one more step was to extend the text hierarchy with `textQuinary`. |
 | Revert the temporary command-bar placeholder experiment after verifying the render path | OpenTUI does apply `placeholderColor`, so once the user confirmed they preferred the original tone, the right fix was to remove `textQuinary` entirely instead of debating whether the prop was ignored. |
+| Use prompt-shell top T-junctions instead of changing the autocomplete popup frame | The visual seam was at the command bar's top corners, so the smallest fix was to swap only those characters when suggestions are present and leave the popup frame itself unchanged. |
+| Revert the autocomplete frame and prompt T-junction experiments in favor of layout-only spacing | The border treatments looked heavier than the underlying issue, so the better fix was a plain spacer row above the suggestions and row-owned padding that lets the selected background fill the visible margins. |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |

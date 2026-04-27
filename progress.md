@@ -194,6 +194,40 @@
   - findings.md (updated)
   - progress.md (updated)
 
+### Phase 14: Prompt Border Junction Tweak
+- **Status:** complete
+- Actions taken:
+  - Added `test/helpers/renderCommandPrompt.tsx` and `test/promptRender.test.ts` first to render the command prompt with and without autocomplete suggestions and pin the command-bar top-edge characters.
+  - Corrected the new test to locate the prompt border relative to the input row after the first run showed the frame capture includes trailing space-only lines.
+  - Updated `src/ui/prompts.tsx` so `PromptShell` supplies custom top border characters `├` and `┤` only while autocomplete suggestions are visible.
+  - Reran focused render validation for the new junction behavior and neighboring autocomplete/history coverage.
+- Files created/modified:
+  - test/helpers/renderCommandPrompt.tsx (created)
+  - test/promptRender.test.ts (created)
+  - src/ui/prompts.tsx (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+
+### Phase 15: Revert Autocomplete Chrome Experiments
+- **Status:** complete
+- Actions taken:
+  - Replaced the autocomplete render helper/test expectations first so the focused render slice now requires a blank parent row above the suggestions and selection background coverage across the visible left/right padding columns.
+  - Removed the temporary prompt-border render helper/spec after the user rejected the T-junction experiment.
+  - Updated `src/ui/AutocompleteList.tsx` to drop the frame, add a non-scrolling spacer row above the scrollbox, and move padding into each suggestion row.
+  - Reverted the prompt-shell custom border-character change in `src/ui/prompts.tsx` while keeping the one extra autocomplete row in the prompt height budget.
+  - Reran focused autocomplete rendering and neighboring autocomplete/completion/history validation successfully.
+- Files created/modified:
+  - test/helpers/renderAutocompleteList.tsx (updated)
+  - test/autocompleteRender.test.ts (updated)
+  - test/helpers/renderCommandPrompt.tsx (deleted)
+  - test/promptRender.test.ts (deleted)
+  - src/ui/AutocompleteList.tsx (updated)
+  - src/ui/prompts.tsx (updated)
+  - task_plan.md (updated)
+  - findings.md (updated)
+  - progress.md (updated)
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -211,20 +245,25 @@
 | Focused autocomplete popup validation | `bun test test/autocomplete.test.ts test/autocompleteRender.test.ts test/completions.test.ts test/historyStore.test.ts && bunx tsc --noEmit` | Bordered autocomplete popup renders correctly and the autocomplete slice still compiles | 38 tests passed | pass |
 | Focused command-bar placeholder validation | `bun test test/config.test.ts test/autocomplete.test.ts test/autocompleteRender.test.ts test/completions.test.ts test/historyStore.test.ts && bunx tsc --noEmit` | New `textQuinary` semantic color compiles and the command-bar prompt slice remains healthy | 49 tests passed | pass |
 | Focused placeholder revert validation | `bun test test/config.test.ts test/autocomplete.test.ts test/autocompleteRender.test.ts test/completions.test.ts test/historyStore.test.ts && bunx tsc --noEmit` | Command-bar placeholder is restored to `textQuaternary` and the prompt/config slice still compiles | 48 tests passed | pass |
+| Focused prompt junction validation | `bun test test/promptRender.test.ts` | Command bar uses top T-junctions only when autocomplete suggestions are visible | 1 test passed | pass |
+| Focused prompt/autocomplete regression validation | `bun test test/promptRender.test.ts test/autocompleteRender.test.ts test/autocomplete.test.ts test/historyStore.test.ts` | Prompt shell and neighboring autocomplete/history behavior remain healthy after the junction tweak | 26 tests passed | pass |
+| Focused typecheck after prompt junction tweak | `bunx tsc --noEmit` | Prompt slice compiles cleanly | Failed with unrelated existing nullability errors in `src/ui/render.tsx` | partial |
+| Focused autocomplete spacer-row validation | `bun test test/autocompleteRender.test.ts` | Autocomplete renders with a blank parent row above suggestions and the selected row covers the visible padding columns | 1 test passed | pass |
+| Focused autocomplete regression validation after chrome revert | `bun test test/autocomplete.test.ts test/autocompleteRender.test.ts test/completions.test.ts test/historyStore.test.ts` | Autocomplete, completion, and history behavior stay healthy after removing the frame and prompt T-junction | 38 tests passed | pass |
 
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
 |-----------|-------|---------|------------|
-|           |       | 1       |            |
+| 2026-04-27 | `bunx tsc --noEmit` reported `Object is possibly 'null'` at `src/ui/render.tsx:664` and `src/ui/render.tsx:678` during prompt-junction validation | 1 | Logged as unrelated existing typecheck errors because this task only changed prompt rendering files |
 
 ## 5-Question Reboot Check
 | Question | Answer |
 |----------|--------|
-| Where am I? | Complete through Phase 13: OpenTUI does honor `placeholderColor`, and the command-bar placeholder is restored to `textQuaternary` |
+| Where am I? | Complete through Phase 15: the autocomplete frame and prompt T-junction experiments have been reverted in favor of a blank spacer row and row-owned padding highlight |
 | Where am I going? | The next major architectural pressure is still concern-based splitting of `state/store.ts`, with further render extraction only when a similarly coherent cluster emerges |
 | What's the goal? | Refactor jif toward clearer one-way-flow subsystems without destabilizing behavior |
-| What have I learned? | Cluster-shaped render extraction works best when the extracted JSX shares one visual/runtime concern and the pure helpers stay on a non-JSX boundary |
-| What have I done? | Implemented and validated the runner, controller, persistence, prompt, runtime, startup, and status-cluster extractions |
+| What have I learned? | Small prompt/autocomplete visual issues are often better solved with spacing and ownership of padding/background fill than with extra box chrome |
+| What have I done? | Implemented and validated the runner, controller, persistence, prompt, runtime, startup, and status-cluster extractions, plus the latest autocomplete spacer-row/padding-highlight adjustment |
 
 ---
 *Update after completing each phase or encountering errors*

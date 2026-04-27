@@ -18,7 +18,6 @@ export function AutocompleteList(props: {
   maxVisibleItems?: number;
 }) {
   const colors = props.config.colorScheme.semanticColors;
-  const borderColor = colors.chromeBorderIdle ?? colors.textTertiary ?? colors.textPrimary;
   let viewport: ScrollBoxRenderable | undefined;
 
   const visibleItems = createMemo(() => {
@@ -60,11 +59,9 @@ export function AutocompleteList(props: {
       width="100%"
       height={visibleHeight() + 1}
       flexDirection="column"
-      border={["top", "left", "right"]}
-      borderStyle="single"
-      borderColor={borderColor}
       backgroundColor={colors.chromeFillTwo}
     >
+      <box width="100%" height={1} backgroundColor={colors.chromeFillTwo} />
       <scrollbox
         ref={(el: ScrollBoxRenderable) => {
           viewport = el;
@@ -82,7 +79,7 @@ export function AutocompleteList(props: {
           },
         }}
       >
-        <box width="100%" flexDirection="column" paddingX={1}>
+        <box width="100%" flexDirection="column">
           <For each={visibleItems()}>
             {({ item, logicalIndex }) => {
               const isSelected = () => logicalIndex === props.selectedIndex;
@@ -92,6 +89,7 @@ export function AutocompleteList(props: {
                   id={`autocomplete-${logicalIndex}`}
                   width="100%"
                   flexDirection="row"
+                  paddingX={1}
                   backgroundColor={backgroundColor()}
                 >
                   {item.tag ? (

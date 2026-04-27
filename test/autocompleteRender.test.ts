@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-test("bottom-to-top autocomplete list starts scrolled to show first item at bottom", async () => {
+test("autocomplete list keeps a blank parent row above suggestions and highlights padded selection columns", async () => {
   const proc = Bun.spawn({
     cmd: ["bun", "run", "test/helpers/renderAutocompleteList.tsx"],
     cwd: process.cwd(),
@@ -16,13 +16,22 @@ test("bottom-to-top autocomplete list starts scrolled to show first item at bott
   expect(exitCode).toBe(0);
   expect(stderr).toBe("");
 
-  const { frame } = JSON.parse(stdout) as { frame: string };
-  const lines = frame.split("\n").filter(Boolean);
+  const { frame, selectedLineSpans } = JSON.parse(stdout) as {
+    frame: string;
+    selectedLineSpans: Array<{ text: string; bg: [number, number, number, number] }>;
+  };
+  const lines = frame.split("\n").slice(0, 6);
   const firstLine = lines[0];
   const lastLine = lines[lines.length - 1];
-  expect(firstLine).toStartWith("┌");
-  expect(firstLine).toEndWith("┐");
-  expect(lastLine).toStartWith("│");
-  expect(lastLine).toEndWith("│");
+  const selectedTextIndex = selectedLineSpans.findIndex((span) => span.text.includes("all"));
+
+  expect(firstLine.trim()).toBe("");
+  expect(lastLine).toStartWith(" ");
   expect(lastLine).toContain("all");
+  expect(selectedTextIndex).toBeGreaterThan(0);
+  expect(selectedTextIndex).toBeLessThan(selectedLineSpans.length - 1);
+  expect(selectedLineSpans[selectedTextIndex - 1].text).toMatch(/\s+/);
+  expect(selectedLineSpans[selectedTextIndex - 1].bg).toEqual(selectedLineSpans[selectedTextIndex].bg);
+  expect(selectedLineSpans[selectedTextIndex + 1].text).toMatch(/\s+/);
+  expect(selectedLineSpans[selectedTextIndex + 1].bg).toEqual(selectedLineSpans[selectedTextIndex].bg);
 }, 20000);

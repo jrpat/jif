@@ -29,7 +29,7 @@ const rendered = await testRender(
   () => (
     <AutocompleteList
       items={items}
-      selectedIndex={null}
+      selectedIndex={0}
       flow="bottom-to-top"
       config={config}
       maxVisibleItems={5}
@@ -40,6 +40,16 @@ const rendered = await testRender(
 
 await rendered.renderOnce();
 const frame = rendered.captureCharFrame();
+const spans = rendered.captureSpans();
 rendered.renderer.destroy();
 
-console.log(JSON.stringify({ frame }));
+const selectedLine = [...spans.lines]
+  .reverse()
+  .find((line) => line.spans.some((span) => span.text.includes("all")));
+
+const selectedLineSpans = selectedLine?.spans.map((span) => ({
+  text: span.text,
+  bg: span.bg.toInts(),
+})) ?? [];
+
+console.log(JSON.stringify({ frame, selectedLineSpans }));
