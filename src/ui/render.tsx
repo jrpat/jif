@@ -451,6 +451,7 @@ export function RevisionItem(props: {
   commandTargetRowId: string | null;
   searchQuery: string;
 }) {
+  const renderer = useRenderer();
   const colors = () => props.config.colorScheme.semanticColors;
   const affectedIds = createMemo(() => getOperationAffectedRowIds(props.state));
   const isFocused = () => props.revision.rowId === props.focusedRowId;
@@ -636,6 +637,58 @@ export function RevisionItem(props: {
     hasNextRevision: false,
   }));
   const superGraphWidth = createMemo(() => measureGutterPlanWidth(superGutterPlan()));
+  const rowWidth = createMemo(() => Math.max(renderer.width, 1));
+  const sideChipWidth = createMemo(() => measureRevisionSideChipsWidth(layoutSpec().sideChips));
+  const changeIdWidth = createMemo(() =>
+    measureRevisionChangeIdWidth(props.revision, showExpandedTimestamp())
+  );
+  const borderedPanelWidth = createMemo(() => Math.max(rowWidth() - inlineGraphWidth() - 1, 0));
+  const borderedContentWidth = createMemo(() => Math.max(borderedPanelWidth() - 3, 0));
+  const borderedElidedDescription = createMemo(() =>
+    truncateTextAtEnd(props.revision.description, borderedContentWidth())
+  );
+  const multiRowDescriptionWidth = createMemo(() =>
+    Math.max(
+      borderedContentWidth() - (layoutSpec().sideChips.length > 0 ? sideChipWidth() + 1 : 0),
+      0,
+    )
+  );
+  const multiRowDescription = createMemo(() =>
+    truncateTextAtEnd(props.revision.description, multiRowDescriptionWidth())
+  );
+  const singleRowDescriptionWidth = createMemo(() => {
+    const leadingWidth = changeIdWidth()
+      + 1
+      + (layoutSpec().sideChips.length > 0 ? sideChipWidth() + 1 : 0);
+    const overlayCommandChipWidth = layoutSpec().commandChip?.placement === "overlay"
+      ? measureCommandChipWidth(layoutSpec().commandChip.text)
+      : 0;
+
+    return Math.max(borderedContentWidth() - leadingWidth - overlayCommandChipWidth, 0);
+  });
+  const singleRowDescription = createMemo(() =>
+    truncateTextAtEnd(props.revision.description, singleRowDescriptionWidth())
+  );
+  const superPanelWidth = createMemo(() => Math.max(rowWidth() - superGraphWidth() - 1, 0));
+  const superElidedDescription = createMemo(() =>
+    truncateTextAtEnd(props.revision.description, superPanelWidth())
+  );
+  const superDescriptionContainerWidth = createMemo(() => {
+    const trailingCommandChipWidth = layoutSpec().commandChip
+      ? measureCommandChipWidth(layoutSpec().commandChip.text) + 1
+      : 0;
+
+    return Math.max(superPanelWidth() - measureRevisionChangeIdWidth(props.revision, false) - 1 - trailingCommandChipWidth, 0);
+  });
+  const superDescriptionWidth = createMemo(() =>
+    Math.max(
+      superDescriptionContainerWidth() - (layoutSpec().sideChips.length > 0 ? sideChipWidth() + 1 : 0),
+      0,
+    )
+  );
+  const superDescription = createMemo(() =>
+    truncateTextAtEnd(props.revision.description, superDescriptionWidth())
+  );
 
   return (
     <box
@@ -705,8 +758,8 @@ export function RevisionItem(props: {
               <Show
                 when={props.revision.marker !== "elided"}
                 fallback={
-                  <text fg={colors().textTertiary} truncate>
-                    {props.revision.description}
+                  <text fg={colors().textTertiary} wrapMode="none">
+                    {borderedElidedDescription()}
                   </text>
                 }
               >
@@ -741,10 +794,9 @@ export function RevisionItem(props: {
                           <text
                             fg={descriptionColor()}
                             wrapMode="none"
-                            truncate
                             attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
                           >
-                            {props.revision.description}
+                            {multiRowDescription()}
                           </text>
                         </box>
                       </box>
@@ -773,10 +825,9 @@ export function RevisionItem(props: {
                         <text
                           fg={descriptionColor()}
                           wrapMode="none"
-                          truncate
                           attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
                         >
-                          {props.revision.description}
+                          {singleRowDescription()}
                         </text>
                       </box>
                     </box>
@@ -851,8 +902,8 @@ export function RevisionItem(props: {
             <Show
               when={props.revision.marker !== "elided"}
               fallback={
-                <text fg={colors().textTertiary} wrapMode="none" truncate>
-                  {props.revision.description}
+                <text fg={colors().textTertiary} wrapMode="none">
+                  {superElidedDescription()}
                 </text>
               }
             >
@@ -872,10 +923,9 @@ export function RevisionItem(props: {
                 <text
                   fg={descriptionColor()}
                   wrapMode="none"
-                  truncate
                   attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
                 >
-                  {props.revision.description}
+                  {superDescription()}
                 </text>
               </box>
               {layoutSpec().commandChip ? (
@@ -1137,4 +1187,40 @@ function padRight(value: string, length: number): string {
   }
 
   return `${value}${" ".repeat(length - value.length)}`;
+}
+
+function truncateTextAtEnd(value: string, maxWidth: number): string {
+  if (maxWidth <= 0) {
+    return "";
+  }
+
+  if (value.length <= maxWidth) {
+    return value;
+  }
+
+  if (maxWidth === 1) {
+    return "…";
+  }
+
+  return `${value.slice(0, maxWidth - 1)}…`;
+}
+
+function measureCommandChipWidth(text: string): number {
+  return text.length + 2;
+}
+
+function measureRevisionChangeIdWidth(
+  revision: Pick<RevisionSummary, "revisionId" | "changeIdPrefixLength" | "localTimestamp">,
+  showTimestamp: boolean,
+): number {
+  return buildRevisionChangeIdSegments(revision, { showTimestamp })
+    .reduce((total, segment) => total + segment.text.length, 0);
+}
+
+function measureRevisionSideChipsWidth(chips: readonly RevisionSideChip[]): number {
+  if (chips.length === 0) {
+    return 0;
+  }
+
+  return chips.reduce((total, chip) => total + chip.text.length + 2, 0) + (chips.length - 1);
 }

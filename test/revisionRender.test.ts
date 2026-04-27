@@ -71,11 +71,12 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
   expect(cycledToSuperCondensed).not.toContain("┌");
   expect(cycledToSuperCondensed).not.toContain("┐");
   const longSuperCondensedLines = longSuperCondensed.trimEnd().split("\n");
-  expect(longSuperCondensedLines[0]).toContain("this is a ver...");
+  expect(longSuperCondensedLines[0]).toContain("this is a very l…");
+  expect(longSuperCondensedLines[0]).not.toContain("...");
   expect(longSuperCondensedLines[1]?.trim() ?? "").toBe("");
 
   expect(divergentFocused).toContain("shared/0 older divergent");
-  expect(divergentFocused).toContain("shared/1 focused divergen");
+  expect(divergentFocused).toContain("shared/1 focused diverge…");
   expect(divergentFocused).toContain("│ │ ┌──────────────────────────┐");
   expect(divergentFocused.split("│ │ ┌──────────────────────────┐").length - 1).toBe(1);
 
