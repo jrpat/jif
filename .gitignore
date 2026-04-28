@@ -8,3 +8,7 @@ node_modules/
 dist/
 my/
 *.local.json
+
+findings.md
+progress.md
+task_plan.md

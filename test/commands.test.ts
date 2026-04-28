@@ -73,6 +73,16 @@ test("resolveCommand resolves vim navigation in normal mode", () => {
   expect(resolveForState("left", state)).toBe("collapse");
 });
 
+test("suspend uses ctrl-z canonically and Z as a normal-mode alias", () => {
+  const state = createState();
+  const revsetState: AppState = { ...state, focusMode: "revset" };
+
+  expect(defaultKeymap._global["ctrl-z"]).toBe("suspend");
+  expect(resolveForState("Z", state)).toBe("suspend");
+  expect(resolveForState("Z", revsetState)).toBeNull();
+  expect(commandDefinitions.find((command) => command.id === "suspend")?.canonicalKeys).toEqual(["ctrl-z"]);
+});
+
 test("resolveCommand returns null for unbound keys", () => {
   const state = createState();
   expect(resolveForState("z", state)).toBeNull();

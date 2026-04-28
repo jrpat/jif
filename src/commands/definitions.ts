@@ -8,6 +8,7 @@ export type CommandController = Readonly<{
   openFocusedRevision: () => void;
   closeFocusedRevision: () => void;
   quit: () => void;
+  suspend: () => void;
   cancelOrBlur: () => void;
   confirm: () => void;
   focusCommandBar: () => void;
@@ -130,6 +131,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Exit the application",
     canonicalKeys: ["q"],
     run: (controller) => controller.quit(),
+    group: "global",
+  },
+  {
+    id: "suspend",
+    title: "Suspend",
+    description: "Suspend the application and return to the shell",
+    canonicalKeys: ["ctrl-z"],
+    run: (controller) => controller.suspend(),
     group: "global",
   },
   {

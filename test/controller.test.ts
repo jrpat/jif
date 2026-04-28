@@ -55,6 +55,7 @@ function createControllerHarness(options: Readonly<{
   const runInteractiveCommands: string[] = [];
   const expandElidedCalls: number[] = [];
   const persistedLayouts: string[] = [];
+  let suspendCalls = 0;
   let executeCurrentCommandCalls = 0;
 
   const controller = createJifCommandController({
@@ -71,6 +72,9 @@ function createControllerHarness(options: Readonly<{
       },
     },
     destroy: () => {},
+    suspend: () => {
+      suspendCalls += 1;
+    },
     executeCurrentCommand: async () => {
       executeCurrentCommandCalls += 1;
     },
@@ -97,11 +101,23 @@ function createControllerHarness(options: Readonly<{
     runInteractiveCommands,
     expandElidedCalls,
     persistedLayouts,
+    get suspendCalls() {
+      return suspendCalls;
+    },
     get executeCurrentCommandCalls() {
       return executeCurrentCommandCalls;
     },
   };
 }
+
+test("suspend delegates to the injected renderer suspend hook", () => {
+  const harness = createControllerHarness({ revisions: [] });
+
+  harness.controller.suspend();
+
+  expect(harness.suspendCalls).toBe(1);
+  harness.store.dispose();
+});
 
 test("confirm uses the interactive squash flow when both source and target have user descriptions", () => {
   const harness = createControllerHarness({

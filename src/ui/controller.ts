@@ -38,6 +38,7 @@ export function createJifCommandController(args: Readonly<{
   store: AppStore;
   client: ControllerClient;
   destroy(): void;
+  suspend(): void;
   executeCurrentCommand: ExecuteCurrentCommand;
   runJjCommand: RunJjCommand;
   runInteractiveJjCommand: RunInteractiveJjCommand;
@@ -92,6 +93,9 @@ export function createJifCommandController(args: Readonly<{
     },
     quit() {
       args.destroy();
+    },
+    suspend() {
+      args.suspend();
     },
     cancelOrBlur() {
       store.actions.cancelOrBlur();

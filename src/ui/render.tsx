@@ -65,6 +65,7 @@ import { dispatchGlobalKey } from "./keybindings.ts";
 import { getActiveMode, getCommandsForMode, defaultKeymap } from "../modes.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
+import { suspendProcessToShell } from "./suspend.ts";
 import { bindViewRendererEvents, createPaletteDetector, startInitialRepositoryLoad } from "./startup.ts";
 
 export function JifView(props: {
@@ -153,6 +154,7 @@ export function JifView(props: {
     store,
     client,
     destroy: () => renderer.destroy(),
+    suspend: () => suspendProcessToShell({ renderer }),
     executeCurrentCommand: runtime.executeCurrentCommand,
     runJjCommand: runtime.runJjCommand,
     runInteractiveJjCommand: runtime.runInteractiveJjCommand,

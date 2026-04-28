@@ -35,6 +35,7 @@ export const defaultKeymap: Keymap = {
   _global: {
     escape: "cancel",
     "ctrl-r": "refresh-repository",
+    "ctrl-z": "suspend",
   },
   normal: {
     j: "move-down",
@@ -43,6 +44,7 @@ export const defaultKeymap: Keymap = {
     up: "move-up",
     J: "move-parent",
     K: "move-child",
+    Z: "suspend",
     l: "expand",
     right: "expand",
     h: "collapse",

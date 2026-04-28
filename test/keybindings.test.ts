@@ -55,6 +55,7 @@ function createController(calls: string[]): CommandController {
     openFocusedRevision: () => calls.push("openFocusedRevision"),
     closeFocusedRevision: () => calls.push("closeFocusedRevision"),
     quit: () => calls.push("quit"),
+    suspend: () => calls.push("suspend"),
     cancelOrBlur: () => calls.push("cancelOrBlur"),
     confirm: () => calls.push("confirm"),
     focusCommandBar: () => calls.push("focusCommandBar"),
@@ -129,6 +130,39 @@ test("dispatchGlobalKey routes escape to cancelOrBlur", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["cancelOrBlur"]);
+});
+
+test("dispatchGlobalKey routes ctrl-z globally to suspend", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "revset",
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "ctrl-z",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["suspend"]);
+});
+
+test("dispatchGlobalKey routes uppercase Z to suspend in normal mode", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "Z",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["suspend"]);
 });
 
 test("dispatchGlobalKey preserves h as collapse", () => {
