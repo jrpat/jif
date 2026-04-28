@@ -1,4 +1,4 @@
-import { For } from "solid-js";
+import { For, createSignal } from "solid-js";
 import { testRender } from "@opentui/solid";
 import { resolveAppConfig } from "../../src/config/index.ts";
 import { createAppStore } from "../../src/state/appStore.ts";
@@ -151,6 +151,54 @@ async function renderLongSuperCondensedDescription() {
   const frame = rendered.captureCharFrame();
   rendered.renderer.destroy();
   return frame;
+}
+
+async function renderLongSuperCondensedDescriptionAfterResize() {
+  const revisions = [
+    createRevision(
+      "curr",
+      "this is a very long commit message that should truncate instead of wrapping onto a second line",
+      ["○  "],
+    ),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout: "super-condensed" });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+  const [width, setWidth] = createSignal(24);
+
+  const rendered = await testRender(() => (
+    <box width={width()} flexDirection="column">
+      <RevisionItem
+        state={store.state}
+        revision={store.state.revisions[0]!}
+        index={0}
+        previousRowId={null}
+        nextRowId={null}
+        config={resolveAppConfig({ commands: { layout: "super-condensed" } })}
+        focusedRowId="curr"
+        selectedRowIds={new Set()}
+        expandedRowId={null}
+        commandTargetRowId={null}
+        searchQuery=""
+      />
+    </box>
+  ), { width: 24, height: 4 });
+
+  await rendered.renderOnce();
+  const initialFrame = rendered.captureCharFrame();
+  setWidth(40);
+  rendered.renderer.width = 40;
+  rendered.renderer.height = 4;
+  await rendered.renderOnce();
+  const resizedFrame = rendered.captureCharFrame();
+  rendered.renderer.destroy();
+
+  return {
+    initialFrame,
+    resizedFrame,
+  };
 }
 
 async function renderDivergentFocusedRevision() {
@@ -347,6 +395,7 @@ const superCondensed = await renderRevisionStack("super-condensed", "curr");
 const superCondensedExpanded = await renderRevisionStack("super-condensed", "curr", "curr");
 const cycledToSuperCondensed = await renderLayoutCycleAfterMount();
 const longSuperCondensed = await renderLongSuperCondensedDescription();
+const resizedLongSuperCondensed = await renderLongSuperCondensedDescriptionAfterResize();
 const divergentFocused = await renderDivergentFocusedRevision();
 const expandedChipsInline = await renderExpandedRevisionWithChips();
 const expandedBookmarkChipRefresh = await renderBookmarkChipAfterRefresh("expanded");
@@ -363,6 +412,7 @@ console.log(JSON.stringify({
   superCondensedExpanded,
   cycledToSuperCondensed,
   longSuperCondensed,
+  resizedLongSuperCondensed,
   divergentFocused,
   expandedChipsInline,
   expandedBookmarkChipRefresh,
