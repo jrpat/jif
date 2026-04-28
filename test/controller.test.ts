@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
+import { join } from "node:path";
 import { createAppStore } from "../src/state/appStore.ts";
 import { draftConfigs, getDisplayedCommandText } from "../src/state/store.ts";
 import type { ChangedFile, RepositoryData, RevisionSummary } from "../src/domain/types.ts";
+import { quoteCommand } from "../src/jj/process.ts";
 import { createJifCommandController } from "../src/ui/controller.ts";
 
 const REPO_PATH = "/tmp/repo";
@@ -179,6 +181,29 @@ test("openFocusedRevision loads changed files and conflict flags for unloaded re
   expect(harness.store.state.revisions[0]?.filesLoaded).toBeTrue();
   expect(harness.store.state.revisions[0]?.files).toEqual([
     { path: "src/app.ts", status: "M", hasConflict: true },
+  ]);
+  harness.store.dispose();
+});
+
+test("showDiff uses an absolute file path for focused files", async () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "loaded on demand",
+        filesLoaded: true,
+        files: [{ path: "src/app.ts", status: "M" }],
+      }),
+    ],
+  });
+
+  harness.store.actions.openFocusedRevision();
+
+  harness.controller.showDiff();
+
+  expect(harness.runInteractiveCommands).toEqual([
+    quoteCommand(["diff", "-r", "a", join(REPO_PATH, "src/app.ts")]),
   ]);
   harness.store.dispose();
 });

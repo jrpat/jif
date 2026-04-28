@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import type { CommandController } from "../commands/definitions.ts";
 import type { AppLayout, ChangedFile, FocusMode } from "../domain/types.ts";
 import { getRevisionArg } from "../domain/revisionIds.ts";
@@ -187,7 +188,9 @@ export function createJifCommandController(args: Readonly<{
       if (isFileNavigationActive(state)) {
         const file = getExpandedRevision(state)?.files[state.focusedFileIndex];
         if (!file) return;
-        void args.runInteractiveJjCommand(`diff -r ${revisionArg} ${file.path}`);
+        void args.runInteractiveJjCommand(
+          quoteCommand(["diff", "-r", revisionArg, join(state.repoPath, file.path)]),
+        );
       } else {
         void args.runInteractiveJjCommand(`show -r ${revisionArg}`);
       }
