@@ -5,6 +5,7 @@ export type CommandController = Readonly<{
   moveFocus: (delta: number) => void;
   moveFocusToParent: () => void;
   moveFocusToChild: () => void;
+  focusLogBottom: () => void;
   openFocusedRevision: () => void;
   closeFocusedRevision: () => void;
   quit: () => void;
@@ -84,6 +85,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     canonicalKeys: ["K"],
     canExecute: (state) => getFocusedChildRevision(state) !== null,
     run: (controller) => controller.moveFocusToChild(),
+  },
+  {
+    id: "jump-to-bottom",
+    title: "Jump to Bottom",
+    description: "Jump to the last revision in the log",
+    canonicalKeys: ["G"],
+    run: (controller) => controller.focusLogBottom(),
   },
   {
     id: "expand",

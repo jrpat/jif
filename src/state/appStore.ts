@@ -20,6 +20,7 @@ import {
   cycleLayout,
   clearStatusMessage,
   closeFocusedRevision,
+  focusLogBottom,
   focusWorkingCopy,
   openRevsetInput,
   closeRevsetInput,
@@ -187,6 +188,9 @@ export function createAppStore(
       },
       focusWorkingCopy() {
         mutate((currentState) => focusWorkingCopy(currentState));
+      },
+      focusLogBottom() {
+        mutate((currentState) => focusLogBottom(currentState));
       },
       openRevsetInput() {
         mutate((currentState) => openRevsetInput(currentState));

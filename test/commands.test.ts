@@ -65,6 +65,7 @@ test("resolveCommand resolves vim navigation in normal mode", () => {
 
   expect(resolveForState("j", state)).toBe("move-down");
   expect(resolveForState("k", state)).toBe("move-up");
+  expect(resolveForState("G", state)).toBe("jump-to-bottom");
   expect(resolveForState("J", state)).toBe("move-parent");
   expect(resolveForState("K", parentState)).toBe("move-child");
   expect(resolveForState("h", state)).toBe("collapse");
@@ -110,6 +111,7 @@ test("undo and redo resolve in normal mode", () => {
   const state = createState();
   expect(resolveForState("u", state)).toBe("undo");
   expect(resolveForState("U", state)).toBe("redo");
+  expect(commandDefinitions.find((command) => command.id === "jump-to-bottom")?.canonicalKeys).toEqual(["G"]);
 });
 
 test("absorb resolves on shift-a in normal mode", () => {

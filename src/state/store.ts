@@ -324,6 +324,18 @@ export function focusWorkingCopy(state: AppState): AppState {
   };
 }
 
+export function focusLogBottom(state: AppState): AppState {
+  if (state.revisions.length === 0) {
+    return state;
+  }
+
+  return {
+    ...state,
+    focusedRevisionIndex: state.revisions.length - 1,
+    focusedFileIndex: 0,
+  };
+}
+
 export function openFocusedRevision(state: AppState): AppState {
   const revision = getFocusedRevision(state);
   if (!revision || revision.marker === "elided") {

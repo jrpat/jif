@@ -42,6 +42,7 @@ export const defaultKeymap: Keymap = {
     down: "move-down",
     k: "move-up",
     up: "move-up",
+    G: "jump-to-bottom",
     J: "move-parent",
     K: "move-child",
     Z: "suspend",

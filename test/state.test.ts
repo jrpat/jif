@@ -14,6 +14,7 @@ import {
   dismissStatusMessage,
   draftConfigs,
   focusCommandBar,
+  focusLogBottom,
   getFocusedRevisionArg,
   focusWorkingCopy,
   getDisplayedCommandSegments,
@@ -663,6 +664,24 @@ test("focusWorkingCopy is a no-op when no working copy exists", () => {
 
   state = focusWorkingCopy(state);
   expect(state.focusedRevisionIndex).toBe(before);
+});
+
+test("focusLogBottom jumps to the last revision", () => {
+  let state = createState();
+
+  state = focusLogBottom(state);
+
+  expect(state.focusedRevisionIndex).toBe(state.revisions.length - 1);
+  expect(state.focusedFileIndex).toBe(0);
+});
+
+test("focusLogBottom is a no-op when there are no revisions", () => {
+  const state = {
+    ...createState(),
+    revisions: [],
+  };
+
+  expect(focusLogBottom(state)).toEqual(state);
 });
 
 test("getFocusedRevisionArg uses the focused revision prefix length", () => {
