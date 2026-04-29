@@ -2,6 +2,8 @@ import { expect, test } from "bun:test";
 import {
   buildSampleRepoCliCommand,
   parseSampleRepoCliOutput,
+  resolveSampleRepoCliScriptPath,
+  resolveSampleRepoCliWorkingDirectory,
 } from "../src/dev/sampleRepoLauncher.ts";
 
 test("buildSampleRepoCliCommand includes bun, script, and sample arguments", () => {
@@ -35,4 +37,11 @@ test("parseSampleRepoCliOutput returns sample repo paths", () => {
       review: "/tmp/sample/review-workspace",
     },
   });
+});
+
+test("sample repo cli paths resolve from the fixture path", () => {
+  const fixturePath = "/repo/test/fixtures/sample-repo.jsonl";
+
+  expect(resolveSampleRepoCliWorkingDirectory(fixturePath)).toBe("/repo");
+  expect(resolveSampleRepoCliScriptPath(fixturePath)).toBe("/repo/scripts/materializeSampleRepoCli.ts");
 });

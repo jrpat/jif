@@ -1,5 +1,5 @@
 import { access } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import type { SampleRepoMaterialization } from "../domain/types.ts";
 
 export function buildSampleRepoCliCommand(options: Readonly<{
@@ -35,7 +35,7 @@ export async function materializeSampleRepoCachedViaCli(options: Readonly<{
   baseDir: string;
   fixturePath: string;
 }>): Promise<SampleRepoMaterialization> {
-  const scriptPath = resolve(import.meta.dir, "../../scripts/materializeSampleRepoCli.ts");
+  const scriptPath = resolveSampleRepoCliScriptPath(options.fixturePath);
   await ensureFileExists(scriptPath);
 
   const bunPath = Bun.which("bun");
@@ -51,7 +51,7 @@ export async function materializeSampleRepoCachedViaCli(options: Readonly<{
   });
   const proc = Bun.spawn({
     cmd: [...command],
-    cwd: resolve(import.meta.dir, "../.."),
+    cwd: resolveSampleRepoCliWorkingDirectory(options.fixturePath),
     stdin: "ignore",
     stdout: "pipe",
     stderr: "pipe",
@@ -69,6 +69,14 @@ export async function materializeSampleRepoCachedViaCli(options: Readonly<{
   }
 
   return parseSampleRepoCliOutput(stdout);
+}
+
+export function resolveSampleRepoCliWorkingDirectory(fixturePath: string): string {
+  return resolve(dirname(fixturePath), "../..");
+}
+
+export function resolveSampleRepoCliScriptPath(fixturePath: string): string {
+  return resolve(resolveSampleRepoCliWorkingDirectory(fixturePath), "scripts/materializeSampleRepoCli.ts");
 }
 
 async function ensureFileExists(path: string): Promise<void> {

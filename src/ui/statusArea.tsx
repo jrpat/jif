@@ -34,6 +34,7 @@ export function StatusArea(props: {
 
     const handle = setInterval(() => {
       setLoadingFrameIndex((current) => current + 1);
+    }, SPINNER_INTERVAL_MS);
     onCleanup(() => clearInterval(handle));
   });
 
@@ -167,7 +168,6 @@ export function StatusArea(props: {
         </scrollbox>
       </box>
     </Show>
-  );
   );
 }
 
