@@ -1,6 +1,10 @@
 import { expect, test } from "bun:test";
 import type { ScrollBoxRenderable } from "@opentui/core";
-import { scrollToKeepChildVisible } from "../src/ui/scroll.ts";
+import {
+  isScrollboxAtBottom,
+  observeScrollboxBottomReached,
+  scrollToKeepChildVisible,
+} from "../src/ui/scroll.ts";
 
 function createMockScrollBox(options: {
   viewportY: number;
@@ -96,4 +100,43 @@ test("does not crash when child is not found", () => {
   scrollToKeepChildVisible(scrollbox, "nonexistent", "down");
 
   expect(scrollByDeltas).toEqual([]);
+});
+
+test("isScrollboxAtBottom detects when the viewport is scrolled to the end", () => {
+  const scrollbox = {
+    scrollTop: 10,
+    scrollHeight: 20,
+    viewport: { height: 10 },
+  } as ScrollBoxRenderable;
+
+  expect(isScrollboxAtBottom(scrollbox)).toBeTrue();
+});
+
+test("observeScrollboxBottomReached hooks scrollBy and fires when the viewport reaches the end", () => {
+  let scrollTop = 0;
+  let triggered = 0;
+  const scrollbox = {
+    scrollTop,
+    scrollHeight: 20,
+    viewport: { height: 10 },
+    scrollBy(delta: number) {
+      scrollTop += delta;
+      this.scrollTop = scrollTop;
+    },
+  } as unknown as ScrollBoxRenderable;
+
+  const dispose = observeScrollboxBottomReached(scrollbox, () => {
+    triggered += 1;
+  });
+
+  scrollbox.scrollBy(5);
+  expect(triggered).toBe(0);
+
+  scrollbox.scrollBy(5);
+  expect(triggered).toBe(1);
+
+  dispose();
+  scrollbox.scrollBy(-1);
+  scrollbox.scrollBy(1);
+  expect(triggered).toBe(1);
 });

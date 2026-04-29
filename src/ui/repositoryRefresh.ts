@@ -1,5 +1,6 @@
 import { CliRenderEvents, type CliRenderer } from "@opentui/core";
 import type { RepositoryData, StatusLevel } from "../domain/types.ts";
+import { DEFAULT_REPOSITORY_LOAD_LIMIT } from "../jj/client.ts";
 
 type RepositoryRefreshClient = {
   verifyRepository(): Promise<void>;
@@ -12,12 +13,20 @@ type RepositoryRefreshActions = {
   pushEvent(text: string, level: StatusLevel): void;
 };
 
+export type RepositoryRefreshSuccess = Readonly<{
+  repositoryData: RepositoryData;
+  requestedLimit: number;
+  canLoadMore: boolean;
+}>;
+
 export function createRepositoryRefresher(args: {
   client: RepositoryRefreshClient;
   actions: RepositoryRefreshActions;
   getRevsetQuery: () => string;
+  onRefreshSuccess?: (details: RepositoryRefreshSuccess) => void;
 }) {
   let refreshInFlight: Promise<boolean> | null = null;
+  let currentRevisionLimit = DEFAULT_REPOSITORY_LOAD_LIMIT;
 
   return async function refreshRepository(revset?: string, limit?: number): Promise<boolean> {
     if (refreshInFlight) {
@@ -25,11 +34,18 @@ export function createRepositoryRefresher(args: {
     }
 
     const effectiveRevset = revset || args.getRevsetQuery() || undefined;
+    const effectiveLimit = limit ?? currentRevisionLimit;
     refreshInFlight = (async () => {
       try {
         await args.client.verifyRepository();
-        const repositoryData = await args.client.loadRepository(limit, effectiveRevset);
+        const repositoryData = await args.client.loadRepository(effectiveLimit, effectiveRevset);
+        currentRevisionLimit = effectiveLimit;
         args.actions.applyRepositoryData(repositoryData);
+        args.onRefreshSuccess?.({
+          repositoryData,
+          requestedLimit: effectiveLimit,
+          canLoadMore: repositoryData.revisions.length >= effectiveLimit,
+        });
         return true;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

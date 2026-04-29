@@ -13,7 +13,21 @@ const FIELD_SEPARATOR = "\u001f";
 const ROW_KIND_HEADER = "header";
 const ROW_KIND_BODY = "body";
 const LOG_TEMPLATE = buildLogTemplate(getMaxRevisionBaseGraphRowCount());
-export const DEFAULT_REPOSITORY_LOAD_LIMIT = 250;
+const FALLBACK_REPOSITORY_LOAD_LIMIT = 250;
+
+export function resolveRepositoryLoadLimit(
+  rawValue = process.env.JIF_REPOSITORY_LOAD_LIMIT,
+  fallback = FALLBACK_REPOSITORY_LOAD_LIMIT,
+): number {
+  const parsed = Number.parseInt(rawValue ?? "", 10);
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+
+  return fallback;
+}
+
+export const DEFAULT_REPOSITORY_LOAD_LIMIT = resolveRepositoryLoadLimit();
 
 export class JjClient {
   constructor(readonly repoPath: string) {}

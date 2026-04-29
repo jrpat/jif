@@ -1,10 +1,8 @@
 import type { FailedCommand, StatusLevel } from "../domain/types.ts";
 import { tokenizeCommandText } from "../jj/client.ts";
+import { SPINNER_INTERVAL_MS, formatSpinnerText } from "../ui/spinner.ts";
 
 export type CommandFeedbackMode = "status-toast" | "event" | "none";
-
-const COMMAND_SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-const COMMAND_SPINNER_INTERVAL_MS = 80;
 
 export type CommandRunnerActions = Readonly<{
   clearLastFailedCommand(): void;
@@ -146,9 +144,9 @@ function startStatusToastSpinner(
   let frameIndex = 0;
   actions.pushStatusMessage(toastId, formatRunningCommandText(commandText, frameIndex), "info");
   const handle = spinnerScheduler.setInterval(() => {
-    frameIndex = (frameIndex + 1) % COMMAND_SPINNER_FRAMES.length;
+    frameIndex += 1;
     actions.updateStatusMessage(toastId, formatRunningCommandText(commandText, frameIndex), "info");
-  }, COMMAND_SPINNER_INTERVAL_MS);
+  }, SPINNER_INTERVAL_MS);
 
   return () => {
     spinnerScheduler.clearInterval(handle);
@@ -156,7 +154,7 @@ function startStatusToastSpinner(
 }
 
 function formatRunningCommandText(commandText: string, frameIndex: number): string {
-  return `${COMMAND_SPINNER_FRAMES[frameIndex]} ${commandText}`;
+  return formatSpinnerText(commandText, frameIndex);
 }
 
 async function executeInteractive(

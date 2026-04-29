@@ -1,9 +1,17 @@
 import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { materializeSampleRepo } from "../src/dev/sampleRepo.ts";
-import { JjClient, parseLogOutput, tokenizeCommandText } from "../src/jj/client.ts";
+import { JjClient, parseLogOutput, resolveRepositoryLoadLimit, tokenizeCommandText } from "../src/jj/client.ts";
 import { runCommand } from "../src/jj/process.ts";
 import { createTempDir } from "./helpers/tempRepo.ts";
+
+test("resolveRepositoryLoadLimit accepts positive integer overrides and rejects invalid values", () => {
+  expect(resolveRepositoryLoadLimit("25", 250)).toBe(25);
+  expect(resolveRepositoryLoadLimit("0", 250)).toBe(250);
+  expect(resolveRepositoryLoadLimit("-3", 250)).toBe(250);
+  expect(resolveRepositoryLoadLimit("not-a-number", 250)).toBe(250);
+  expect(resolveRepositoryLoadLimit(undefined, 250)).toBe(250);
+});
 
 test("tokenizeCommandText keeps quoted segments together", () => {
   expect(tokenizeCommandText('rebase -r abc123 -o "bookmark main"')).toEqual([

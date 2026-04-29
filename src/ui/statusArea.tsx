@@ -1,10 +1,11 @@
 import { TextAttributes } from "@opentui/core";
-import { For, Show, createEffect, onCleanup } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import type { StatusMessage } from "../domain/types.ts";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { ShortcutGrid, ShortcutSummarySegment } from "./shortcutPanel.ts";
 import { parseAnsiToStyledText } from "./ansiToStyledText.ts";
 import { getStatusColor, getStatusMessageDismissDelay } from "./statusMessages.ts";
+import { SPINNER_INTERVAL_MS, formatSpinnerText } from "./spinner.ts";
 
 export function StatusArea(props: {
   shortcutSummary: string;
@@ -14,8 +15,27 @@ export function StatusArea(props: {
   currentModeLabel: string;
   panelBodyHeight: number;
   config: ResolvedAppConfig;
+  loadingIndicatorText?: string | null;
 }) {
   const colors = props.config.colorScheme.semanticColors;
+  const [loadingFrameIndex, setLoadingFrameIndex] = createSignal(0);
+  const loadingIndicator = createMemo(() =>
+    props.loadingIndicatorText
+      ? formatSpinnerText(props.loadingIndicatorText, loadingFrameIndex())
+      : null
+  );
+
+  createEffect(() => {
+    if (!props.loadingIndicatorText) {
+      setLoadingFrameIndex(0);
+      return;
+    }
+
+    const handle = setInterval(() => {
+      setLoadingFrameIndex((current) => current + 1);
+    }, SPINNER_INTERVAL_MS);
+    onCleanup(() => clearInterval(handle));
+  });
 
   return (
     <Show
@@ -31,28 +51,34 @@ export function StatusArea(props: {
           paddingX={1}
           flexDirection="row"
         >
-          <Show
-            when={props.shortcutSummarySegments.length > 0}
-            fallback={
-              <text fg={colors.textTertiary} truncate>
-                {props.shortcutSummary}
-              </text>
-            }
-          >
-            <For each={props.shortcutSummarySegments}>
-              {(segment, index) => (
-                <box flexDirection="row">
-                  <Show when={index() > 0}>
-                    <text fg={colors.textTertiary}>{"   "}</text>
-                  </Show>
-                  <text fg={colors.textTertiary} attributes={TextAttributes.BOLD}>
-                    {segment.keyLabel}
-                  </text>
-                  <text fg={colors.textTertiary}>{` ${segment.label}`}</text>
-                </box>
-              )}
-            </For>
+          <Show when={loadingIndicator() !== null}>
+            <text fg={getStatusColor("info", colors)}>{loadingIndicator()}</text>
+            <box width={3} />
           </Show>
+          <box flexGrow={1} minWidth={0} flexDirection="row">
+            <Show
+              when={props.shortcutSummarySegments.length > 0}
+              fallback={
+                <text fg={colors.textTertiary} truncate>
+                  {props.shortcutSummary}
+                </text>
+              }
+            >
+              <For each={props.shortcutSummarySegments}>
+                {(segment, index) => (
+                  <box flexDirection="row">
+                    <Show when={index() > 0}>
+                      <text fg={colors.textTertiary}>{"   "}</text>
+                    </Show>
+                    <text fg={colors.textTertiary} attributes={TextAttributes.BOLD}>
+                      {segment.keyLabel}
+                    </text>
+                    <text fg={colors.textTertiary}>{` ${segment.label}`}</text>
+                  </box>
+                )}
+              </For>
+            </Show>
+          </box>
         </box>
       }
     >
@@ -76,6 +102,10 @@ export function StatusArea(props: {
           </text>
           <text fg={colors.textTertiary}>{` ${props.currentModeLabel}`}</text>
           <box flexGrow={1} />
+          <Show when={loadingIndicator() !== null}>
+            <text fg={getStatusColor("info", colors)} truncate>{loadingIndicator()}</text>
+            <box width={1} />
+          </Show>
           <text fg={colors.textTertiary}>? close</text>
         </box>
         <box width="100%" height={1} backgroundColor={colors.chromeFillTwo} />

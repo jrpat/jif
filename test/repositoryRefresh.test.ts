@@ -93,6 +93,77 @@ test("createRepositoryRefresher forwards an explicit revision load limit", async
   ]);
 });
 
+test("createRepositoryRefresher reuses the last explicit revision load limit", async () => {
+  const calls: string[] = [];
+
+  const refreshRepository = createRepositoryRefresher({
+    client: {
+      async verifyRepository() {
+        calls.push("verify");
+      },
+      async loadRepository(limit) {
+        calls.push(`load:${limit ?? ""}`);
+        return createRepositoryData();
+      },
+    },
+    actions: {
+      setLoading() {},
+      applyRepositoryData() {},
+      pushEvent() {
+        throw new Error("refresh should not fail");
+      },
+    },
+    getRevsetQuery: () => "",
+  });
+
+  await refreshRepository(undefined, 21);
+  await refreshRepository();
+
+  expect(calls).toEqual([
+    "verify",
+    "load:21",
+    "verify",
+    "load:21",
+  ]);
+});
+
+test("createRepositoryRefresher reports refresh metadata for lazy loading", async () => {
+  const refreshUpdates: Array<{ requestedLimit: number; revisionCount: number; canLoadMore: boolean }> = [];
+
+  const refreshRepository = createRepositoryRefresher({
+    client: {
+      async verifyRepository() {},
+      async loadRepository() {
+        return {
+          repoPath: "/tmp/repo",
+          revisions: Array.from({ length: 21 }, (_, index) => ({ rowId: `r${index}` })) as any,
+        };
+      },
+    },
+    actions: {
+      setLoading() {},
+      applyRepositoryData() {},
+      pushEvent() {
+        throw new Error("refresh should not fail");
+      },
+    },
+    getRevsetQuery: () => "",
+    onRefreshSuccess(details) {
+      refreshUpdates.push({
+        requestedLimit: details.requestedLimit,
+        revisionCount: details.repositoryData.revisions.length,
+        canLoadMore: details.canLoadMore,
+      });
+    },
+  });
+
+  await refreshRepository(undefined, 21);
+
+  expect(refreshUpdates).toEqual([
+    { requestedLimit: 21, revisionCount: 21, canLoadMore: true },
+  ]);
+});
+
 test("createRepositoryRefresher coalesces concurrent refresh requests", async () => {
   const loadDeferred = createDeferred<RepositoryData>();
   let loadCalls = 0;

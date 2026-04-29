@@ -48,7 +48,7 @@ import {
   getRevisionSelectionMarker,
 } from "./revisionHeader.ts";
 import { getChangedFileRowBackgroundColor, getRevisionRowBackgroundColor } from "./rowBackgrounds.ts";
-import { scrollToKeepChildVisible } from "./scroll.ts";
+import { isScrollboxAtBottom, observeScrollboxBottomReached, scrollToKeepChildVisible } from "./scroll.ts";
 import {
   buildShortcutEntries,
   buildShortcutGrid,
@@ -84,6 +84,9 @@ export function JifView(props: {
   const [config, setConfig] = createStore<ResolvedAppConfig>(props.config);
   const [ready, setReady] = createSignal(false);
   const [workspaceRoot, setWorkspaceRoot] = createSignal<string | null>(null);
+  const [currentRevisionLoadLimit, setCurrentRevisionLoadLimit] = createSignal(DEFAULT_REPOSITORY_LOAD_LIMIT);
+  const [canLoadMoreRevisions, setCanLoadMoreRevisions] = createSignal(true);
+  const [loadingMoreRevisions, setLoadingMoreRevisions] = createSignal(false);
   const renderer = useRenderer();
   const [terminalSize, setTerminalSize] = createSignal({
     width: Math.max(renderer.width, 1),
@@ -94,6 +97,10 @@ export function JifView(props: {
     client,
     actions: store.actions,
     getRevsetQuery: () => store.snapshot().revsetQuery,
+    onRefreshSuccess: (details) => {
+      setCurrentRevisionLoadLimit(details.requestedLimit);
+      setCanLoadMoreRevisions(details.canLoadMore);
+    },
   });
   const commandRunner = createCommandRunner({
     actions: store.actions,
@@ -148,13 +155,15 @@ export function JifView(props: {
       setReady(true);
       const disposeFocusRefresh = bindRefreshOnFocus(renderer, () => refreshRepository());
       onCleanup(() => disposeFocusRefresh());
-      queueDeferredRepositoryLoad({
-        initialRevisionLimit,
-        backgroundRevisionLimit: DEFAULT_REPOSITORY_LOAD_LIMIT,
-        revset: initialLoad.initialRevset || undefined,
-        schedule: queueMicrotask,
-        refreshRepository,
-      });
+      if (canLoadMoreRevisions()) {
+        queueDeferredRepositoryLoad({
+          initialRevisionLimit,
+          backgroundRevisionLimit: DEFAULT_REPOSITORY_LOAD_LIMIT,
+          revset: initialLoad.initialRevset || undefined,
+          schedule: queueMicrotask,
+          refreshRepository,
+        });
+      }
     })();
 
     const disposeRendererEvents = bindViewRendererEvents({
@@ -354,6 +363,47 @@ export function JifView(props: {
     }
   });
 
+  const maybeLoadMoreRevisions = async (): Promise<void> => {
+    if (store.state.loading || loadingMoreRevisions() || !canLoadMoreRevisions() || store.state.revisions.length === 0) {
+      return;
+    }
+
+    const nextLimit = Math.max(currentRevisionLoadLimit(), store.state.revisions.length) + DEFAULT_REPOSITORY_LOAD_LIMIT;
+    setLoadingMoreRevisions(true);
+    try {
+      await refreshRepository(undefined, nextLimit);
+    } finally {
+      setLoadingMoreRevisions(false);
+    }
+  };
+
+  createRenderEffect(() => {
+    if (store.state.focusMode !== "revisions") {
+      return;
+    }
+
+    if (store.state.revisions.length === 0) {
+      return;
+    }
+
+    if (store.state.focusedRevisionIndex === store.state.revisions.length - 1) {
+      void maybeLoadMoreRevisions();
+    }
+  });
+
+  createEffect(() => {
+    if (!ready() || !logViewport) {
+      return;
+    }
+
+    const disposeScrollObserver = observeScrollboxBottomReached(logViewport, () => {
+      if (isScrollboxAtBottom(logViewport)) {
+        void maybeLoadMoreRevisions();
+      }
+    });
+    onCleanup(() => disposeScrollObserver());
+  });
+
 
 
   return (
@@ -449,6 +499,7 @@ export function JifView(props: {
             currentModeLabel={shortcutModeLabel(activeMode())}
             panelBodyHeight={shortcutPanelBodyHeight()}
             config={config}
+            loadingIndicatorText={loadingMoreRevisions() ? "loading more revisions" : null}
           />
         </Show>
         <MessageOverlay
