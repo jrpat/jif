@@ -196,6 +196,15 @@ export function getShortcutPanelCommands(
     );
   }
 
+  if (state.focusMode === "inline-confirmation") {
+    return actionable.filter((command) =>
+      command.group === "mode" ||
+      command.group === "cancel" ||
+      command.id === "shortcut-panel" ||
+      command.id === "force-last-command"
+    );
+  }
+
   if (state.focusMode === "files") {
     return actionable.filter((command) =>
       NAVIGATION_COMMAND_IDS.has(command.id) ||
@@ -224,6 +233,8 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Revisions";
     case "files":
       return "Files";
+    case "inline-confirmation":
+      return "Confirm";
     case "rebase":
       return "Rebase";
     case "squash":
@@ -365,6 +376,11 @@ function commandHasImmediateEffect(
       return state.focusMode === "files" && currentFocusedFileExists(state);
     case "restore":
       return state.focusMode === "files" && currentFocusedFileExists(state);
+    case "split":
+      return (state.focusMode === "revisions" || state.focusMode === "files") && getFocusedRevision(state) !== null;
+    case "inline-confirmation-prev-option":
+    case "inline-confirmation-next-option":
+      return state.focusMode === "inline-confirmation" && state.inlineConfirmation !== null;
     case "rebase":
     case "squash":
       return state.focusMode === "revisions" && getFocusedRevision(state) !== null;
@@ -379,6 +395,7 @@ function hasCancelableState(state: AppState): boolean {
   return (
     state.statusMessages.length > 0 ||
     state.focusMode === "command" ||
+    state.focusMode === "inline-confirmation" ||
     state.commandDraft !== null ||
     state.selectedRowIds.length > 0 ||
     state.focusMode === "files"

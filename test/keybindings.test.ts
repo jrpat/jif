@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { commandDefinitions, type CommandController } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
 import { createInitialState, draftConfigs, startCommandDraft } from "../src/state/store.ts";
+import { defaultKeymap } from "../src/modes.ts";
 import { dispatchGlobalKey } from "../src/ui/keybindings.ts";
 
 function createState(): AppState {
@@ -61,12 +62,15 @@ function createController(calls: string[]): CommandController {
     confirm: () => calls.push("confirm"),
     focusCommandBar: () => calls.push("focusCommandBar"),
     startRebase: () => calls.push("startRebase"),
+    startSplit: () => calls.push("startSplit"),
     startSquash: () => calls.push("startSquash"),
     startNewRevision: () => calls.push("startNewRevision"),
     editRevision: () => calls.push("editRevision"),
     toggleSelection: () => calls.push("toggleSelection"),
     toggleFileSelection: () => calls.push("toggleFileSelection"),
     restoreFiles: () => calls.push("restoreFiles"),
+    selectPreviousInlineConfirmationOption: () => calls.push("selectPreviousInlineConfirmationOption"),
+    selectNextInlineConfirmationOption: () => calls.push("selectNextInlineConfirmationOption"),
     toggleShortFlags: () => calls.push("toggleShortFlags"),
     cycleLayout: () => calls.push("cycleLayout"),
     toggleRebaseDescendants: () => calls.push("toggleRebaseDescendants"),
@@ -301,7 +305,7 @@ test("dispatchGlobalKey routes s to rebase-descendants in rebase mode", () => {
   expect(calls).toEqual(["toggleRebaseDescendants"]);
 });
 
-test("dispatchGlobalKey does not route s in normal mode", () => {
+test("dispatchGlobalKey routes s to split in normal mode", () => {
   const calls: string[] = [];
   const state = createState();
 
@@ -312,8 +316,92 @@ test("dispatchGlobalKey does not route s in normal mode", () => {
     controller: createController(calls),
   });
 
-  expect(handled).toBeFalse();
-  expect(calls).toEqual([]);
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["startSplit"]);
+});
+
+test("dispatchGlobalKey routes h/l inside inline confirmation mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "inline-confirmation",
+    inlineConfirmation: {
+      kind: "split-files",
+      rowId: "aaaaaaaa",
+      message: "Split selected files?",
+      options: ["yes", "interactive", "no"],
+      selectedOption: "interactive",
+      actualCommandByOption: {
+        yes: "split -r a /tmp/repo/src/app.ts",
+        interactive: "split -i -r a /tmp/repo/src/app.ts",
+        no: "split -r a",
+      },
+      previewCommandByOption: {
+        yes: "split -r a …files…",
+        interactive: "split -i -r a …files…",
+        no: "split -r a",
+      },
+    },
+  };
+
+  const handledLeft = dispatchGlobalKey({
+    normalizedKey: "h",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+  const handledRight = dispatchGlobalKey({
+    normalizedKey: "l",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handledLeft).toBeTrue();
+  expect(handledRight).toBeTrue();
+  expect(calls).toEqual([
+    "selectPreviousInlineConfirmationOption",
+    "selectNextInlineConfirmationOption",
+  ]);
+});
+
+test("dispatchGlobalKey prefers current mode bindings over global bindings on the same key", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "files",
+    expandedRowId: "aaaaaaaa",
+    revisions: createState().revisions.map((revision, index) =>
+      index === 0
+        ? {
+          ...revision,
+          filesLoaded: true,
+          files: [{ path: "src/app.ts", status: "M" }],
+        }
+        : revision
+    ),
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "s",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+    keymap: {
+      ...defaultKeymap,
+      _global: {
+        ...defaultKeymap._global,
+        s: "quit",
+      },
+      files: {
+        ...defaultKeymap.files,
+        s: "split",
+      },
+    },
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["startSplit"]);
 });
 
 test("dispatchGlobalKey handles escape even in input modes", () => {

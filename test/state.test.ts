@@ -49,6 +49,9 @@ import {
   nextSearchMatch,
   prevSearchMatch,
   getSearchMatchIndices,
+  getInlineConfirmation,
+  openInlineConfirmation,
+  selectNextInlineConfirmationOption,
   clearLastFailedCommand,
   setLastFailedCommand,
 } from "../src/state/store.ts";
@@ -370,6 +373,22 @@ test("cancelCommandState returns to file navigation when a revision is expanded"
   expect(state.expandedRowId).toBe(FIRST_ROW_ID);
 });
 
+test("mode transitions keep a stack so overlays can return to their parent mode", () => {
+  let state = createState();
+
+  expect(state.focusModeStack).toEqual(["revisions"]);
+
+  state = openFocusedRevision(state);
+  expect(state.focusModeStack).toEqual(["revisions", "files"]);
+
+  state = openRevsetInput(state);
+  expect(state.focusModeStack).toEqual(["revisions", "files", "revset"]);
+
+  state = cancelOrBlurState(state);
+  expect(state.focusMode).toBe("files");
+  expect(state.focusModeStack).toEqual(["revisions", "files"]);
+});
+
 test("cancelOrBlurState closes the shortcut panel before other browse-mode state", () => {
   let state = createState();
   state = openFocusedRevision(state);
@@ -380,6 +399,18 @@ test("cancelOrBlurState closes the shortcut panel before other browse-mode state
   expect(state.shortcutPanelExpanded).toBeFalse();
   expect(state.focusMode).toBe("files");
   expect(state.expandedRowId).toBe(FIRST_ROW_ID);
+});
+
+test("cancelOrBlurState pops the active mode before dismissing error status messages", () => {
+  let state = createState();
+  state = pushEvent(state, "command failed", "error");
+  state = focusCommandBar(state);
+
+  state = cancelOrBlurState(state);
+
+  expect(state.focusMode).toBe("revisions");
+  expect(state.statusMessages).toHaveLength(1);
+  expect(state.statusMessages[0]?.level).toBe("error");
 });
 
 test("startCommandDraft advances focus to parent revision", () => {
@@ -886,11 +917,50 @@ test("segment highlighting styles flags as command and values as selected/target
   ]);
 });
 
+test("inline confirmation preview highlights file placeholders separately from command text", () => {
+  let state = createState();
+  state = openFocusedRevision(state);
+  state = setRevisionFiles(state, FIRST_ROW_ID, [
+    { status: "M", path: "src/a.ts" },
+  ]);
+  state = toggleFileSelection(state);
+  state = openInlineConfirmation(state, {
+    kind: "split-files",
+    rowId: FIRST_ROW_ID,
+    message: "Split selected files?",
+    options: ["yes", "interactive", "no"],
+    selectedOption: "yes",
+    actualCommandByOption: {
+      yes: "split -r a /tmp/repo/src/a.ts",
+      interactive: "split -i -r a /tmp/repo/src/a.ts",
+      no: "split -r a",
+    },
+    previewCommandByOption: {
+      yes: "split -r a …files…",
+      interactive: "split -i -r a …files…",
+      no: "split -r a",
+    },
+  });
+
+  expect(getInlineConfirmation(state)?.selectedOption).toBe("yes");
+  expect(getDisplayedCommandSegments(state)).toEqual([
+    { text: "split -r a ", style: "command" },
+    { text: "…files…", style: "files" },
+  ]);
+
+  state = selectNextInlineConfirmationOption(state);
+  expect(getDisplayedCommandSegments(state)).toEqual([
+    { text: "split -i -r a ", style: "command" },
+    { text: "…files…", style: "files" },
+  ]);
+});
+
 test("openRevsetInput sets focusMode to revset", () => {
   let state = createState();
   expect(state.focusMode).toBe("revisions");
   state = openRevsetInput(state);
   expect(state.focusMode).toBe("revset");
+  expect(state.focusModeStack).toEqual(["revisions", "revset"]);
 });
 
 test("closeRevsetInput restores focusMode to revisions", () => {

@@ -4,6 +4,7 @@ import type { CommandDefinition } from "./commands/definitions.ts";
 export type Mode =
   | "normal"
   | "files"
+  | "inline-confirmation"
   | "rebase"
   | "squash"
   | "command"
@@ -21,6 +22,7 @@ export type ModeDefinition = Readonly<{
 export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   normal: { id: "normal", inputPassthrough: false, label: "Revisions" },
   files: { id: "files", parent: "normal", inputPassthrough: false, label: "Files" },
+  "inline-confirmation": { id: "inline-confirmation", inputPassthrough: false, label: "Confirm" },
   rebase: { id: "rebase", parent: "normal", inputPassthrough: false, label: "Rebase" },
   squash: { id: "squash", parent: "normal", inputPassthrough: false, label: "Squash" },
   command: { id: "command", inputPassthrough: true, label: "Command" },
@@ -56,6 +58,7 @@ export const defaultKeymap: Keymap = {
     q: "quit",
     enter: "confirm",
     r: "rebase",
+    s: "split",
     S: "squash",
     n: "new-revision",
     e: "edit-revision",
@@ -74,8 +77,16 @@ export const defaultKeymap: Keymap = {
     a: "abandon",
   },
   files: {
+    s: "split",
     r: "restore",
     " ": "toggle-file-selection",
+  },
+  "inline-confirmation": {
+    h: "inline-confirmation-prev-option",
+    left: "inline-confirmation-prev-option",
+    l: "inline-confirmation-next-option",
+    right: "inline-confirmation-next-option",
+    enter: "confirm",
   },
   rebase: {
     s: "rebase-descendants",
@@ -94,6 +105,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "command") return "command";
   if (state.focusMode === "revset") return "revset";
   if (state.focusMode === "search") return "search";
+  if (state.focusMode === "inline-confirmation") return "inline-confirmation";
   if (state.focusMode === "files") return "files";
   if (state.commandDraft?.config.kind === "rebase") return "rebase";
   if (state.commandDraft?.config.kind === "squash") return "squash";
@@ -106,17 +118,7 @@ export function resolveCommand(
   key: string,
   keymap: Keymap = defaultKeymap,
 ): string | null {
-  const bindings = keymap[mode];
-  if (bindings && key in bindings) {
-    return bindings[key]!;
-  }
-
-  const def = modeDefinitions[mode];
-  if (def.parent) {
-    return resolveCommand(def.parent, key, keymap);
-  }
-
-  return null;
+  return getModeBindings(mode, keymap)[key] ?? null;
 }
 
 export function getCommandsForMode(
@@ -142,24 +144,30 @@ function collectBoundCommandIds(
   keymap: Keymap,
   collected: Set<string> = new Set(),
 ): ReadonlySet<string> {
-  const bindings = keymap[mode];
-  if (bindings) {
-    for (const commandId of Object.values(bindings)) {
-      collected.add(commandId);
-    }
+  const modeBindings = getModeBindings(mode, keymap);
+  for (const commandId of Object.values(modeBindings)) {
+    collected.add(commandId);
   }
 
-  // Also include _global commands
   if (keymap._global) {
-    for (const commandId of Object.values(keymap._global)) {
-      collected.add(commandId);
+    for (const [key, commandId] of Object.entries(keymap._global)) {
+      if (!(key in modeBindings)) {
+        collected.add(commandId);
+      }
     }
-  }
-
-  const def = modeDefinitions[mode];
-  if (def.parent) {
-    collectBoundCommandIds(def.parent, keymap, collected);
   }
 
   return collected;
+}
+
+function getModeBindings(
+  mode: Mode,
+  keymap: Keymap,
+): Readonly<Record<string, string>> {
+  const def = modeDefinitions[mode];
+  const parentBindings = def.parent ? getModeBindings(def.parent, keymap) : {};
+  return {
+    ...parentBindings,
+    ...(keymap[mode] ?? {}),
+  };
 }

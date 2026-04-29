@@ -19,25 +19,27 @@ export function dispatchGlobalKey(options: {
   const { normalizedKey, state, commands, controller, keymap = defaultKeymap } = options;
   const mode = getActiveMode(state);
 
-  const globalCommandId = keymap._global[normalizedKey];
-  if (globalCommandId) {
-    const command = commands.find((c) => c.id === globalCommandId);
-    if (command) {
-      command.run(controller);
-      return true;
-    }
-  }
-
-  if (modeDefinitions[mode].inputPassthrough) {
-    return false;
-  }
-
   const commandId = resolveCommand(mode, normalizedKey, keymap);
-  if (!commandId) {
+  if (commandId) {
+    const command = commands.find((c) => c.id === commandId);
+    if (!command) {
+      return false;
+    }
+
+    if (command.canExecute && !command.canExecute(state)) {
+      return false;
+    }
+
+    command.run(controller);
+    return true;
+  }
+
+  const globalCommandId = keymap._global[normalizedKey];
+  if (!globalCommandId) {
     return false;
   }
 
-  const command = commands.find((c) => c.id === commandId);
+  const command = commands.find((c) => c.id === globalCommandId);
   if (!command) {
     return false;
   }

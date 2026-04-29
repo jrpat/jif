@@ -142,13 +142,14 @@ export function CommandPreview(props: {
         <For each={props.commandSegments}>
           {(segment) => (
             <text
-              fg={segment.style === "selected"
+              fg={segment.style === "selected" || segment.style === "files"
                 ? colors.rowSelectedAccent
                 : segment.style === "target"
                   ? colors.chromeBorderFocus
                   : segment.style === "placeholder"
                     ? colors.chromeBorderFocus
                     : colors.textPrimary}
+              bg={segment.style === "files" ? colors.rowSelectedFill : undefined}
               attributes={segment.style !== "command" ? TextAttributes.BOLD : undefined}
             >
               {segment.text}

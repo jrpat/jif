@@ -1,8 +1,18 @@
 import { expect, test } from "bun:test";
 import { commandDefinitions } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
-import { createInitialState, draftConfigs, startCommandDraft } from "../src/state/store.ts";
-import { resolveCommand, getActiveMode, getDirectCommandsForMode, defaultKeymap } from "../src/modes.ts";
+import {
+  createInitialState,
+  draftConfigs,
+  openInlineConfirmation,
+  startCommandDraft,
+} from "../src/state/store.ts";
+import {
+  resolveCommand,
+  getActiveMode,
+  getDirectCommandsForMode,
+  defaultKeymap,
+} from "../src/modes.ts";
 
 function createState(): AppState {
   return {
@@ -101,7 +111,7 @@ test("resolveCommand returns null in command mode for browse keys", () => {
 });
 
 test("rebase-descendants resolves in rebase mode but not normal mode", () => {
-  expect(resolveForState("s", createState())).toBeNull();
+  expect(resolveForState("s", createState())).toBe("split");
 
   const rebaseState = startCommandDraft(createState(), draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
   expect(resolveForState("s", rebaseState)).toBe("rebase-descendants");
@@ -113,6 +123,49 @@ test("getDirectCommandsForMode returns only rebase-local bindings", () => {
   expect(commands.map((command) => command.id)).toEqual(["rebase-descendants"]);
 });
 
+test("inline confirmation uses a dedicated mode with local option navigation", () => {
+  let state = createState();
+  state = {
+    ...state,
+    focusMode: "files",
+    expandedRowId: "aaaaaaaa",
+    revisions: state.revisions.map((revision, index) =>
+      index === 0
+        ? {
+          ...revision,
+          filesLoaded: true,
+          files: [{ path: "src/app.ts", status: "M" }],
+        }
+        : revision
+    ),
+    selectedFilePaths: ["src/app.ts"],
+  };
+
+  state = openInlineConfirmation(state, {
+    kind: "split-files",
+    rowId: "aaaaaaaa",
+    message: "Split selected files?",
+    options: ["yes", "interactive", "no"],
+    selectedOption: "yes",
+    actualCommandByOption: {
+      yes: "split -r a /tmp/repo/src/app.ts",
+      interactive: "split -i -r a /tmp/repo/src/app.ts",
+      no: "split -r a",
+    },
+    previewCommandByOption: {
+      yes: "split -r a …files…",
+      interactive: "split -i -r a …files…",
+      no: "split -r a",
+    },
+  });
+
+  expect(getActiveMode(state)).toBe("inline-confirmation");
+  expect(resolveForState("h", state)).toBe("inline-confirmation-prev-option");
+  expect(resolveForState("left", state)).toBe("inline-confirmation-prev-option");
+  expect(resolveForState("l", state)).toBe("inline-confirmation-next-option");
+  expect(resolveForState("right", state)).toBe("inline-confirmation-next-option");
+  expect(resolveForState("j", state)).toBeNull();
+});
 test("undo and redo resolve in normal mode", () => {
   const state = createState();
   expect(resolveForState("u", state)).toBe("undo");
@@ -197,7 +250,9 @@ test("mode inheritance lets files mode use normal keys", () => {
   expect(resolveForState("k", state)).toBe("move-up");
   expect(resolveForState("?", state)).toBe("shortcut-panel");
 
-  // Overridden in files
+  // Mode-local in files
+  expect(defaultKeymap.files.s).toBe("split");
+  expect(resolveForState("s", state)).toBe("split");
   expect(resolveForState("r", state)).toBe("restore");
   expect(resolveForState(" ", state)).toBe("toggle-file-selection");
 });

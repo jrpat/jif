@@ -6,6 +6,7 @@ import type {
   ChangedFile,
   CommandDraftConfig,
   FailedCommand,
+  InlineConfirmation,
   RepositoryData,
   RevisionSummary,
   StatusLevel,
@@ -13,6 +14,7 @@ import type {
 import {
   applyRepositoryData,
   cancelOrBlurState,
+  closeInlineConfirmation,
   cancelCommandDraft,
   cancelCommandState,
   clearLastFailedCommand,
@@ -35,7 +37,10 @@ import {
   dismissStatusMessage,
   expandElidedRevision,
   logEvent,
+  openInlineConfirmation,
   pushStatusMessage,
+  selectNextInlineConfirmationOption,
+  selectPreviousInlineConfirmationOption,
   startCommandDraft,
   toggleFileSelection,
   toggleShortFlags,
@@ -161,6 +166,18 @@ export function createAppStore(
       },
       toggleFileSelection() {
         mutate((currentState) => toggleFileSelection(currentState));
+      },
+      openInlineConfirmation(confirmation: InlineConfirmation) {
+        mutate((currentState) => openInlineConfirmation(currentState, confirmation));
+      },
+      closeInlineConfirmation() {
+        mutate((currentState) => closeInlineConfirmation(currentState));
+      },
+      selectPreviousInlineConfirmationOption() {
+        mutate((currentState) => selectPreviousInlineConfirmationOption(currentState));
+      },
+      selectNextInlineConfirmationOption() {
+        mutate((currentState) => selectNextInlineConfirmationOption(currentState));
       },
       cancelCommandDraft() {
         mutate((currentState) => cancelCommandDraft(currentState));

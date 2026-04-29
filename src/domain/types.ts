@@ -1,6 +1,19 @@
 export type RevisionMarker = "working-copy" | "bookmark" | "plain" | "immutable" | "elided";
 
-export type FocusMode = "revisions" | "files" | "command" | "revset" | "search";
+export type InlineConfirmationOptionId = "yes" | "interactive" | "no";
+export type InlineConfirmationKind = "split-files";
+
+export type InlineConfirmation = Readonly<{
+  kind: InlineConfirmationKind;
+  rowId: string;
+  message: string;
+  options: readonly InlineConfirmationOptionId[];
+  selectedOption: InlineConfirmationOptionId;
+  actualCommandByOption: Readonly<Record<InlineConfirmationOptionId, string>>;
+  previewCommandByOption: Readonly<Record<InlineConfirmationOptionId, string>>;
+}>;
+
+export type FocusMode = "revisions" | "files" | "inline-confirmation" | "command" | "revset" | "search";
 export type AppLayout = "expanded" | "condensed" | "super-condensed";
 
 export type ChangedFile = Readonly<{
@@ -80,6 +93,8 @@ export type AppState = Readonly<{
   repoPath: string;
   revisions: readonly RevisionSummary[];
   focusMode: FocusMode;
+  focusModeStack: readonly FocusMode[];
+  inlineConfirmation?: InlineConfirmation | null;
   shortcutPanelExpanded: boolean;
   focusedRevisionIndex: number;
   expandedRowId: string | null;

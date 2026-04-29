@@ -15,12 +15,15 @@ export type CommandController = Readonly<{
   focusCommandBar: () => void;
   forceLastCommand: () => void;
   startRebase: () => void;
+  startSplit: () => void;
   startSquash: () => void;
   startNewRevision: () => void;
   editRevision: () => void;
   toggleSelection: () => void;
   toggleFileSelection: () => void;
   restoreFiles: () => void;
+  selectPreviousInlineConfirmationOption: () => void;
+  selectNextInlineConfirmationOption: () => void;
   toggleShortFlags: () => void;
   cycleLayout: () => void;
   toggleRebaseDescendants: () => void;
@@ -175,6 +178,15 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     group: "global",
   },
   {
+    id: "split",
+    title: "Split",
+    description: "Split the focused revision, or choose how to use the current file selection",
+    canonicalKeys: ["s"],
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startSplit(),
+    group: "mode",
+  },
+  {
     id: "restore",
     title: "Restore",
     description: "Restore selected files to their state before this change",
@@ -297,6 +309,22 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Include descendants in the rebase preview",
     canonicalKeys: ["s"],
     run: (controller) => controller.toggleRebaseDescendants(),
+    group: "mode",
+  },
+  {
+    id: "inline-confirmation-prev-option",
+    title: "Previous Option",
+    description: "Select the previous confirmation option",
+    canonicalKeys: ["h"],
+    run: (controller) => controller.selectPreviousInlineConfirmationOption(),
+    group: "mode",
+  },
+  {
+    id: "inline-confirmation-next-option",
+    title: "Next Option",
+    description: "Select the next confirmation option",
+    canonicalKeys: ["l"],
+    run: (controller) => controller.selectNextInlineConfirmationOption(),
     group: "mode",
   },
   {

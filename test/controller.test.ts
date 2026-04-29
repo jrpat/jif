@@ -137,6 +137,63 @@ test("confirm uses the interactive squash flow when both source and target have 
   harness.store.dispose();
 });
 
+test("startSplit opens inline confirmation when specific files are selected", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "working copy",
+        marker: "working-copy",
+        filesLoaded: true,
+        files: [
+          { path: "src/app.ts", status: "M" },
+          { path: "src/ui/render.tsx", status: "M" },
+        ],
+      }),
+    ],
+  });
+
+  harness.store.actions.openFocusedRevision();
+  harness.store.actions.toggleFileSelection();
+
+  harness.controller.startSplit();
+
+  expect(harness.store.state.focusMode).toBe("inline-confirmation");
+  expect(harness.store.state.inlineConfirmation?.kind).toBe("split-files");
+  expect(harness.store.state.inlineConfirmation?.selectedOption).toBe("yes");
+  expect(harness.runInteractiveCommands).toEqual([]);
+  expect(harness.runJjCommands).toEqual([]);
+  harness.store.dispose();
+});
+
+test("confirm runs the split command selected by inline confirmation", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "working copy",
+        marker: "working-copy",
+        filesLoaded: true,
+        files: [{ path: "src/app.ts", status: "M" }],
+      }),
+    ],
+  });
+
+  harness.store.actions.openFocusedRevision();
+  harness.store.actions.toggleFileSelection();
+  harness.controller.startSplit();
+
+  expect(harness.store.state.inlineConfirmation?.selectedOption).toBe("yes");
+  harness.controller.confirm();
+  expect(harness.runJjCommands).toHaveLength(1);
+  expect(harness.runJjCommands[0]).toContain("split -r a");
+  expect(harness.runJjCommands[0]).toContain(join(REPO_PATH, "src/app.ts"));
+  expect(harness.runInteractiveCommands).toEqual([]);
+  harness.store.dispose();
+});
+
 test("forceLastCommand retries supported failed commands through the shared runner path", () => {
   const harness = createControllerHarness({ revisions: [] });
 

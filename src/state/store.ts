@@ -7,6 +7,8 @@ import type {
   EventLogEntry,
   FailedCommand,
   FocusMode,
+  InlineConfirmation,
+  InlineConfirmationOptionId,
   RepositoryData,
   RevisionSummary,
   StatusMessage,
@@ -15,6 +17,7 @@ import type {
 import { getRevisionArg } from "../domain/revisionIds.ts";
 
 export const DRAFT_PLACEHOLDER = "░░░░";
+export const INLINE_CONFIRMATION_FILES_PLACEHOLDER = "…files…";
 const LAYOUT_CYCLE: readonly AppLayout[] = ["expanded", "condensed", "super-condensed"];
 
 export const draftConfigs = {
@@ -39,7 +42,7 @@ export type TemplateContext = Readonly<{
   arg: (pair: string) => string;
 }>;
 
-export type CommandSegmentStyle = "command" | "selected" | "target" | "placeholder";
+export type CommandSegmentStyle = "command" | "selected" | "target" | "placeholder" | "files";
 
 export type CommandSegment = Readonly<{
   text: string;
@@ -101,6 +104,8 @@ export function createInitialState(
     repoPath,
     revisions: [],
     focusMode: "revisions",
+    focusModeStack: ["revisions"],
+    inlineConfirmation: null,
     shortcutPanelExpanded: false,
     focusedRevisionIndex: 0,
     expandedRowId: null,
@@ -154,11 +159,12 @@ export function toggleShortcutPanel(state: AppState): AppState {
 }
 
 export function openRevsetInput(state: AppState): AppState {
-  return { ...state, focusMode: "revset" };
+  const nextState = { ...state, inlineConfirmation: null };
+  return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "revset"]);
 }
 
 export function closeRevsetInput(state: AppState): AppState {
-  return { ...state, focusMode: getBrowseFocusMode(state) };
+  return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
 }
 
 export function setRevsetQuery(state: AppState, query: string): AppState {
@@ -195,10 +201,9 @@ export function applyRepositoryData(
     revisions.some((revision) => revision.rowId === state.expandedRowId)
       ? state.expandedRowId
       : null;
-  const nextFocusMode =
-    state.focusMode === "files" && expandedRowId === null
-      ? "revisions"
-      : state.focusMode;
+  const inlineConfirmation = state.inlineConfirmation && expandedRowId === state.inlineConfirmation.rowId
+    ? state.inlineConfirmation
+    : null;
 
   const rowIdSet = new Set(revisions.map((r) => r.rowId));
   const selectedRowIds = state.selectedRowIds.filter((id) => rowIdSet.has(id));
@@ -208,11 +213,11 @@ export function applyRepositoryData(
       ? state.selectedFilePaths
       : [];
 
-  return {
+  return normalizeFocusState({
     ...state,
     repoPath: repositoryData.repoPath,
     revisions,
-    focusMode: nextFocusMode,
+    inlineConfirmation,
     focusedRevisionIndex,
     expandedRowId,
     focusedFileIndex: clampIndex(state.focusedFileIndex, getExpandedFilesCount(revisions, expandedRowId)),
@@ -220,7 +225,7 @@ export function applyRepositoryData(
     markedRowIds,
     selectedFilePaths,
     loading: false,
-  };
+  });
 }
 
 export function setRevisionFiles(
@@ -250,7 +255,7 @@ export function setRevisionFiles(
 }
 
 export function moveFocus(state: AppState, delta: number): AppState {
-  if (state.focusMode === "command") {
+  if (state.focusMode === "command" || state.focusMode === "inline-confirmation") {
     return state;
   }
 
@@ -273,7 +278,7 @@ export function moveFocus(state: AppState, delta: number): AppState {
 }
 
 export function moveFocusToParent(state: AppState): AppState {
-  if (state.focusMode === "command") {
+  if (state.focusMode === "command" || state.focusMode === "inline-confirmation") {
     return state;
   }
 
@@ -282,18 +287,18 @@ export function moveFocusToParent(state: AppState): AppState {
     return state;
   }
 
-  return {
+  return replaceFocusModeStack({
     ...state,
-    focusMode: "revisions",
+    inlineConfirmation: null,
     expandedRowId: null,
     focusedRevisionIndex: state.revisions.findIndex((revision) => revision.rowId === parentRevision.rowId),
     focusedFileIndex: 0,
     selectedFilePaths: [],
-  };
+  }, ["revisions"]);
 }
 
 export function moveFocusToChild(state: AppState): AppState {
-  if (state.focusMode === "command") {
+  if (state.focusMode === "command" || state.focusMode === "inline-confirmation") {
     return state;
   }
 
@@ -302,14 +307,14 @@ export function moveFocusToChild(state: AppState): AppState {
     return state;
   }
 
-  return {
+  return replaceFocusModeStack({
     ...state,
-    focusMode: "revisions",
+    inlineConfirmation: null,
     expandedRowId: null,
     focusedRevisionIndex: state.revisions.findIndex((revision) => revision.rowId === childRevision.rowId),
     focusedFileIndex: 0,
     selectedFilePaths: [],
-  };
+  }, ["revisions"]);
 }
 
 export function focusWorkingCopy(state: AppState): AppState {
@@ -342,13 +347,15 @@ export function openFocusedRevision(state: AppState): AppState {
     return state;
   }
 
-  return {
+  const nextState = {
     ...state,
-    focusMode: "files",
+    inlineConfirmation: null,
     expandedRowId: revision.rowId,
     focusedFileIndex: 0,
     selectedFilePaths: [],
   };
+
+  return replaceFocusModeStack(nextState, ["revisions", "files"]);
 }
 
 export function expandElidedRevision(
@@ -373,32 +380,31 @@ export function closeFocusedRevision(state: AppState): AppState {
     return state;
   }
 
-  return {
+  return replaceFocusModeStack({
     ...state,
-    focusMode: "revisions",
+    inlineConfirmation: null,
     expandedRowId: null,
     focusedFileIndex: 0,
     selectedFilePaths: [],
-  };
+  }, ["revisions"]);
 }
 
 export function focusCommandBar(state: AppState): AppState {
   const text = getDisplayedCommandText(state);
-  return {
+  const nextState = {
     ...state,
-    focusMode: "command",
+    inlineConfirmation: null,
     commandBar: {
       text: text.length > 0 && !text.endsWith(" ") ? `${text} ` : text,
       manual: true,
     },
   };
+
+  return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "command"]);
 }
 
 export function blurCommandBar(state: AppState): AppState {
-  return {
-    ...state,
-    focusMode: getBrowseFocusMode(state),
-  };
+  return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
 }
 
 export function setCommandBarText(state: AppState, text: string): AppState {
@@ -412,9 +418,9 @@ export function setCommandBarText(state: AppState, text: string): AppState {
 }
 
 export function cancelCommandState(state: AppState): AppState {
-  return {
+  const nextState = {
     ...state,
-    focusMode: getBrowseFocusMode(state),
+    inlineConfirmation: null,
     commandBar: createEmptyCommandBar(),
     commandDraft: null,
     selectedRowIds: [],
@@ -422,6 +428,8 @@ export function cancelCommandState(state: AppState): AppState {
     selectedFilePaths: [],
     statusMessages: state.commandDraft ? [] : state.statusMessages,
   };
+
+  return replaceFocusModeStack(nextState, getBrowseFocusModeStack(nextState));
 }
 
 export function cancelCommandDraft(state: AppState): AppState {
@@ -457,7 +465,8 @@ export function clearLastFailedCommand(state: AppState): AppState {
 }
 
 export function openSearch(state: AppState): AppState {
-  return { ...state, focusMode: "search", searchQuery: "" };
+  const nextState = { ...state, inlineConfirmation: null, searchQuery: "" };
+  return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "search"]);
 }
 
 export function setSearchText(state: AppState, query: string): AppState {
@@ -478,15 +487,17 @@ export function setSearchText(state: AppState, query: string): AppState {
 }
 
 export function finalizeSearch(state: AppState): AppState {
-  return { ...state, focusMode: getBrowseFocusMode(state) };
+  return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
 }
 
 export function closeSearch(state: AppState): AppState {
+  if (state.focusMode === "search") {
+    return replaceFocusModeStack({ ...state, searchQuery: "" }, getBrowseFocusModeStack(state));
+  }
+
   return {
     ...state,
     searchQuery: "",
-    focusMode:
-      state.focusMode === "search" ? getBrowseFocusMode(state) : state.focusMode,
   };
 }
 
@@ -535,21 +546,33 @@ export function getSearchMatchIndices(state: AppState): number[] {
 }
 
 export function cancelOrBlurState(state: AppState): AppState {
-  if (state.focusMode === "search" || state.searchQuery !== "") {
+  if (state.focusMode === "search") {
     return closeSearch(state);
-  }
-
-  const dismissable = state.statusMessages.find((m) => m.level !== "info");
-  if (dismissable) {
-    return dismissStatusMessage(state, dismissable.id);
   }
 
   if (state.focusMode === "command") {
     return cancelCommandState(state);
   }
 
+  if (state.focusMode === "revset") {
+    return closeRevsetInput(state);
+  }
+
+  if (state.focusMode === "inline-confirmation") {
+    return closeInlineConfirmation(state);
+  }
+
   if (state.shortcutPanelExpanded) {
     return closeShortcutPanel(state);
+  }
+
+  if (state.searchQuery !== "") {
+    return closeSearch(state);
+  }
+
+  const dismissable = state.statusMessages.find((m) => m.level !== "info");
+  if (dismissable) {
+    return dismissStatusMessage(state, dismissable.id);
   }
 
   if (state.commandDraft !== null) {
@@ -620,6 +643,7 @@ export function startCommandDraft(
   return {
     ...state,
     commandBar: createEmptyCommandBar(),
+    inlineConfirmation: null,
     focusedRevisionIndex: hasPreSelection
       ? state.focusedRevisionIndex
       : clampIndex(state.focusedRevisionIndex + 1, state.revisions.length),
@@ -847,6 +871,80 @@ export function getExpandedRevision(state: AppState): RevisionSummary | null {
   );
 }
 
+export function getInlineConfirmation(state: AppState): InlineConfirmation | null {
+  return state.inlineConfirmation ?? null;
+}
+
+export function getInlineConfirmationActualCommand(state: AppState): string | null {
+  const confirmation = getInlineConfirmation(state);
+  if (!confirmation) {
+    return null;
+  }
+
+  return confirmation.actualCommandByOption[confirmation.selectedOption];
+}
+
+export function openInlineConfirmation(
+  state: AppState,
+  confirmation: InlineConfirmation,
+): AppState {
+  if (state.expandedRowId !== confirmation.rowId) {
+    return state;
+  }
+
+  const nextState = {
+    ...state,
+    inlineConfirmation: confirmation,
+    commandBar: createEmptyCommandBar(),
+  };
+
+  return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "inline-confirmation"]);
+}
+
+export function closeInlineConfirmation(state: AppState): AppState {
+  if (!state.inlineConfirmation) {
+    return state;
+  }
+
+  return replaceFocusModeStack({
+    ...state,
+    inlineConfirmation: null,
+  }, getBrowseFocusModeStack(state));
+}
+
+function selectInlineConfirmationOption(
+  state: AppState,
+  delta: number,
+): AppState {
+  const confirmation = getInlineConfirmation(state);
+  if (!confirmation) {
+    return state;
+  }
+
+  const currentIndex = Math.max(confirmation.options.indexOf(confirmation.selectedOption), 0);
+  const nextIndex = clampIndex(currentIndex + delta, confirmation.options.length);
+  const nextOption = confirmation.options[nextIndex] ?? confirmation.selectedOption;
+  if (nextOption === confirmation.selectedOption) {
+    return state;
+  }
+
+  return {
+    ...state,
+    inlineConfirmation: {
+      ...confirmation,
+      selectedOption: nextOption,
+    },
+  };
+}
+
+export function selectPreviousInlineConfirmationOption(state: AppState): AppState {
+  return selectInlineConfirmationOption(state, -1);
+}
+
+export function selectNextInlineConfirmationOption(state: AppState): AppState {
+  return selectInlineConfirmationOption(state, 1);
+}
+
 export function isFileNavigationActive(state: AppState): boolean {
   return state.focusMode === "files" && state.expandedRowId !== null;
 }
@@ -948,9 +1046,33 @@ function buildTaggedContext(state: AppState): { template: string; context: Templ
   };
 }
 
+function buildInlineConfirmationCommandSegments(commandText: string): readonly CommandSegment[] {
+  const placeholderIndex = commandText.indexOf(INLINE_CONFIRMATION_FILES_PLACEHOLDER);
+  if (placeholderIndex === -1) {
+    return [{ text: commandText, style: "command" }];
+  }
+
+  const segments: CommandSegment[] = [];
+  const before = commandText.slice(0, placeholderIndex);
+  const after = commandText.slice(placeholderIndex + INLINE_CONFIRMATION_FILES_PLACEHOLDER.length);
+  if (before.length > 0) {
+    segments.push({ text: before, style: "command" });
+  }
+  segments.push({ text: INLINE_CONFIRMATION_FILES_PLACEHOLDER, style: "files" });
+  if (after.length > 0) {
+    segments.push({ text: after, style: "command" });
+  }
+  return segments;
+}
+
 export function getDisplayedCommandText(state: AppState): string {
   if (state.commandBar.manual) {
     return state.commandBar.text;
+  }
+
+  const inlineConfirmation = getInlineConfirmation(state);
+  if (inlineConfirmation) {
+    return inlineConfirmation.previewCommandByOption[inlineConfirmation.selectedOption];
   }
 
   const resolved = buildContext(state);
@@ -964,6 +1086,13 @@ export function getDisplayedCommandText(state: AppState): string {
 export function getDisplayedCommandSegments(state: AppState): readonly CommandSegment[] | null {
   if (state.commandBar.manual) {
     return null;
+  }
+
+  const inlineConfirmation = getInlineConfirmation(state);
+  if (inlineConfirmation) {
+    return buildInlineConfirmationCommandSegments(
+      inlineConfirmation.previewCommandByOption[inlineConfirmation.selectedOption],
+    );
   }
 
   const resolved = buildTaggedContext(state);
@@ -1021,6 +1150,10 @@ export function commandCanExecute(state: AppState): boolean {
     return state.commandBar.text.trim().length > 0;
   }
 
+  if (state.inlineConfirmation) {
+    return true;
+  }
+
   if (!state.commandDraft) {
     return false;
   }
@@ -1068,7 +1201,85 @@ function resolveRevisionFiles(
 }
 
 function getBrowseFocusMode(state: AppState): FocusMode {
-  return state.expandedRowId !== null ? "files" : "revisions";
+  return getBrowseFocusModeStack(state).at(-1) ?? "revisions";
+}
+
+function getBrowseFocusModeStack(
+  state: Pick<AppState, "expandedRowId">,
+): readonly FocusMode[] {
+  return state.expandedRowId !== null ? ["revisions", "files"] : ["revisions"];
+}
+
+function replaceFocusModeStack(
+  state: AppState,
+  focusModeStack: readonly FocusMode[],
+): AppState {
+  return normalizeFocusState({
+    ...state,
+    focusMode: focusModeStack.at(-1) ?? "revisions",
+    focusModeStack: [...focusModeStack],
+  });
+}
+
+function normalizeFocusState(state: AppState): AppState {
+  const focusModeStack = normalizeFocusModeStack(resolveFocusModeStack(state), state);
+  const focusMode = focusModeStack.at(-1) ?? "revisions";
+
+  if (
+    state.focusMode === focusMode &&
+    state.focusModeStack.length === focusModeStack.length &&
+    state.focusModeStack.every((mode, index) => mode === focusModeStack[index])
+  ) {
+    return state;
+  }
+
+  return {
+    ...state,
+    focusMode,
+    focusModeStack,
+  };
+}
+
+function resolveFocusModeStack(state: AppState): FocusMode[] {
+  const stack = state.focusModeStack.length > 0
+    ? [...state.focusModeStack]
+    : [state.focusMode];
+  const currentModeIndex = stack.lastIndexOf(state.focusMode);
+
+  if (currentModeIndex === -1) {
+    stack.push(state.focusMode);
+  } else if (currentModeIndex !== stack.length - 1) {
+    stack.splice(currentModeIndex + 1);
+  }
+
+  return stack;
+}
+
+function normalizeFocusModeStack(
+  stack: readonly FocusMode[],
+  state: Pick<AppState, "expandedRowId" | "inlineConfirmation">,
+): FocusMode[] {
+  const nextStack = stack.filter((mode) => {
+    if (mode === "files") {
+      return state.expandedRowId !== null;
+    }
+
+    if (mode === "inline-confirmation") {
+      return state.expandedRowId !== null && state.inlineConfirmation !== null;
+    }
+
+    return true;
+  }).filter((mode, index) => mode !== "revisions" || index === 0);
+
+  if (nextStack.length === 0) {
+    return ["revisions"];
+  }
+
+  if (nextStack[0] === "revisions") {
+    return nextStack;
+  }
+
+  return ["revisions", ...nextStack.filter((mode) => mode !== "revisions")];
 }
 
 function clampIndex(value: number, size: number): number {

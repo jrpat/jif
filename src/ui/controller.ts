@@ -11,6 +11,8 @@ import {
   getExpandedRevision,
   getFocusedRevision,
   getFocusedRevisionArg,
+  getInlineConfirmation,
+  getInlineConfirmationActualCommand,
   getSelectedRevisionIds,
   isFileNavigationActive,
 } from "../state/store.ts";
@@ -102,6 +104,22 @@ export function createJifCommandController(args: Readonly<{
     },
     confirm() {
       const state = store.snapshot();
+      const inlineConfirmation = getInlineConfirmation(state);
+      if (inlineConfirmation) {
+        const commandText = getInlineConfirmationActualCommand(state)?.trim() ?? "";
+        if (commandText.length === 0) {
+          return;
+        }
+
+        if (inlineConfirmation.kind === "split-files" && inlineConfirmation.selectedOption === "yes") {
+          void args.runJjCommand(commandText);
+          return;
+        }
+
+        void args.runInteractiveJjCommand(commandText);
+        return;
+      }
+
       if (state.commandDraft?.config.kind === "squash" && squashNeedsInteractiveShell(state)) {
         const commandText = getDisplayedCommandText(state).trim();
         if (commandText.length > 0) {
@@ -160,6 +178,42 @@ export function createJifCommandController(args: Readonly<{
           reportError(store, error);
         }
       })();
+    },
+    startSplit() {
+      const state = store.snapshot();
+      const revision = getFocusedRevision(state);
+      if (!revision) {
+        return;
+      }
+
+      const revisionArg = getRevisionArg(revision.revisionId, revision.changeIdPrefixLength);
+      const selectedFilePaths = state.focusMode === "files" && state.expandedRowId === revision.rowId
+        ? state.selectedFilePaths
+        : [];
+
+      if (selectedFilePaths.length === 0) {
+        void args.runInteractiveJjCommand(quoteCommand(["split", "-r", revisionArg]));
+        return;
+      }
+
+      const absoluteFilePaths = selectedFilePaths.map((filePath) => join(state.repoPath, filePath));
+      store.actions.openInlineConfirmation({
+        kind: "split-files",
+        rowId: revision.rowId,
+        message: "Split only selected files?",
+        options: ["yes", "interactive", "no"],
+        selectedOption: "yes",
+        actualCommandByOption: {
+          yes: quoteCommand(["split", "-r", revisionArg, ...absoluteFilePaths]),
+          interactive: quoteCommand(["split", "-i", "-r", revisionArg, ...absoluteFilePaths]),
+          no: quoteCommand(["split", "-r", revisionArg]),
+        },
+        previewCommandByOption: {
+          yes: `split -r ${revisionArg} …files…`,
+          interactive: `split -i -r ${revisionArg} …files…`,
+          no: `split -r ${revisionArg}`,
+        },
+      });
     },
     startNewRevision() {
       const revisionArg = getFocusedRevisionArg(store.snapshot());
@@ -226,6 +280,12 @@ export function createJifCommandController(args: Readonly<{
       }
 
       void args.runJjCommand(`restore -c ${revisionArg} ${filePaths.join(" ")}`);
+    },
+    selectPreviousInlineConfirmationOption() {
+      store.actions.selectPreviousInlineConfirmationOption();
+    },
+    selectNextInlineConfirmationOption() {
+      store.actions.selectNextInlineConfirmationOption();
     },
     toggleShortFlags() {
       store.actions.toggleShortFlags();

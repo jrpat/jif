@@ -248,6 +248,7 @@ test("getShortcutPanelCommands narrows rebase draft shortcuts to draft-relevant 
   expect(ids).toContain("force-last-command");
   expect(ids).toContain("rebase-descendants");
   expect(ids).toContain("shortcut-panel");
+  expect(ids).not.toContain("split");
   expect(ids).not.toContain("quit");
   expect(ids).not.toContain("undo");
   expect(ids).not.toContain("cycle-layout");
@@ -261,6 +262,7 @@ test("getShortcutPanelCommands narrows file mode shortcuts to file-relevant acti
   const commands = getShortcutPanelCommands(state, getCommandsForMode(getActiveMode(state), defaultKeymap, commandDefinitions));
   const ids = commands.map((command) => command.id);
 
+  expect(ids).toContain("split");
   expect(ids).toContain("restore");
   expect(ids).toContain("toggle-file-selection");
   expect(ids).toContain("collapse");

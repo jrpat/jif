@@ -26,6 +26,7 @@ import { DEFAULT_REPOSITORY_LOAD_LIMIT, type JjClient } from "../jj/client.ts";
 import { runInteractiveCommand } from "../jj/process.ts";
 import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/types.ts";
 import { createJifCommandController } from "./controller.ts";
+import { InlineConfirmation } from "./InlineConfirmation.tsx";
 import { CommandPreview, CommandPrompt, RevsetPrompt, SearchPrompt } from "./prompts.tsx";
 import {
   getRevisionBorderPolicy,
@@ -569,6 +570,11 @@ export function RevisionItem(props: {
   const anyExpanded = () => props.expandedRowId !== null;
   const isAffected = () => affectedIds().has(props.revision.rowId);
   const isCommandTarget = () => props.commandTargetRowId === props.revision.rowId;
+  const inlineConfirmation = createMemo(() =>
+    props.state.inlineConfirmation?.rowId === props.revision.rowId
+      ? props.state.inlineConfirmation
+      : null
+  );
   const commandChipText = createMemo(() => getCommandChipTextForRevision(props.state, props.revision.rowId));
   const isSearchMatch = () => revisionMatchesSearch(props.revision, props.searchQuery);
   const changedFileRows = createMemo(() => isExpanded() ? buildChangedFileDisplayRows(props.revision) : []);
@@ -581,7 +587,9 @@ export function RevisionItem(props: {
   const nextRowState = createMemo(() =>
     getRevisionRowState(props.nextRowId, props.focusedRowId, props.selectedRowIds),
   );
-  const detailRowCount = () => isExpanded() ? Math.max(props.revision.files.length, 1) : 0;
+  const detailRowCount = () => isExpanded()
+    ? Math.max(props.revision.files.length, 1) + (inlineConfirmation() ? 1 : 0)
+    : 0;
   const layoutSpec = createMemo(() =>
     buildRevisionLayoutSpec(props.revision, {
       mode: props.state.layout,
@@ -738,7 +746,7 @@ export function RevisionItem(props: {
     graphRows: props.revision.graphRows,
     baseGraphRowCount: layoutSpec().baseGraphRowCount,
     visibleGraphMode: layoutSpec().visibleGraphMode,
-    detailRowCount: changedFileRows().length,
+    detailRowCount: changedFileRows().length + (inlineConfirmation() ? 1 : 0),
     ownsTop: false,
     ownsBottom: false,
     previousGraphBottom: null,
@@ -1032,6 +1040,24 @@ export function RevisionItem(props: {
             </box>
           )}
         </For>
+        {inlineConfirmation()
+          ? (
+            <box width="100%" flexDirection="row">
+              <text fg={continuationGraphColor()}>
+                {padRight(superGutterPlan().detail[changedFileRows().length] ?? "", superGraphWidth())}
+              </text>
+              <box width={1} />
+              <box flexGrow={1}>
+                <InlineConfirmation
+                  config={props.config}
+                  message={inlineConfirmation()!.message}
+                  options={inlineConfirmation()!.options}
+                  selectedOption={inlineConfirmation()!.selectedOption}
+                />
+              </box>
+            </box>
+          )
+          : null}
       </Show>
       <Show when={layoutSpec().mode !== "super-condensed"}>
         <For each={externalGraphRows()}>
@@ -1199,6 +1225,11 @@ function ChangedFiles(props: {
   config: ResolvedAppConfig;
 }) {
   const rows = createMemo(() => buildChangedFileDisplayRows(props.revision));
+  const inlineConfirmation = createMemo(() =>
+    props.state.inlineConfirmation?.rowId === props.revision.rowId
+      ? props.state.inlineConfirmation
+      : null
+  );
 
   return (
     <box width="100%" flexDirection="column">
@@ -1212,6 +1243,16 @@ function ChangedFiles(props: {
           />
         )}
       </For>
+      {inlineConfirmation()
+        ? (
+          <InlineConfirmation
+            config={props.config}
+            message={inlineConfirmation()!.message}
+            options={inlineConfirmation()!.options}
+            selectedOption={inlineConfirmation()!.selectedOption}
+          />
+        )
+        : null}
     </box>
   );
 }
