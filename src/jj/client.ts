@@ -13,11 +13,12 @@ const FIELD_SEPARATOR = "\u001f";
 const ROW_KIND_HEADER = "header";
 const ROW_KIND_BODY = "body";
 const LOG_TEMPLATE = buildLogTemplate(getMaxRevisionBaseGraphRowCount());
+export const DEFAULT_REPOSITORY_LOAD_LIMIT = 250;
 
 export class JjClient {
   constructor(readonly repoPath: string) {}
 
-  async loadRepository(limit = 80, revset?: string): Promise<RepositoryData> {
+  async loadRepository(limit = DEFAULT_REPOSITORY_LOAD_LIMIT, revset?: string): Promise<RepositoryData> {
     const args = [
       "log",
       "--limit",

@@ -22,7 +22,7 @@ import {
   type CommandSegment,
 } from "../state/store.ts";
 import { logShortcutDebug } from "../debug.ts";
-import type { JjClient } from "../jj/client.ts";
+import { DEFAULT_REPOSITORY_LOAD_LIMIT, type JjClient } from "../jj/client.ts";
 import { runInteractiveCommand } from "../jj/process.ts";
 import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/types.ts";
 import { createJifCommandController } from "./controller.ts";
@@ -66,7 +66,13 @@ import { getActiveMode, getCommandsForMode, defaultKeymap } from "../modes.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { suspendProcessToShell } from "./suspend.ts";
-import { bindViewRendererEvents, createPaletteDetector, startInitialRepositoryLoad } from "./startup.ts";
+import {
+  bindViewRendererEvents,
+  createPaletteDetector,
+  estimateInitialRevisionLoadLimit,
+  queueDeferredRepositoryLoad,
+  startInitialRepositoryLoad,
+} from "./startup.ts";
 
 export function JifView(props: {
   store: AppStore;
@@ -126,7 +132,9 @@ export function JifView(props: {
 
   onMount(() => {
     void (async () => {
-      await startInitialRepositoryLoad({
+      const initialRevisionLimit = initialRevisionLoadLimit();
+      const initialLoad = await startInitialRepositoryLoad({
+        initialRevisionLimit,
         detectAndApplyPalette,
         loadWorkspaceRoot: () => client.loadWorkspaceRoot().catch(() => null),
         loadDefaultRevset: () => client.loadDefaultRevset(),
@@ -140,6 +148,13 @@ export function JifView(props: {
       setReady(true);
       const disposeFocusRefresh = bindRefreshOnFocus(renderer, () => refreshRepository());
       onCleanup(() => disposeFocusRefresh());
+      queueDeferredRepositoryLoad({
+        initialRevisionLimit,
+        backgroundRevisionLimit: DEFAULT_REPOSITORY_LOAD_LIMIT,
+        revset: initialLoad.initialRevset || undefined,
+        schedule: queueMicrotask,
+        refreshRepository,
+      });
     })();
 
     const disposeRendererEvents = bindViewRendererEvents({
@@ -240,6 +255,13 @@ export function JifView(props: {
 
     return 3;
   });
+  const initialRevisionLoadLimit = createMemo(() =>
+    estimateInitialRevisionLoadLimit({
+      terminalHeight: terminalSize().height,
+      layout: store.state.layout,
+      maximum: DEFAULT_REPOSITORY_LOAD_LIMIT,
+    })
+  );
 
   createEffect(() => {
     logShortcutDebug("shortcut-panel-state", {

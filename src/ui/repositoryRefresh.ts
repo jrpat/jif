@@ -19,7 +19,7 @@ export function createRepositoryRefresher(args: {
 }) {
   let refreshInFlight: Promise<boolean> | null = null;
 
-  return async function refreshRepository(revset?: string): Promise<boolean> {
+  return async function refreshRepository(revset?: string, limit?: number): Promise<boolean> {
     if (refreshInFlight) {
       return refreshInFlight;
     }
@@ -28,7 +28,7 @@ export function createRepositoryRefresher(args: {
     refreshInFlight = (async () => {
       try {
         await args.client.verifyRepository();
-        const repositoryData = await args.client.loadRepository(undefined, effectiveRevset);
+        const repositoryData = await args.client.loadRepository(limit, effectiveRevset);
         args.actions.applyRepositoryData(repositoryData);
         return true;
       } catch (error) {

@@ -61,6 +61,38 @@ test("createRepositoryRefresher reloads using the active revset", async () => {
   expect(appliedRepositoryData).toEqual(repositoryData);
 });
 
+test("createRepositoryRefresher forwards an explicit revision load limit", async () => {
+  const calls: string[] = [];
+
+  const refreshRepository = createRepositoryRefresher({
+    client: {
+      async verifyRepository() {
+        calls.push("verify");
+      },
+      async loadRepository(limit, revset) {
+        calls.push(`load:${revset ?? ""}:${limit ?? ""}`);
+        return createRepositoryData();
+      },
+    },
+    actions: {
+      setLoading() {},
+      applyRepositoryData() {},
+      pushEvent() {
+        throw new Error("refresh should not fail");
+      },
+    },
+    getRevsetQuery: () => "mine()",
+  });
+
+  const result = await refreshRepository(undefined, 21);
+
+  expect(result).toBe(true);
+  expect(calls).toEqual([
+    "verify",
+    "load:mine():21",
+  ]);
+});
+
 test("createRepositoryRefresher coalesces concurrent refresh requests", async () => {
   const loadDeferred = createDeferred<RepositoryData>();
   let loadCalls = 0;

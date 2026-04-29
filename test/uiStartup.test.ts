@@ -2,12 +2,31 @@ import { EventEmitter } from "node:events";
 import { expect, test } from "bun:test";
 import { CliRenderEvents } from "@opentui/core";
 import { FALLBACK_PALETTE_DARK } from "../src/config/index.ts";
-import { bindViewRendererEvents, createPaletteDetector, startInitialRepositoryLoad } from "../src/ui/startup.ts";
+import {
+  bindViewRendererEvents,
+  createPaletteDetector,
+  estimateInitialRevisionLoadLimit,
+  queueDeferredRepositoryLoad,
+  startInitialRepositoryLoad,
+} from "../src/ui/startup.ts";
+
+test("estimateInitialRevisionLoadLimit uses layout-specific row budgets", () => {
+  expect(estimateInitialRevisionLoadLimit({ terminalHeight: 24, layout: "super-condensed" })).toBe(21);
+  expect(estimateInitialRevisionLoadLimit({ terminalHeight: 24, layout: "condensed" })).toBe(21);
+  expect(estimateInitialRevisionLoadLimit({ terminalHeight: 24, layout: "expanded" })).toBe(11);
+});
+
+test("estimateInitialRevisionLoadLimit clamps to the configured maximum", () => {
+  expect(
+    estimateInitialRevisionLoadLimit({ terminalHeight: 500, layout: "super-condensed", maximum: 250 }),
+  ).toBe(250);
+});
 
 test("startInitialRepositoryLoad awaits palette detection before refreshing", async () => {
   const events: string[] = [];
 
   const result = await startInitialRepositoryLoad({
+    initialRevisionLimit: 21,
     detectAndApplyPalette: async () => {
       events.push("palette.done");
     },
@@ -23,8 +42,8 @@ test("startInitialRepositoryLoad awaits palette detection before refreshing", as
       events.push(`saved-revset.load:${workspaceRoot}`);
       return "";
     },
-    refreshRepository: async (revset) => {
-      events.push(`refresh:${revset}`);
+    refreshRepository: async (revset, limit) => {
+      events.push(`refresh:${revset}:${limit}`);
       return true;
     },
     setWorkspaceRoot: (workspaceRoot) => {
@@ -41,18 +60,19 @@ test("startInitialRepositoryLoad awaits palette detection before refreshing", as
   });
   // palette.done must appear before refresh — it's awaited in Promise.all
   const paletteIndex = events.indexOf("palette.done");
-  const refreshIndex = events.indexOf("refresh:all()");
+  const refreshIndex = events.indexOf("refresh:all():21");
   expect(paletteIndex).toBeGreaterThanOrEqual(0);
   expect(refreshIndex).toBeGreaterThan(paletteIndex);
 });
 
 test("startInitialRepositoryLoad prefers saved revset over default revset", async () => {
   const result = await startInitialRepositoryLoad({
+    initialRevisionLimit: 34,
     detectAndApplyPalette: async () => {},
     loadWorkspaceRoot: async () => "/repo",
     loadDefaultRevset: async () => "default()",
     loadSavedRevset: async () => "mine()",
-    refreshRepository: async (revset) => revset === "mine()",
+    refreshRepository: async (revset, limit) => revset === "mine()" && limit === 34,
     setWorkspaceRoot: () => {},
     setRevsetQuery: () => {},
   });
@@ -61,6 +81,47 @@ test("startInitialRepositoryLoad prefers saved revset over default revset", asyn
     workspaceRoot: "/repo",
     initialRevset: "mine()",
   });
+});
+
+test("queueDeferredRepositoryLoad schedules a follow-up refresh after the initial render", async () => {
+  const scheduled: Array<() => void> = [];
+  const refreshCalls: Array<{ revset: string | undefined; limit: number | undefined }> = [];
+
+  const queued = queueDeferredRepositoryLoad({
+    initialRevisionLimit: 21,
+    backgroundRevisionLimit: 250,
+    revset: "mine()",
+    schedule(task) {
+      scheduled.push(task);
+    },
+    refreshRepository: async (revset, limit) => {
+      refreshCalls.push({ revset, limit });
+      return true;
+    },
+  });
+
+  expect(queued).toBe(true);
+  expect(refreshCalls).toEqual([]);
+  expect(scheduled).toHaveLength(1);
+
+  scheduled[0]!();
+  await Promise.resolve();
+
+  expect(refreshCalls).toEqual([{ revset: "mine()", limit: 250 }]);
+});
+
+test("queueDeferredRepositoryLoad skips the follow-up refresh when the initial load already hit the ceiling", () => {
+  const queued = queueDeferredRepositoryLoad({
+    initialRevisionLimit: 250,
+    backgroundRevisionLimit: 250,
+    revset: "mine()",
+    schedule() {
+      throw new Error("background load should not be scheduled");
+    },
+    refreshRepository: async () => true,
+  });
+
+  expect(queued).toBe(false);
 });
 
 test("createPaletteDetector resolves config from the renderer palette", async () => {
