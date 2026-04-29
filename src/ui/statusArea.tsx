@@ -14,6 +14,7 @@ export function StatusArea(props: {
   expanded: boolean;
   currentModeLabel: string;
   panelBodyHeight: number;
+  actionLabel?: string | null;
   config: ResolvedAppConfig;
   loadingIndicatorText?: string | null;
 }) {
@@ -33,7 +34,6 @@ export function StatusArea(props: {
 
     const handle = setInterval(() => {
       setLoadingFrameIndex((current) => current + 1);
-    }, SPINNER_INTERVAL_MS);
     onCleanup(() => clearInterval(handle));
   });
 
@@ -106,7 +106,9 @@ export function StatusArea(props: {
             <text fg={getStatusColor("info", colors)} truncate>{loadingIndicator()}</text>
             <box width={1} />
           </Show>
-          <text fg={colors.textTertiary}>? close</text>
+          <Show when={props.actionLabel !== null && props.actionLabel !== undefined}>
+            <text fg={colors.textTertiary}>{props.actionLabel}</text>
+          </Show>
         </box>
         <box width="100%" height={1} backgroundColor={colors.chromeFillTwo} />
         <scrollbox
@@ -165,6 +167,7 @@ export function StatusArea(props: {
         </scrollbox>
       </box>
     </Show>
+  );
   );
 }
 

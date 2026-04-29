@@ -128,6 +128,15 @@ export function getCommandsForMode(
   return definitions.filter((def) => ids.has(def.id));
 }
 
+export function getDirectCommandsForMode(
+  mode: Mode,
+  keymap: Keymap,
+  definitions: readonly CommandDefinition[],
+): readonly CommandDefinition[] {
+  const ids = new Set(Object.values(keymap[mode] ?? {}));
+  return definitions.filter((def) => ids.has(def.id));
+}
+
 function collectBoundCommandIds(
   mode: Mode,
   keymap: Keymap,

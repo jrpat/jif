@@ -60,9 +60,10 @@ import {
   type ShortcutGrid,
   type ShortcutSummarySegment,
 } from "./shortcutPanel.ts";
+import { resolveBottomChromeLayout } from "./bottomChrome.ts";
 import { normalizeKey } from "./keyboard.ts";
 import { dispatchGlobalKey } from "./keybindings.ts";
-import { getActiveMode, getCommandsForMode, defaultKeymap } from "../modes.ts";
+import { getActiveMode, getCommandsForMode, getDirectCommandsForMode, defaultKeymap } from "../modes.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { suspendProcessToShell } from "./suspend.ts";
@@ -214,8 +215,14 @@ export function JifView(props: {
   const visibleCommands = createMemo(() =>
     getCommandsForMode(activeMode(), defaultKeymap, commandDefinitions)
   );
+  const directModeCommands = createMemo(() =>
+    getDirectCommandsForMode(activeMode(), defaultKeymap, commandDefinitions)
+  );
   const shortcutCommands = createMemo(() =>
     getShortcutPanelCommands(store.state, visibleCommands())
+  );
+  const modeShortcutCommands = createMemo(() =>
+    getShortcutPanelCommands(store.state, directModeCommands())
   );
   const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutCommands()));
   const shortcutContentWidth = createMemo(() => Math.max(1, terminalSize().width - 4));
@@ -234,7 +241,6 @@ export function JifView(props: {
   const shortcutPanelBodyHeight = createMemo(() =>
     Math.max(1, Math.min(shortcutGrid().rows.length, Math.max(1, shortcutPanelHeight() - 3)))
   );
-  const shortcutPanelRenderedHeight = createMemo(() => shortcutPanelBodyHeight() + 4);
   const [promptSurfaceHeight, setPromptSurfaceHeight] = createSignal(3);
   const showsCommandPrompt = createMemo(() => store.state.focusMode === "command");
   const showsRevsetPrompt = createMemo(() => store.state.focusMode === "revset");
@@ -242,7 +248,7 @@ export function JifView(props: {
     !showsCommandPrompt() && !showsRevsetPrompt() &&
     (store.state.focusMode === "search" || store.state.searchQuery !== "")
   );
-  const showsShortcutPanel = createMemo(() =>
+  const showsPersistentShortcutPanel = createMemo(() =>
     !showsCommandPrompt() && !showsRevsetPrompt() && !showsSearchPrompt() &&
     store.state.shortcutPanelExpanded
   );
@@ -250,20 +256,9 @@ export function JifView(props: {
     !showsCommandPrompt() &&
     !showsRevsetPrompt() &&
     !showsSearchPrompt() &&
-    !showsShortcutPanel() &&
+    !showsPersistentShortcutPanel() &&
     commandSegments() !== null
   );
-  const bottomSurfaceHeight = createMemo(() => {
-    if (showsCommandPrompt() || showsRevsetPrompt() || showsSearchPrompt() || showsCommandPreview()) {
-      return promptSurfaceHeight();
-    }
-
-    if (showsShortcutPanel()) {
-      return shortcutPanelRenderedHeight();
-    }
-
-    return 3;
-  });
   const initialRevisionLoadLimit = createMemo(() =>
     estimateInitialRevisionLoadLimit({
       terminalHeight: terminalSize().height,
@@ -271,6 +266,30 @@ export function JifView(props: {
       maximum: DEFAULT_REPOSITORY_LOAD_LIMIT,
     })
   );
+  const showsTransientShortcutPanel = createMemo(() =>
+    showsCommandPreview() && !showsPersistentShortcutPanel() && modeShortcutCommands().length > 0
+  );
+  const expandedShortcutCommands = createMemo(() =>
+    showsTransientShortcutPanel() ? modeShortcutCommands() : shortcutCommands()
+  );
+  const expandedShortcutEntries = createMemo(() => buildShortcutEntries(expandedShortcutCommands()));
+  const expandedShortcutGrid = createMemo(() =>
+    buildShortcutGrid(expandedShortcutEntries(), shortcutContentWidth())
+  );
+  const expandedShortcutPanelBodyHeight = createMemo(() =>
+    Math.max(1, Math.min(expandedShortcutGrid().rows.length, Math.max(1, shortcutPanelHeight() - 3)))
+  );
+  const expandedShortcutPanelRenderedHeight = createMemo(() => expandedShortcutPanelBodyHeight() + 4);
+  const bottomChromeLayout = createMemo(() => resolveBottomChromeLayout({
+    showsCommandPrompt: showsCommandPrompt(),
+    showsRevsetPrompt: showsRevsetPrompt(),
+    showsSearchPrompt: showsSearchPrompt(),
+    showsCommandPreview: showsCommandPreview(),
+    showsPersistentShortcutPanel: showsPersistentShortcutPanel(),
+    showsTransientShortcutPanel: showsTransientShortcutPanel(),
+    promptSurfaceHeight: promptSurfaceHeight(),
+    shortcutPanelRenderedHeight: expandedShortcutPanelRenderedHeight(),
+  }));
 
   createEffect(() => {
     logShortcutDebug("shortcut-panel-state", {
@@ -446,6 +465,19 @@ export function JifView(props: {
             </For>
           </box>
         </scrollbox>
+        <Show when={bottomChromeLayout().showExpandedShortcutPanel}>
+          <StatusArea
+            shortcutSummary={shortcutSummary()}
+            shortcutSummarySegments={shortcutSummarySegments()}
+            shortcutGrid={expandedShortcutGrid()}
+            expanded
+            currentModeLabel={shortcutModeLabel(activeMode())}
+            panelBodyHeight={expandedShortcutPanelBodyHeight()}
+            actionLabel={showsPersistentShortcutPanel() ? "? close" : null}
+            config={config}
+            loadingIndicatorText={loadingMoreRevisions() ? "loading more revisions" : null}
+          />
+        </Show>
         <Show when={showsCommandPrompt()}>
           <CommandPrompt
             store={store}
@@ -490,12 +522,12 @@ export function JifView(props: {
             onHeightChange={setPromptSurfaceHeight}
           />
         </Show>
-        <Show when={!showsCommandPrompt() && !showsRevsetPrompt() && !showsSearchPrompt() && !showsCommandPreview()}>
+        <Show when={bottomChromeLayout().showCollapsedStatusArea}>
           <StatusArea
             shortcutSummary={shortcutSummary()}
             shortcutSummarySegments={shortcutSummarySegments()}
             shortcutGrid={shortcutGrid()}
-            expanded={showsShortcutPanel()}
+            expanded={false}
             currentModeLabel={shortcutModeLabel(activeMode())}
             panelBodyHeight={shortcutPanelBodyHeight()}
             config={config}
@@ -506,7 +538,7 @@ export function JifView(props: {
           messages={store.state.statusMessages}
           loading={store.state.loading}
           config={config}
-          bottomInset={bottomSurfaceHeight()}
+          bottomInset={bottomChromeLayout().bottomSurfaceHeight}
           onDismiss={(id) => store.actions.dismissStatusMessage(id)}
         />
       </box>

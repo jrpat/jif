@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { commandDefinitions } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
 import { createInitialState, draftConfigs, startCommandDraft } from "../src/state/store.ts";
-import { resolveCommand, getActiveMode, defaultKeymap } from "../src/modes.ts";
+import { resolveCommand, getActiveMode, getDirectCommandsForMode, defaultKeymap } from "../src/modes.ts";
 
 function createState(): AppState {
   return {
@@ -105,6 +105,12 @@ test("rebase-descendants resolves in rebase mode but not normal mode", () => {
 
   const rebaseState = startCommandDraft(createState(), draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
   expect(resolveForState("s", rebaseState)).toBe("rebase-descendants");
+});
+
+test("getDirectCommandsForMode returns only rebase-local bindings", () => {
+  const commands = getDirectCommandsForMode("rebase", defaultKeymap, commandDefinitions);
+
+  expect(commands.map((command) => command.id)).toEqual(["rebase-descendants"]);
 });
 
 test("undo and redo resolve in normal mode", () => {
