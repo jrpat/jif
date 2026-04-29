@@ -106,6 +106,7 @@ export function createInitialState(
     expandedRowId: null,
     focusedFileIndex: 0,
     selectedRowIds: [],
+    markedRowIds: [],
     selectedFilePaths: [],
     commandBar: createEmptyCommandBar(),
     commandDraft: null,
@@ -201,6 +202,7 @@ export function applyRepositoryData(
 
   const rowIdSet = new Set(revisions.map((r) => r.rowId));
   const selectedRowIds = state.selectedRowIds.filter((id) => rowIdSet.has(id));
+  const markedRowIds = state.markedRowIds.filter((id) => rowIdSet.has(id));
   const selectedFilePaths =
     expandedRowId === state.expandedRowId
       ? state.selectedFilePaths
@@ -215,6 +217,7 @@ export function applyRepositoryData(
     expandedRowId,
     focusedFileIndex: clampIndex(state.focusedFileIndex, getExpandedFilesCount(revisions, expandedRowId)),
     selectedRowIds,
+    markedRowIds,
     selectedFilePaths,
     loading: false,
   };
@@ -403,6 +406,7 @@ export function cancelCommandState(state: AppState): AppState {
     commandBar: createEmptyCommandBar(),
     commandDraft: null,
     selectedRowIds: [],
+    markedRowIds: [],
     selectedFilePaths: [],
     statusMessages: state.commandDraft ? [] : state.statusMessages,
   };
@@ -414,6 +418,7 @@ export function cancelCommandDraft(state: AppState): AppState {
     commandBar: createEmptyCommandBar(),
     commandDraft: null,
     selectedRowIds: [],
+    markedRowIds: [],
     statusMessages: state.commandDraft ? [] : state.statusMessages,
   };
 }
@@ -554,6 +559,7 @@ export function clearRevisionSelection(state: AppState): AppState {
   return {
     ...state,
     selectedRowIds: [],
+    markedRowIds: [],
   };
 }
 
@@ -606,6 +612,7 @@ export function startCommandDraft(
       ? state.focusedRevisionIndex
       : clampIndex(state.focusedRevisionIndex + 1, state.revisions.length),
     selectedRowIds: sourceIds,
+    markedRowIds: hasPreSelection ? state.markedRowIds : [],
     commandDraft: {
       config,
       includeDescendants: false,
@@ -639,16 +646,26 @@ export function toggleRevisionSelection(state: AppState): AppState {
   }
 
   const ids = state.selectedRowIds;
+  const markedIds = state.markedRowIds;
   const isSelected = ids.includes(focusedRevision.rowId);
+  const isMarked = markedIds.includes(focusedRevision.rowId);
+  const selectingImplicitDraftSource = state.commandDraft !== null && isSelected && !isMarked;
 
   return {
     ...state,
-    focusedRevisionIndex: isSelected
+    focusedRevisionIndex: isMarked
       ? state.focusedRevisionIndex
       : clampIndex(state.focusedRevisionIndex + 1, state.revisions.length),
-    selectedRowIds: isSelected
-      ? ids.filter((id) => id !== focusedRevision.rowId)
-      : [...ids, focusedRevision.rowId],
+    selectedRowIds: selectingImplicitDraftSource
+      ? ids
+      : isSelected
+        ? ids.filter((id) => id !== focusedRevision.rowId)
+        : [...ids, focusedRevision.rowId],
+    markedRowIds: selectingImplicitDraftSource
+      ? [...markedIds, focusedRevision.rowId]
+      : isMarked
+        ? markedIds.filter((id) => id !== focusedRevision.rowId)
+        : [...markedIds, focusedRevision.rowId],
   };
 }
 
@@ -865,6 +882,10 @@ export function getCommandTargetRowId(state: AppState): string | null {
   }
 
   return focusedRevision.rowId;
+}
+
+export function getMarkedRowIds(state: AppState): ReadonlySet<string> {
+  return new Set(state.markedRowIds);
 }
 
 export function getSelectedRowIds(state: AppState): ReadonlySet<string> {

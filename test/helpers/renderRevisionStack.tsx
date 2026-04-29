@@ -2,7 +2,7 @@ import { For, createSignal } from "solid-js";
 import { testRender } from "@opentui/solid";
 import { resolveAppConfig } from "../../src/config/index.ts";
 import { createAppStore } from "../../src/state/appStore.ts";
-import { draftConfigs, getCommandTargetRowId, getSelectedRowIds } from "../../src/state/store.ts";
+import { draftConfigs, getCommandTargetRowId, getMarkedRowIds } from "../../src/state/store.ts";
 import type { RevisionSummary } from "../../src/domain/types.ts";
 import { RevisionItem } from "../../src/ui/render.tsx";
 import type { AppLayout } from "../../src/domain/types.ts";
@@ -373,7 +373,7 @@ async function renderCommandDraftChips(
             nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
             config={resolveAppConfig({ commands: { layout } })}
             focusedRowId={store.state.revisions[store.state.focusedRevisionIndex]?.rowId ?? null}
-            selectedRowIds={getSelectedRowIds(store.state)}
+            selectedRowIds={getMarkedRowIds(store.state)}
             expandedRowId={null}
             commandTargetRowId={getCommandTargetRowId(store.state)}
             searchQuery=""

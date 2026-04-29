@@ -85,6 +85,7 @@ export type AppState = Readonly<{
   expandedRowId: string | null;
   focusedFileIndex: number;
   selectedRowIds: readonly string[];
+  markedRowIds: readonly string[];
   selectedFilePaths: readonly string[];
   commandBar: CommandBarState;
   commandDraft: CommandDraft | null;

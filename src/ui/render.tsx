@@ -16,8 +16,8 @@ import {
   getDisplayedCommandText,
   getExpandedRevision,
   getFocusedRevision,
+  getMarkedRowIds,
   getOperationAffectedRowIds,
-  getSelectedRowIds,
   revisionMatchesSearch,
   type CommandSegment,
 } from "../state/store.ts";
@@ -365,7 +365,7 @@ export function JifView(props: {
                   nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
                   config={config}
                   focusedRowId={getFocusedRevision(store.state)?.rowId ?? null}
-                  selectedRowIds={getSelectedRowIds(store.state)}
+                  selectedRowIds={getMarkedRowIds(store.state)}
                   expandedRowId={getExpandedRevision(store.state)?.rowId ?? null}
                   commandTargetRowId={getCommandTargetRowId(store.state)}
                   searchQuery={store.state.searchQuery}

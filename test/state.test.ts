@@ -18,6 +18,7 @@ import {
   focusWorkingCopy,
   getDisplayedCommandSegments,
   getDisplayedCommandText,
+  getMarkedRowIds,
   getSelectedRowIds,
   logEvent,
   openShortcutPanel,
@@ -385,6 +386,16 @@ test("startCommandDraft advances focus to parent revision", () => {
   expect(state.focusedRevisionIndex).toBe(0);
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
   expect(state.focusedRevisionIndex).toBe(1);
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+});
+
+test("startCommandDraft keeps the implicit source out of manual selection", () => {
+  let state = createState();
+
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
+
+  expect(getMarkedRowIds(state).size).toBe(0);
+  expect(getSelectedRowIds(state).has(FIRST_ROW_ID)).toBeTrue();
   expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
 });
 

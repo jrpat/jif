@@ -119,6 +119,7 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
 
   expect(rebaseCommandChips).toContain("move");
   expect(rebaseCommandChips).toContain("onto");
+  expect(rebaseCommandChips).not.toContain("✓");
   expect(rebaseCommandChips.indexOf("move")).toBeLessThan(rebaseCommandChips.indexOf("onto"));
 
   const expandedSourceChipLine = rebaseCommandChips
@@ -158,4 +159,5 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
 
   expect(squashCommandChips).toContain("from");
   expect(squashCommandChips).toContain("into");
+  expect(squashCommandChips).not.toContain("✓");
 }, 20000);
