@@ -14,15 +14,21 @@ This README is for humans working in this repository.
 ## Install
 
 ```bash
-bun install
+bun run install:bin
 ```
 
 This compiles a single `jif` executable into `${XDG_BIN_HOME:-$HOME/.local/bin}`.
 
+To install workspace dependencies without compiling the binary:
+
+```bash
+bun install
+```
+
 To install into a different location for one run:
 
 ```bash
-XDG_BIN_HOME=/some/bin bun install
+XDG_BIN_HOME=/some/bin bun run install:bin
 ```
 
 ## Run

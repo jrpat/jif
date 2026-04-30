@@ -11,8 +11,8 @@
     "start": "bun run index.ts",
     "sample": "bun run index.ts --sample",
     "dev": "bun --watch ./index.ts --sample",
-    "install": "bun run scripts/install.ts",
-    "live": "bun run install && jif"
+    "bin": "bun run scripts/install-binary.ts",
+    "live": "bun run install:bin && jif"
   },
   "devDependencies": {
     "@types/bun": "^1.3.10"
