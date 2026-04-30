@@ -1,4 +1,4 @@
-import { TextAttributes } from "@opentui/core";
+import { TextAttributes, type InputRenderable } from "@opentui/core";
 import { For, Show, createEffect, createMemo, createSignal, onMount } from "solid-js";
 import { useKeyboard } from "@opentui/solid";
 import { matchHistoryEntries } from "../history/store.ts";
@@ -27,7 +27,9 @@ export function CommandPrompt(props: {
   const colors = config.colorScheme.semanticColors;
   const flow: AutocompleteFlow = "bottom-to-top";
   const [historyEntries, setHistoryEntries] = createSignal<string[]>([]);
+  const [draftText, setDraftText] = createSignal(props.commandText);
   const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null);
+  let input: InputRenderable | undefined;
 
   createEffect(() => {
     const workspaceRoot = props.workspaceRoot;
@@ -42,11 +44,14 @@ export function CommandPrompt(props: {
   });
 
   createEffect(() => {
-    props.commandText;
-    setSelectedIndex(null);
+    const nextText = props.commandText;
+    if (nextText !== draftText()) {
+      setDraftText(nextText);
+      setSelectedIndex(null);
+    }
   });
 
-  const filteredHistory = createMemo(() => matchHistoryEntries(props.commandText, historyEntries()));
+  const filteredHistory = createMemo(() => matchHistoryEntries(draftText(), historyEntries()));
 
   const autocompleteItems = createMemo<AutocompleteListItem[]>(() =>
     filteredHistory().map((entry) => ({
@@ -54,6 +59,19 @@ export function CommandPrompt(props: {
       text: entry,
     }))
   );
+
+  const displayedText = createMemo(() => {
+    const index = selectedIndex();
+    if (index === null) {
+      return draftText();
+    }
+
+    return filteredHistory()[index] ?? draftText();
+  });
+
+  createEffect(() => {
+    syncPromptInput(input, displayedText());
+  });
 
   useKeyboard((event) => {
     if (event.eventType === "release") {
@@ -101,9 +119,12 @@ export function CommandPrompt(props: {
         <text fg={colors.textPrimary}>jj </text>
       </box>
       <input
-        ref={(el: any) => el.editorView.setScrollMargin(0)}
+        ref={(el: InputRenderable) => {
+          input = el;
+          el.editorView.setScrollMargin(0);
+          syncPromptInput(el, displayedText());
+        }}
         flexGrow={1}
-        value={props.commandText}
         placeholder="subcommand"
         focused
         textColor={colors.textPrimary}
@@ -111,6 +132,8 @@ export function CommandPrompt(props: {
         placeholderColor={colors.textQuaternary}
         cursorColor={colors.chromeBorderFocus}
         onInput={(value) => {
+          setDraftText(value);
+          setSelectedIndex(null);
           store.actions.setCommandBarText(value);
         }}
         onSubmit={props.onSubmit as any}
@@ -228,6 +251,7 @@ export function RevsetPrompt(props: {
   const [completionItems, setCompletionItems] = createSignal<CompletionItem[]>([]);
   const [historyEntries, setHistoryEntries] = createSignal<string[]>([]);
   const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null);
+  let input: InputRenderable | undefined;
 
   const suggestions = createMemo<AutocompleteListItem[]>(() => {
     if (text().trim().length === 0) {
@@ -263,26 +287,32 @@ export function RevsetPrompt(props: {
   });
 
   const applySuggestion = (item: AutocompleteListItem) => {
-    if (item.tag === "hs") {
-      setText(item.text);
-      setSelectedIndex(null);
+    const nextText = getRevsetSuggestionText(text(), item, completionItems());
+    if (nextText === null) {
       return;
     }
 
-    const completion = completionItems().find((candidate) => candidate.name === item.text);
-    if (!completion) {
-      return;
-    }
-
-    const current = text();
-    const { start } = extractLastToken(current);
-    let nextValue = completion.name;
-    if (completion.kind === "function") {
-      nextValue += completion.hasParameters ? "(" : "()";
-    }
-    setText(current.slice(0, start) + nextValue);
+    setText(nextText);
     setSelectedIndex(null);
   };
+
+  const displayedText = createMemo(() => {
+    const index = selectedIndex();
+    if (index === null) {
+      return text();
+    }
+
+    const item = suggestions()[index];
+    if (!item) {
+      return text();
+    }
+
+    return getRevsetSuggestionText(text(), item, completionItems()) ?? text();
+  });
+
+  createEffect(() => {
+    syncPromptInput(input, displayedText());
+  });
 
   useKeyboard((event) => {
     if (event.eventType === "release" || event.meta || event.option) {
@@ -330,8 +360,11 @@ export function RevsetPrompt(props: {
         <text fg={colors.textTertiary}>Revset: </text>
       </Show>
       <input
+        ref={(el: InputRenderable) => {
+          input = el;
+          syncPromptInput(el, displayedText());
+        }}
         flexGrow={1}
-        value={text()}
         focused
         textColor={colors.textPrimary}
         focusedTextColor={colors.textPrimary}
@@ -392,6 +425,38 @@ function PromptShell(props: {
       </box>
     </box>
   );
+}
+
+function getRevsetSuggestionText(
+  currentText: string,
+  item: AutocompleteListItem,
+  completionItems: readonly CompletionItem[],
+): string | null {
+  if (item.tag === "hs") {
+    return item.text;
+  }
+
+  const completion = completionItems.find((candidate) => candidate.name === item.text);
+  if (!completion) {
+    return null;
+  }
+
+  const { start } = extractLastToken(currentText);
+  let nextValue = completion.name;
+  if (completion.kind === "function") {
+    nextValue += completion.hasParameters ? "(" : "()";
+  }
+
+  return currentText.slice(0, start) + nextValue;
+}
+
+function syncPromptInput(input: InputRenderable | undefined, text: string) {
+  if (!input || input.plainText === text) {
+    return;
+  }
+
+  input.setText(text);
+  input.cursorOffset = text.length;
 }
 
 function completionKindLabel(kind: CompletionItem["kind"]): string {
