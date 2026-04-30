@@ -3,16 +3,22 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "workspaces": [
+    "packages/*",
+    "ext/*"
+  ],
   "scripts": {
     "clean": "rm -rf dist .tmp",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
+    "typecheck:workspaces": "bun run --filter '*' typecheck",
     "build": "bun run scripts/build.ts",
     "start": "bun run index.ts",
     "sample": "bun run index.ts --sample",
     "dev": "bun --watch ./index.ts --sample",
     "bin": "bun run scripts/install-binary.ts",
-    "live": "bun run install:bin && jif"
+    "live": "bun run install:bin && jif",
+    "vsc:local": "bun run --cwd ext/vscode install:local"
   },
   "devDependencies": {
     "@types/bun": "^1.3.10"

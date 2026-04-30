@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Smoke test JIF extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/ext/vscode",
+        "--disable-extension=jjx.jjx",
+        "${workspaceFolder}"
+      ],
+      "preLaunchTask": "build jif vscode extension",
+      "outFiles": [
+        "${workspaceFolder}/ext/vscode/dist/**/*.js"
+      ],
+      "env": {
+        "PATH": "${env:HOME}/.local/bin:${env:PATH}"
+      }
+    }
+  ]
+}
