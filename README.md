@@ -99,3 +99,13 @@ bunx tsc --noEmit
 Repo-local config lives in `config.ts`.
 
 The current color configuration supports `light`, `dark`, and `auto` theme mode. In `auto`, startup queries the terminal background color and picks the light or dark theme accordingly.
+
+Revision IDs default to the longest unique prefix across the visible log. You can show a few extra characters with:
+
+```ts
+export default defineConfig({
+	log: {
+		revisionIdAdditionalChars: 0,
+	},
+});
+```

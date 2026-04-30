@@ -107,6 +107,24 @@ test("resolveAppConfig defaults log.scrollMargin to 1", () => {
   expect(resolved.log.scrollMargin).toBe(1);
 });
 
+test("resolveAppConfig defaults log.revisionIdAdditionalChars to 0", () => {
+  const resolved = resolveAppConfig(defaultAppConfig);
+
+  expect(resolved.log.revisionIdAdditionalChars).toBe(0);
+});
+
+test("resolveAppConfig applies log.revisionIdAdditionalChars", () => {
+  const config: AppConfig = {
+    log: {
+      revisionIdAdditionalChars: 2,
+    },
+  };
+
+  const resolved = resolveAppConfig(config);
+
+  expect(resolved.log.revisionIdAdditionalChars).toBe(2);
+});
+
 test("resolveAppConfig defaults layout to condensed", () => {
   const resolved = resolveAppConfig(defaultAppConfig);
 

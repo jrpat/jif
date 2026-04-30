@@ -43,6 +43,7 @@ import {
 import { buildRevisionLayoutSpec, type RevisionSideChip } from "./revisionLayout.ts";
 import {
   buildRevisionChangeIdSegments,
+  getRevisionChangeIdDisplayLength,
   getRevisionCommandChipBgColor,
   getRevisionChangeIdColors,
   getRevisionDescriptionColor,
@@ -212,6 +213,12 @@ export function JifView(props: {
     store.state.selectedRowIds;
     return getDisplayedCommandSegments(store.state);
   });
+  const revisionChangeIdDisplayLength = createMemo(() =>
+    getRevisionChangeIdDisplayLength(
+      store.state.revisions,
+      config.log.revisionIdAdditionalChars,
+    )
+  );
   const activeMode = createMemo(() => getActiveMode(store.state));
   const visibleCommands = createMemo(() =>
     getCommandsForMode(activeMode(), defaultKeymap, commandDefinitions)
@@ -452,6 +459,7 @@ export function JifView(props: {
                 <RevisionItem
                   state={store.state}
                   revision={revision}
+                  revisionChangeIdDisplayLength={revisionChangeIdDisplayLength()}
                   index={index()}
                   previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
                   nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
@@ -551,6 +559,7 @@ export function JifView(props: {
 export function RevisionItem(props: {
   state: AppStore["state"];
   revision: RevisionSummary;
+  revisionChangeIdDisplayLength?: number;
   index: number;
   previousRowId: string | null;
   nextRowId: string | null;
@@ -574,6 +583,13 @@ export function RevisionItem(props: {
     props.state.inlineConfirmation?.rowId === props.revision.rowId
       ? props.state.inlineConfirmation
       : null
+  );
+  const revisionChangeIdDisplayLength = createMemo(() =>
+    props.revisionChangeIdDisplayLength
+      ?? getRevisionChangeIdDisplayLength(
+        props.state.revisions,
+        props.config.log.revisionIdAdditionalChars,
+      )
   );
   const commandChipText = createMemo(() => getCommandChipTextForRevision(props.state, props.revision.rowId));
   const isSearchMatch = () => revisionMatchesSearch(props.revision, props.searchQuery);
@@ -834,6 +850,7 @@ export function RevisionItem(props: {
                       <box width="100%" flexDirection="row">
                         <RevisionChangeId
                           revision={props.revision}
+                          displayLength={revisionChangeIdDisplayLength()}
                           rowState={effectiveRowState()}
                           colors={colors()}
                           showTimestamp={showExpandedTimestamp()}
@@ -879,6 +896,7 @@ export function RevisionItem(props: {
                     <box width="100%" height={1} flexDirection="row">
                       <RevisionChangeId
                         revision={props.revision}
+                        displayLength={revisionChangeIdDisplayLength()}
                         rowState={effectiveRowState()}
                         colors={colors()}
                         showTimestamp={showExpandedTimestamp()}
@@ -979,6 +997,7 @@ export function RevisionItem(props: {
             >
               <RevisionChangeId
                 revision={props.revision}
+                displayLength={revisionChangeIdDisplayLength()}
                 rowState={effectiveRowState()}
                 colors={colors()}
                 showTimestamp={false}
@@ -1078,12 +1097,16 @@ export function RevisionItem(props: {
 
 function RevisionChangeId(props: {
   revision: Pick<RevisionSummary, "revisionId" | "changeIdPrefixLength" | "localTimestamp">;
+  displayLength: number;
   rowState: RevisionRowState;
   colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
   showTimestamp: boolean;
 }) {
   const segments = createMemo(() =>
-    buildRevisionChangeIdSegments(props.revision, { showTimestamp: props.showTimestamp })
+    buildRevisionChangeIdSegments(props.revision, {
+      showTimestamp: props.showTimestamp,
+      displayLength: props.displayLength,
+    })
   );
   const changeIdColors = createMemo(() =>
     getRevisionChangeIdColors({

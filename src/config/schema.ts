@@ -61,6 +61,7 @@ export type AppConfig = Readonly<{
   }>;
   log?: Readonly<{
     scrollMargin?: number;
+    revisionIdAdditionalChars?: number;
   }>;
   commands?: Readonly<{
     shortFlags?: boolean;
@@ -75,6 +76,7 @@ export type ResolvedAppConfig = Readonly<{
   terminalPalette: readonly (string | null)[];
   log: Readonly<{
     scrollMargin: number;
+    revisionIdAdditionalChars: number;
   }>;
   commands: Readonly<{
     shortFlags: boolean;
@@ -247,6 +249,7 @@ export function resolveAppConfig(
     terminalPalette: palette?.palette ?? FALLBACK_PALETTE_DARK.palette,
     log: {
       scrollMargin: config.log?.scrollMargin ?? 1,
+      revisionIdAdditionalChars: config.log?.revisionIdAdditionalChars ?? 0,
     },
     commands: {
       shortFlags: config.commands?.shortFlags ?? true,

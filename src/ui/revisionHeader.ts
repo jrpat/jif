@@ -19,6 +19,30 @@ export function getRevisionSelectionMarker(rowState: RevisionRowState): "✓ " |
   return rowState === "selected" ? "✓ " : "";
 }
 
+export function getRevisionChangeIdDisplayLength(
+  revisions: readonly Pick<RevisionSummary, "revisionId" | "changeIdPrefixLength">[],
+  additionalChars = 0,
+): number {
+  let longestUniquePrefix = 0;
+  let maxChangeIdLength = 0;
+
+  for (const revision of revisions) {
+    const changeId = getChangeIdFromRevisionId(revision.revisionId);
+    if (changeId.length === 0) {
+      continue;
+    }
+
+    longestUniquePrefix = Math.max(longestUniquePrefix, revision.changeIdPrefixLength);
+    maxChangeIdLength = Math.max(maxChangeIdLength, changeId.length);
+  }
+
+  if (maxChangeIdLength === 0) {
+    return 0;
+  }
+
+  return Math.min(maxChangeIdLength, longestUniquePrefix + Math.max(0, additionalChars));
+}
+
 export function getRevisionCommandChipBgColor(options: Readonly<{
   rowState: RevisionRowState;
   colors: Readonly<{
@@ -36,17 +60,21 @@ export function getRevisionCommandChipBgColor(options: Readonly<{
 
 export function buildRevisionChangeIdSegments(
   revision: Pick<RevisionSummary, "revisionId" | "changeIdPrefixLength" | "localTimestamp">,
-  options: Readonly<{ showTimestamp: boolean }>,
+  options: Readonly<{ showTimestamp: boolean; displayLength?: number }>,
 ): readonly RevisionChangeIdSegment[] {
   const changeId = getChangeIdFromRevisionId(revision.revisionId);
+  const visibleChangeIdLength = options.displayLength === undefined
+    ? changeId.length
+    : Math.min(changeId.length, Math.max(0, options.displayLength));
+  const visiblePrefixLength = Math.min(revision.changeIdPrefixLength, visibleChangeIdLength);
   const segments: RevisionChangeIdSegment[] = [
     {
       kind: "prefix",
-      text: changeId.slice(0, revision.changeIdPrefixLength),
+      text: changeId.slice(0, visiblePrefixLength),
     },
     {
       kind: "suffix",
-      text: changeId.slice(revision.changeIdPrefixLength),
+      text: changeId.slice(visiblePrefixLength, visibleChangeIdLength),
     },
   ];
 

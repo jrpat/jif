@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import type { RevisionSummary } from "../src/domain/types.ts";
 import {
   buildRevisionChangeIdSegments,
+  getRevisionChangeIdDisplayLength,
   getRevisionCommandChipBgColor,
   getRevisionChangeIdColors,
   getRevisionSelectionMarker,
@@ -43,6 +44,51 @@ test("buildRevisionChangeIdSegments appends timestamps only in expanded layout",
 
   expect(expandedText).toBe("abcdefgh · 2026-03-30 07:22:39");
   expect(condensedText).toBe("abcdefgh");
+});
+
+test("getRevisionChangeIdDisplayLength uses the longest unique prefix by default", () => {
+  const revisions = [
+    createRevision({ revisionId: "abcdefgh", changeIdPrefixLength: 2 }),
+    createRevision({ revisionId: "ijklmnop", changeIdPrefixLength: 4 }),
+    createRevision({ revisionId: "qrstuvwx", changeIdPrefixLength: 3 }),
+  ];
+
+  expect(getRevisionChangeIdDisplayLength(revisions)).toBe(4);
+});
+
+test("getRevisionChangeIdDisplayLength adds configured extra characters", () => {
+  const revisions = [
+    createRevision({ revisionId: "abcdefgh", changeIdPrefixLength: 2 }),
+    createRevision({ revisionId: "ijklmnop", changeIdPrefixLength: 4 }),
+    createRevision({ revisionId: "qrstuvwx", changeIdPrefixLength: 3 }),
+  ];
+
+  expect(getRevisionChangeIdDisplayLength(revisions, 2)).toBe(6);
+});
+
+test("getRevisionChangeIdDisplayLength never exceeds the available change id", () => {
+  const revisions = [
+    createRevision({ revisionId: "abcdefgh", changeIdPrefixLength: 8 }),
+  ];
+
+  expect(getRevisionChangeIdDisplayLength(revisions, 3)).toBe(8);
+});
+
+test("buildRevisionChangeIdSegments truncates the rendered change id to the shared display length", () => {
+  const revision = createRevision({
+    changeIdPrefixLength: 3,
+    revisionId: "abcdefgh",
+  });
+
+  const segments = buildRevisionChangeIdSegments(revision, {
+    showTimestamp: false,
+    displayLength: 4,
+  });
+
+  expect(segments).toEqual([
+    { kind: "prefix", text: "abc" },
+    { kind: "suffix", text: "d" },
+  ]);
 });
 
 test("buildRevisionChangeIdSegments styles divergent suffix like the prefix", () => {

@@ -76,20 +76,20 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
   expect(cycledToSuperCondensed).not.toContain("┌");
   expect(cycledToSuperCondensed).not.toContain("┐");
   const longSuperCondensedLines = longSuperCondensed.trimEnd().split("\n");
-  expect(longSuperCondensedLines[0]).toContain("this is a ver...a");
+  expect(longSuperCondensedLines[0]).toContain("this is a ve...a s");
   expect(longSuperCondensedLines[0]).not.toContain("…");
   expect(longSuperCondensedLines[1]?.trim() ?? "").toBe("");
 
   const resizedLongInitialLines = resizedLongSuperCondensed.initialFrame.trimEnd().split("\n");
-  expect(resizedLongInitialLines[0]).toContain("this is a ver...a");
+  expect(resizedLongInitialLines[0]).toContain("this is a ve...a s");
 
   const resizedLongSuperCondensedLines = resizedLongSuperCondensed.resizedFrame.trimEnd().split("\n");
-  expect(resizedLongSuperCondensedLines[0]).toContain("this is a very lo");
+  expect(resizedLongSuperCondensedLines[0]).toContain("this is a very lon");
   expect(resizedLongSuperCondensedLines[0]).not.toContain("...");
   expect(resizedLongSuperCondensedLines[1]?.trim() ?? "").toBe("");
 
-  expect(divergentFocused).toContain("shared/0 older divergent");
-  expect(divergentFocused).toContain("shared/1 focused divergen");
+  expect(divergentFocused).toContain("sh /0 older divergent");
+  expect(divergentFocused).toContain("sh /1 focused divergent");
   expect(divergentFocused).toContain("│ │ ┌──────────────────────────┐");
   expect(divergentFocused.split("│ │ ┌──────────────────────────┐").length - 1).toBe(1);
 
@@ -125,14 +125,14 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
   const expandedSourceChipLine = rebaseCommandChips
     .trimEnd()
     .split("\n")
-    .find((line) => line.includes("src") && line.includes("move"));
+    .find((line) => line.includes("sr") && line.includes("move"));
   expect(expandedSourceChipLine).toBeDefined();
   expect(expandedSourceChipLine!).toMatch(/move\s*│$/);
 
   const condensedSourceChipLine = rebaseCommandChipsCondensed
     .trimEnd()
     .split("\n")
-    .find((line) => line.includes("src") && line.includes("move"));
+    .find((line) => line.includes("sr") && line.includes("move"));
   expect(condensedSourceChipLine).toBeDefined();
   expect(condensedSourceChipLine!).toMatch(/move\s*│$/);
   expect(condensedSourceChipLine!.indexOf("move")).toBeGreaterThan(condensedSourceChipLine!.indexOf("revision"));
@@ -140,7 +140,7 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
   const condensedTargetChipLine = rebaseCommandChipsCondensed
     .trimEnd()
     .split("\n")
-    .find((line) => line.includes("dst") && line.includes("onto"));
+    .find((line) => line.includes("ds") && line.includes("onto"));
   expect(condensedTargetChipLine).toBeDefined();
   expect(condensedTargetChipLine!).toMatch(/onto\s*│$/);
   expect(condensedTargetChipLine!.indexOf("onto")).toBeGreaterThan(condensedTargetChipLine!.indexOf("ation"));
