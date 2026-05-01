@@ -605,6 +605,96 @@ test("dispatchGlobalKey routes n to search-next when searchQuery is set", () => 
   expect(calls).toEqual(["nextSearchMatch"]);
 });
 
+test("dispatchGlobalKey routes q to quit in normal mode", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "q",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["quit"]);
+});
+
+test("dispatchGlobalKey routes q to quit in files mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "files",
+    expandedRowId: "aaaaaaaa",
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "q",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["quit"]);
+});
+
+test("dispatchGlobalKey does not route q to quit in command mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "command",
+    commandBar: { kind: "jj", text: "", manual: true },
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "q",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeFalse();
+  expect(calls).toEqual([]);
+});
+
+test("dispatchGlobalKey does not route q to quit in search mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "search",
+    searchQuery: "",
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "q",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeFalse();
+  expect(calls).toEqual([]);
+});
+
+test("dispatchGlobalKey does not route q to quit in revset mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "revset",
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "q",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeFalse();
+  expect(calls).toEqual([]);
+});
+
 test("dispatchGlobalKey routes n to new-revision when searchQuery is empty", () => {
   const calls: string[] = [];
   const state = createState();

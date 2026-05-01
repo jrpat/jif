@@ -36,6 +36,10 @@ export function dispatchGlobalKey(options: {
     return true;
   }
 
+  if (modeDefinitions[mode].inputPassthrough && normalizedKey.length === 1) {
+    return false;
+  }
+
   const globalCommandId = keymap._global[normalizedKey];
   if (!globalCommandId) {
     return false;

@@ -80,8 +80,12 @@ test("resolveCommand resolves vim navigation in normal mode", () => {
   expect(resolveForState("K", parentState)).toBe("move-child");
   expect(resolveForState("h", state)).toBe("collapse");
   expect(resolveForState("l", state)).toBe("expand");
-  expect(resolveForState("q", state)).toBe("quit");
   expect(resolveForState("left", state)).toBe("collapse");
+});
+
+test("quit is bound globally so q exits from any non-text-input mode", () => {
+  expect(defaultKeymap._global.q).toBe("quit");
+  expect(defaultKeymap.normal.q).toBeUndefined();
 });
 
 test("suspend uses ctrl-z canonically and Z as a normal-mode alias", () => {

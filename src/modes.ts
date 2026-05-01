@@ -38,6 +38,7 @@ export const defaultKeymap: Keymap = {
     escape: "cancel",
     "ctrl-r": "refresh-repository",
     "ctrl-z": "suspend",
+    q: "quit",
   },
   normal: {
     j: "move-down",
@@ -56,7 +57,6 @@ export const defaultKeymap: Keymap = {
     ">": "shell-command-bar",
     "!": "force-last-command",
     "?": "shortcut-panel",
-    q: "quit",
     enter: "confirm",
     r: "rebase",
     s: "split",
