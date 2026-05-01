@@ -111,8 +111,9 @@ export function createJifCommandController(args: Readonly<{
           return;
         }
 
-        if (inlineConfirmation.kind === "split-files" && inlineConfirmation.selectedOption === "yes") {
-          void args.runJjCommand(commandText);
+        if (inlineConfirmation.kind === "split-files") {
+          // jj split can still prompt for descriptions even when files are preselected.
+          void args.runInteractiveJjCommand(commandText);
           return;
         }
 

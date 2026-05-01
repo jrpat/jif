@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { TextAttributes } from "@opentui/core";
 
 test("split confirmation wraps the option group as a unit and renders accent styling in the preview", async () => {
   const proc = Bun.spawn({
@@ -40,14 +41,19 @@ test("split confirmation wraps the option group as a unit and renders accent sty
   const wideLines = wide.frame.trimEnd().split("\n");
   const narrowLines = narrow.frame.trimEnd().split("\n");
   const revisionLines = revision.frame.trimEnd().split("\n");
+  const wideConfirmationLine = wideLines.find((line) => line.includes("Split only selected files?"));
 
   expect(wideLines[0]).toContain("┌");
   expect(wideLines.at(-1)).toContain("┘");
   expect(wideLines.some((line) => line.includes("Split only selected files?") && line.includes("Interactive"))).toBeTrue();
+  expect(wideConfirmationLine).toBeDefined();
+  expect(wideConfirmationLine).toMatch(/files\?\s{3,}Yes/);
+  expect(wideConfirmationLine).toMatch(/No\s{1,2}│$/);
 
   expect(narrowLines.some((line) => line.includes("Split only selected files?") && line.includes("Interactive"))).toBeFalse();
   expect(narrowLines.some((line) => line.includes("Yes") && line.includes("Interactive") && line.includes("No"))).toBeTrue();
 
+  expect(wide.selectedSpan.attributes & TextAttributes.INVERSE).not.toBe(0);
   expect(wide.selectedSpan.attributes).not.toBe(wide.normalSpan.attributes);
   expect(wide.selectedSpan.bg).not.toEqual(wide.normalSpan.bg);
 

@@ -167,7 +167,7 @@ test("startSplit opens inline confirmation when specific files are selected", ()
   harness.store.dispose();
 });
 
-test("confirm runs the split command selected by inline confirmation", () => {
+test("confirm runs the split command selected by inline confirmation through the interactive runner", () => {
   const harness = createControllerHarness({
     revisions: [
       createRevision({
@@ -187,10 +187,10 @@ test("confirm runs the split command selected by inline confirmation", () => {
 
   expect(harness.store.state.inlineConfirmation?.selectedOption).toBe("yes");
   harness.controller.confirm();
-  expect(harness.runJjCommands).toHaveLength(1);
-  expect(harness.runJjCommands[0]).toContain("split -r a");
-  expect(harness.runJjCommands[0]).toContain(join(REPO_PATH, "src/app.ts"));
-  expect(harness.runInteractiveCommands).toEqual([]);
+  expect(harness.runJjCommands).toEqual([]);
+  expect(harness.runInteractiveCommands).toHaveLength(1);
+  expect(harness.runInteractiveCommands[0]).toContain("split -r a");
+  expect(harness.runInteractiveCommands[0]).toContain(join(REPO_PATH, "src/app.ts"));
   harness.store.dispose();
 });
 

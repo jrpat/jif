@@ -27,17 +27,19 @@ export function InlineConfirmation(props: {
       borderColor={colors.textPrimary}
       backgroundColor={colors.chromeFillTwo}
     >
-      <box width="100%" flexDirection="row" flexWrap="wrap" gap={1}>
+      <box width="100%" flexDirection="row" flexWrap="wrap" backgroundColor={colors.chromeFillTwo}>
         <box flexDirection="row" flexShrink={0}>
           <text fg={colors.textPrimary}>{props.message}</text>
         </box>
-        <box flexDirection="row" flexShrink={0} gap={1}>
+        <box flexGrow={1} minWidth={0} />
+        <box flexDirection="row" flexShrink={0} gap={1} backgroundColor={colors.chromeFillTwo}>
           <For each={props.options}>
             {(option) => {
               const selected = option === props.selectedOption;
               return (
                 <text
                   fg={colors.textPrimary}
+                  wrapMode="none"
                   attributes={selected ? TextAttributes.BOLD | TextAttributes.INVERSE : undefined}
                 >
                   {optionLabels[option]}
