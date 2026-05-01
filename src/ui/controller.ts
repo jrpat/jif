@@ -289,15 +289,17 @@ export function createJifCommandController(args: Readonly<{
       }
 
       const revisionArg = getRevisionArg(revision.revisionId, revision.changeIdPrefixLength);
+      const focusedPath = revision.files[state.focusedFileIndex]?.path;
       const filePaths = state.selectedFilePaths.length > 0
         ? state.selectedFilePaths
-        : [revision.files[state.focusedFileIndex]?.path].filter(Boolean);
+        : focusedPath ? [focusedPath] : [];
 
       if (filePaths.length === 0) {
         return;
       }
 
-      void args.runJjCommand(`restore -c ${revisionArg} ${filePaths.join(" ")}`);
+      const absoluteFilePaths = filePaths.map((filePath) => join(state.repoPath, filePath));
+      void args.runJjCommand(quoteCommand(["restore", "-c", revisionArg, ...absoluteFilePaths]));
     },
     selectPreviousInlineConfirmationOption() {
       store.actions.selectPreviousInlineConfirmationOption();
