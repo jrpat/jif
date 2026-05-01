@@ -48,6 +48,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand("jif.refreshOperationLog", () => operationLogProvider.refresh()),
     vscode.commands.registerCommand("jif.refreshGraph", () => graphViewProvider.refresh()),
+    vscode.commands.registerCommand("jif.focusGraph", () => vscode.commands.executeCommand("jifGraph.focus")),
     vscode.commands.registerCommand("jif.openAllChanges", (group: vscode.SourceControlResourceGroup) => scmProvider.openAllChanges(group)),
   );
 

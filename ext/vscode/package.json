@@ -79,6 +79,18 @@
         "title": "Refresh Graph",
         "category": "Jif",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "jif.focusGraph",
+        "title": "Focus Graph",
+        "category": "Jif"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "jif.focusGraph",
+        "key": "ctrl+\\",
+        "when": "jif.repoActive"
       }
     ],
     "menus": {
