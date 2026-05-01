@@ -26,6 +26,9 @@ test("prompt autocomplete navigation previews selections and restores the typed 
       editedLine: string;
       editedText: string | null;
     };
+    shell: {
+      initialLine: string;
+    };
     revset: {
       initialLine: string;
       firstPreview: string | null;
@@ -41,6 +44,9 @@ test("prompt autocomplete navigation previews selections and restores the typed 
   expect(result.command.restoredLine).toContain("zz");
   expect(result.command.editedText).not.toBeNull();
   expect(result.command.editedLine).toContain(result.command.editedText!);
+
+  expect(result.shell.initialLine).toContain("❯ ");
+  expect(result.shell.initialLine).toContain("pwd");
 
   expect(result.revset.initialLine).toContain("zz");
   expect(result.revset.firstPreview).not.toBeNull();

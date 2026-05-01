@@ -77,6 +77,7 @@ import {
   queueDeferredRepositoryLoad,
   startInitialRepositoryLoad,
 } from "./startup.ts";
+import { executeShellCommand as executeShellTextCommand } from "../jj/process.ts";
 
 export function JifView(props: {
   store: AppStore;
@@ -109,6 +110,14 @@ export function JifView(props: {
   const commandRunner = createCommandRunner({
     actions: store.actions,
     executeCommandArgs: (commandArgs, options) => client.executeCommandArgs(commandArgs, options),
+    executeShellCommand: async (commandText, options) => {
+      const root = options?.cwd ?? workspaceRoot();
+      if (!root) {
+        throw new Error("Workspace root is unavailable.");
+      }
+
+      return await executeShellTextCommand(root, commandText, { color: true });
+    },
     executeInteractiveCommandArgs: async (commandArgs, options) => {
       const root = options?.cwd ?? workspaceRoot();
       if (!root) {
@@ -186,6 +195,7 @@ export function JifView(props: {
     suspend: () => suspendProcessToShell({ renderer }),
     executeCurrentCommand: runtime.executeCurrentCommand,
     runJjCommand: runtime.runJjCommand,
+    runShellCommand: runtime.runShellCommand,
     runInteractiveJjCommand: runtime.runInteractiveJjCommand,
     refreshRepository,
     expandElidedRevisions: runtime.expandElidedRevisions,
@@ -498,8 +508,12 @@ export function JifView(props: {
             store={store}
             config={config}
             workspaceRoot={workspaceRoot()}
-            loadHistory={(root) => persistence.loadCommandHistory(root)}
+            loadHistory={(root) => store.state.commandBar.kind === "shell"
+              ? persistence.loadShellHistory(root)
+              : persistence.loadCommandHistory(root)}
             commandText={commandText()}
+            prefix={store.state.commandBar.kind === "shell" ? "❯ " : "jj "}
+            placeholder={store.state.commandBar.kind === "shell" ? "shell command" : "subcommand"}
             onSubmit={(value) => {
               store.actions.setCommandBarText(value);
               void runtime.executeCurrentCommand(value, { recordHistory: true });

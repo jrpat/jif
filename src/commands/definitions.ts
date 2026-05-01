@@ -6,6 +6,8 @@ export type JjCommandOptions = Readonly<{
   focusWorkingCopyAfterRefresh?: boolean;
 }>;
 
+export type ShellCommandOptions = JjCommandOptions;
+
 export type InteractiveJjCommandOptions = Readonly<{
   cwd?: string;
 }>;
@@ -22,6 +24,7 @@ export type CommandController = Readonly<{
   cancelOrBlur: () => void;
   confirm: () => void;
   focusCommandBar: () => void;
+  focusShellCommandBar: () => void;
   forceLastCommand: () => void;
   startRebase: () => void;
   startSplit: () => void;
@@ -51,6 +54,7 @@ export type CommandController = Readonly<{
   absorb: () => void;
   abandonRevision: () => void;
   jj: (commandText: string, options?: JjCommandOptions) => Promise<void>;
+  sh: (commandText: string, options?: ShellCommandOptions) => Promise<void>;
   jji: (commandText: string, options?: InteractiveJjCommandOptions) => Promise<void>;
   reportError: (error: unknown) => void;
 }>;
@@ -132,6 +136,15 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     canonicalKeys: [":"],
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.focusCommandBar(),
+    group: "global",
+  },
+  {
+    id: "shell-command-bar",
+    title: "Shell Command Bar",
+    description: "Focus the shell command bar",
+    canonicalKeys: [">"],
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.focusShellCommandBar(),
     group: "global",
   },
   {

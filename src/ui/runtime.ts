@@ -1,5 +1,9 @@
-import type { CommandRunOptions } from "../commands/runner.ts";
-import type { InteractiveJjCommandOptions, JjCommandOptions } from "../commands/definitions.ts";
+import type { CommandExecutor, CommandRunOptions } from "../commands/runner.ts";
+import type {
+  InteractiveJjCommandOptions,
+  JjCommandOptions,
+  ShellCommandOptions,
+} from "../commands/definitions.ts";
 import type { RevisionSummary } from "../domain/types.ts";
 import type { JjClient } from "../jj/client.ts";
 import type { PersistenceService } from "../persistence/service.ts";
@@ -14,7 +18,7 @@ type RuntimeClient = Pick<JjClient, "loadElidedRevisions">;
 
 type RuntimePersistence = Pick<
   PersistenceService,
-  "recordCommandHistory" | "recordRevsetHistory" | "saveActiveRevset"
+  "recordCommandHistory" | "recordShellHistory" | "recordRevsetHistory" | "saveActiveRevset"
 >;
 
 export function createJifRuntime(args: Readonly<{
@@ -35,16 +39,21 @@ export function createJifRuntime(args: Readonly<{
       const state = store.snapshot();
       const commandText = (commandOverride ?? getDisplayedCommandText(state)).trim();
       const workspaceRoot = args.getWorkspaceRoot();
+      const executor: CommandExecutor = state.commandBar.kind === "shell" ? "shell" : "jj";
+      const recordHistory = options?.recordHistory && workspaceRoot
+        ? (value: string) => executor === "shell"
+          ? persistence.recordShellHistory(workspaceRoot, value)
+          : persistence.recordCommandHistory(workspaceRoot, value)
+        : undefined;
 
       await commandRunner.run({
         commandText,
+        executor,
         canExecute: commandCanExecute(state),
         cancelBeforeRun: true,
         successFeedback: "status-toast",
         failureFeedback: "status-toast",
-        recordHistory: options?.recordHistory && workspaceRoot
-          ? (value) => persistence.recordCommandHistory(workspaceRoot, value)
-          : undefined,
+        recordHistory,
       });
     },
 
@@ -54,6 +63,23 @@ export function createJifRuntime(args: Readonly<{
     ): Promise<void> {
       await commandRunner.run({
         commandText,
+        canExecute: true,
+        cancelOnSuccess: true,
+        showLoading: true,
+        successFeedback: "event",
+        failureFeedback: "event",
+        focusWorkingCopyAfterRefresh: options?.focusWorkingCopyAfterRefresh,
+        cwd: options?.cwd,
+      });
+    },
+
+    async runShellCommand(
+      commandText: string,
+      options?: ShellCommandOptions,
+    ): Promise<void> {
+      await commandRunner.run({
+        commandText,
+        executor: "shell",
         canExecute: true,
         cancelOnSuccess: true,
         showLoading: true,

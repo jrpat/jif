@@ -16,6 +16,12 @@ describe("resolveHistoryFilePath", () => {
     );
   });
 
+  test("stores shell history in the workspace .jj folder", () => {
+    expect(resolveHistoryFilePath("/tmp/worktree", "shell-history")).toBe(
+      "/tmp/worktree/.jj/jif/shell-history",
+    );
+  });
+
   test("stores revset history in the workspace .jj folder", () => {
     expect(resolveHistoryFilePath("/tmp/worktree", "revset-history")).toBe(
       "/tmp/worktree/.jj/jif/revset-history",
@@ -73,9 +79,11 @@ describe("HistoryStore", () => {
   test("keeps command and revset histories isolated", async () => {
     const { store } = await createStore();
     await store.record("command-history", "log");
+    await store.record("shell-history", "pwd | cat");
     await store.record("revset-history", "ancestors(main, 5)");
 
     expect(await store.load("command-history")).toEqual(["log"]);
+    expect(await store.load("shell-history")).toEqual(["pwd | cat"]);
     expect(await store.load("revset-history")).toEqual(["ancestors(main, 5)"]);
   });
 

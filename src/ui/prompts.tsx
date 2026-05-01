@@ -20,6 +20,8 @@ export function CommandPrompt(props: {
   workspaceRoot: string | null;
   loadHistory: (workspaceRoot: string) => Promise<string[]>;
   commandText: string;
+  prefix: string;
+  placeholder: string;
   onSubmit: (value: string) => void;
   onHeightChange?: (height: number) => void;
 }) {
@@ -115,8 +117,8 @@ export function CommandPrompt(props: {
       focused
       onHeightChange={props.onHeightChange}
     >
-      <box width={3} flexDirection="row" flexShrink={0}>
-        <text fg={colors.textPrimary}>jj </text>
+      <box width={Array.from(props.prefix).length} flexDirection="row" flexShrink={0}>
+        <text fg={colors.textPrimary}>{props.prefix}</text>
       </box>
       <input
         ref={(el: InputRenderable) => {
@@ -125,7 +127,7 @@ export function CommandPrompt(props: {
           syncPromptInput(el, displayedText());
         }}
         flexGrow={1}
-        placeholder="subcommand"
+        placeholder={props.placeholder}
         focused
         textColor={colors.textPrimary}
         focusedTextColor={colors.textPrimary}

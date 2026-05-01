@@ -229,6 +229,8 @@ namespace Jif {
     focusWorkingCopyAfterRefresh?: boolean;
   }>;
 
+  type ShellCommandOptions = JjCommandOptions;
+
   type InteractiveJjCommandOptions = Readonly<{
     cwd?: string;
   }>;
@@ -245,6 +247,7 @@ namespace Jif {
     cancelOrBlur: () => void;
     confirm: () => void;
     focusCommandBar: () => void;
+    focusShellCommandBar: () => void;
     forceLastCommand: () => void;
     startRebase: () => void;
     startSplit: () => void;
@@ -274,6 +277,7 @@ namespace Jif {
     absorb: () => void;
     abandonRevision: () => void;
     jj: (commandText: string, options?: JjCommandOptions) => Promise<void>;
+    sh: (commandText: string, options?: ShellCommandOptions) => Promise<void>;
     jji: (commandText: string, options?: InteractiveJjCommandOptions) => Promise<void>;
   }>;
 

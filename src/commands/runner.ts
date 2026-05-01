@@ -3,6 +3,7 @@ import { tokenizeCommandText } from "../jj/client.ts";
 import { SPINNER_INTERVAL_MS, formatSpinnerText } from "../ui/spinner.ts";
 
 export type CommandFeedbackMode = "status-toast" | "event" | "none";
+export type CommandExecutor = "jj" | "shell";
 
 export type CommandRunnerActions = Readonly<{
   clearLastFailedCommand(): void;
@@ -34,6 +35,7 @@ const defaultSpinnerScheduler: SpinnerScheduler = {
 
 export type CommandRunOptions = Readonly<{
   commandText: string;
+  executor?: CommandExecutor;
   interactive?: boolean;
   cwd?: string;
   canExecute?: boolean;
@@ -49,10 +51,17 @@ export type CommandRunOptions = Readonly<{
 export function createTrackedCommand(
   commandText: string,
   interactive: boolean,
+  executor: CommandExecutor = "jj",
 ): FailedCommand | null {
   const normalizedText = commandText.trim();
-  const commandArgs = tokenizeCommandText(normalizedText);
-  if (normalizedText.length === 0 || commandArgs.length === 0) {
+  if (normalizedText.length === 0) {
+    return null;
+  }
+
+  const commandArgs = executor === "shell"
+    ? [normalizedText]
+    : tokenizeCommandText(normalizedText);
+  if (commandArgs.length === 0) {
     return null;
   }
 
@@ -68,6 +77,7 @@ export function createTrackedCommand(
 export function createCommandRunner(args: Readonly<{
   actions: CommandRunnerActions;
   executeCommandArgs(commandArgs: readonly string[], options?: { cwd?: string }): Promise<string>;
+  executeShellCommand?(commandText: string, options?: { cwd?: string }): Promise<string>;
   executeInteractiveCommandArgs?(commandArgs: readonly string[], options?: { cwd?: string }): Promise<void>;
   refreshRepository(): Promise<boolean>;
   createToastId?(): string;
@@ -75,7 +85,12 @@ export function createCommandRunner(args: Readonly<{
 }>) {
   return {
     async run(options: CommandRunOptions): Promise<boolean> {
-      const command = createTrackedCommand(options.commandText, options.interactive ?? false);
+      const executor = options.executor ?? "jj";
+      const command = createTrackedCommand(
+        options.commandText,
+        options.interactive ?? false,
+        executor,
+      );
       if (!command || options.canExecute === false) {
         return false;
       }
@@ -106,8 +121,8 @@ export function createCommandRunner(args: Readonly<{
 
       try {
         const resultMessage = command.interactive
-          ? await executeInteractive(args, command.commandArgs, options.cwd)
-          : await args.executeCommandArgs(command.commandArgs, { cwd: options.cwd });
+          ? await executeInteractive(args, executor, command, options.cwd)
+          : await executeCommand(args, executor, command, options.cwd);
         stopToastSpinner();
         args.actions.clearLastFailedCommand();
         if (options.cancelOnSuccess) {
@@ -160,17 +175,43 @@ function formatRunningCommandText(commandText: string, frameIndex: number): stri
 
 async function executeInteractive(
   args: Readonly<{
+    executeShellCommand?(commandText: string, options?: { cwd?: string }): Promise<string>;
     executeInteractiveCommandArgs?(commandArgs: readonly string[], options?: { cwd?: string }): Promise<void>;
   }>,
-  commandArgs: readonly string[],
+  executor: CommandExecutor,
+  command: Pick<FailedCommand, "commandArgs" | "commandText">,
   cwd?: string,
 ): Promise<string> {
+  if (executor === "shell") {
+    throw new Error("Interactive shell executor is unavailable.");
+  }
+
   if (!args.executeInteractiveCommandArgs) {
     throw new Error("Interactive command executor is unavailable.");
   }
 
-  await args.executeInteractiveCommandArgs(commandArgs, { cwd });
+  await args.executeInteractiveCommandArgs(command.commandArgs, { cwd });
   return "";
+}
+
+async function executeCommand(
+  args: Readonly<{
+    executeCommandArgs(commandArgs: readonly string[], options?: { cwd?: string }): Promise<string>;
+    executeShellCommand?(commandText: string, options?: { cwd?: string }): Promise<string>;
+  }>,
+  executor: CommandExecutor,
+  command: Pick<FailedCommand, "commandArgs" | "commandText">,
+  cwd?: string,
+): Promise<string> {
+  if (executor === "shell") {
+    if (!args.executeShellCommand) {
+      throw new Error("Shell command executor is unavailable.");
+    }
+
+    return await args.executeShellCommand(command.commandText, { cwd });
+  }
+
+  return await args.executeCommandArgs(command.commandArgs, { cwd });
 }
 
 function recordFailedCommand(

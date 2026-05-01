@@ -57,6 +57,7 @@ function createRuntimeHarness(options: Readonly<{
   const commandRuns: CommandRunOptions[] = [];
   const refreshCalls: Array<string | undefined> = [];
   const recordedCommandHistory: string[] = [];
+  const recordedShellHistory: string[] = [];
   const recordedRevsetHistory: string[] = [];
   const savedActiveRevsets: string[] = [];
   let refreshIndex = 0;
@@ -75,6 +76,10 @@ function createRuntimeHarness(options: Readonly<{
     persistence: {
       async recordCommandHistory(_workspaceRoot, commandText) {
         recordedCommandHistory.push(commandText);
+        return [];
+      },
+      async recordShellHistory(_workspaceRoot, commandText) {
+        recordedShellHistory.push(commandText);
         return [];
       },
       async recordRevsetHistory(_workspaceRoot, query) {
@@ -100,6 +105,7 @@ function createRuntimeHarness(options: Readonly<{
     commandRuns,
     refreshCalls,
     recordedCommandHistory,
+    recordedShellHistory,
     recordedRevsetHistory,
     savedActiveRevsets,
   };
@@ -126,6 +132,30 @@ test("executeCurrentCommand forwards record-history policy through the runtime s
   harness.store.dispose();
 });
 
+test("executeCurrentCommand uses shell execution and shell history for the shell command bar", async () => {
+  const harness = createRuntimeHarness({});
+
+  harness.store.actions.focusShellCommandBar();
+  harness.store.actions.setCommandBarText(" pwd | cat ");
+
+  await harness.runtime.executeCurrentCommand(undefined, { recordHistory: true });
+
+  expect(harness.commandRuns).toHaveLength(1);
+  expect(harness.commandRuns[0]).toMatchObject({
+    commandText: "pwd | cat",
+    executor: "shell",
+    cancelBeforeRun: true,
+    successFeedback: "status-toast",
+    failureFeedback: "status-toast",
+  });
+  expect(typeof harness.commandRuns[0]?.recordHistory).toBe("function");
+
+  await harness.commandRuns[0]?.recordHistory?.("pwd | cat");
+  expect(harness.recordedCommandHistory).toEqual([]);
+  expect(harness.recordedShellHistory).toEqual(["pwd | cat"]);
+  harness.store.dispose();
+});
+
 test("runInteractiveJjCommand is a no-op when workspace root is unavailable", async () => {
   const harness = createRuntimeHarness({ workspaceRoot: null });
 
@@ -143,6 +173,23 @@ test("runJjCommand forwards an explicit cwd override", async () => {
   expect(harness.commandRuns).toHaveLength(1);
   expect(harness.commandRuns[0]).toMatchObject({
     commandText: "status",
+    cwd: "/tmp/other",
+    cancelOnSuccess: true,
+    successFeedback: "event",
+    failureFeedback: "event",
+  });
+  harness.store.dispose();
+});
+
+test("runShellCommand forwards an explicit cwd override", async () => {
+  const harness = createRuntimeHarness({ workspaceRoot: null });
+
+  await harness.runtime.runShellCommand("pwd | cat", { cwd: "/tmp/other" });
+
+  expect(harness.commandRuns).toHaveLength(1);
+  expect(harness.commandRuns[0]).toMatchObject({
+    commandText: "pwd | cat",
+    executor: "shell",
     cwd: "/tmp/other",
     cancelOnSuccess: true,
     successFeedback: "event",

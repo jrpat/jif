@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { hasMatch, score } from "fzy.js";
 
-export type HistoryKind = "command-history" | "revset-history";
+export type HistoryKind = "command-history" | "shell-history" | "revset-history";
 
 const HISTORY_LIMIT = 200;
 

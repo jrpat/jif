@@ -15,6 +15,7 @@ export type InlineConfirmation = Readonly<{
 
 export type FocusMode = "revisions" | "files" | "inline-confirmation" | "command" | "revset" | "search";
 export type AppLayout = "expanded" | "condensed" | "super-condensed";
+export type CommandBarKind = "jj" | "shell";
 
 export type ChangedFile = Readonly<{
   path: string;
@@ -78,6 +79,7 @@ export type EventLogEntry = Readonly<{
 }>;
 
 export type CommandBarState = Readonly<{
+  kind: CommandBarKind;
   text: string;
   manual: boolean;
 }>;

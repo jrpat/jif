@@ -46,6 +46,8 @@ test("persistence service routes workspace history and settings through a histor
 
   expect(await service.loadCommandHistory("/tmp/workspace")).toEqual(["command-history:entry"]);
   expect(await service.recordCommandHistory("/tmp/workspace", "describe -r a")).toEqual(["describe -r a"]);
+  expect(await service.loadShellHistory("/tmp/workspace")).toEqual(["shell-history:entry"]);
+  expect(await service.recordShellHistory("/tmp/workspace", "pwd | cat")).toEqual(["pwd | cat"]);
   expect(await service.loadRevsetHistory("/tmp/workspace")).toEqual(["revset-history:entry"]);
   expect(await service.recordRevsetHistory("/tmp/workspace", "main..@")).toEqual(["main..@"]);
   expect(await service.loadActiveRevset("/tmp/workspace")).toBe("active-revset:value");
@@ -54,6 +56,8 @@ test("persistence service routes workspace history and settings through a histor
   expect(entries).toEqual([
     "load:/tmp/workspace:command-history",
     "record:/tmp/workspace:command-history:describe -r a",
+    "load:/tmp/workspace:shell-history",
+    "record:/tmp/workspace:shell-history:pwd | cat",
     "load:/tmp/workspace:revset-history",
     "record:/tmp/workspace:revset-history:main..@",
     "loadSetting:/tmp/workspace:active-revset",

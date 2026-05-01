@@ -3,6 +3,7 @@ import type {
   CommandController,
   InteractiveJjCommandOptions,
   JjCommandOptions,
+  ShellCommandOptions,
 } from "../commands/definitions.ts";
 import type { AppLayout, ChangedFile, FocusMode } from "../domain/types.ts";
 import { getRevisionArg } from "../domain/revisionIds.ts";
@@ -38,6 +39,11 @@ type RunJjCommand = (
   options?: JjCommandOptions,
 ) => Promise<void>;
 
+type RunShellCommand = (
+  commandText: string,
+  options?: ShellCommandOptions,
+) => Promise<void>;
+
 type RunInteractiveJjCommand = (
   commandText: string,
   options?: InteractiveJjCommandOptions,
@@ -50,6 +56,7 @@ export function createJifCommandController(args: Readonly<{
   suspend(): void;
   executeCurrentCommand: ExecuteCurrentCommand;
   runJjCommand: RunJjCommand;
+  runShellCommand: RunShellCommand;
   runInteractiveJjCommand: RunInteractiveJjCommand;
   refreshRepository(): Promise<boolean>;
   expandElidedRevisions(elidedIndex: number): Promise<void>;
@@ -139,6 +146,9 @@ export function createJifCommandController(args: Readonly<{
     },
     focusCommandBar() {
       store.actions.focusCommandBar();
+    },
+    focusShellCommandBar() {
+      store.actions.focusShellCommandBar();
     },
     forceLastCommand() {
       const failedCommand = store.snapshot().lastFailedCommand;
@@ -363,6 +373,12 @@ export function createJifCommandController(args: Readonly<{
     },
     jj(commandText, options) {
       return args.runJjCommand(commandText, {
+        ...options,
+        cwd: options?.cwd ?? store.snapshot().repoPath,
+      });
+    },
+    sh(commandText, options) {
+      return args.runShellCommand(commandText, {
         ...options,
         cwd: options?.cwd ?? store.snapshot().repoPath,
       });

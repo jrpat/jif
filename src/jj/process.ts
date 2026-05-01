@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -68,6 +69,17 @@ export async function runCommand(
     stderr,
     exitCode,
   };
+}
+
+export async function executeShellCommand(
+  cwd: string,
+  commandText: string,
+  options?: { color?: boolean },
+): Promise<string> {
+  const result = await runCommand(cwd, [resolveShellPath(), "-lc", commandText], options);
+  const stderr = result.stderr.trim();
+  const stdout = result.stdout.trim();
+  return stderr || stdout || `Executed: ${commandText.trim()}`;
 }
 
 export async function runInteractiveCommand(
@@ -222,4 +234,13 @@ export function quoteCommand(command: readonly string[]): string {
       return JSON.stringify(part);
     })
     .join(" ");
+}
+
+function resolveShellPath(): string {
+  const shellPath = process.env.SHELL;
+  if (shellPath && shellPath.startsWith("/") && existsSync(shellPath)) {
+    return shellPath;
+  }
+
+  return "/bin/sh";
 }

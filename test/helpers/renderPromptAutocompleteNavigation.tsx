@@ -40,6 +40,8 @@ async function renderCommandPromptNavigation() {
         workspaceRoot="/repo"
         loadHistory={async () => [...history]}
         commandText={text()}
+        prefix="jj "
+        placeholder="subcommand"
         onSubmit={() => {}}
       />
     );
@@ -93,6 +95,8 @@ async function renderCommandPromptEditAfterPreview() {
         workspaceRoot="/repo"
         loadHistory={async () => [...history]}
         commandText={text()}
+        prefix="jj "
+        placeholder="subcommand"
         onSubmit={() => {}}
       />
     );
@@ -169,10 +173,44 @@ async function renderRevsetPromptNavigation() {
   }
 }
 
+async function renderShellPrompt() {
+  const rendered = await testRender(() => {
+    const [text, setText] = createSignal("pwd");
+    const store = {
+      actions: {
+        setCommandBarText: setText,
+      },
+    } as unknown as AppStore;
+
+    return (
+      <CommandPrompt
+        store={store}
+        config={config}
+        workspaceRoot="/repo"
+        loadHistory={async () => ["pwd | cat"]}
+        commandText={text()}
+        prefix="❯ "
+        placeholder="shell command"
+        onSubmit={() => {}}
+      />
+    );
+  }, { width: 80, height: 12 });
+
+  try {
+    await flushRender(rendered);
+    return {
+      initialLine: capturePromptLine(rendered),
+    };
+  } finally {
+    rendered.renderer.destroy();
+  }
+}
+
 const command = {
   ...await renderCommandPromptNavigation(),
   ...await renderCommandPromptEditAfterPreview(),
 };
+const shell = await renderShellPrompt();
 const revset = await renderRevsetPromptNavigation();
 
-console.log(JSON.stringify({ command, revset }));
+console.log(JSON.stringify({ command, shell, revset }));

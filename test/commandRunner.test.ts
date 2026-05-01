@@ -191,6 +191,40 @@ test("command runner records failures and clears loading for event-driven comman
   ]);
 });
 
+test("shell command runner passes the raw command text to the shell executor", async () => {
+  const { entries, actions } = createActionLog();
+
+  const runner = createCommandRunner({
+    actions,
+    executeCommandArgs: async () => {
+      throw new Error("jj path should not run");
+    },
+    executeShellCommand: async (commandText) => {
+      entries.push(`shell:${commandText}`);
+      return "shell ok";
+    },
+    refreshRepository: async () => {
+      entries.push("refreshRepository");
+      return true;
+    },
+  });
+
+  await runner.run({
+    commandText: "printf '%s' \"$PWD\" | cat",
+    executor: "shell",
+    canExecute: true,
+    successFeedback: "event",
+    failureFeedback: "event",
+  });
+
+  expect(entries).toEqual([
+    "shell:printf '%s' \"$PWD\" | cat",
+    "clearLastFailedCommand",
+    "pushEvent:success:shell ok",
+    "refreshRepository",
+  ]);
+});
+
 test("interactive command runner uses the interactive executor and can focus working copy after refresh", async () => {
   const { entries, actions } = createActionLog();
 

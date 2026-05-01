@@ -62,6 +62,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     cancelOrBlur: () => calls.push("cancelOrBlur"),
     confirm: () => calls.push("confirm"),
     focusCommandBar: () => calls.push("focusCommandBar"),
+    focusShellCommandBar: () => calls.push("focusShellCommandBar"),
     startRebase: () => calls.push("startRebase"),
     startSplit: () => calls.push("startSplit"),
     startSquash: () => calls.push("startSquash"),
@@ -115,6 +116,21 @@ test("dispatchGlobalKey routes ? to the shortcut panel toggle", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["toggleShortcutPanel"]);
+});
+
+test("dispatchGlobalKey routes > to the shell command bar", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: ">",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["focusShellCommandBar"]);
 });
 
 test("dispatchGlobalKey passes the full app state values to inline configured handlers", () => {

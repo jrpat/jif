@@ -14,6 +14,7 @@ import {
   dismissStatusMessage,
   draftConfigs,
   focusCommandBar,
+  focusShellCommandBar,
   focusLogBottom,
   getFocusedRevisionArg,
   focusWorkingCopy,
@@ -361,6 +362,19 @@ test("command bar editing is controlled by reducer state", () => {
   state = cancelCommandState(state);
   expect(getDisplayedCommandText(state)).toBe("");
   expect(state.focusMode).toBe("revisions");
+});
+
+test("shell command bar starts empty and preserves raw shell text", () => {
+  let state = createState();
+  state = focusShellCommandBar(state);
+
+  expect(state.focusMode).toBe("command");
+  expect(state.commandBar.kind).toBe("shell");
+  expect(getDisplayedCommandText(state)).toBe("");
+
+  state = setCommandBarText(state, "jj status | cat");
+  expect(state.commandBar.kind).toBe("shell");
+  expect(getDisplayedCommandText(state)).toBe("jj status | cat");
 });
 
 test("cancelCommandState returns to file navigation when a revision is expanded", () => {

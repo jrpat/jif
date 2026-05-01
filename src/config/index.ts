@@ -27,6 +27,7 @@ export type {
   UserCommandController,
   InteractiveJjCommandOptions,
   JjCommandOptions,
+  ShellCommandOptions,
 } from "../commands/definitions.ts";
 export {
   detectTerminalThemeMode,

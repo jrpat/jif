@@ -188,10 +188,14 @@ test("shortcut panel toggle uses ? in normal mode", () => {
   const state = createState();
   expect(resolveForState("?", state)).toBe("shortcut-panel");
   expect(resolveForState("!", state)).toBe("force-last-command");
+  expect(resolveForState(">", state)).toBe("shell-command-bar");
+  expect(defaultKeymap.normal[">"]).toBe("shell-command-bar");
+  expect(commandDefinitions.find((command) => command.id === "shell-command-bar")?.canonicalKeys).toEqual([">"]);
 
   const revsetState: AppState = { ...state, focusMode: "revset" };
   expect(resolveForState("?", revsetState)).toBeNull();
   expect(resolveForState("!", revsetState)).toBeNull();
+  expect(resolveForState(">", revsetState)).toBeNull();
 });
 
 test("new and edit resolve in normal mode only", () => {

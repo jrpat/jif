@@ -2,6 +2,7 @@ import type {
   AppLayout,
   AppState,
   ChangedFile,
+  CommandBarKind,
   CommandBarState,
   CommandDraftConfig,
   EventLogEntry,
@@ -173,8 +174,17 @@ export function setRevsetQuery(state: AppState, query: string): AppState {
 
 export function createEmptyCommandBar(): CommandBarState {
   return {
+    kind: "jj",
     text: "",
     manual: false,
+  };
+}
+
+function createManualCommandBar(kind: CommandBarKind, text: string): CommandBarState {
+  return {
+    kind,
+    text,
+    manual: true,
   };
 }
 
@@ -394,10 +404,20 @@ export function focusCommandBar(state: AppState): AppState {
   const nextState = {
     ...state,
     inlineConfirmation: null,
-    commandBar: {
-      text: text.length > 0 && !text.endsWith(" ") ? `${text} ` : text,
-      manual: true,
-    },
+    commandBar: createManualCommandBar(
+      "jj",
+      text.length > 0 && !text.endsWith(" ") ? `${text} ` : text,
+    ),
+  };
+
+  return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "command"]);
+}
+
+export function focusShellCommandBar(state: AppState): AppState {
+  const nextState = {
+    ...state,
+    inlineConfirmation: null,
+    commandBar: createManualCommandBar("shell", ""),
   };
 
   return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "command"]);
@@ -408,12 +428,13 @@ export function blurCommandBar(state: AppState): AppState {
 }
 
 export function setCommandBarText(state: AppState, text: string): AppState {
+  const normalizedText = state.commandBar.kind === "jj" && text.startsWith("jj ")
+    ? text.slice(3)
+    : text;
+
   return {
     ...state,
-    commandBar: {
-      text: text.startsWith("jj ") ? text.slice(3) : text,
-      manual: true,
-    },
+    commandBar: createManualCommandBar(state.commandBar.kind, normalizedText),
   };
 }
 

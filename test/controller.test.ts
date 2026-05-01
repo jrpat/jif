@@ -52,8 +52,13 @@ function createControllerHarness(options: Readonly<{
   }
 
   const runJjCommands: string[] = [];
+  const runShellCommands: string[] = [];
   const runInteractiveCommands: string[] = [];
   const runJjCalls: Array<{
+    commandText: string;
+    options?: { focusWorkingCopyAfterRefresh?: boolean; cwd?: string };
+  }> = [];
+  const runShellCalls: Array<{
     commandText: string;
     options?: { focusWorkingCopyAfterRefresh?: boolean; cwd?: string };
   }> = [];
@@ -90,6 +95,10 @@ function createControllerHarness(options: Readonly<{
       runJjCommands.push(commandText);
       runJjCalls.push({ commandText, options });
     },
+    runShellCommand: async (commandText, options) => {
+      runShellCommands.push(commandText);
+      runShellCalls.push({ commandText, options });
+    },
     runInteractiveJjCommand: async (commandText, options) => {
       runInteractiveCommands.push(commandText);
       runInteractiveCalls.push({ commandText, options });
@@ -108,8 +117,10 @@ function createControllerHarness(options: Readonly<{
     store,
     controller,
     runJjCommands,
+    runShellCommands,
     runInteractiveCommands,
     runJjCalls,
+    runShellCalls,
     runInteractiveCalls,
     expandElidedCalls,
     persistedLayouts,
@@ -139,6 +150,20 @@ test("jj defaults cwd to repoPath for user-defined commands", () => {
   expect(harness.runJjCalls).toEqual([
     {
       commandText: "status",
+      options: { cwd: REPO_PATH },
+    },
+  ]);
+  harness.store.dispose();
+});
+
+test("sh defaults cwd to repoPath for user-defined commands", () => {
+  const harness = createControllerHarness({ revisions: [] });
+
+  harness.controller.sh("pwd | cat");
+
+  expect(harness.runShellCalls).toEqual([
+    {
+      commandText: "pwd | cat",
       options: { cwd: REPO_PATH },
     },
   ]);
