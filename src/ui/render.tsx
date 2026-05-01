@@ -26,7 +26,9 @@ import { DEFAULT_REPOSITORY_LOAD_LIMIT, type JjClient } from "../jj/client.ts";
 import { runInteractiveCommand } from "../jj/process.ts";
 import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/types.ts";
 import { createJifCommandController } from "./controller.ts";
+import { DiffViewer } from "./DiffViewer.tsx";
 import { InlineConfirmation } from "./InlineConfirmation.tsx";
+import { OperationLogEntryItem } from "./OperationLogEntryItem.tsx";
 import { CommandPreview, CommandPrompt, RevsetPrompt, SearchPrompt } from "./prompts.tsx";
 import {
   getRevisionBorderPolicy,
@@ -144,6 +146,7 @@ export function JifView(props: {
   });
   const configuredKeymap = resolveConfiguredKeymap(rawConfig.keymap);
   let logViewport: ScrollBoxRenderable | undefined;
+  let diffViewport: ScrollBoxRenderable | undefined;
   const detectAndApplyPalette = createPaletteDetector({
     renderer,
     rawConfig,
@@ -201,6 +204,7 @@ export function JifView(props: {
     refreshRepository,
     expandElidedRevisions: runtime.expandElidedRevisions,
     persistLayout: (layout) => persistence.saveLayoutPreference(layout),
+    getDiffViewport: () => diffViewport,
     logShortcutPanelToggle: ({ before, after, focusMode }) => {
       logShortcutDebug("toggle-shortcut-panel", {
         before,
@@ -304,6 +308,17 @@ export function JifView(props: {
     Math.max(1, Math.min(expandedShortcutGrid().rows.length, Math.max(1, shortcutPanelHeight() - 3)))
   );
   const expandedShortcutPanelRenderedHeight = createMemo(() => expandedShortcutPanelBodyHeight() + 4);
+  const loadingIndicatorText = createMemo(() => {
+    if (store.state.operationLogLoading) {
+      return "loading operation log";
+    }
+
+    if (loadingMoreRevisions()) {
+      return "loading more revisions";
+    }
+
+    return null;
+  });
   const bottomChromeLayout = createMemo(() => resolveBottomChromeLayout({
     showsCommandPrompt: showsCommandPrompt(),
     showsRevsetPrompt: showsRevsetPrompt(),
@@ -363,8 +378,13 @@ export function JifView(props: {
   }, { release: true });
 
   let prevFocusedIndex = store.state.focusedRevisionIndex;
+  let prevFocusedOperationIndex = store.state.focusedOperationLogIndex;
 
   createRenderEffect(() => {
+    if (store.state.focusMode === "op-log") {
+      return;
+    }
+
     const focusedRevision = getFocusedRevision(store.state);
     if (!focusedRevision || !logViewport) {
       return;
@@ -383,6 +403,28 @@ export function JifView(props: {
     })();
 
     scrollToKeepChildVisible(logViewport, `revision-${marginRowId}`, direction);
+  });
+
+  createRenderEffect(() => {
+    if (store.state.focusMode !== "op-log" || !logViewport) {
+      return;
+    }
+
+    const focusedEntry = store.state.operationLogEntries[store.state.focusedOperationLogIndex];
+    if (!focusedEntry) {
+      return;
+    }
+
+    const focusedIndex = store.state.focusedOperationLogIndex;
+    const direction = focusedIndex >= prevFocusedOperationIndex ? "down" : "up";
+    prevFocusedOperationIndex = focusedIndex;
+
+    const margin = config.log.scrollMargin;
+    const marginIndex = direction === "down"
+      ? Math.min(focusedIndex + margin, store.state.operationLogEntries.length - 1)
+      : Math.max(focusedIndex - margin, 0);
+
+    scrollToKeepChildVisible(logViewport, `operation-log-entry-${marginIndex}`, direction);
   });
 
   createRenderEffect(() => {
@@ -441,7 +483,7 @@ export function JifView(props: {
     }
 
     const disposeScrollObserver = observeScrollboxBottomReached(logViewport, () => {
-      if (isScrollboxAtBottom(logViewport)) {
+      if (store.state.focusMode === "revisions" && isScrollboxAtBottom(logViewport)) {
         void maybeLoadMoreRevisions();
       }
     });
@@ -458,39 +500,81 @@ export function JifView(props: {
         flexDirection="column"
         backgroundColor={config.colorScheme.semanticColors.chromeFillOne}
       >
-        <scrollbox
-          ref={logViewport}
-          width="100%"
-          flexGrow={1}
-          scrollY
-          scrollbarOptions={{
-            trackOptions: {
-              backgroundColor: config.colorScheme.semanticColors.chromeFillThree,
-              foregroundColor: config.colorScheme.semanticColors.chromeScrollbarThumb,
-            },
-          }}
+        <Show
+          when={store.state.focusMode === "diff-viewer" && store.state.diffViewer}
+          fallback={(
+            <scrollbox
+              ref={logViewport}
+              width="100%"
+              flexGrow={1}
+              scrollY
+              scrollbarOptions={{
+                trackOptions: {
+                  backgroundColor: config.colorScheme.semanticColors.chromeFillThree,
+                  foregroundColor: config.colorScheme.semanticColors.chromeScrollbarThumb,
+                },
+              }}
+            >
+              <box width="100%" flexDirection="column">
+                <Show
+                  when={store.state.focusMode === "op-log"}
+                  fallback={(
+                    <For each={store.state.revisions}>
+                      {(revision, index) => (
+                        <RevisionItem
+                          state={store.state}
+                          revision={revision}
+                          revisionChangeIdDisplayLength={revisionChangeIdDisplayLength()}
+                          index={index()}
+                          previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
+                          nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
+                          config={config}
+                          focusedRowId={getFocusedRevision(store.state)?.rowId ?? null}
+                          selectedRowIds={getMarkedRowIds(store.state)}
+                          expandedRowId={getExpandedRevision(store.state)?.rowId ?? null}
+                          commandTargetRowId={getCommandTargetRowId(store.state)}
+                          searchQuery={store.state.searchQuery}
+                        />
+                      )}
+                    </For>
+                  )}
+                >
+                  <Show
+                    when={store.state.operationLogEntries.length > 0}
+                    fallback={(
+                      <box width="100%" paddingX={1} paddingY={1}>
+                        <text fg={config.colorScheme.semanticColors.textTertiary}>
+                          {store.state.operationLogLoading ? "Loading operation log..." : "No operation log entries."}
+                        </text>
+                      </box>
+                    )}
+                  >
+                    <For each={store.state.operationLogEntries}>
+                      {(entry, index) => (
+                        <OperationLogEntryItem
+                          id={`operation-log-entry-${index()}`}
+                          entry={entry}
+                          focused={store.state.focusedOperationLogIndex === index()}
+                          config={config}
+                        />
+                      )}
+                    </For>
+                  </Show>
+                </Show>
+              </box>
+            </scrollbox>
+          )}
         >
-          <box width="100%" flexDirection="column">
-            <For each={store.state.revisions}>
-              {(revision, index) => (
-                <RevisionItem
-                  state={store.state}
-                  revision={revision}
-                  revisionChangeIdDisplayLength={revisionChangeIdDisplayLength()}
-                  index={index()}
-                  previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
-                  nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
-                  config={config}
-                  focusedRowId={getFocusedRevision(store.state)?.rowId ?? null}
-                  selectedRowIds={getMarkedRowIds(store.state)}
-                  expandedRowId={getExpandedRevision(store.state)?.rowId ?? null}
-                  commandTargetRowId={getCommandTargetRowId(store.state)}
-                  searchQuery={store.state.searchQuery}
-                />
-              )}
-            </For>
+          <box width="100%" flexGrow={1}>
+            <DiffViewer
+              state={store.state.diffViewer!}
+              config={config}
+              registerScrollbox={(el) => {
+                diffViewport = el;
+              }}
+            />
           </box>
-        </scrollbox>
+        </Show>
         <Show when={bottomChromeLayout().showExpandedShortcutPanel}>
           <StatusArea
             shortcutSummary={shortcutSummary()}
@@ -501,7 +585,7 @@ export function JifView(props: {
             panelBodyHeight={expandedShortcutPanelBodyHeight()}
             actionLabel={showsPersistentShortcutPanel() ? "? close" : null}
             config={config}
-            loadingIndicatorText={loadingMoreRevisions() ? "loading more revisions" : null}
+            loadingIndicatorText={loadingIndicatorText()}
           />
         </Show>
         <Show when={showsCommandPrompt()}>
@@ -561,7 +645,7 @@ export function JifView(props: {
             currentModeLabel={shortcutModeLabel(activeMode())}
             panelBodyHeight={shortcutPanelBodyHeight()}
             config={config}
-            loadingIndicatorText={loadingMoreRevisions() ? "loading more revisions" : null}
+            loadingIndicatorText={loadingIndicatorText()}
           />
         </Show>
         <MessageOverlay

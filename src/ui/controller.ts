@@ -1,11 +1,12 @@
 import { join } from "node:path";
+import type { ScrollBoxRenderable } from "@opentui/core";
 import type {
   CommandController,
   InteractiveJjCommandOptions,
   JjCommandOptions,
   ShellCommandOptions,
 } from "../commands/definitions.ts";
-import type { AppLayout, ChangedFile, FocusMode } from "../domain/types.ts";
+import type { AppLayout, ChangedFile, FocusMode, OperationLogEntry } from "../domain/types.ts";
 import { getRevisionArg } from "../domain/revisionIds.ts";
 import { buildForceRetryPlan } from "../jj/forceRetry.ts";
 import { quoteCommand } from "../jj/process.ts";
@@ -14,6 +15,7 @@ import {
   draftConfigs,
   getDisplayedCommandText,
   getExpandedRevision,
+  getFocusedOperationLogEntry,
   getFocusedRevision,
   getFocusedRevisionArg,
   getInlineConfirmation,
@@ -26,6 +28,8 @@ import { hasUserDescription } from "./revisionHeader.ts";
 type ControllerClient = Readonly<{
   loadChangedFiles(revisionId: string): Promise<readonly ChangedFile[]>;
   loadConflictedFiles(revisionId: string): Promise<ReadonlySet<string>>;
+  loadOperationLog(): Promise<readonly OperationLogEntry[]>;
+  loadOperationDiff(operationId: string): Promise<string>;
   resolveDescendants(revisionId: string): Promise<readonly string[]>;
 }>;
 
@@ -61,6 +65,7 @@ export function createJifCommandController(args: Readonly<{
   refreshRepository(): Promise<boolean>;
   expandElidedRevisions(elidedIndex: number): Promise<void>;
   persistLayout(layout: AppLayout): void | Promise<unknown>;
+  getDiffViewport(): ScrollBoxRenderable | undefined;
   logShortcutPanelToggle(details: Readonly<{
     before: boolean;
     after: boolean;
@@ -78,6 +83,20 @@ export function createJifCommandController(args: Readonly<{
     },
     moveFocusToChild() {
       store.actions.moveFocusToChild();
+    },
+    openOperationLog() {
+      store.actions.openOperationLog();
+      store.actions.setOperationLogLoading(true);
+      void (async () => {
+        try {
+          const entries = await client.loadOperationLog();
+          store.actions.setOperationLogEntries(entries);
+        } catch (error) {
+          reportError(store, error);
+        } finally {
+          store.actions.setOperationLogLoading(false);
+        }
+      })();
     },
     openFocusedRevision() {
       const state = store.snapshot();
@@ -280,6 +299,40 @@ export function createJifCommandController(args: Readonly<{
       } else {
         void args.runInteractiveJjCommand(`show -r ${revisionArg}`);
       }
+    },
+    restoreOperation() {
+      const operation = getFocusedOperationLogEntry(store.snapshot());
+      if (!operation) {
+        return;
+      }
+
+      void args.runJjCommand(`op restore ${operation.id}`);
+    },
+    revertOperation() {
+      const operation = getFocusedOperationLogEntry(store.snapshot());
+      if (!operation) {
+        return;
+      }
+
+      void args.runJjCommand(`op revert ${operation.id}`);
+    },
+    showOperationDiff() {
+      const operation = getFocusedOperationLogEntry(store.snapshot());
+      if (!operation) {
+        return;
+      }
+
+      void (async () => {
+        try {
+          const content = await client.loadOperationDiff(operation.id);
+          store.actions.openDiffViewer(content);
+        } catch (error) {
+          store.actions.reportError(error);
+        }
+      })();
+    },
+    scrollDiffViewer(rowDelta: number, colDelta: number) {
+      args.getDiffViewport()?.scrollBy({ x: colDelta, y: rowDelta });
     },
     toggleSelection() {
       store.actions.toggleRevisionSelection();

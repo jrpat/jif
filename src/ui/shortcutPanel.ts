@@ -233,6 +233,8 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Revisions";
     case "files":
       return "Files";
+    case "op-log":
+      return "Op Log";
     case "inline-confirmation":
       return "Confirm";
     case "rebase":
@@ -247,6 +249,8 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Search";
     case "search-results":
       return "Search Results";
+    case "diff-viewer":
+      return "Diff";
   }
 }
 

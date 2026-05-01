@@ -13,7 +13,15 @@ export type InlineConfirmation = Readonly<{
   previewCommandByOption: Readonly<Record<InlineConfirmationOptionId, string>>;
 }>;
 
-export type FocusMode = "revisions" | "files" | "inline-confirmation" | "command" | "revset" | "search";
+export type FocusMode =
+  | "revisions"
+  | "files"
+  | "op-log"
+  | "inline-confirmation"
+  | "command"
+  | "revset"
+  | "search"
+  | "diff-viewer";
 export type AppLayout = "expanded" | "condensed" | "super-condensed";
 export type CommandBarKind = "jj" | "shell";
 
@@ -39,6 +47,11 @@ export type RevisionSummary = Readonly<{
   marker: RevisionMarker;
   filesLoaded: boolean;
   files: readonly ChangedFile[];
+}>;
+
+export type OperationLogEntry = Readonly<{
+  id: string;
+  lines: readonly string[];
 }>;
 
 export type RepositoryData = Readonly<{
@@ -93,14 +106,21 @@ export type FailedCommand = Readonly<{
   statusMessageId?: string;
 }>;
 
+export type DiffViewerState = Readonly<{
+  content: string;
+}>;
+
 export type AppState = Readonly<{
   repoPath: string;
   revisions: readonly RevisionSummary[];
+  operationLogEntries: readonly OperationLogEntry[];
+  operationLogLoading: boolean;
   focusMode: FocusMode;
   focusModeStack: readonly FocusMode[];
   inlineConfirmation?: InlineConfirmation | null;
   shortcutPanelExpanded: boolean;
   focusedRevisionIndex: number;
+  focusedOperationLogIndex: number;
   expandedRowId: string | null;
   focusedFileIndex: number;
   selectedRowIds: readonly string[];
@@ -116,6 +136,7 @@ export type AppState = Readonly<{
   layout: AppLayout;
   revsetQuery: string;
   searchQuery: string;
+  diffViewer: DiffViewerState | null;
 }>;
 
 export type SampleRepoMaterialization = Readonly<{

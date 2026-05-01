@@ -1,4 +1,4 @@
-import { getFocusedChildRevision, getFocusedParentRevision } from "../state/store.ts";
+import { getFocusedChildRevision, getFocusedOperationLogEntry, getFocusedParentRevision } from "../state/store.ts";
 import type { AppState } from "../domain/types.ts";
 
 export type JjCommandOptions = Readonly<{
@@ -17,6 +17,7 @@ export type CommandController = Readonly<{
   moveFocusToParent: () => void;
   moveFocusToChild: () => void;
   focusLogBottom: () => void;
+  openOperationLog: () => void;
   openFocusedRevision: () => void;
   closeFocusedRevision: () => void;
   quit: () => void;
@@ -47,6 +48,10 @@ export type CommandController = Readonly<{
   commit: () => void;
   describe: () => void;
   showDiff: () => void;
+  restoreOperation: () => void;
+  revertOperation: () => void;
+  showOperationDiff: () => void;
+  scrollDiffViewer: (rowDelta: number, colDelta: number) => void;
   openSearch: () => void;
   nextSearchMatch: () => void;
   prevSearchMatch: () => void;
@@ -92,6 +97,70 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     run: (controller) => controller.moveFocus(-1),
   },
   {
+    id: "scroll-down",
+    title: "Scroll Down",
+    description: "Scroll the diff viewer down",
+    canonicalKeys: ["j"],
+    canExecute: (state) => state.diffViewer !== null,
+    run: (controller) => controller.scrollDiffViewer(1, 0),
+  },
+  {
+    id: "scroll-up",
+    title: "Scroll Up",
+    description: "Scroll the diff viewer up",
+    canonicalKeys: ["k"],
+    canExecute: (state) => state.diffViewer !== null,
+    run: (controller) => controller.scrollDiffViewer(-1, 0),
+  },
+  {
+    id: "scroll-left",
+    title: "Scroll Left",
+    description: "Scroll the diff viewer left",
+    canonicalKeys: ["h"],
+    canExecute: (state) => state.diffViewer !== null,
+    run: (controller) => controller.scrollDiffViewer(0, -1),
+  },
+  {
+    id: "scroll-right",
+    title: "Scroll Right",
+    description: "Scroll the diff viewer right",
+    canonicalKeys: ["l"],
+    canExecute: (state) => state.diffViewer !== null,
+    run: (controller) => controller.scrollDiffViewer(0, 1),
+  },
+  {
+    id: "scroll-down-large",
+    title: "Scroll Down Large",
+    description: "Scroll the diff viewer down by 10 lines",
+    canonicalKeys: ["J"],
+    canExecute: (state) => state.diffViewer !== null,
+    run: (controller) => controller.scrollDiffViewer(10, 0),
+  },
+  {
+    id: "scroll-up-large",
+    title: "Scroll Up Large",
+    description: "Scroll the diff viewer up by 10 lines",
+    canonicalKeys: ["K"],
+    canExecute: (state) => state.diffViewer !== null,
+    run: (controller) => controller.scrollDiffViewer(-10, 0),
+  },
+  {
+    id: "scroll-left-large",
+    title: "Scroll Left Large",
+    description: "Scroll the diff viewer left by 10 characters",
+    canonicalKeys: ["H"],
+    canExecute: (state) => state.diffViewer !== null,
+    run: (controller) => controller.scrollDiffViewer(0, -10),
+  },
+  {
+    id: "scroll-right-large",
+    title: "Scroll Right Large",
+    description: "Scroll the diff viewer right by 10 characters",
+    canonicalKeys: ["L"],
+    canExecute: (state) => state.diffViewer !== null,
+    run: (controller) => controller.scrollDiffViewer(0, 10),
+  },
+  {
     id: "move-parent",
     title: "Move to Parent",
     description: "Focus the nearest visible parent revision",
@@ -113,6 +182,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Jump to the last revision in the log",
     canonicalKeys: ["G"],
     run: (controller) => controller.focusLogBottom(),
+  },
+  {
+    id: "open-operation-log",
+    title: "Operation Log",
+    description: "Show the repository operation log",
+    canonicalKeys: ["O"],
+    run: (controller) => controller.openOperationLog(),
+    group: "global",
   },
   {
     id: "expand",
@@ -273,6 +350,33 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.showDiff(),
     group: "global",
+  },
+  {
+    id: "restore-operation",
+    title: "Restore Operation",
+    description: "Restore the selected operation",
+    canonicalKeys: ["r"],
+    canExecute: (state) => getFocusedOperationLogEntry(state) !== null,
+    run: (controller) => controller.restoreOperation(),
+    group: "mode",
+  },
+  {
+    id: "revert-operation",
+    title: "Revert Operation",
+    description: "Revert the selected operation",
+    canonicalKeys: ["R"],
+    canExecute: (state) => getFocusedOperationLogEntry(state) !== null,
+    run: (controller) => controller.revertOperation(),
+    group: "mode",
+  },
+  {
+    id: "show-operation-diff",
+    title: "Operation Diff",
+    description: "Show repository changes for the selected operation",
+    canonicalKeys: ["D"],
+    canExecute: (state) => getFocusedOperationLogEntry(state) !== null,
+    run: (controller) => controller.showOperationDiff(),
+    group: "mode",
   },
   {
     id: "toggle-revision-selection",

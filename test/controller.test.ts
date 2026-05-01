@@ -1,12 +1,32 @@
 import { expect, test } from "bun:test";
 import { join } from "node:path";
+import type { ScrollBoxRenderable } from "@opentui/core";
 import { createAppStore } from "../src/state/appStore.ts";
 import { draftConfigs, getDisplayedCommandText } from "../src/state/store.ts";
-import type { ChangedFile, RepositoryData, RevisionSummary } from "../src/domain/types.ts";
+import type { ChangedFile, OperationLogEntry, RepositoryData, RevisionSummary } from "../src/domain/types.ts";
 import { quoteCommand } from "../src/jj/process.ts";
 import { createJifCommandController } from "../src/ui/controller.ts";
 
 const REPO_PATH = "/tmp/repo";
+
+const OP_LOG_ENTRIES: readonly OperationLogEntry[] = [
+  {
+    id: "65d964491fc0",
+    lines: [
+      "65d964491fc0 jrpat@host jif-3@ 9 minutes ago",
+      "rebase commit 93f155d4a5345ccc3eb97e649e3ee0eab8878180 and 1 more",
+      "args: jj --color always rebase -r q -r xm -d n",
+    ],
+  },
+  {
+    id: "96df2f0afa0c",
+    lines: [
+      "96df2f0afa0c jrpat@host jif-3@ 9 minutes ago",
+      "export git refs",
+      "args: jj git export",
+    ],
+  },
+];
 
 function createRevision(
   overrides: Partial<RevisionSummary> & Pick<RevisionSummary, "rowId" | "revisionId" | "description">,
@@ -47,6 +67,8 @@ function createControllerHarness(harnessOptions: Readonly<{
   conflictedFiles?: ReadonlySet<string>;
   runJjResult?: boolean;
   runInteractiveResult?: boolean;
+  operationLogEntries?: readonly OperationLogEntry[];
+  diffViewport?: ScrollBoxRenderable;
 }>) {
   const store = createAppStore(REPO_PATH);
   if (harnessOptions.revisions) {
@@ -82,6 +104,12 @@ function createControllerHarness(harnessOptions: Readonly<{
       async loadConflictedFiles() {
         return harnessOptions.conflictedFiles ?? new Set<string>();
       },
+      async loadOperationLog() {
+        return harnessOptions.operationLogEntries ?? [];
+      },
+      async loadOperationDiff() {
+        return "fake diff";
+      },
       async resolveDescendants() {
         return ["bbbbbbbb"];
       },
@@ -114,6 +142,7 @@ function createControllerHarness(harnessOptions: Readonly<{
     persistLayout: async (layout) => {
       persistedLayouts.push(layout);
     },
+    getDiffViewport: () => harnessOptions.diffViewport,
     logShortcutPanelToggle: () => {},
   });
 
@@ -393,5 +422,92 @@ test("cycleLayout persists the updated layout after mutating store state", () =>
 
   expect(harness.store.state.layout).toBe("condensed");
   expect(harness.persistedLayouts).toEqual(["condensed"]);
+  harness.store.dispose();
+});
+
+test("openOperationLog loads entries and switches focus to op-log mode", async () => {
+  const harness = createControllerHarness({ operationLogEntries: OP_LOG_ENTRIES });
+
+  harness.controller.openOperationLog();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(harness.store.state.focusMode).toBe("op-log");
+  expect(harness.store.state.operationLogEntries).toEqual(OP_LOG_ENTRIES);
+  expect(harness.store.state.focusedOperationLogIndex).toBe(0);
+  harness.store.dispose();
+});
+
+test("restoreOperation runs jj op restore for the focused operation", () => {
+  const harness = createControllerHarness({ operationLogEntries: OP_LOG_ENTRIES });
+
+  harness.store.actions.setOperationLogEntries(OP_LOG_ENTRIES);
+  harness.store.actions.openOperationLog();
+  harness.store.actions.moveFocus(1);
+
+  harness.controller.restoreOperation();
+
+  expect(harness.runJjCommands).toEqual(["op restore 96df2f0afa0c"]);
+  harness.store.dispose();
+});
+
+test("revertOperation runs jj op revert for the focused operation", () => {
+  const harness = createControllerHarness({ operationLogEntries: OP_LOG_ENTRIES });
+
+  harness.store.actions.setOperationLogEntries(OP_LOG_ENTRIES);
+  harness.store.actions.openOperationLog();
+
+  harness.controller.revertOperation();
+
+  expect(harness.runJjCommands).toEqual(["op revert 65d964491fc0"]);
+  harness.store.dispose();
+});
+
+test("showOperationDiff uses jj operation diff against the focused operation", async () => {
+  const harness = createControllerHarness({ operationLogEntries: OP_LOG_ENTRIES });
+
+  harness.store.actions.setOperationLogEntries(OP_LOG_ENTRIES);
+  harness.store.actions.openOperationLog();
+  harness.store.actions.moveFocus(1);
+
+  harness.controller.showOperationDiff();
+
+  // Wait for the async implementation to complete
+  await Promise.resolve();
+  await Promise.resolve();
+
+  const state = harness.store.snapshot();
+  expect(state.focusMode).toBe("diff-viewer");
+  expect(state.diffViewer?.content).toBe("fake diff");
+  harness.store.dispose();
+});
+
+test("scrollDiffViewer forwards row and column deltas to the registered scrollbox", () => {
+  const calls: Array<{ x: number; y: number }> = [];
+  const fakeScrollbox = {
+    scrollBy: (delta: { x: number; y: number }) => {
+      calls.push(delta);
+    },
+  } as unknown as ScrollBoxRenderable;
+  const harness = createControllerHarness({ diffViewport: fakeScrollbox });
+
+  harness.controller.scrollDiffViewer(1, 0);
+  harness.controller.scrollDiffViewer(-10, 0);
+  harness.controller.scrollDiffViewer(0, 1);
+  harness.controller.scrollDiffViewer(0, -10);
+
+  expect(calls).toEqual([
+    { x: 0, y: 1 },
+    { x: 0, y: -10 },
+    { x: 1, y: 0 },
+    { x: -10, y: 0 },
+  ]);
+  harness.store.dispose();
+});
+
+test("scrollDiffViewer is a no-op when no scrollbox is registered", () => {
+  const harness = createControllerHarness({});
+
+  expect(() => harness.controller.scrollDiffViewer(1, 0)).not.toThrow();
   harness.store.dispose();
 });

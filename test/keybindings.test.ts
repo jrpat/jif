@@ -55,6 +55,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     moveFocusToParent: () => calls.push("moveFocusToParent"),
     moveFocusToChild: () => calls.push("moveFocusToChild"),
     focusLogBottom: () => calls.push("focusLogBottom"),
+    openOperationLog: () => calls.push("openOperationLog"),
     openFocusedRevision: () => calls.push("openFocusedRevision"),
     closeFocusedRevision: () => calls.push("closeFocusedRevision"),
     quit: () => calls.push("quit"),
@@ -85,6 +86,11 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     commit: () => calls.push("commit"),
     describe: () => calls.push("describe"),
     showDiff: () => calls.push("showDiff"),
+    restoreOperation: () => calls.push("restoreOperation"),
+    revertOperation: () => calls.push("revertOperation"),
+    showOperationDiff: () => calls.push("showOperationDiff"),
+    scrollDiffViewer: (rowDelta, colDelta) =>
+      calls.push(`scrollDiffViewer(${rowDelta},${colDelta})`),
     openSearch: () => calls.push("openSearch"),
     nextSearchMatch: () => calls.push("nextSearchMatch"),
     prevSearchMatch: () => calls.push("prevSearchMatch"),
@@ -93,6 +99,9 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     abandonRevision: () => calls.push("abandonRevision"),
     jj: async () => {
       calls.push("jj");
+    },
+    sh: async () => {
+      calls.push("sh");
     },
     jji: async () => {
       calls.push("jji");
@@ -298,6 +307,56 @@ test("dispatchGlobalKey routes uppercase Z to suspend in normal mode", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["suspend"]);
+});
+
+test("dispatchGlobalKey routes O to the operation log", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "O",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["openOperationLog"]);
+});
+
+test("dispatchGlobalKey routes op-log actions to operation commands", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "op-log",
+    focusModeStack: ["revisions", "op-log"],
+    operationLogEntries: [{ id: "65d964491fc0", lines: ["65d964491fc0"] }],
+    focusedOperationLogIndex: 0,
+  };
+
+  const restoreHandled = dispatchGlobalKey({
+    normalizedKey: "r",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+  const revertHandled = dispatchGlobalKey({
+    normalizedKey: "R",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+  const diffHandled = dispatchGlobalKey({
+    normalizedKey: "d",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(restoreHandled).toBeTrue();
+  expect(revertHandled).toBeTrue();
+  expect(diffHandled).toBeTrue();
+  expect(calls).toEqual(["restoreOperation", "revertOperation", "showOperationDiff"]);
 });
 
 test("dispatchGlobalKey preserves h as collapse", () => {
@@ -539,7 +598,7 @@ test("dispatchGlobalKey handles escape even in input modes", () => {
   const state: AppState = {
     ...createState(),
     focusMode: "command",
-    commandBar: { text: "log", manual: true },
+    commandBar: { kind: "jj", text: "log", manual: true },
   };
 
   const handled = dispatchGlobalKey({
@@ -708,4 +767,116 @@ test("dispatchGlobalKey routes n to new-revision when searchQuery is empty", () 
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["startNewRevision"]);
+});
+
+function diffViewerState(): AppState {
+  return {
+    ...createState(),
+    focusMode: "diff-viewer",
+    focusModeStack: ["revisions", "op-log", "diff-viewer"],
+    diffViewer: { content: "line a\nline b\nline c" },
+  };
+}
+
+test("dispatchGlobalKey routes j/k to scrollDiffViewer in diff-viewer mode", () => {
+  const calls: string[] = [];
+  const state = diffViewerState();
+
+  const downHandled = dispatchGlobalKey({
+    normalizedKey: "j",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+  const upHandled = dispatchGlobalKey({
+    normalizedKey: "k",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(downHandled).toBeTrue();
+  expect(upHandled).toBeTrue();
+  expect(calls).toEqual(["scrollDiffViewer(1,0)", "scrollDiffViewer(-1,0)"]);
+});
+
+test("dispatchGlobalKey routes uppercase J/K to large vertical scroll in diff-viewer mode", () => {
+  const calls: string[] = [];
+  const state = diffViewerState();
+
+  const downHandled = dispatchGlobalKey({
+    normalizedKey: "J",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+  const upHandled = dispatchGlobalKey({
+    normalizedKey: "K",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(downHandled).toBeTrue();
+  expect(upHandled).toBeTrue();
+  expect(calls).toEqual(["scrollDiffViewer(10,0)", "scrollDiffViewer(-10,0)"]);
+});
+
+test("dispatchGlobalKey routes h/l to horizontal scroll in diff-viewer mode", () => {
+  const calls: string[] = [];
+  const state = diffViewerState();
+
+  const leftHandled = dispatchGlobalKey({
+    normalizedKey: "h",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+  const rightHandled = dispatchGlobalKey({
+    normalizedKey: "l",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(leftHandled).toBeTrue();
+  expect(rightHandled).toBeTrue();
+  expect(calls).toEqual(["scrollDiffViewer(0,-1)", "scrollDiffViewer(0,1)"]);
+});
+
+test("dispatchGlobalKey routes uppercase H/L to large horizontal scroll in diff-viewer mode", () => {
+  const calls: string[] = [];
+  const state = diffViewerState();
+
+  const leftHandled = dispatchGlobalKey({
+    normalizedKey: "H",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+  const rightHandled = dispatchGlobalKey({
+    normalizedKey: "L",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(leftHandled).toBeTrue();
+  expect(rightHandled).toBeTrue();
+  expect(calls).toEqual(["scrollDiffViewer(0,-10)", "scrollDiffViewer(0,10)"]);
+});
+
+test("scroll-* commands are gated by canExecute when no diff viewer is open", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "j",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["moveFocus"]);
 });

@@ -1,7 +1,13 @@
 import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { materializeSampleRepo } from "../src/dev/sampleRepo.ts";
-import { JjClient, parseLogOutput, resolveRepositoryLoadLimit, tokenizeCommandText } from "../src/jj/client.ts";
+import {
+  JjClient,
+  parseLogOutput,
+  parseOperationLogOutput,
+  resolveRepositoryLoadLimit,
+  tokenizeCommandText,
+} from "../src/jj/client.ts";
 import { runCommand } from "../src/jj/process.ts";
 import { createTempDir } from "./helpers/tempRepo.ts";
 
@@ -148,6 +154,38 @@ test("parseLogOutput sets hasConflict for conflicted revisions", () => {
   expect(revisions[0]?.hasConflict).toBeTrue();
   expect(revisions[0]?.marker).toBe("working-copy");
   expect(revisions[1]?.hasConflict).toBeFalse();
+});
+
+test("parseOperationLogOutput groups multi-line ANSI entries by operation id", () => {
+  const output = [
+    "\u001b[1m\u001b[38;5;12m65d964491fc0\u001b[39m \u001b[38;5;3mjrpat@host\u001b[39m \u001b[4m\u001b[38;5;6mjif-3@\u001b[24m\u001b[39m \u001b[38;5;14m9 minutes ago\u001b[39m\u001b[0m",
+    "\u001b[1mrebase commit 93f155d4a5345ccc3eb97e649e3ee0eab8878180 and 1 more\u001b[0m",
+    "\u001b[1m\u001b[38;5;13margs: jj --color always rebase -r q -r xm -d n\u001b[39m\u001b[0m",
+    "\u001b[38;5;4m96df2f0afa0c\u001b[39m \u001b[38;5;3mjrpat@host\u001b[39m \u001b[4m\u001b[38;5;6mjif-3@\u001b[24m\u001b[39m \u001b[38;5;6m9 minutes ago\u001b[39m",
+    "export git refs",
+    "\u001b[38;5;5margs: jj git export\u001b[39m",
+  ].join("\n");
+
+  const entries = parseOperationLogOutput(output);
+
+  expect(entries).toEqual([
+    {
+      id: "65d964491fc0",
+      lines: [
+        "\u001b[1m\u001b[38;5;12m65d964491fc0\u001b[39m \u001b[38;5;3mjrpat@host\u001b[39m \u001b[4m\u001b[38;5;6mjif-3@\u001b[24m\u001b[39m \u001b[38;5;14m9 minutes ago\u001b[39m\u001b[0m",
+        "\u001b[1mrebase commit 93f155d4a5345ccc3eb97e649e3ee0eab8878180 and 1 more\u001b[0m",
+        "\u001b[1m\u001b[38;5;13margs: jj --color always rebase -r q -r xm -d n\u001b[39m\u001b[0m",
+      ],
+    },
+    {
+      id: "96df2f0afa0c",
+      lines: [
+        "\u001b[38;5;4m96df2f0afa0c\u001b[39m \u001b[38;5;3mjrpat@host\u001b[39m \u001b[4m\u001b[38;5;6mjif-3@\u001b[24m\u001b[39m \u001b[38;5;6m9 minutes ago\u001b[39m",
+        "export git refs",
+        "\u001b[38;5;5margs: jj git export\u001b[39m",
+      ],
+    },
+  ]);
 });
 
 test("parseLogOutput defaults hasConflict to false when field is missing", () => {

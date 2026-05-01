@@ -10,6 +10,7 @@ import type {
   FocusMode,
   InlineConfirmation,
   InlineConfirmationOptionId,
+  OperationLogEntry,
   RepositoryData,
   RevisionSummary,
   StatusMessage,
@@ -104,11 +105,14 @@ export function createInitialState(
   return {
     repoPath,
     revisions: [],
+    operationLogEntries: [],
+    operationLogLoading: false,
     focusMode: "revisions",
     focusModeStack: ["revisions"],
     inlineConfirmation: null,
     shortcutPanelExpanded: false,
     focusedRevisionIndex: 0,
+    focusedOperationLogIndex: 0,
     expandedRowId: null,
     focusedFileIndex: 0,
     selectedRowIds: [],
@@ -124,7 +128,28 @@ export function createInitialState(
     layout: options?.layout ?? "expanded",
     revsetQuery: "",
     searchQuery: "",
+    diffViewer: null,
   };
+}
+
+export function openDiffViewer(state: AppState, content: string): AppState {
+  const nextState = {
+    ...state,
+    diffViewer: { content },
+  };
+
+  return replaceFocusModeStack(nextState, [...state.focusModeStack, "diff-viewer"]);
+}
+
+export function closeDiffViewer(state: AppState): AppState {
+  if (state.focusMode !== "diff-viewer") {
+    return state;
+  }
+
+  return replaceFocusModeStack({
+    ...state,
+    diffViewer: null,
+  }, state.focusModeStack.slice(0, -1));
 }
 
 export function toggleShortFlags(state: AppState): AppState {
@@ -269,6 +294,16 @@ export function moveFocus(state: AppState, delta: number): AppState {
     return state;
   }
 
+  if (state.focusMode === "op-log") {
+    return {
+      ...state,
+      focusedOperationLogIndex: clampIndex(
+        state.focusedOperationLogIndex + delta,
+        state.operationLogEntries.length,
+      ),
+    };
+  }
+
   if (state.focusMode === "files" && state.expandedRowId !== null) {
     const revision = getExpandedRevision(state);
     return {
@@ -340,6 +375,17 @@ export function focusWorkingCopy(state: AppState): AppState {
 }
 
 export function focusLogBottom(state: AppState): AppState {
+  if (state.focusMode === "op-log") {
+    if (state.operationLogEntries.length === 0) {
+      return state;
+    }
+
+    return {
+      ...state,
+      focusedOperationLogIndex: state.operationLogEntries.length - 1,
+    };
+  }
+
   if (state.revisions.length === 0) {
     return state;
   }
@@ -366,6 +412,40 @@ export function openFocusedRevision(state: AppState): AppState {
   };
 
   return replaceFocusModeStack(nextState, ["revisions", "files"]);
+}
+
+export function openOperationLog(state: AppState): AppState {
+  return replaceFocusModeStack({
+    ...state,
+    inlineConfirmation: null,
+    focusedOperationLogIndex: clampIndex(state.focusedOperationLogIndex, state.operationLogEntries.length),
+  }, ["revisions", "op-log"]);
+}
+
+export function closeOperationLog(state: AppState): AppState {
+  if (state.focusMode !== "op-log") {
+    return state;
+  }
+
+  return replaceFocusModeStack(state, ["revisions"]);
+}
+
+export function setOperationLogEntries(
+  state: AppState,
+  operationLogEntries: readonly OperationLogEntry[],
+): AppState {
+  return {
+    ...state,
+    operationLogEntries,
+    focusedOperationLogIndex: clampIndex(state.focusedOperationLogIndex, operationLogEntries.length),
+  };
+}
+
+export function setOperationLogLoading(state: AppState, operationLogLoading: boolean): AppState {
+  return {
+    ...state,
+    operationLogLoading,
+  };
 }
 
 export function expandElidedRevision(
@@ -594,6 +674,14 @@ export function cancelOrBlurState(state: AppState): AppState {
   const dismissable = state.statusMessages.find((m) => m.level !== "info");
   if (dismissable) {
     return dismissStatusMessage(state, dismissable.id);
+  }
+
+  if (state.focusMode === "diff-viewer") {
+    return closeDiffViewer(state);
+  }
+
+  if (state.focusMode === "op-log") {
+    return closeOperationLog(state);
   }
 
   if (state.commandDraft !== null) {
@@ -853,6 +941,10 @@ export function clearStatusMessage(state: AppState): AppState {
 
 export function getFocusedRevision(state: AppState): RevisionSummary | null {
   return state.revisions[state.focusedRevisionIndex] ?? null;
+}
+
+export function getFocusedOperationLogEntry(state: AppState): OperationLogEntry | null {
+  return state.operationLogEntries[state.focusedOperationLogIndex] ?? null;
 }
 
 function getParentRevisionForIndex(state: AppState, revisionIndex: number): RevisionSummary | null {
@@ -1252,8 +1344,12 @@ function getBrowseFocusMode(state: AppState): FocusMode {
 }
 
 function getBrowseFocusModeStack(
-  state: Pick<AppState, "expandedRowId">,
+  state: Pick<AppState, "expandedRowId" | "focusModeStack">,
 ): readonly FocusMode[] {
+  if (state.focusModeStack.includes("op-log")) {
+    return ["revisions", "op-log"];
+  }
+
   return state.expandedRowId !== null ? ["revisions", "files"] : ["revisions"];
 }
 
@@ -1304,7 +1400,7 @@ function resolveFocusModeStack(state: AppState): FocusMode[] {
 
 function normalizeFocusModeStack(
   stack: readonly FocusMode[],
-  state: Pick<AppState, "expandedRowId" | "inlineConfirmation">,
+  state: Pick<AppState, "expandedRowId" | "inlineConfirmation" | "diffViewer">,
 ): FocusMode[] {
   const nextStack = stack.filter((mode) => {
     if (mode === "files") {
@@ -1313,6 +1409,10 @@ function normalizeFocusModeStack(
 
     if (mode === "inline-confirmation") {
       return state.expandedRowId !== null && state.inlineConfirmation !== null;
+    }
+
+    if (mode === "diff-viewer") {
+      return state.diffViewer !== null;
     }
 
     return true;

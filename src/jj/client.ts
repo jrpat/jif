@@ -1,6 +1,7 @@
 import { CommandExecutionError, runCommand } from "./process.ts";
 import type {
   ChangedFile,
+  OperationLogEntry,
   RepositoryData,
   RevisionMarker,
   RevisionSummary,
@@ -14,6 +15,7 @@ const ROW_KIND_HEADER = "header";
 const ROW_KIND_BODY = "body";
 const LOG_TEMPLATE = buildLogTemplate(getMaxRevisionBaseGraphRowCount());
 const FALLBACK_REPOSITORY_LOAD_LIMIT = 250;
+const FALLBACK_OPERATION_LOG_LIMIT = 200;
 
 export function resolveRepositoryLoadLimit(
   rawValue = process.env.JIF_REPOSITORY_LOAD_LIMIT,
@@ -28,6 +30,7 @@ export function resolveRepositoryLoadLimit(
 }
 
 export const DEFAULT_REPOSITORY_LOAD_LIMIT = resolveRepositoryLoadLimit();
+export const DEFAULT_OPERATION_LOG_LIMIT = FALLBACK_OPERATION_LOG_LIMIT;
 
 export class JjClient {
   constructor(readonly repoPath: string) {}
@@ -117,6 +120,35 @@ export class JjClient {
       .map((line) => line.trimEnd())
       .filter((line) => line.length > 0)
       .map(parseChangedFile);
+  }
+
+  async loadOperationLog(limit = DEFAULT_OPERATION_LOG_LIMIT): Promise<readonly OperationLogEntry[]> {
+    const result = await this.runJj([
+      "op",
+      "log",
+      "--color",
+      "always",
+      "--no-graph",
+      "--ignore-working-copy",
+      "--limit",
+      String(limit),
+    ], {
+      color: true,
+    });
+
+    return parseOperationLogOutput(result.stdout);
+  }
+
+  async loadOperationDiff(operationId: string): Promise<string> {
+    const result = await this.runJj([
+      "operation",
+      "diff",
+      "--operation",
+      operationId,
+      "--color",
+      "always",
+    ], { color: true });
+    return result.stdout;
   }
 
   async resolveDescendants(revisionId: string): Promise<readonly string[]> {
@@ -325,6 +357,46 @@ export function parseLogOutput(
   return revisions;
 }
 
+export function parseOperationLogOutput(output: string): readonly OperationLogEntry[] {
+  const entries: OperationLogEntry[] = [];
+  let currentId: string | null = null;
+  let currentLines: string[] = [];
+
+  const flush = () => {
+    if (currentId === null) {
+      return;
+    }
+
+    entries.push({ id: currentId, lines: currentLines });
+    currentId = null;
+    currentLines = [];
+  };
+
+  for (const line of output.split("\n")) {
+    if (line.length === 0) {
+      if (currentId !== null) {
+        currentLines.push(line);
+      }
+      continue;
+    }
+
+    const operationId = parseOperationIdFromLine(line);
+    if (operationId !== null) {
+      flush();
+      currentId = operationId;
+      currentLines = [line];
+      continue;
+    }
+
+    if (currentId !== null) {
+      currentLines.push(line);
+    }
+  }
+
+  flush();
+  return entries;
+}
+
 function buildLogTemplate(baseGraphRowCount: number): string {
   const shortChangeId = "change_id.shortest(8)";
   const shortRevisionId = `${shortChangeId} ++ if(divergent, surround("/", "", change_offset))`;
@@ -338,6 +410,12 @@ function buildLogTemplate(baseGraphRowCount: number): string {
   }
 
   return rows.join(" ++ ");
+}
+
+function parseOperationIdFromLine(line: string): string | null {
+  const plainLine = line.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").trimStart();
+  const match = plainLine.match(/^(?<id>[0-9a-f]{12,})\b/i);
+  return match?.groups?.id ?? null;
 }
 
 function splitWords(rawValue: string): readonly string[] {

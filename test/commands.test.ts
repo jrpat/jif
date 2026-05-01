@@ -107,7 +107,7 @@ test("resolveCommand returns null in command mode for browse keys", () => {
   const state: AppState = {
     ...createState(),
     focusMode: "command",
-    commandBar: { text: "", manual: true },
+    commandBar: { kind: "jj", text: "", manual: true },
   };
 
   expect(resolveForState("j", state)).toBeNull();
@@ -210,7 +210,7 @@ test("new and edit resolve in normal mode only", () => {
   const commandState: AppState = {
     ...state,
     focusMode: "command",
-    commandBar: { text: "", manual: true },
+    commandBar: { kind: "jj", text: "", manual: true },
   };
   expect(resolveForState("n", commandState)).toBeNull();
   expect(resolveForState("e", commandState)).toBeNull();

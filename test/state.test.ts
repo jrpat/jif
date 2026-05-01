@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { AppState } from "../src/domain/types.ts";
+import type { AppState, OperationLogEntry } from "../src/domain/types.ts";
 import { createRowId } from "../src/domain/rowIds.ts";
 import {
   applyRepositoryData,
@@ -31,6 +31,8 @@ import {
   moveFocus,
   moveFocusToChild,
   moveFocusToParent,
+  openDiffViewer,
+  openOperationLog,
   openFocusedRevision,
   closeShortcutPanel,
   toggleShortcutPanel,
@@ -67,6 +69,24 @@ const BRANCH_SIDE_ROW_ID = createRowId("44444444", "dddddddd");
 const BRANCH_PARENT_ROW_ID = createRowId("55555555", "eeeeeeee");
 const BRANCH_BASE_ROW_ID = createRowId("66666666", "ffffffff");
 const BRANCH_ROOT_ROW_ID = createRowId("77777777", "gggggggg");
+const OP_LOG_ENTRIES: readonly OperationLogEntry[] = [
+  {
+    id: "65d964491fc0",
+    lines: [
+      "65d964491fc0 jrpat@host jif-3@ 9 minutes ago",
+      "rebase commit 93f155d4a5345ccc3eb97e649e3ee0eab8878180 and 1 more",
+      "args: jj --color always rebase -r q -r xm -d n",
+    ],
+  },
+  {
+    id: "96df2f0afa0c",
+    lines: [
+      "96df2f0afa0c jrpat@host jif-3@ 9 minutes ago",
+      "export git refs",
+      "args: jj git export",
+    ],
+  },
+];
 
 function createState(): AppState {
   return {
@@ -302,6 +322,39 @@ test("moveFocus enters file navigation when details are open", () => {
   state = moveFocus(state, 1);
   expect(state.focusedFileIndex).toBe(1);
   expect(state.focusedRevisionIndex).toBe(0);
+});
+
+test("openOperationLog enters a dedicated browse mode", () => {
+  const state = openOperationLog({
+    ...createState(),
+    operationLogEntries: OP_LOG_ENTRIES,
+    focusedOperationLogIndex: 1,
+  });
+
+  expect(state.focusMode).toBe("op-log");
+  expect(state.focusModeStack).toEqual(["revisions", "op-log"]);
+  expect(state.focusedOperationLogIndex).toBe(1);
+});
+
+test("moveFocus navigates operation log entries without changing revision focus", () => {
+  const state = moveFocus(openOperationLog({
+    ...createState(),
+    operationLogEntries: OP_LOG_ENTRIES,
+    focusedOperationLogIndex: 0,
+  }), 1);
+
+  expect(state.focusedOperationLogIndex).toBe(1);
+  expect(state.focusedRevisionIndex).toBe(0);
+});
+
+test("cancelOrBlurState exits operation log mode", () => {
+  const state = cancelOrBlurState(openOperationLog({
+    ...createState(),
+    operationLogEntries: OP_LOG_ENTRIES,
+  }));
+
+  expect(state.focusMode).toBe("revisions");
+  expect(state.focusModeStack).toEqual(["revisions"]);
 });
 
 test("moveFocusToParent focuses the nearest visible parent revision", () => {
@@ -1195,4 +1248,21 @@ test("cancelOrBlurState clears finalized search query", () => {
 
   state = cancelOrBlurState(state);
   expect(state.searchQuery).toBe("");
+});
+
+test("openDiffViewer enters diff-viewer mode and stores content", () => {
+  let state = createState();
+  state = openDiffViewer(state, "line 1\nline 2\nline 3");
+
+  expect(state.focusMode).toBe("diff-viewer");
+  expect(state.focusModeStack).toEqual(["revisions", "diff-viewer"]);
+  expect(state.diffViewer?.content).toBe("line 1\nline 2\nline 3");
+});
+
+test("openDiffViewer accepts empty content without crashing", () => {
+  let state = createState();
+  state = openDiffViewer(state, "");
+
+  expect(state.focusMode).toBe("diff-viewer");
+  expect(state.diffViewer?.content).toBe("");
 });

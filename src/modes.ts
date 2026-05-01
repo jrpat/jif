@@ -4,13 +4,15 @@ import type { CommandDefinition } from "./commands/definitions.ts";
 export type Mode =
   | "normal"
   | "files"
+  | "op-log"
   | "inline-confirmation"
   | "rebase"
   | "squash"
   | "command"
   | "revset"
   | "search"
-  | "search-results";
+  | "search-results"
+  | "diff-viewer";
 
 export type ModeDefinition = Readonly<{
   id: Mode;
@@ -22,6 +24,7 @@ export type ModeDefinition = Readonly<{
 export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   normal: { id: "normal", inputPassthrough: false, label: "Revisions" },
   files: { id: "files", parent: "normal", inputPassthrough: false, label: "Files" },
+  "op-log": { id: "op-log", inputPassthrough: false, label: "Op Log" },
   "inline-confirmation": { id: "inline-confirmation", inputPassthrough: false, label: "Confirm" },
   rebase: { id: "rebase", parent: "normal", inputPassthrough: false, label: "Rebase" },
   squash: { id: "squash", parent: "normal", inputPassthrough: false, label: "Squash" },
@@ -29,6 +32,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   revset: { id: "revset", inputPassthrough: true, label: "Revset" },
   search: { id: "search", inputPassthrough: true, label: "Search" },
   "search-results": { id: "search-results", parent: "normal", inputPassthrough: false, label: "Search Results" },
+  "diff-viewer": { id: "diff-viewer", inputPassthrough: false, label: "Diff" },
 };
 
 export type Keymap = Readonly<Record<"_global" | Mode, Readonly<Record<string, string>>>>;
@@ -76,11 +80,26 @@ export const defaultKeymap: Keymap = {
     "/": "search",
     A: "absorb",
     a: "abandon",
+    o: "open-operation-log",
+    O: "open-operation-log",
   },
   files: {
     s: "split",
     r: "restore",
     " ": "toggle-file-selection",
+  },
+  "op-log": {
+    j: "move-down",
+    down: "move-down",
+    J: "move-down",
+    k: "move-up",
+    up: "move-up",
+    K: "move-up",
+    G: "jump-to-bottom",
+    r: "restore-operation",
+    R: "revert-operation",
+    d: "show-operation-diff",
+    "?": "shortcut-panel",
   },
   "inline-confirmation": {
     h: "inline-confirmation-prev-option",
@@ -100,6 +119,16 @@ export const defaultKeymap: Keymap = {
     n: "search-next",
     p: "search-prev",
   },
+  "diff-viewer": {
+    j: "scroll-down",
+    k: "scroll-up",
+    h: "scroll-left",
+    l: "scroll-right",
+    J: "scroll-down-large",
+    K: "scroll-up-large",
+    H: "scroll-left-large",
+    L: "scroll-right-large",
+  },
 };
 
 export function getActiveMode(state: AppState): Mode {
@@ -107,6 +136,8 @@ export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "revset") return "revset";
   if (state.focusMode === "search") return "search";
   if (state.focusMode === "inline-confirmation") return "inline-confirmation";
+  if (state.focusMode === "diff-viewer") return "diff-viewer";
+  if (state.focusMode === "op-log") return "op-log";
   if (state.focusMode === "files") return "files";
   if (state.commandDraft?.config.kind === "rebase") return "rebase";
   if (state.commandDraft?.config.kind === "squash") return "squash";

@@ -89,6 +89,7 @@ function cloneKeymap(source: Keymap): MutableKeymap {
     _global: { ...source._global },
     normal: { ...source.normal },
     files: { ...source.files },
+    "op-log": { ...source["op-log"] },
     "inline-confirmation": { ...source["inline-confirmation"] },
     rebase: { ...source.rebase },
     squash: { ...source.squash },
@@ -96,6 +97,7 @@ function cloneKeymap(source: Keymap): MutableKeymap {
     revset: { ...source.revset },
     search: { ...source.search },
     "search-results": { ...source["search-results"] },
+    "diff-viewer": { ...source["diff-viewer"] },
   };
 }
 
@@ -117,6 +119,7 @@ const KEYMAP_SCOPES: readonly KeymapScope[] = [
   "_global",
   "normal",
   "files",
+  "op-log",
   "inline-confirmation",
   "rebase",
   "squash",
@@ -124,4 +127,5 @@ const KEYMAP_SCOPES: readonly KeymapScope[] = [
   "revset",
   "search",
   "search-results",
+  "diff-viewer",
 ];

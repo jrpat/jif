@@ -22,8 +22,12 @@ import {
   cycleLayout,
   clearStatusMessage,
   closeFocusedRevision,
+  closeOperationLog,
+  closeDiffViewer,
   focusLogBottom,
   focusWorkingCopy,
+  openOperationLog,
+  openDiffViewer,
   openRevsetInput,
   closeRevsetInput,
   closeSearch,
@@ -57,6 +61,8 @@ import {
   setLastFailedCommand,
   setCommandBarText,
   setLoading,
+  setOperationLogEntries,
+  setOperationLogLoading,
   setRevisionFiles,
   touchStatusMessage,
   toggleRebaseDescendants,
@@ -100,8 +106,15 @@ export function createAppStore(
       setLoading(loading: boolean) {
         mutate((currentState) => setLoading(currentState, loading));
       },
+      setOperationLogLoading(loading: boolean) {
+        mutate((currentState) => setOperationLogLoading(currentState, loading));
+      },
       pushEvent(text: string, level: StatusLevel) {
         mutate((currentState) => pushEvent(currentState, text, level));
+      },
+      reportError(error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        mutate((currentState) => pushEvent(currentState, message, "error"));
       },
       pushStatusMessage(id: string, text: string, level: StatusLevel) {
         mutate((currentState) => pushStatusMessage(currentState, id, text, level));
@@ -121,6 +134,9 @@ export function createAppStore(
       setRevisionFiles(rowId: string, files: readonly ChangedFile[]) {
         mutate((currentState) => setRevisionFiles(currentState, rowId, files));
       },
+      setOperationLogEntries(operationLogEntries: AppState["operationLogEntries"]) {
+        mutate((currentState) => setOperationLogEntries(currentState, operationLogEntries));
+      },
       moveFocus(delta: number) {
         mutate((currentState) => moveFocus(currentState, delta));
       },
@@ -138,6 +154,18 @@ export function createAppStore(
       },
       closeFocusedRevision() {
         mutate((currentState) => closeFocusedRevision(currentState));
+      },
+      openOperationLog() {
+        mutate((currentState) => openOperationLog(currentState));
+      },
+      closeOperationLog() {
+        mutate((currentState) => closeOperationLog(currentState));
+      },
+      openDiffViewer(content: string) {
+        mutate((currentState) => openDiffViewer(currentState, content));
+      },
+      closeDiffViewer() {
+        mutate((currentState) => closeDiffViewer(currentState));
       },
       focusCommandBar() {
         mutate((currentState) => focusCommandBar(currentState));
