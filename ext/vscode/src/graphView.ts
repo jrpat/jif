@@ -3,6 +3,9 @@ import * as vscode from "vscode";
 import * as nodePty from "node-pty";
 import { resolveGraphLaunchTarget } from "./jifRuntime.ts";
 
+const FOCUS_BLINK_INTERVAL_MS = 1000 / 8;
+const FOCUS_BLINK_COUNT = 2;
+
 export class JifGraphViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   private readonly disposables: vscode.Disposable[] = [];
   private view: vscode.WebviewView | null = null;
@@ -86,6 +89,10 @@ export class JifGraphViewProvider implements vscode.WebviewViewProvider, vscode.
 
     this.stopPty();
     this.startPty();
+  }
+
+  blink(): void {
+    void this.view?.webview.postMessage({ type: "blink" });
   }
 
   dispose(): void {
@@ -202,6 +209,19 @@ export class JifGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         overflow: hidden;
       }
 
+      #focus-blink {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 2;
+        box-shadow: inset 0 0 0 2px var(--vscode-focusBorder, #007fd4);
+        opacity: 0;
+      }
+
+      #focus-blink.on {
+        opacity: 1;
+      }
+
       .xterm {
         box-sizing: border-box;
       }
@@ -229,13 +249,33 @@ export class JifGraphViewProvider implements vscode.WebviewViewProvider, vscode.
   <body>
     <div id="status">Loading Jif graph...</div>
     <div id="terminal"></div>
+    <div id="focus-blink"></div>
     <script nonce="${nonce}" src="${xtermJsUri}"></script>
     <script nonce="${nonce}" src="${fitAddonUri}"></script>
     <script nonce="${nonce}">
       const terminalAppearance = ${JSON.stringify(terminalAppearance)};
+      const focusBlinkIntervalMs = ${FOCUS_BLINK_INTERVAL_MS};
+      const focusBlinkCount = ${FOCUS_BLINK_COUNT};
       const vscode = acquireVsCodeApi();
       const statusElement = document.getElementById('status');
       const terminalElement = document.getElementById('terminal');
+      const blinkElement = document.getElementById('focus-blink');
+      let blinkTimers = [];
+      const runBlink = () => {
+        for (const id of blinkTimers) {
+          clearTimeout(id);
+        }
+        blinkTimers = [];
+        blinkElement.classList.remove('on');
+        const totalSteps = focusBlinkCount * 2;
+        for (let step = 0; step < totalSteps; step += 1) {
+          const on = step % 2 === 0;
+          const id = setTimeout(() => {
+            blinkElement.classList.toggle('on', on);
+          }, step * focusBlinkIntervalMs);
+          blinkTimers.push(id);
+        }
+      };
       const setStatus = (message) => {
         statusElement.textContent = message;
         statusElement.hidden = !message;
@@ -334,6 +374,11 @@ export class JifGraphViewProvider implements vscode.WebviewViewProvider, vscode.
 
           if (message.type === 'error') {
             terminal.writeln('\\r\\n' + message.message);
+            return;
+          }
+
+          if (message.type === 'blink') {
+            runBlink();
           }
         });
 
