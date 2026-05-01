@@ -1,4 +1,5 @@
 import type { CommandController, CommandDefinition } from "../commands/definitions.ts";
+import { createUserAppState } from "../config/keymap.ts";
 import type { AppState } from "../domain/types.ts";
 import {
   type Keymap,
@@ -18,6 +19,7 @@ export function dispatchGlobalKey(options: {
 }): boolean {
   const { normalizedKey, state, commands, controller, keymap = defaultKeymap } = options;
   const mode = getActiveMode(state);
+  const userState = createUserAppState(state);
 
   const commandId = resolveCommand(mode, normalizedKey, keymap);
   if (commandId) {
@@ -26,11 +28,11 @@ export function dispatchGlobalKey(options: {
       return false;
     }
 
-    if (command.canExecute && !command.canExecute(state)) {
+    if (command.canExecute && !command.canExecute(userState)) {
       return false;
     }
 
-    command.run(controller);
+    runCommand(command, controller, userState);
     return true;
   }
 
@@ -44,10 +46,24 @@ export function dispatchGlobalKey(options: {
     return false;
   }
 
-  if (command.canExecute && !command.canExecute(state)) {
+  if (command.canExecute && !command.canExecute(userState)) {
     return false;
   }
 
-  command.run(controller);
+  runCommand(command, controller, userState);
   return true;
+}
+
+function runCommand(
+  command: CommandDefinition,
+  controller: CommandController,
+  state: AppState,
+) {
+  try {
+    void Promise.resolve(command.run(controller, state)).catch((error) => {
+      controller.reportError(error);
+    });
+  } catch (error) {
+    controller.reportError(error);
+  }
 }

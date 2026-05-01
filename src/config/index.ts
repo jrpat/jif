@@ -14,6 +14,21 @@ export {
 } from "./schema.ts";
 export { loadAppConfig } from "./loadConfig.ts";
 export {
+  createUserAppState,
+  resolveConfiguredKeymap,
+  type ResolvedConfiguredKeymap,
+  type UserAppState,
+  type UserKeyBinding,
+  type UserKeybindingCommand,
+  type UserKeyMap,
+} from "./keymap.ts";
+export type { UserAppState as AppState } from "./keymap.ts";
+export type {
+  UserCommandController,
+  InteractiveJjCommandOptions,
+  JjCommandOptions,
+} from "../commands/definitions.ts";
+export {
   detectTerminalThemeMode,
   detectThemeModeFromColorFgbg,
   inferThemeModeFromRgb,

@@ -53,6 +53,14 @@ function createControllerHarness(options: Readonly<{
 
   const runJjCommands: string[] = [];
   const runInteractiveCommands: string[] = [];
+  const runJjCalls: Array<{
+    commandText: string;
+    options?: { focusWorkingCopyAfterRefresh?: boolean; cwd?: string };
+  }> = [];
+  const runInteractiveCalls: Array<{
+    commandText: string;
+    options?: { cwd?: string };
+  }> = [];
   const expandElidedCalls: number[] = [];
   const persistedLayouts: string[] = [];
   let suspendCalls = 0;
@@ -78,11 +86,13 @@ function createControllerHarness(options: Readonly<{
     executeCurrentCommand: async () => {
       executeCurrentCommandCalls += 1;
     },
-    runJjCommand: async (commandText) => {
+    runJjCommand: async (commandText, options) => {
       runJjCommands.push(commandText);
+      runJjCalls.push({ commandText, options });
     },
-    runInteractiveJjCommand: async (commandText) => {
+    runInteractiveJjCommand: async (commandText, options) => {
       runInteractiveCommands.push(commandText);
+      runInteractiveCalls.push({ commandText, options });
     },
     refreshRepository: async () => true,
     expandElidedRevisions: async (index) => {
@@ -99,6 +109,8 @@ function createControllerHarness(options: Readonly<{
     controller,
     runJjCommands,
     runInteractiveCommands,
+    runJjCalls,
+    runInteractiveCalls,
     expandElidedCalls,
     persistedLayouts,
     get suspendCalls() {
@@ -116,6 +128,34 @@ test("suspend delegates to the injected renderer suspend hook", () => {
   harness.controller.suspend();
 
   expect(harness.suspendCalls).toBe(1);
+  harness.store.dispose();
+});
+
+test("jj defaults cwd to repoPath for user-defined commands", () => {
+  const harness = createControllerHarness({ revisions: [] });
+
+  harness.controller.jj("status");
+
+  expect(harness.runJjCalls).toEqual([
+    {
+      commandText: "status",
+      options: { cwd: REPO_PATH },
+    },
+  ]);
+  harness.store.dispose();
+});
+
+test("jji preserves an explicit cwd override", () => {
+  const harness = createControllerHarness({ revisions: [] });
+
+  harness.controller.jji("show -r @", { cwd: "/tmp/other" });
+
+  expect(harness.runInteractiveCalls).toEqual([
+    {
+      commandText: "show -r @",
+      options: { cwd: "/tmp/other" },
+    },
+  ]);
   harness.store.dispose();
 });
 

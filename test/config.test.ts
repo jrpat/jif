@@ -1,7 +1,12 @@
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { expect, test } from "bun:test";
 import {
   defaultAppConfig,
+  loadAppConfig,
   resolveAppConfig,
+  resolveConfiguredKeymap,
   FALLBACK_PALETTE_DARK,
   FALLBACK_PALETTE_LIGHT,
   type AppConfig,
@@ -157,4 +162,178 @@ test("resolveAppConfig without palette falls back to dark xterm defaults", () =>
   expect(resolved.colorScheme.semanticColors.textPrimary).toBe(
     withExplicit.colorScheme.semanticColors.textPrimary,
   );
+});
+
+test("resolveConfiguredKeymap preserves built-in bindings while adding inline commands", () => {
+  const run = () => {};
+
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        title: "Custom Search",
+        description: "Run a custom search action",
+        run,
+      },
+    },
+  });
+
+  expect(resolved.keymap.normal.j).toBe("move-down");
+  expect(resolved.keymap.normal.g).toBe("user:normal:g");
+
+  const command = resolved.commands.find((entry) => entry.id === "user:normal:g");
+  expect(command).toBeDefined();
+  expect(command?.title).toBe("Custom Search");
+  expect(command?.description).toBe("Run a custom search action");
+  expect(command?.canonicalKeys).toEqual(["g"]);
+  expect(typeof command?.run).toBe("function");
+});
+
+test("resolveConfiguredKeymap preserves explicit ids for inline commands", () => {
+  const run = () => {};
+
+  const resolved = resolveConfiguredKeymap({
+    _global: {
+      "ctrl-x": {
+        id: "custom.refresh",
+        title: "Refresh Everything",
+        description: "Refresh the repository view",
+        group: "global",
+        run,
+      },
+    },
+  });
+
+  expect(resolved.keymap._global["ctrl-x"]).toBe("user:custom.refresh");
+
+  const command = resolved.commands.find((entry) => entry.id === "user:custom.refresh");
+  expect(command).toBeDefined();
+  expect(command?.canonicalKeys).toEqual(["ctrl-x"]);
+  expect(command?.group).toBe("global");
+  expect(typeof command?.run).toBe("function");
+});
+
+test("resolveConfiguredKeymap namespaces explicit user ids away from built-in command ids", () => {
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        id: "move-up",
+        title: "Custom Move Up",
+        description: "Do not collide with the built-in command id",
+        run: () => {},
+      },
+    },
+  });
+
+  expect(resolved.keymap.normal.g).toBe("user:move-up");
+  expect(resolved.commands.find((entry) => entry.id === "move-up")?.title).toBe("Move Up");
+  expect(resolved.commands.find((entry) => entry.id === "user:move-up")?.title).toBe("Custom Move Up");
+});
+
+test("resolveConfiguredKeymap lets users rebind built-in commands by id", () => {
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      j: "move-up",
+    },
+  });
+
+  expect(resolved.keymap.normal.j).toBe("move-up");
+  expect(resolved.keymap.normal.k).toBe("move-up");
+});
+
+test("resolveConfiguredKeymap deep-merges user bindings into the default keymap", () => {
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        title: "Custom Action",
+        description: "Run a custom action",
+        run: () => {},
+      },
+    },
+    files: {
+      x: "restore",
+    },
+  });
+
+  expect(resolved.keymap._global.escape).toBe("cancel");
+  expect(resolved.keymap.normal.j).toBe("move-down");
+  expect(resolved.keymap.normal.g).toBe("user:normal:g");
+  expect(resolved.keymap.files.s).toBe("split");
+  expect(resolved.keymap.files.x).toBe("restore");
+});
+
+test("loadAppConfig reads config.ts from XDG_CONFIG_HOME/jif", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-config-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+  const previousHome = process.env.HOME;
+
+  try {
+    const configDir = join(tempDir, "jif");
+    await mkdir(configDir, { recursive: true });
+    await writeFile(
+      join(configDir, "config.ts"),
+      "export default { log: { scrollMargin: 7 } };\n",
+      "utf8",
+    );
+
+    process.env.XDG_CONFIG_HOME = tempDir;
+    process.env.HOME = join(tempDir, "home-ignored");
+
+    const { raw, resolved } = await loadAppConfig();
+
+    expect(raw.log?.scrollMargin).toBe(7);
+    expect(resolved.log.scrollMargin).toBe(7);
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+
+    if (previousHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = previousHome;
+    }
+
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("loadAppConfig falls back to ~/.config/jif when XDG_CONFIG_HOME is unset", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-home-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+  const previousHome = process.env.HOME;
+
+  try {
+    const homeDir = join(tempDir, "home");
+    const configDir = join(homeDir, ".config", "jif");
+    await mkdir(configDir, { recursive: true });
+    await writeFile(
+      join(configDir, "config.ts"),
+      "export default { log: { revisionIdAdditionalChars: 4 } };\n",
+      "utf8",
+    );
+
+    delete process.env.XDG_CONFIG_HOME;
+    process.env.HOME = homeDir;
+
+    const { raw, resolved } = await loadAppConfig();
+
+    expect(raw.log?.revisionIdAdditionalChars).toBe(4);
+    expect(resolved.log.revisionIdAdditionalChars).toBe(4);
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+
+    if (previousHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = previousHome;
+    }
+
+    await rm(tempDir, { recursive: true, force: true });
+  }
 });

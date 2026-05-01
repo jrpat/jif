@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { resolveConfiguredKeymap } from "../src/config/index.ts";
 import { commandDefinitions, type CommandController } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
 import { createInitialState, draftConfigs, startCommandDraft } from "../src/state/store.ts";
@@ -48,7 +49,7 @@ function createState(): AppState {
   };
 }
 
-function createController(calls: string[]): CommandController {
+function createController(calls: string[], errors: string[] = []): CommandController {
   return {
     moveFocus: () => calls.push("moveFocus"),
     moveFocusToParent: () => calls.push("moveFocusToParent"),
@@ -89,6 +90,15 @@ function createController(calls: string[]): CommandController {
     refreshRepository: () => calls.push("refreshRepository"),
     absorb: () => calls.push("absorb"),
     abandonRevision: () => calls.push("abandonRevision"),
+    jj: async () => {
+      calls.push("jj");
+    },
+    jji: async () => {
+      calls.push("jji");
+    },
+    reportError: (error) => {
+      errors.push(error instanceof Error ? error.message : String(error));
+    },
   };
 }
 
@@ -105,6 +115,110 @@ test("dispatchGlobalKey routes ? to the shortcut panel toggle", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["toggleShortcutPanel"]);
+});
+
+test("dispatchGlobalKey passes the full app state values to inline configured handlers", () => {
+  const calls: string[] = [];
+  const state = createState();
+  let receivedState: { repoPath: string; focusedRevisionIndex: number } | null = null;
+
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        title: "Capture State",
+        description: "Capture the current app state",
+        run: (_controller, app) => {
+          calls.push("custom");
+          receivedState = {
+            repoPath: app.repoPath,
+            focusedRevisionIndex: app.focusedRevisionIndex,
+          };
+        },
+      },
+    },
+  });
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "g",
+    state,
+    commands: resolved.commands,
+    controller: createController(calls),
+    keymap: resolved.keymap,
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["custom"]);
+  if (receivedState === null) {
+    throw new Error("expected receivedState to be set");
+  }
+  expect(receivedState as { repoPath: string; focusedRevisionIndex: number }).toEqual({
+    repoPath: state.repoPath,
+    focusedRevisionIndex: state.focusedRevisionIndex,
+  });
+});
+
+test("dispatchGlobalKey exposes the focused revision on app.rev for inline handlers", () => {
+  const calls: string[] = [];
+  const state = createState();
+  let focusedRevisionId: string | null = null;
+
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        title: "Read Focused Revision",
+        description: "Capture the focused revision via app.rev",
+        run: (_controller, app) => {
+          calls.push("custom");
+          focusedRevisionId = app.rev?.revisionId ?? null;
+        },
+      },
+    },
+  });
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "g",
+    state,
+    commands: resolved.commands,
+    controller: createController(calls),
+    keymap: resolved.keymap,
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["custom"]);
+  if (focusedRevisionId === null) {
+    throw new Error("expected focused revision id to be set");
+  }
+  expect(focusedRevisionId as string).toBe("aaaaaaaa");
+});
+
+test("dispatchGlobalKey reports rejected inline handlers through the controller", async () => {
+  const calls: string[] = [];
+  const errors: string[] = [];
+  const state = createState();
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        title: "Reject",
+        description: "Reject from an async handler",
+        run: async () => {
+          throw new Error("boom");
+        },
+      },
+    },
+  });
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "g",
+    state,
+    commands: resolved.commands,
+    controller: createController(calls, errors),
+    keymap: resolved.keymap,
+  });
+
+  await Promise.resolve();
+
+  expect(handled).toBeTrue();
+  expect(errors).toEqual(["boom"]);
 });
 
 test("dispatchGlobalKey routes ! to forceLastCommand", () => {

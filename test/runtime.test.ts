@@ -135,6 +135,39 @@ test("runInteractiveJjCommand is a no-op when workspace root is unavailable", as
   harness.store.dispose();
 });
 
+test("runJjCommand forwards an explicit cwd override", async () => {
+  const harness = createRuntimeHarness({ workspaceRoot: null });
+
+  await harness.runtime.runJjCommand("status", { cwd: "/tmp/other" });
+
+  expect(harness.commandRuns).toHaveLength(1);
+  expect(harness.commandRuns[0]).toMatchObject({
+    commandText: "status",
+    cwd: "/tmp/other",
+    cancelOnSuccess: true,
+    successFeedback: "event",
+    failureFeedback: "event",
+  });
+  harness.store.dispose();
+});
+
+test("runInteractiveJjCommand uses an explicit cwd override even without workspace root", async () => {
+  const harness = createRuntimeHarness({ workspaceRoot: null });
+
+  await harness.runtime.runInteractiveJjCommand("status", { cwd: "/tmp/other" });
+
+  expect(harness.commandRuns).toHaveLength(1);
+  expect(harness.commandRuns[0]).toMatchObject({
+    commandText: "status",
+    interactive: true,
+    cwd: "/tmp/other",
+    cancelOnSuccess: true,
+    successFeedback: "none",
+    failureFeedback: "event",
+  });
+  harness.store.dispose();
+});
+
 test("applyRevsetQuery persists successful revset changes", async () => {
   const harness = createRuntimeHarness({});
 

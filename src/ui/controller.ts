@@ -1,5 +1,9 @@
 import { join } from "node:path";
-import type { CommandController } from "../commands/definitions.ts";
+import type {
+  CommandController,
+  InteractiveJjCommandOptions,
+  JjCommandOptions,
+} from "../commands/definitions.ts";
 import type { AppLayout, ChangedFile, FocusMode } from "../domain/types.ts";
 import { getRevisionArg } from "../domain/revisionIds.ts";
 import { buildForceRetryPlan } from "../jj/forceRetry.ts";
@@ -31,10 +35,13 @@ type ExecuteCurrentCommand = (
 
 type RunJjCommand = (
   commandText: string,
-  options?: { focusWorkingCopyAfterRefresh?: boolean },
+  options?: JjCommandOptions,
 ) => Promise<void>;
 
-type RunInteractiveJjCommand = (commandText: string) => Promise<void>;
+type RunInteractiveJjCommand = (
+  commandText: string,
+  options?: InteractiveJjCommandOptions,
+) => Promise<void>;
 
 export function createJifCommandController(args: Readonly<{
   store: AppStore;
@@ -353,6 +360,21 @@ export function createJifCommandController(args: Readonly<{
       const revisionArg = getFocusedRevisionArg(store.snapshot());
       if (!revisionArg) return;
       void args.runJjCommand(`abandon ${revisionArg}`);
+    },
+    jj(commandText, options) {
+      return args.runJjCommand(commandText, {
+        ...options,
+        cwd: options?.cwd ?? store.snapshot().repoPath,
+      });
+    },
+    jji(commandText, options) {
+      return args.runInteractiveJjCommand(commandText, {
+        ...options,
+        cwd: options?.cwd ?? store.snapshot().repoPath,
+      });
+    },
+    reportError(error) {
+      reportError(store, error);
     },
   };
 }

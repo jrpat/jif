@@ -121,7 +121,7 @@ test("command runner animates the status toast while a command is running", asyn
     spinnerScheduler: {
       setInterval(callback) {
         tickSpinner = callback;
-        return 1;
+        return 1 as unknown as ReturnType<typeof globalThis.setInterval>;
       },
       clearInterval() {
         clearCount += 1;

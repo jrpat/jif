@@ -3,8 +3,8 @@ import { For, Show, createEffect, createMemo, createRenderEffect, createSignal, 
 import { createStore, reconcile } from "solid-js/store";
 import { useKeyboard, useRenderer } from "@opentui/solid";
 import { createCommandRunner } from "../commands/runner.ts";
-import { commandDefinitions } from "../commands/definitions.ts";
 import type { AppConfig, ResolvedAppConfig } from "../config/schema.ts";
+import { resolveConfiguredKeymap } from "../config/index.ts";
 import type { AppStore } from "../state/appStore.ts";
 import { createPersistenceService } from "../persistence/service.ts";
 import {
@@ -65,7 +65,7 @@ import {
 import { resolveBottomChromeLayout } from "./bottomChrome.ts";
 import { normalizeKey } from "./keyboard.ts";
 import { dispatchGlobalKey } from "./keybindings.ts";
-import { getActiveMode, getCommandsForMode, getDirectCommandsForMode, defaultKeymap } from "../modes.ts";
+import { getActiveMode, getCommandsForMode, getDirectCommandsForMode } from "../modes.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { suspendProcessToShell } from "./suspend.ts";
@@ -108,9 +108,9 @@ export function JifView(props: {
   });
   const commandRunner = createCommandRunner({
     actions: store.actions,
-    executeCommandArgs: (commandArgs) => client.executeCommandArgs(commandArgs),
-    executeInteractiveCommandArgs: async (commandArgs) => {
-      const root = workspaceRoot();
+    executeCommandArgs: (commandArgs, options) => client.executeCommandArgs(commandArgs, options),
+    executeInteractiveCommandArgs: async (commandArgs, options) => {
+      const root = options?.cwd ?? workspaceRoot();
       if (!root) {
         throw new Error("Workspace root is unavailable.");
       }
@@ -132,6 +132,7 @@ export function JifView(props: {
     getWorkspaceRoot: workspaceRoot,
     refreshRepository,
   });
+  const configuredKeymap = resolveConfiguredKeymap(rawConfig.keymap);
   let logViewport: ScrollBoxRenderable | undefined;
   const detectAndApplyPalette = createPaletteDetector({
     renderer,
@@ -222,10 +223,10 @@ export function JifView(props: {
   );
   const activeMode = createMemo(() => getActiveMode(store.state));
   const visibleCommands = createMemo(() =>
-    getCommandsForMode(activeMode(), defaultKeymap, commandDefinitions)
+    getCommandsForMode(activeMode(), configuredKeymap.keymap, configuredKeymap.commands)
   );
   const directModeCommands = createMemo(() =>
-    getDirectCommandsForMode(activeMode(), defaultKeymap, commandDefinitions)
+    getDirectCommandsForMode(activeMode(), configuredKeymap.keymap, configuredKeymap.commands)
   );
   const shortcutCommands = createMemo(() =>
     getShortcutPanelCommands(store.state, visibleCommands())
@@ -331,8 +332,9 @@ export function JifView(props: {
     const handled = dispatchGlobalKey({
       normalizedKey,
       state,
-      commands: commandDefinitions,
+      commands: configuredKeymap.commands,
       controller,
+      keymap: configuredKeymap.keymap,
     });
     if (!handled) {
       logShortcutDebug("key-ignored", {

@@ -147,12 +147,15 @@ export class JjClient {
     return await this.executeCommandArgs(args);
   }
 
-  async executeCommandArgs(args: readonly string[]): Promise<string> {
+  async executeCommandArgs(args: readonly string[], options?: { cwd?: string }): Promise<string> {
     if (args.length === 0) {
       return "";
     }
 
-    const result = await this.runJj(["--color", "always", ...args], { color: true });
+    const result = await this.runJj(["--color", "always", ...args], {
+      color: true,
+      cwd: options?.cwd,
+    });
     const stderr = result.stderr.trim();
     const stdout = result.stdout.trim();
     return stderr || stdout || `Executed: jj ${quoteCommand(args)}`;
@@ -217,8 +220,8 @@ export class JjClient {
     }
   }
 
-  private async runJj(args: readonly string[], options?: { color?: boolean }) {
-    return await runCommand(this.repoPath, ["jj", ...args], options);
+  private async runJj(args: readonly string[], options?: { color?: boolean; cwd?: string }) {
+    return await runCommand(options?.cwd ?? this.repoPath, ["jj", ...args], options);
   }
 }
 

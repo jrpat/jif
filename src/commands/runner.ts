@@ -35,6 +35,7 @@ const defaultSpinnerScheduler: SpinnerScheduler = {
 export type CommandRunOptions = Readonly<{
   commandText: string;
   interactive?: boolean;
+  cwd?: string;
   canExecute?: boolean;
   cancelBeforeRun?: boolean;
   cancelOnSuccess?: boolean;
@@ -66,8 +67,8 @@ export function createTrackedCommand(
 
 export function createCommandRunner(args: Readonly<{
   actions: CommandRunnerActions;
-  executeCommandArgs(commandArgs: readonly string[]): Promise<string>;
-  executeInteractiveCommandArgs?(commandArgs: readonly string[]): Promise<void>;
+  executeCommandArgs(commandArgs: readonly string[], options?: { cwd?: string }): Promise<string>;
+  executeInteractiveCommandArgs?(commandArgs: readonly string[], options?: { cwd?: string }): Promise<void>;
   refreshRepository(): Promise<boolean>;
   createToastId?(): string;
   spinnerScheduler?: SpinnerScheduler;
@@ -105,8 +106,8 @@ export function createCommandRunner(args: Readonly<{
 
       try {
         const resultMessage = command.interactive
-          ? await executeInteractive(args, command.commandArgs)
-          : await args.executeCommandArgs(command.commandArgs);
+          ? await executeInteractive(args, command.commandArgs, options.cwd)
+          : await args.executeCommandArgs(command.commandArgs, { cwd: options.cwd });
         stopToastSpinner();
         args.actions.clearLastFailedCommand();
         if (options.cancelOnSuccess) {
@@ -159,15 +160,16 @@ function formatRunningCommandText(commandText: string, frameIndex: number): stri
 
 async function executeInteractive(
   args: Readonly<{
-    executeInteractiveCommandArgs?(commandArgs: readonly string[]): Promise<void>;
+    executeInteractiveCommandArgs?(commandArgs: readonly string[], options?: { cwd?: string }): Promise<void>;
   }>,
   commandArgs: readonly string[],
+  cwd?: string,
 ): Promise<string> {
   if (!args.executeInteractiveCommandArgs) {
     throw new Error("Interactive command executor is unavailable.");
   }
 
-  await args.executeInteractiveCommandArgs(commandArgs);
+  await args.executeInteractiveCommandArgs(commandArgs, { cwd });
   return "";
 }
 

@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { resolveConfiguredKeymap } from "../src/config/index.ts";
 import { commandDefinitions, type CommandDefinition } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
 import { createInitialState, draftConfigs, openFocusedRevision, startCommandDraft } from "../src/state/store.ts";
@@ -274,4 +275,24 @@ test("getShortcutPanelCommands narrows file mode shortcuts to file-relevant acti
   expect(ids).not.toContain("edit-revision");
   expect(ids).not.toContain("undo");
   expect(ids).not.toContain("edit-revset");
+});
+
+test("getShortcutPanelCommands includes inline configured commands from the merged keymap", () => {
+  const state = createState();
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        title: "Custom Action",
+        description: "Run a custom action",
+        run: () => {},
+      },
+    },
+  });
+
+  const commands = getShortcutPanelCommands(
+    state,
+    getCommandsForMode(getActiveMode(state), resolved.keymap, resolved.commands),
+  );
+
+  expect(commands.find((command) => command.id === "user:normal:g")?.title).toBe("Custom Action");
 });

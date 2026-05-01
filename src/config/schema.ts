@@ -1,5 +1,6 @@
 import type { TerminalColors } from "@opentui/core";
 import type { AppLayout } from "../domain/types.ts";
+import type { UserKeyMap } from "./keymap.ts";
 
 export type SemanticColorValue = string | undefined;
 
@@ -59,6 +60,7 @@ export type AppConfig = Readonly<{
   colorScheme?: Readonly<{
     colors?: Partial<Record<SemanticColorKey, SemanticColorOverride>>;
   }>;
+  keymap?: UserKeyMap;
   log?: Readonly<{
     scrollMargin?: number;
     revisionIdAdditionalChars?: number;

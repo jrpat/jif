@@ -1,6 +1,15 @@
 import { getFocusedChildRevision, getFocusedParentRevision } from "../state/store.ts";
 import type { AppState } from "../domain/types.ts";
 
+export type JjCommandOptions = Readonly<{
+  cwd?: string;
+  focusWorkingCopyAfterRefresh?: boolean;
+}>;
+
+export type InteractiveJjCommandOptions = Readonly<{
+  cwd?: string;
+}>;
+
 export type CommandController = Readonly<{
   moveFocus: (delta: number) => void;
   moveFocusToParent: () => void;
@@ -41,7 +50,12 @@ export type CommandController = Readonly<{
   refreshRepository: () => void;
   absorb: () => void;
   abandonRevision: () => void;
+  jj: (commandText: string, options?: JjCommandOptions) => Promise<void>;
+  jji: (commandText: string, options?: InteractiveJjCommandOptions) => Promise<void>;
+  reportError: (error: unknown) => void;
 }>;
+
+export type UserCommandController = Omit<CommandController, "reportError">;
 
 export type CommandDefinition = Readonly<{
   id: string;
@@ -49,7 +63,7 @@ export type CommandDefinition = Readonly<{
   description: string;
   canonicalKeys: readonly string[];
   canExecute?: (state: AppState) => boolean;
-  run: (controller: CommandController) => void;
+  run: (controller: CommandController, state: AppState) => void | Promise<void>;
   group?: "global" | "mode" | "cancel";
 }>;
 

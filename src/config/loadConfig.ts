@@ -1,5 +1,6 @@
 import { access } from "node:fs/promises";
-import { resolve } from "node:path";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { TerminalColors } from "@opentui/core";
 import {
@@ -9,7 +10,7 @@ import {
   type ResolvedAppConfig,
 } from "./schema.ts";
 
-const CONFIG_CANDIDATES = [
+export const CONFIG_CANDIDATES = [
   "config.ts",
   "config.js",
   "jif.config.ts",
@@ -17,14 +18,14 @@ const CONFIG_CANDIDATES = [
 ] as const;
 
 export async function loadAppConfig(options: Readonly<{
-  projectRoot?: string;
+  configDir?: string;
   palette?: TerminalColors | null;
 }> = {}): Promise<{ raw: AppConfig; resolved: ResolvedAppConfig }> {
-  const projectRoot = options.projectRoot ?? resolve(import.meta.dir, "../..");
+  const configDir = options.configDir ?? resolveUserConfigDir();
   const palette = options.palette ?? null;
 
   for (const candidate of CONFIG_CANDIDATES) {
-    const configPath = resolve(projectRoot, candidate);
+    const configPath = resolve(configDir, candidate);
     if (!(await fileExists(configPath))) {
       continue;
     }
@@ -35,6 +36,15 @@ export async function loadAppConfig(options: Readonly<{
   }
 
   return { raw: defaultAppConfig, resolved: resolveAppConfig(defaultAppConfig, { palette }) };
+}
+
+export function resolveUserConfigDir(): string {
+  const xdgConfigHome = process.env.XDG_CONFIG_HOME;
+  if (xdgConfigHome && xdgConfigHome.length > 0) {
+    return join(xdgConfigHome, "jif");
+  }
+
+  return join(process.env.HOME || homedir(), ".config", "jif");
 }
 
 async function fileExists(path: string): Promise<boolean> {

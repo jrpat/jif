@@ -122,7 +122,7 @@ test("observeScrollboxBottomReached hooks scrollBy and fires when the viewport r
     viewport: { height: 10 },
     scrollBy(delta: number) {
       scrollTop += delta;
-      this.scrollTop = scrollTop;
+      (this as { scrollTop: number }).scrollTop = scrollTop;
     },
   } as unknown as ScrollBoxRenderable;
 

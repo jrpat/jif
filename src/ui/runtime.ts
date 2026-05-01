@@ -1,4 +1,5 @@
 import type { CommandRunOptions } from "../commands/runner.ts";
+import type { InteractiveJjCommandOptions, JjCommandOptions } from "../commands/definitions.ts";
 import type { RevisionSummary } from "../domain/types.ts";
 import type { JjClient } from "../jj/client.ts";
 import type { PersistenceService } from "../persistence/service.ts";
@@ -49,7 +50,7 @@ export function createJifRuntime(args: Readonly<{
 
     async runJjCommand(
       commandText: string,
-      options?: { focusWorkingCopyAfterRefresh?: boolean },
+      options?: JjCommandOptions,
     ): Promise<void> {
       await commandRunner.run({
         commandText,
@@ -59,11 +60,16 @@ export function createJifRuntime(args: Readonly<{
         successFeedback: "event",
         failureFeedback: "event",
         focusWorkingCopyAfterRefresh: options?.focusWorkingCopyAfterRefresh,
+        cwd: options?.cwd,
       });
     },
 
-    async runInteractiveJjCommand(commandText: string): Promise<void> {
-      if (!args.getWorkspaceRoot()) {
+    async runInteractiveJjCommand(
+      commandText: string,
+      options?: InteractiveJjCommandOptions,
+    ): Promise<void> {
+      const cwd = options?.cwd ?? args.getWorkspaceRoot();
+      if (!cwd) {
         return;
       }
 
@@ -74,6 +80,7 @@ export function createJifRuntime(args: Readonly<{
         cancelOnSuccess: true,
         successFeedback: "none",
         failureFeedback: "event",
+        cwd,
       });
     },
 

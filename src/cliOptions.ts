@@ -1,14 +1,19 @@
 export type CliOptions = Readonly<{
+  command: "run" | "init-config";
   sampleName: string | undefined;
   useLongFlags: boolean;
   explicitRepoPath: string | undefined;
 }>;
 
 export function parseCliOptions(argv: readonly string[]): CliOptions {
+  const command = argv[0] === "init-config" ? "init-config" : "run";
+  const args = command === "init-config" ? argv.slice(1) : argv;
+
   return {
-    sampleName: readOptionalFlag(argv, "--sample"),
-    useLongFlags: argv.includes("--long-flags"),
-    explicitRepoPath: readFlagValue(argv, "--repo"),
+    command,
+    sampleName: readOptionalFlag(args, "--sample"),
+    useLongFlags: args.includes("--long-flags"),
+    explicitRepoPath: readFlagValue(args, "--repo"),
   };
 }
 
