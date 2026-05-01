@@ -1,37 +1,256 @@
 # jif
 
-`jif` is a keyboard-first terminal UI for browsing and operating on Jujutsu history.
+`jif` is a Jujutsu porcelain — highly-tuned out of the box, but *deeply* configurable. Built to make the underlying model more accessible, not to hide it.
 
-This README is for humans working in this repository.
+## Jif's Worldview
+
+jif is meant to be lived in, kept open, reached for constantly – your home for Jujutsu in the terminal. It comes out-of-the box with thoughtful ergonomics, consistent shortcuts, creature comforts, and fit and finish you feel immediately.
+
+But it's also *yours*, designed from the start to be molded to how you work. The configuration system is TypeScript executed at runtime, with all the app state and internal commands exposed. Nothing is hidden or artificially restricted. The defaults aren't a ceiling.
+
+## Command Composition
+
+Every operation in jif — `rebase`, `squash`, `split`, `new`, `commit`, and the rest — is really just composing a `jj` command. As you press keys, the command bar shows the exact `jj` invocation being assembled, color-coded by piece (subcommand, target revision, selected files, flags, etc…). When you confirm, jif runs that command verbatim.
+
+You get the ergonomics of a TUI porcelain without the CLI being hidden from you, and over time the visible command bar teaches you the underlying `jj` commands.
+
+Press `-` while composing to flip between short and long flag names. Press `:` at any time to drop into the command bar and type a `jj` subcommand directly — if a command is already being composed, `:` preserves it and lets you edit it as text before running.
 
 ## Prerequisites
 
-- `bun`
-- `jj`
-
-`jif` shells out to the real `jj` binary. The built app is a single `jif` executable, but it still expects `jj` to be installed and available on `PATH`.
+`jif` shells out to the real `jj` binary, so `jj` must be installed and available on `PATH`.
 
 ## Install
 
+> TODO
+
+## Run
+
 ```bash
-bun run install:bin
+jif
 ```
 
-This compiles a single `jif` executable into `${XDG_BIN_HOME:-$HOME/.local/bin}`.
+This launches the TUI against the current working directory.
 
-To install workspace dependencies without compiling the binary:
+## Keybindings
+
+Default keybindings, grouped by mode. Modes other than Global and Inline Confirmation inherit Normal-mode bindings on top of their own.
+
+### Global
+
+Available in every mode (mode-specific bindings can override these).
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `ctrl-r` | refresh-repository | Refresh the revision log |
+| `ctrl-z` | suspend | Suspend the application and return to the shell |
+| `escape` | cancel | Cancel command composition or leave input mode |
+
+### Normal
+
+Viewing and navigating the revision log.
+
+#### Navigation
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `j` / `↓` | move-down | Move through revisions or files |
+| `k` / `↑` | move-up | Move through revisions or files |
+| `J` | move-parent | Follow the graph to the nearest visible parent, skipping branches |
+| `K` | move-child | Follow the graph to the nearest visible child, skipping branches |
+| `@` | jump-to-working-copy | Jump to the working-copy revision |
+| `G` | jump-to-bottom | Jump to the last revision in the log |
+
+#### View
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `h` / `←` | collapse | Close the focused detail view |
+| `l` / `→` | expand | Open changed files for the focused revision |
+| `L` | edit-revset | Change which revisions are displayed |
+| `/` | search | Incremental search through the revision log |
+| `_` | cycle-layout | Rotate expanded, condensed, and super-condensed layouts |
+
+#### Revision operations
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `a` | abandon | Abandon the focused revision |
+| `A` | absorb | Run `jj absorb` |
+| `c` | commit | Commit the working-copy revision (`@`) |
+| `d` | show-diff | Show diff for the focused revision or file |
+| `D` | describe | Edit description of the focused revision |
+| `e` | edit-revision | Edit the focused revision |
+| `n` | new-revision | Create a new revision from the focused revision |
+| `r` | rebase | Start a rebase from the focused revision |
+| `s` | split | Split the focused revision, or use the current file selection |
+| `S` | squash | Squash the focused revision into another |
+| `u` | undo | Undo the last operation |
+| `U` | redo | Redo the last undone operation |
+| `space` | toggle-revision-selection | Add or remove the focused revision from the selection |
+
+#### Miscellaneous
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `:` | command-bar | Focus the command bar |
+| `q` | quit | Exit the application |
+| `?` | shortcut-panel | Expand or collapse the shortcut panel |
+| `!` | force-last-command | Retry the last failed command with the override flag `jj` is asking for:<br>• `--ignore-immutable` — when the command refused because the target is immutable<br>• `--allow-backwards` — when a bookmark move was rejected as backwards/sideways |
+| `-` | toggle-flags | Toggle the command bar between short and long flag names while composing a command |
+
+### Files
+
+Active when a revision is expanded and a file is focused. Inherits Normal.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `r` | restore | Restore selected files to their state before this change |
+| `s` | split | Split using the current file selection |
+| `space` | toggle-file-selection | Add or remove the focused file from the selection |
+
+### Rebase
+
+Active while previewing a rebase. Inherits Normal.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `s` | rebase-descendants | Toggle whether descendants are included in the rebase |
+
+### Search Results
+
+Active after running a search. Inherits Normal.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `n` | search-next | Jump to the next search match |
+| `p` | search-prev | Jump to the previous search match |
+
+### Inline Confirmation
+
+Active in inline confirmation prompts.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `enter` | confirm | Confirm the selected option |
+| `h` / `←` | inline-confirmation-prev-option | Select the previous option |
+| `l` / `→` | inline-confirmation-next-option | Select the next option |
+
+### Text Input Modes
+
+Active in the command bar (`:`), revset prompt (`L`), and search prompt (`/`). Keystrokes pass through as text input; the bindings below navigate history and suggestion lists.
+
+| Key | Description |
+|-----|-------------|
+| `ctrl-j` / `ctrl-n` / `↓` | Move to the next history entry or suggestion |
+| `ctrl-k` / `ctrl-p` / `↑` | Move to the previous history entry or suggestion |
+| `enter` | Submit the current input (run the command, apply the revset, finalize the search) |
+| `tab` / `shift-tab` | Move to the next / previous suggestion |
+
+## Configuration
+
+Run `jif init-config` to create a starter config. The command creates:
+
+- `config.ts` with a placeholder `Jif.Config` shape and commented examples
+- `jif.d.ts` with editor-facing types for autocomplete and inline docs
+
+If a config file already exists, `jif init-config` leaves it alone and only fills in missing support files.
+
+### Config location
+
+User config lives in the jif config directory:
+
+- `$XDG_CONFIG_HOME/jif` when `XDG_CONFIG_HOME` is set
+- otherwise `~/.config/jif`
+
+jif loads the first existing file in this order from that directory:
+
+- `config.ts`
+- `config.js`
+- `jif.config.ts`
+- `jif.config.js`
+
+### Theme
+
+The color configuration supports `light`, `dark`, and `auto` theme mode. In `auto`, startup queries the terminal background color and picks the light or dark theme accordingly.
+
+### Revision IDs
+
+Revision IDs default to the longest unique prefix across the visible log. You can show a few extra characters with:
+
+```ts
+export default {
+	log: {
+		revisionIdAdditionalChars: 0,
+	},
+} satisfies Jif.Config;
+```
+
+### Keybindings
+
+Key bindings live under the top-level `keymap` field. User keymaps are deep-merged into the built-in defaults, so adding one binding does not replace the rest of the default map.
+
+You can either rebind an existing built-in command by id:
+
+```ts
+export default {
+	keymap: {
+		normal: {
+			J: "move-down",
+		},
+	},
+} satisfies Jif.Config;
+```
+
+Or define an inline command directly in the keymap:
+
+```ts
+export default {
+	keymap: {
+		normal: {
+			"ctrl-g": {
+				id: "show-focused",  // command ids are optional
+				title: "Show Focused Revision",
+				description: "Open jj show for the focused revision",
+				run: (cmd, app) => {
+					const revision = app.rev;
+					if (!revision) return;
+
+					return cmd.jji(`show -r ${revision.revisionId}`);
+				},
+			},
+			"ctrl-e": {
+				title: "Edit Focused Revision",
+				description: "Run jj edit on the focused revision",
+				run: (cmd, app) => {
+					const revision = app.rev;
+					if (!revision) return;
+
+					return cmd.jj(`edit ${revision.revisionId}`);
+				},
+			},
+		},
+	},
+} satisfies Jif.Config;
+```
+
+Inline handlers receive as arguments:
+
+- `cmd` — the command controller. See [TODO](TODO) for full documentation, but the most useful methods are:
+	- `cmd.jj("...")` to run a jj command
+	- `cmd.sh("...")` to run a shell command
+- `app` — the full `AppState`, plus a few ergonomic shortcuts:
+	- `app.rev` holds the currently-focused revision id
+
+## Developing
+
+Workspace tooling uses [Bun](https://bun.sh/). Install dependencies with:
 
 ```bash
 bun install
 ```
 
-To install into a different location for one run:
-
-```bash
-XDG_BIN_HOME=/some/bin bun run install:bin
-```
-
-## Run
+### Run from source
 
 Run against the current working directory:
 
@@ -57,7 +276,19 @@ You can also run the entrypoint directly:
 bun run index.ts
 ```
 
-## Build
+### Build
+
+Compile a single `jif` executable into `${XDG_BIN_HOME:-$HOME/.local/bin}`:
+
+```bash
+bun run bin
+```
+
+To install into a different location for one run:
+
+```bash
+XDG_BIN_HOME=/some/bin bun run install:bin
+```
 
 Build a standalone executable into `dist/`:
 
@@ -77,7 +308,7 @@ You can smoke-test the built binary with:
 ./dist/jif-bun-darwin-arm64 --sample
 ```
 
-## Test
+### Test
 
 Run the test suite:
 
@@ -90,99 +321,3 @@ Run typechecking:
 ```bash
 bunx tsc --noEmit
 ```
-
-## Project Notes
-
-- This is a Jujutsu repository. Use `jj`, not Git.
-- Deterministic sample data lives in `test/fixtures/sample-repo.jsonl`.
-- Sample repo materialization logic lives under `src/dev/`.
-- The UI runtime is OpenTUI + Solid.
-- `tsconfig.json` uses `jsxImportSource: "@opentui/solid"` and `bunfig.toml` preloads `@opentui/solid/preload`.
-- `scripts/build.ts` uses the OpenTUI Solid Bun plugin during `Bun.build`.
-
-## Configuration
-
-User config lives in the jif config directory:
-
-- `$XDG_CONFIG_HOME/jif` when `XDG_CONFIG_HOME` is set
-- otherwise `~/.config/jif`
-
-jif currently loads the first existing file in this order from that directory:
-
-- `config.ts`
-- `config.js`
-- `jif.config.ts`
-- `jif.config.js`
-
-Run `jif init-config` to create a starter config in that directory. The command creates:
-
-- `config.ts` with a placeholder `Jif.Config` shape and commented examples
-- `jif.d.ts` with editor-facing types for autocomplete and inline docs
-
-The generated `config.ts` starts with a `/// <reference path="./jif.d.ts" />` comment so TypeScript language servers can pick up the types even outside the jif source tree.
-
-If a config file already exists, `jif init-config` leaves it alone and only fills in missing support files.
-
-The current color configuration supports `light`, `dark`, and `auto` theme mode. In `auto`, startup queries the terminal background color and picks the light or dark theme accordingly.
-
-Revision IDs default to the longest unique prefix across the visible log. You can show a few extra characters with:
-
-```ts
-export default {
-	log: {
-		revisionIdAdditionalChars: 0,
-	},
-} satisfies Jif.Config;
-```
-
-Key bindings live under the top-level `keymap` field. User keymaps are deep-merged into the built-in defaults, so adding one binding does not replace the rest of the default map.
-
-You can either rebind an existing built-in command by id:
-
-```ts
-export default {
-	keymap: {
-		normal: {
-			J: "move-down",
-		},
-	},
-} satisfies Jif.Config;
-```
-
-Or define an inline command directly in the keymap:
-
-```ts
-export default {
-	keymap: {
-		normal: {
-			"ctrl-g": {
-				title: "Show Focused Revision",
-				description: "Open jj show for the focused revision",
-				run: (cmd, app) => {
-					const revision = app.rev;
-					if (!revision) return;
-
-					return cmd.jji(`show -r ${revision.revisionId}`);
-				},
-			},
-			"ctrl-e": {
-				title: "Edit Focused Revision",
-				description: "Run jj edit on the focused revision",
-				run: (cmd, app) => {
-					const revision = app.rev;
-					if (!revision) return;
-
-					return cmd.jj(`edit ${revision.revisionId}`);
-				},
-			},
-		},
-	},
-} satisfies Jif.Config;
-```
-
-Inline handlers receive `cmd` and `app` by convention:
-
-- `cmd` is the user command controller. Use `cmd.jj("...")` for normal commands or `cmd.jji("...")` for interactive ones.
-- `app` is the full config-facing `AppState`, plus an ergonomic `app.rev` getter for the currently focused revision.
-
-Custom inline command ids are optional. If you provide one, jif prefixes it internally so it cannot collide with built-in command ids.
