@@ -1232,7 +1232,13 @@ function ChangedFileRowContent(props: {
         {rowState().selected ? "✓" : " "}
       </text>
       <text fg={colors.fileStatusAccent}>{row.file.status}</text>
-      <text fg={rowState().selected || rowState().focused ? colors.textPrimary : colors.textSecondary} truncate>
+      <text
+        flexShrink={1}
+        minWidth={0}
+        wrapMode="none"
+        fg={rowState().selected || rowState().focused ? colors.textPrimary : colors.textSecondary}
+        truncate
+      >
         {row.file.path}
       </text>
       <Show when={row.file.hasConflict}>
