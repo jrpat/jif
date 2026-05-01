@@ -40,7 +40,7 @@ test("expanded layout uses direct two-row graph geometry", () => {
   expect(layout.visibleGraphMode).toBe("direct");
   expect(layout.commandChip?.placement).toBe("inline");
   expect(layout.sideChips).toEqual([
-    { kind: "workspace", text: "review" },
+    { kind: "workspace", text: "review@" },
     { kind: "bookmark", text: "main" },
   ]);
 });

@@ -42,6 +42,10 @@ export function getMaxRevisionBaseGraphRowCount(): number {
   return Math.max(...Object.values(BASE_LAYOUT_SPECS).map((spec) => spec.baseGraphRowCount));
 }
 
+function formatWorkspaceChipText(workspaceName: string): string {
+  return workspaceName.endsWith("@") ? workspaceName : `${workspaceName}@`;
+}
+
 export function buildRevisionLayoutSpec(
   revision: Pick<RevisionSummary, "revisionId" | "bookmarks" | "workspaces" | "graphRows" | "hasConflict">,
   options: Readonly<{
@@ -51,7 +55,7 @@ export function buildRevisionLayoutSpec(
 ): RevisionLayoutSpec {
   const sideChips: RevisionSideChip[] = [
     ...(revision.hasConflict ? [{ kind: "conflict" as const, text: "×" }] : []),
-    ...revision.workspaces.map((text) => ({ kind: "workspace" as const, text })),
+    ...revision.workspaces.map((text) => ({ kind: "workspace" as const, text: formatWorkspaceChipText(text) })),
     ...revision.bookmarks.map((text) => ({ kind: "bookmark" as const, text })),
   ];
   const base = BASE_LAYOUT_SPECS[options.mode];
