@@ -54,6 +54,7 @@ import {
   selectNextInlineConfirmationOption,
   clearLastFailedCommand,
   setLastFailedCommand,
+  touchStatusMessage,
 } from "../src/state/store.ts";
 
 const FIRST_ROW_ID = createRowId("11111111", "aaaaaaaa");
@@ -514,6 +515,18 @@ test("updateStatusMessage changes text and level of an existing toast", () => {
   expect(state.statusMessages).toHaveLength(1);
   expect(state.statusMessages[0]?.text).toBe("done");
   expect(state.statusMessages[0]?.level).toBe("success");
+});
+
+test("touchStatusMessage updates the interaction timestamp without changing text", () => {
+  let state = createState();
+  state = pushStatusMessage(state, "toast-1", "done", "success");
+  const originalMessage = state.statusMessages[0]!;
+
+  state = touchStatusMessage(state, "toast-1", originalMessage.lastInteractedAt + 1000);
+
+  expect(state.statusMessages[0]?.text).toBe("done");
+  expect(state.statusMessages[0]?.createdAt).toBe(originalMessage.createdAt);
+  expect(state.statusMessages[0]?.lastInteractedAt).toBe(originalMessage.lastInteractedAt + 1000);
 });
 
 test("logEvent adds to event log without creating a status message", () => {

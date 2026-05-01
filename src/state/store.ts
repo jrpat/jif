@@ -730,6 +730,7 @@ export function pushEvent(
     text,
     level,
     createdAt,
+    lastInteractedAt: createdAt,
   };
 
   return {
@@ -745,7 +746,14 @@ export function pushStatusMessage(
   text: string,
   level: StatusLevel,
 ): AppState {
-  const message: StatusMessage = { id, text, level, createdAt: Date.now() };
+  const now = Date.now();
+  const message: StatusMessage = {
+    id,
+    text,
+    level,
+    createdAt: now,
+    lastInteractedAt: now,
+  };
   return { ...state, statusMessages: [...state.statusMessages, message] };
 }
 
@@ -759,9 +767,27 @@ export function updateStatusMessage(
   return {
     ...state,
     statusMessages: state.statusMessages.map((m) =>
-      m.id === id ? { ...m, text, level, createdAt: now } : m,
+      m.id === id ? { ...m, text, level, lastInteractedAt: now } : m,
     ),
   };
+}
+
+export function touchStatusMessage(
+  state: AppState,
+  id: string,
+  touchedAt = Date.now(),
+): AppState {
+  let touched = false;
+  const statusMessages = state.statusMessages.map((message) => {
+    if (message.id !== id) {
+      return message;
+    }
+
+    touched = true;
+    return { ...message, lastInteractedAt: touchedAt };
+  });
+
+  return touched ? { ...state, statusMessages } : state;
 }
 
 export function logEvent(

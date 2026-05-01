@@ -69,6 +69,7 @@ import { getActiveMode, getCommandsForMode, getDirectCommandsForMode, defaultKey
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { suspendProcessToShell } from "./suspend.ts";
+import { getStatusToastMaxBodyHeight } from "./statusMessages.ts";
 import {
   bindViewRendererEvents,
   createPaletteDetector,
@@ -245,6 +246,9 @@ export function JifView(props: {
   );
   const shortcutPanelHeight = createMemo(() =>
     computeShortcutPanelHeight(terminalSize().height)
+  );
+  const statusToastMaxBodyHeight = createMemo(() =>
+    getStatusToastMaxBodyHeight(terminalSize().height)
   );
   const shortcutPanelBodyHeight = createMemo(() =>
     Math.max(1, Math.min(shortcutGrid().rows.length, Math.max(1, shortcutPanelHeight() - 3)))
@@ -548,6 +552,8 @@ export function JifView(props: {
           loading={store.state.loading}
           config={config}
           bottomInset={bottomChromeLayout().bottomSurfaceHeight}
+          maxToastBodyHeight={statusToastMaxBodyHeight()}
+          onInteract={(id) => store.actions.touchStatusMessage(id)}
           onDismiss={(id) => store.actions.dismissStatusMessage(id)}
         />
       </box>

@@ -67,6 +67,7 @@ export type StatusMessage = Readonly<{
   text: string;
   level: StatusLevel;
   createdAt: number;
+  lastInteractedAt: number;
 }>;
 
 export type EventLogEntry = Readonly<{

@@ -57,6 +57,7 @@ import {
   setCommandBarText,
   setLoading,
   setRevisionFiles,
+  touchStatusMessage,
   toggleRebaseDescendants,
   toggleRevisionSelection,
   updateStatusMessage,
@@ -106,6 +107,9 @@ export function createAppStore(
       },
       updateStatusMessage(id: string, text: string, level: StatusLevel) {
         mutate((currentState) => updateStatusMessage(currentState, id, text, level));
+      },
+      touchStatusMessage(id: string) {
+        mutate((currentState) => touchStatusMessage(currentState, id));
       },
       logEvent(text: string, level: StatusLevel) {
         mutate((currentState) => logEvent(currentState, text, level));

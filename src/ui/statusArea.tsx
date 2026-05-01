@@ -1,10 +1,16 @@
 import { TextAttributes } from "@opentui/core";
+import type { ScrollBoxRenderable } from "@opentui/core";
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import type { StatusMessage } from "../domain/types.ts";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { ShortcutGrid, ShortcutSummarySegment } from "./shortcutPanel.ts";
 import { parseAnsiToStyledText } from "./ansiToStyledText.ts";
-import { getStatusColor, getStatusMessageDismissDelay } from "./statusMessages.ts";
+import { observeScrollboxInteraction } from "./scroll.ts";
+import {
+  getStatusColor,
+  getStatusMessageDismissDelay,
+  getStatusToastBodyHeight,
+} from "./statusMessages.ts";
 import { SPINNER_INTERVAL_MS, formatSpinnerText } from "./spinner.ts";
 
 export function StatusArea(props: {
@@ -176,6 +182,8 @@ export function MessageOverlay(props: {
   loading: boolean;
   config: ResolvedAppConfig;
   bottomInset: number;
+  maxToastBodyHeight: number;
+  onInteract: (id: string) => void;
   onDismiss: (id?: string) => void;
 }) {
   const visible = () => props.messages.length > 0 || props.loading;
@@ -200,6 +208,8 @@ export function MessageOverlay(props: {
                 <StatusToast
                   message={message}
                   config={props.config}
+                  maxBodyHeight={props.maxToastBodyHeight}
+                  onInteract={() => props.onInteract(message.id)}
                   onDismiss={() => props.onDismiss(message.id)}
                 />
               )}
@@ -235,20 +245,36 @@ function LoadingOverlay(props: {
 function StatusToast(props: {
   message: StatusMessage;
   config: ResolvedAppConfig;
+  maxBodyHeight: number;
+  onInteract: () => void;
   onDismiss: () => void;
 }) {
   const colors = props.config.colorScheme.semanticColors;
+  const bodyHeight = createMemo(() =>
+    getStatusToastBodyHeight(props.message.text, props.maxBodyHeight)
+  );
+  const isScrollable = createMemo(() => bodyHeight() === props.maxBodyHeight);
 
   createEffect(() => {
     if (props.message.level !== "success") return;
     const timer = setTimeout(
       props.onDismiss,
-      getStatusMessageDismissDelay(props.message.createdAt),
+      getStatusMessageDismissDelay(props.message.lastInteractedAt),
     );
     onCleanup(() => clearTimeout(timer));
   });
 
+  let bodyRef: ScrollBoxRenderable | undefined;
   let textRef: any;
+
+  createEffect(() => {
+    if (!bodyRef) {
+      return;
+    }
+
+    const dispose = observeScrollboxInteraction(bodyRef, props.onInteract);
+    onCleanup(dispose);
+  });
 
   createEffect(() => {
     if (textRef) {
@@ -265,7 +291,34 @@ function StatusToast(props: {
       borderColor={getStatusColor(props.message.level, colors)}
       paddingX={1}
     >
-      <text ref={textRef} fg={colors.textPrimary} wrapMode="word" />
+      <Show
+        when={isScrollable()}
+        fallback={(
+          <box width="100%" height={bodyHeight()} backgroundColor={colors.chromeFillOne}>
+            <text ref={textRef} fg={colors.textPrimary} wrapMode="word" />
+          </box>
+        )}
+      >
+        <scrollbox
+          id={`status-toast-body-${props.message.id}`}
+          ref={(el: ScrollBoxRenderable) => {
+            bodyRef = el;
+          }}
+          width="100%"
+          maxHeight={props.maxBodyHeight}
+          scrollY
+          backgroundColor={colors.chromeFillOne}
+          scrollbarOptions={{
+            trackOptions: {
+              backgroundColor: colors.chromeFillThree,
+              foregroundColor: colors.chromeScrollbarThumb,
+            },
+          }}
+          onMouseScroll={() => props.onInteract()}
+        >
+          <text ref={textRef} fg={colors.textPrimary} wrapMode="word" />
+        </scrollbox>
+      </Show>
     </box>
   );
 }

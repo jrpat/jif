@@ -27,6 +27,23 @@ export function observeScrollboxBottomReached(
   };
 }
 
+export function observeScrollboxInteraction(
+  scrollbox: Pick<ScrollBoxRenderable, "scrollBy">,
+  onInteraction: () => void,
+): () => void {
+  const originalScrollBy = scrollbox.scrollBy.bind(scrollbox);
+  type ScrollBy = ScrollBoxRenderable["scrollBy"];
+
+  scrollbox.scrollBy = ((delta: Parameters<ScrollBy>[0], unit?: Parameters<ScrollBy>[1]) => {
+    originalScrollBy(delta, unit);
+    onInteraction();
+  }) as ScrollBy;
+
+  return () => {
+    scrollbox.scrollBy = originalScrollBy as ScrollBy;
+  };
+}
+
 export function scrollToKeepChildVisible(
   scrollbox: ScrollBoxRenderable,
   childId: string,

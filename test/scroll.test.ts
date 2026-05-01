@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import type { ScrollBoxRenderable } from "@opentui/core";
 import {
   isScrollboxAtBottom,
+  observeScrollboxInteraction,
   observeScrollboxBottomReached,
   scrollToKeepChildVisible,
 } from "../src/ui/scroll.ts";
@@ -139,4 +140,23 @@ test("observeScrollboxBottomReached hooks scrollBy and fires when the viewport r
   scrollbox.scrollBy(-1);
   scrollbox.scrollBy(1);
   expect(triggered).toBe(1);
+});
+
+test("observeScrollboxInteraction hooks scrollBy and fires for scroll attempts until disposed", () => {
+  let triggered = 0;
+  const scrollbox = {
+    scrollBy() {},
+  } as unknown as ScrollBoxRenderable;
+
+  const dispose = observeScrollboxInteraction(scrollbox, () => {
+    triggered += 1;
+  });
+
+  scrollbox.scrollBy(1);
+  scrollbox.scrollBy(-1);
+  expect(triggered).toBe(2);
+
+  dispose();
+  scrollbox.scrollBy(1);
+  expect(triggered).toBe(2);
 });
