@@ -1,5 +1,5 @@
 import { TextAttributes, type InputRenderable } from "@opentui/core";
-import { For, Show, createEffect, createMemo, createSignal, onMount } from "solid-js";
+import { For, Show, batch, createEffect, createMemo, createSignal, onMount } from "solid-js";
 import { useKeyboard } from "@opentui/solid";
 import { matchHistoryEntries } from "../history/store.ts";
 import type { JjClient } from "../jj/client.ts";
@@ -48,8 +48,10 @@ export function CommandPrompt(props: {
   createEffect(() => {
     const nextText = props.commandText;
     if (nextText !== draftText()) {
-      setDraftText(nextText);
-      setSelectedIndex(null);
+      batch(() => {
+        setDraftText(nextText);
+        setSelectedIndex(null);
+      });
     }
   });
 
@@ -134,9 +136,11 @@ export function CommandPrompt(props: {
         placeholderColor={colors.textQuaternary}
         cursorColor={colors.chromeBorderFocus}
         onInput={(value) => {
-          setDraftText(value);
-          setSelectedIndex(null);
-          store.actions.setCommandBarText(value);
+          batch(() => {
+            setDraftText(value);
+            setSelectedIndex(null);
+            store.actions.setCommandBarText(value);
+          });
         }}
         onSubmit={props.onSubmit as any}
       />
@@ -372,8 +376,10 @@ export function RevsetPrompt(props: {
         focusedTextColor={colors.textPrimary}
         cursorColor={colors.chromeBorderFocus}
         onInput={(value) => {
-          setText(value);
-          setSelectedIndex(null);
+          batch(() => {
+            setText(value);
+            setSelectedIndex(null);
+          });
         }}
       />
     </PromptShell>
