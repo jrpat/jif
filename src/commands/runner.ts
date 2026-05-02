@@ -136,7 +136,12 @@ export function createCommandRunner(args: Readonly<{
         return true;
       } catch (error) {
         stopToastSpinner();
-        const message = recordFailedCommand(args.actions, command, error);
+        const message = recordFailedCommand(
+          args.actions,
+          command,
+          error,
+          options.failureFeedback === "status-toast" ? toastId ?? undefined : undefined,
+        );
         publishFailure(args.actions, toastId, message, options.failureFeedback);
         if (options.showLoading) {
           args.actions.setLoading(false);
@@ -218,6 +223,7 @@ function recordFailedCommand(
   actions: CommandRunnerActions,
   command: FailedCommand,
   error: unknown,
+  statusMessageId?: string,
 ): string {
   const message = error instanceof Error ? error.message : String(error);
   actions.setLastFailedCommand({
@@ -226,6 +232,7 @@ function recordFailedCommand(
     stderr: error instanceof Error && "stderr" in error && typeof error.stderr === "string"
       ? error.stderr.trim()
       : message,
+    statusMessageId,
   });
   return message;
 }

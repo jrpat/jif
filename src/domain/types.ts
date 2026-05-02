@@ -90,6 +90,7 @@ export type FailedCommand = Readonly<{
   interactive: boolean;
   errorText: string;
   stderr: string;
+  statusMessageId?: string;
 }>;
 
 export type AppState = Readonly<{

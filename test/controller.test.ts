@@ -41,14 +41,16 @@ function applyRepositoryData(store: ReturnType<typeof createAppStore>, revisions
   store.actions.applyRepositoryData(repositoryData);
 }
 
-function createControllerHarness(options: Readonly<{
+function createControllerHarness(harnessOptions: Readonly<{
   revisions?: readonly RevisionSummary[];
   changedFiles?: readonly ChangedFile[];
   conflictedFiles?: ReadonlySet<string>;
+  runJjResult?: boolean;
+  runInteractiveResult?: boolean;
 }>) {
   const store = createAppStore(REPO_PATH);
-  if (options.revisions) {
-    applyRepositoryData(store, options.revisions);
+  if (harnessOptions.revisions) {
+    applyRepositoryData(store, harnessOptions.revisions);
   }
 
   const runJjCommands: string[] = [];
@@ -75,10 +77,10 @@ function createControllerHarness(options: Readonly<{
     store,
     client: {
       async loadChangedFiles() {
-        return options.changedFiles ?? [];
+        return harnessOptions.changedFiles ?? [];
       },
       async loadConflictedFiles() {
-        return options.conflictedFiles ?? new Set<string>();
+        return harnessOptions.conflictedFiles ?? new Set<string>();
       },
       async resolveDescendants() {
         return ["bbbbbbbb"];
@@ -94,6 +96,7 @@ function createControllerHarness(options: Readonly<{
     runJjCommand: async (commandText, options) => {
       runJjCommands.push(commandText);
       runJjCalls.push({ commandText, options });
+      return harnessOptions.runJjResult ?? true;
     },
     runShellCommand: async (commandText, options) => {
       runShellCommands.push(commandText);
@@ -102,6 +105,7 @@ function createControllerHarness(options: Readonly<{
     runInteractiveJjCommand: async (commandText, options) => {
       runInteractiveCommands.push(commandText);
       runInteractiveCalls.push({ commandText, options });
+      return harnessOptions.runInteractiveResult ?? true;
     },
     refreshRepository: async () => true,
     expandElidedRevisions: async (index) => {
@@ -259,7 +263,7 @@ test("confirm runs the split command selected by inline confirmation through the
   harness.store.dispose();
 });
 
-test("forceLastCommand retries supported failed commands through the shared runner path", () => {
+test("forceLastCommand retries supported failed commands through the shared runner path", async () => {
   const harness = createControllerHarness({ revisions: [] });
 
   harness.store.actions.setLastFailedCommand({
@@ -268,12 +272,48 @@ test("forceLastCommand retries supported failed commands through the shared runn
     interactive: false,
     errorText: "Error: Refusing to move bookmark backwards or sideways: main",
     stderr: "Error: Refusing to move bookmark backwards or sideways: main\nHint: Use --allow-backwards to allow it.",
+    statusMessageId: "failure-toast",
   });
+  harness.store.actions.pushStatusMessage(
+    "failure-toast",
+    "Error: Refusing to move bookmark backwards or sideways: main",
+    "error",
+  );
 
   harness.controller.forceLastCommand();
+  await Promise.resolve();
 
   expect(harness.runJjCommands).toHaveLength(1);
   expect(harness.runJjCommands[0]).toContain("--allow-backwards");
+  expect(harness.store.state.statusMessages).toEqual([]);
+  harness.store.dispose();
+});
+
+test("forceLastCommand leaves the original toast visible when the forced retry fails", async () => {
+  const harness = createControllerHarness({
+    revisions: [],
+    runJjResult: false,
+  });
+
+  harness.store.actions.setLastFailedCommand({
+    commandText: "bookmark set main -r main-",
+    commandArgs: ["bookmark", "set", "main", "-r", "main-"],
+    interactive: false,
+    errorText: "Error: Refusing to move bookmark backwards or sideways: main",
+    stderr: "Error: Refusing to move bookmark backwards or sideways: main\nHint: Use --allow-backwards to allow it.",
+    statusMessageId: "failure-toast",
+  });
+  harness.store.actions.pushStatusMessage(
+    "failure-toast",
+    "Error: Refusing to move bookmark backwards or sideways: main",
+    "error",
+  );
+
+  harness.controller.forceLastCommand();
+  await Promise.resolve();
+
+  expect(harness.runJjCommands).toHaveLength(1);
+  expect(harness.store.state.statusMessages).toHaveLength(1);
   harness.store.dispose();
 });
 

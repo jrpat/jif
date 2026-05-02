@@ -37,7 +37,7 @@ type ExecuteCurrentCommand = (
 type RunJjCommand = (
   commandText: string,
   options?: JjCommandOptions,
-) => Promise<void>;
+) => Promise<boolean>;
 
 type RunShellCommand = (
   commandText: string,
@@ -47,7 +47,7 @@ type RunShellCommand = (
 type RunInteractiveJjCommand = (
   commandText: string,
   options?: InteractiveJjCommandOptions,
-) => Promise<void>;
+) => Promise<boolean>;
 
 export function createJifCommandController(args: Readonly<{
   store: AppStore;
@@ -167,12 +167,22 @@ export function createJifCommandController(args: Readonly<{
       }
 
       const retryCommandText = quoteCommand(retryPlan.commandArgs);
-      if (failedCommand.interactive) {
-        void args.runInteractiveJjCommand(retryCommandText);
-        return;
-      }
+      void (async () => {
+        const retrySucceeded = failedCommand.interactive
+          ? await args.runInteractiveJjCommand(retryCommandText)
+          : await args.runJjCommand(retryCommandText);
 
-      void args.runJjCommand(retryCommandText);
+        if (!retrySucceeded || !failedCommand.statusMessageId) {
+          return;
+        }
+
+        const toastStillVisible = store.snapshot().statusMessages.some((message) =>
+          message.id === failedCommand.statusMessageId
+        );
+        if (toastStillVisible) {
+          store.actions.dismissStatusMessage(failedCommand.statusMessageId);
+        }
+      })();
     },
     startSquash() {
       const revision = getFocusedRevision(store.snapshot());
@@ -377,7 +387,7 @@ export function createJifCommandController(args: Readonly<{
       return args.runJjCommand(commandText, {
         ...options,
         cwd: options?.cwd ?? store.snapshot().repoPath,
-      });
+      }).then(() => {});
     },
     sh(commandText, options) {
       return args.runShellCommand(commandText, {
@@ -389,7 +399,7 @@ export function createJifCommandController(args: Readonly<{
       return args.runInteractiveJjCommand(commandText, {
         ...options,
         cwd: options?.cwd ?? store.snapshot().repoPath,
-      });
+      }).then(() => {});
     },
     reportError(error) {
       reportError(store, error);

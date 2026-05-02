@@ -62,8 +62,8 @@ export function createJifRuntime(args: Readonly<{
     async runJjCommand(
       commandText: string,
       options?: JjCommandOptions,
-    ): Promise<void> {
-      await commandRunner.run({
+    ): Promise<boolean> {
+      return await commandRunner.run({
         commandText,
         canExecute: true,
         cancelOnSuccess: true,
@@ -95,13 +95,13 @@ export function createJifRuntime(args: Readonly<{
     async runInteractiveJjCommand(
       commandText: string,
       options?: InteractiveJjCommandOptions,
-    ): Promise<void> {
+    ): Promise<boolean> {
       const cwd = options?.cwd ?? args.getWorkspaceRoot();
       if (!cwd) {
-        return;
+        return false;
       }
 
-      await commandRunner.run({
+      return await commandRunner.run({
         commandText,
         interactive: true,
         canExecute: true,

@@ -34,9 +34,10 @@ function createActionLog() {
         interactive: boolean;
         errorText: string;
         stderr: string;
+        statusMessageId?: string;
       }) {
         entries.push(
-          `setLastFailedCommand:${command.interactive}:${command.commandText}:${command.stderr}`,
+          `setLastFailedCommand:${command.interactive}:${command.commandText}:${command.stderr}:${command.statusMessageId ?? "none"}`,
         );
       },
       focusWorkingCopy() {
@@ -185,9 +186,38 @@ test("command runner records failures and clears loading for event-driven comman
 
   expect(entries).toEqual([
     "setLoading:true",
-    "setLastFailedCommand:false:undo:stderr details",
+    "setLastFailedCommand:false:undo:stderr details:none",
     "pushEvent:error:boom",
     "setLoading:false",
+  ]);
+});
+
+test("command runner records the failure toast id for retryable status-toast failures", async () => {
+  const { entries, actions } = createActionLog();
+
+  const runner = createCommandRunner({
+    actions,
+    executeCommandArgs: async () => {
+      throw Object.assign(new Error("boom"), {
+        stderr: "stderr details\n",
+      });
+    },
+    refreshRepository: async () => true,
+    createToastId: () => "toast-1",
+  });
+
+  await runner.run({
+    commandText: "undo",
+    canExecute: true,
+    successFeedback: "status-toast",
+    failureFeedback: "status-toast",
+  });
+
+  expect(entries).toEqual([
+    "pushStatusMessage:toast-1:info:⠋ undo",
+    "setLastFailedCommand:false:undo:stderr details:toast-1",
+    "updateStatusMessage:toast-1:error:boom",
+    "logEvent:error:boom",
   ]);
 });
 
