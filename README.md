@@ -187,6 +187,12 @@ export default {
 } satisfies Jif.Config;
 ```
 
+### Shell commands
+
+Shell commands invoked via `>` (or `cmd.sh()` from a custom keybinding) run in your login shell (`$SHELL -lc`) with the cwd jif was launched from. Login shells source `.zprofile` / `.bash_profile` / `.profile`, but **not** `.zshrc` / `.bashrc`, so aliases and functions defined only in your interactive rc files will not be available.
+
+If you want an alias to work from `>`, define it somewhere a non-interactive shell will see it — for zsh, that's `.zshenv` (sourced for every invocation) or `.zprofile` (sourced for login shells); for bash, `.bash_profile` or `.profile`.
+
 ### Keybindings
 
 Key bindings live under the top-level `keymap` field. User keymaps are deep-merged into the built-in defaults, so adding one binding does not replace the rest of the default map.
