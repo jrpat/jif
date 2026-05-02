@@ -27,6 +27,7 @@ export function createJifRuntime(args: Readonly<{
   commandRunner: CommandRunnerLike;
   persistence: RuntimePersistence;
   getWorkspaceRoot(): string | null;
+  getShellCwd(): string;
   refreshRepository(revset?: string): Promise<boolean>;
 }>) {
   const { store, client, commandRunner, persistence } = args;
@@ -49,6 +50,7 @@ export function createJifRuntime(args: Readonly<{
       await commandRunner.run({
         commandText,
         executor,
+        cwd: executor === "shell" ? args.getShellCwd() : undefined,
         canExecute: commandCanExecute(state),
         cancelBeforeRun: true,
         successFeedback: "status-toast",

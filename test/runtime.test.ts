@@ -41,6 +41,7 @@ function applyRepositoryData(store: ReturnType<typeof createAppStore>, revisions
 
 function createRuntimeHarness(options: Readonly<{
   workspaceRoot?: string | null;
+  shellCwd?: string;
   refreshResults?: readonly boolean[];
   revisions?: readonly RevisionSummary[];
   loadElidedRevisions?: (
@@ -91,6 +92,7 @@ function createRuntimeHarness(options: Readonly<{
       },
     },
     getWorkspaceRoot: () => options.workspaceRoot === undefined ? REPO_PATH : options.workspaceRoot,
+    getShellCwd: () => options.shellCwd ?? "/tmp/parent-shell",
     refreshRepository: async (revset) => {
       refreshCalls.push(revset);
       const result = options.refreshResults?.[refreshIndex];
@@ -133,7 +135,7 @@ test("executeCurrentCommand forwards record-history policy through the runtime s
 });
 
 test("executeCurrentCommand uses shell execution and shell history for the shell command bar", async () => {
-  const harness = createRuntimeHarness({});
+  const harness = createRuntimeHarness({ shellCwd: "/tmp/parent-shell" });
 
   harness.store.actions.focusShellCommandBar();
   harness.store.actions.setCommandBarText(" pwd | cat ");
@@ -144,6 +146,7 @@ test("executeCurrentCommand uses shell execution and shell history for the shell
   expect(harness.commandRuns[0]).toMatchObject({
     commandText: "pwd | cat",
     executor: "shell",
+    cwd: "/tmp/parent-shell",
     cancelBeforeRun: true,
     successFeedback: "status-toast",
     failureFeedback: "status-toast",
@@ -153,6 +156,18 @@ test("executeCurrentCommand uses shell execution and shell history for the shell
   await harness.commandRuns[0]?.recordHistory?.("pwd | cat");
   expect(harness.recordedCommandHistory).toEqual([]);
   expect(harness.recordedShellHistory).toEqual(["pwd | cat"]);
+  harness.store.dispose();
+});
+
+test("executeCurrentCommand for the jj command bar does not pass a cwd", async () => {
+  const harness = createRuntimeHarness({ shellCwd: "/tmp/parent-shell" });
+
+  harness.store.actions.setCommandBarText(" log ");
+
+  await harness.runtime.executeCurrentCommand(undefined, { recordHistory: true });
+
+  expect(harness.commandRuns).toHaveLength(1);
+  expect(harness.commandRuns[0]?.cwd).toBeUndefined();
   harness.store.dispose();
 });
 

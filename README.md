@@ -93,7 +93,8 @@ Viewing and navigating the revision log.
 
 | Key | Command | Description |
 |-----|---------|-------------|
-| `:` | command-bar | Focus the command bar |
+| `:` | command-bar | Run a jj subcommand |
+| `>` | shell-command-bar | Run a shell command |
 | `q` | quit | Exit the application |
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 | `!` | force-last-command | Retry the last failed command with the override flag `jj` is asking for:<br>• `--ignore-immutable` — when the command refused because the target is immutable<br>• `--allow-backwards` — when a bookmark move was rejected as backwards/sideways |

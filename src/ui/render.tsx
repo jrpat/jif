@@ -139,6 +139,7 @@ export function JifView(props: {
     commandRunner,
     persistence,
     getWorkspaceRoot: workspaceRoot,
+    getShellCwd: () => process.cwd(),
     refreshRepository,
   });
   const configuredKeymap = resolveConfiguredKeymap(rawConfig.keymap);
