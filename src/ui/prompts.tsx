@@ -91,23 +91,17 @@ export function CommandPrompt(props: {
       return;
     }
 
-    if (event.name !== "return") {
+    if (event.name === "return") {
+      event.preventDefault();
+      const finalText = displayedText();
+      batch(() => {
+        setDraftText(finalText);
+        setSelectedIndex(null);
+        store.actions.setCommandBarText(finalText);
+      });
+      props.onSubmit(finalText);
       return;
     }
-
-    const index = selectedIndex();
-    if (index === null) {
-      return;
-    }
-
-    const entry = filteredHistory()[index];
-    if (!entry) {
-      return;
-    }
-
-    event.preventDefault();
-    store.actions.setCommandBarText(entry);
-    setSelectedIndex(null);
   }, { release: true });
 
   return (
@@ -142,7 +136,6 @@ export function CommandPrompt(props: {
             store.actions.setCommandBarText(value);
           });
         }}
-        onSubmit={props.onSubmit as any}
       />
     </PromptShell>
   );
@@ -292,16 +285,6 @@ export function RevsetPrompt(props: {
     })();
   });
 
-  const applySuggestion = (item: AutocompleteListItem) => {
-    const nextText = getRevsetSuggestionText(text(), item, completionItems());
-    if (nextText === null) {
-      return;
-    }
-
-    setText(nextText);
-    setSelectedIndex(null);
-  };
-
   const displayedText = createMemo(() => {
     const index = selectedIndex();
     if (index === null) {
@@ -336,13 +319,7 @@ export function RevsetPrompt(props: {
 
     if (event.name === "return") {
       event.preventDefault();
-      const idx = selectedIndex();
-      const items = suggestions();
-      if (idx !== null && idx < items.length) {
-        applySuggestion(items[idx]!);
-      } else {
-        void props.onApply(text());
-      }
+      void props.onApply(displayedText());
       return;
     }
 
