@@ -89,7 +89,8 @@
     "keybindings": [
       {
         "command": "jif.focusGraph",
-        "key": "ctrl+\\",
+        "key": "ctrl+alt+j",
+        "mac": "cmd+alt+j",
         "when": "jif.repoActive"
       }
     ],
