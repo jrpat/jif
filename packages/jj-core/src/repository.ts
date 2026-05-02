@@ -52,15 +52,11 @@ export class JjRepository {
     await this.runRead(["root"]);
   }
 
-  async getStatus(): Promise<RepositoryStatus> {
-    const output = await this.runRead([
-      "log",
-      "-r",
-      "@",
-      "-T",
-      STATUS_TEMPLATE,
-      "--no-graph",
-    ]);
+  async getStatus(options: { snapshot?: boolean } = {}): Promise<RepositoryStatus> {
+    const output = await this.runRead(
+      ["log", "-r", "@", "-T", STATUS_TEMPLATE, "--no-graph"],
+      { allowSnapshot: options.snapshot ?? false },
+    );
     const entry = parseSingleJsonLine<RawStatusEntry>(output.stdout);
 
     return {
@@ -133,8 +129,12 @@ export class JjRepository {
       }));
   }
 
-  private async runRead(args: readonly string[]) {
-    return await runCommand(this.repositoryRoot, [this.jjExecutable, "--ignore-working-copy", ...args]);
+  private async runRead(
+    args: readonly string[],
+    options: { allowSnapshot?: boolean } = {},
+  ) {
+    const prefix = options.allowSnapshot ? [this.jjExecutable] : [this.jjExecutable, "--ignore-working-copy"];
+    return await runCommand(this.repositoryRoot, [...prefix, ...args]);
   }
 }
 

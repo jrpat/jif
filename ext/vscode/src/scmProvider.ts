@@ -21,7 +21,7 @@ export class JifScmProvider implements vscode.Disposable {
   }
 
   async refresh(): Promise<void> {
-    const workingCopy = await this.repository.getStatus();
+    const workingCopy = await this.repository.getStatus({ snapshot: true });
     this.renderWorkingCopy(workingCopy);
   }
 

@@ -90,7 +90,7 @@
       {
         "command": "jif.focusGraph",
         "key": "ctrl+alt+j",
-        "mac": "cmd+alt+j",
+          "mac": "cmd+ctrl+j",
         "when": "jif.repoActive"
       }
     ],

@@ -1,3 +1,4 @@
+import path from "node:path";
 import * as vscode from "vscode";
 import { JjRepository, resolveRepositoryRoot } from "@jif/jj-core";
 import { JifDocumentContentProvider } from "./jjDocumentProvider.ts";
@@ -6,6 +7,8 @@ import { JifOperationLogProvider } from "./operationLogView.ts";
 import { JifScmProvider } from "./scmProvider.ts";
 
 const REPO_ACTIVE_CONTEXT = "jif.repoActive";
+const REFRESH_DEBOUNCE_MS = 250;
+const IGNORED_PATH_SEGMENTS = [".jj", ".git", "node_modules", "dist", "build", "out", ".next"];
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const outputChannel = vscode.window.createOutputChannel("Jif");
@@ -58,8 +61,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   await vscode.commands.executeCommand("setContext", REPO_ACTIVE_CONTEXT, true);
   await refreshRepositoryViews();
 
-  const watcher = createRefreshWatcher(repositoryRoot, refreshRepositoryViews);
-  context.subscriptions.push(watcher);
+  const scheduler = new RefreshScheduler(refreshRepositoryViews, REFRESH_DEBOUNCE_MS);
+  context.subscriptions.push(
+    scheduler,
+    createRefreshWatcher(repositoryRoot, scheduler),
+    createOpHeadsWatcher(repositoryRoot, scheduler),
+    vscode.workspace.onDidSaveTextDocument((doc: vscode.TextDocument) => {
+      if (isInsideRepo(repositoryRoot, doc.uri.fsPath) && !isIgnoredPath(repositoryRoot, doc.uri.fsPath)) {
+        scheduler.schedule();
+      }
+    }),
+    vscode.window.onDidChangeWindowState((state: vscode.WindowState) => {
+      if (state.focused) {
+        scheduler.schedule();
+      }
+    }),
+  );
 }
 
 async function findRepositoryRoot(): Promise<string | null> {
@@ -74,33 +91,71 @@ async function findRepositoryRoot(): Promise<string | null> {
   return null;
 }
 
-function createRefreshWatcher(repositoryRoot: string, refreshAll: () => Promise<void>): vscode.Disposable {
-  const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(repositoryRoot, "**/*"));
-  let timer: ReturnType<typeof setTimeout> | null = null;
+class RefreshScheduler implements vscode.Disposable {
+  private timer: ReturnType<typeof setTimeout> | null = null;
 
-  const scheduleRefresh = () => {
-    if (timer) {
-      clearTimeout(timer);
+  constructor(
+    private readonly refreshAll: () => Promise<void>,
+    private readonly debounceMs: number,
+  ) {}
+
+  schedule(): void {
+    if (this.timer) {
+      clearTimeout(this.timer);
     }
-    timer = setTimeout(() => {
-      timer = null;
-      void refreshAll();
-    }, 150);
-  };
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      void this.refreshAll();
+    }, this.debounceMs);
+  }
 
-  const createListener = watcher.onDidCreate(scheduleRefresh);
-  const changeListener = watcher.onDidChange(scheduleRefresh);
-  const deleteListener = watcher.onDidDelete(scheduleRefresh);
+  dispose(): void {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+  }
+}
+
+function createRefreshWatcher(repositoryRoot: string, scheduler: RefreshScheduler): vscode.Disposable {
+  const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(repositoryRoot, "**/*"));
+  const handleEvent = (uri: vscode.Uri) => {
+    if (!isIgnoredPath(repositoryRoot, uri.fsPath)) {
+      scheduler.schedule();
+    }
+  };
 
   return vscode.Disposable.from(
     watcher,
-    createListener,
-    changeListener,
-    deleteListener,
-    new vscode.Disposable(() => {
-      if (timer) {
-        clearTimeout(timer);
-      }
-    }),
+    watcher.onDidCreate(handleEvent),
+    watcher.onDidChange(handleEvent),
+    watcher.onDidDelete(handleEvent),
   );
+}
+
+function createOpHeadsWatcher(repositoryRoot: string, scheduler: RefreshScheduler): vscode.Disposable {
+  const watcher = vscode.workspace.createFileSystemWatcher(
+    new vscode.RelativePattern(repositoryRoot, ".jj/repo/op_heads/heads/*"),
+  );
+  const handleEvent = () => scheduler.schedule();
+
+  return vscode.Disposable.from(
+    watcher,
+    watcher.onDidCreate(handleEvent),
+    watcher.onDidDelete(handleEvent),
+  );
+}
+
+function isInsideRepo(repositoryRoot: string, fsPath: string): boolean {
+  const relative = path.relative(repositoryRoot, fsPath);
+  return relative.length > 0 && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
+function isIgnoredPath(repositoryRoot: string, fsPath: string): boolean {
+  const relative = path.relative(repositoryRoot, fsPath);
+  if (relative.length === 0 || relative.startsWith("..") || path.isAbsolute(relative)) {
+    return true;
+  }
+  const segments = relative.split(path.sep);
+  return segments.some((segment) => IGNORED_PATH_SEGMENTS.includes(segment));
 }
