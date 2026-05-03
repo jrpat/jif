@@ -72,11 +72,13 @@ export function buildRevisionChangeIdSegments(
       kind: "prefix",
       text: changeId.slice(0, visiblePrefixLength),
     },
-    {
+  ];
+  if (visiblePrefixLength < visibleChangeIdLength) {
+    segments.push({
       kind: "suffix",
       text: changeId.slice(visiblePrefixLength, visibleChangeIdLength),
-    },
-  ];
+    });
+  }
 
   if (isDivergentRevisionId(revision.revisionId)) {
     segments.push({

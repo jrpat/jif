@@ -76,20 +76,20 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
   expect(cycledToSuperCondensed).not.toContain("┌");
   expect(cycledToSuperCondensed).not.toContain("┐");
   const longSuperCondensedLines = longSuperCondensed.trimEnd().split("\n");
-  expect(longSuperCondensedLines[0]).toContain("this is a ve...a s");
+  expect(longSuperCondensedLines[0]).toContain("this is a ve... sec");
   expect(longSuperCondensedLines[0]).not.toContain("…");
   expect(longSuperCondensedLines[1]?.trim() ?? "").toBe("");
 
   const resizedLongInitialLines = resizedLongSuperCondensed.initialFrame.trimEnd().split("\n");
-  expect(resizedLongInitialLines[0]).toContain("this is a ve...a s");
+  expect(resizedLongInitialLines[0]).toContain("this is a ve... sec");
 
   const resizedLongSuperCondensedLines = resizedLongSuperCondensed.resizedFrame.trimEnd().split("\n");
   expect(resizedLongSuperCondensedLines[0]).toContain("this is a very lon");
   expect(resizedLongSuperCondensedLines[0]).not.toContain("...");
   expect(resizedLongSuperCondensedLines[1]?.trim() ?? "").toBe("");
 
-  expect(divergentFocused).toContain("sh /0 older divergent");
-  expect(divergentFocused).toContain("sh /1 focused divergent");
+  expect(divergentFocused).toContain("sh/0 older divergent");
+  expect(divergentFocused).toContain("sh/1 focused divergent");
   expect(divergentFocused).toContain("│ │ ┌──────────────────────────┐");
   expect(divergentFocused.split("│ │ ┌──────────────────────────┐").length - 1).toBe(1);
 

@@ -91,6 +91,22 @@ test("buildRevisionChangeIdSegments truncates the rendered change id to the shar
   ]);
 });
 
+test("buildRevisionChangeIdSegments omits the suffix segment when the unique prefix fills the display length", () => {
+  const revision = createRevision({
+    changeIdPrefixLength: 4,
+    revisionId: "abcdefgh",
+  });
+
+  const segments = buildRevisionChangeIdSegments(revision, {
+    showTimestamp: false,
+    displayLength: 4,
+  });
+
+  expect(segments).toEqual([
+    { kind: "prefix", text: "abcd" },
+  ]);
+});
+
 test("buildRevisionChangeIdSegments styles divergent suffix like the prefix", () => {
   const revision = createRevision({
     changeIdPrefixLength: 3,
