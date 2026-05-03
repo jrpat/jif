@@ -100,7 +100,7 @@ export function buildCommandSegments(
 
 export function createInitialState(
   repoPath: string,
-  options?: { useShortFlags?: boolean; layout?: AppLayout },
+  options?: { useShortFlags?: boolean; layout?: AppLayout; notificationHistoryLimit?: number },
 ): AppState {
   return {
     repoPath,
@@ -123,6 +123,9 @@ export function createInitialState(
     lastFailedCommand: null,
     statusMessages: [],
     eventLog: [],
+    notificationHistoryLimit: Math.max(1, Math.floor(options?.notificationHistoryLimit ?? 50)),
+    focusedNotificationIndex: 0,
+    expandedNotificationIds: [],
     loading: true,
     useShortFlags: options?.useShortFlags ?? true,
     layout: options?.layout ?? "expanded",
@@ -304,6 +307,16 @@ export function moveFocus(state: AppState, delta: number): AppState {
     };
   }
 
+  if (state.focusMode === "notifications") {
+    return {
+      ...state,
+      focusedNotificationIndex: clampIndex(
+        state.focusedNotificationIndex + delta,
+        state.eventLog.length,
+      ),
+    };
+  }
+
   if (state.focusMode === "files" && state.expandedRowId !== null) {
     const revision = getExpandedRevision(state);
     return {
@@ -386,6 +399,17 @@ export function focusLogBottom(state: AppState): AppState {
     };
   }
 
+  if (state.focusMode === "notifications") {
+    if (state.eventLog.length === 0) {
+      return state;
+    }
+
+    return {
+      ...state,
+      focusedNotificationIndex: state.eventLog.length - 1,
+    };
+  }
+
   if (state.revisions.length === 0) {
     return state;
   }
@@ -445,6 +469,58 @@ export function setOperationLogLoading(state: AppState, operationLogLoading: boo
   return {
     ...state,
     operationLogLoading,
+  };
+}
+
+export function openNotifications(state: AppState): AppState {
+  return replaceFocusModeStack({
+    ...state,
+    inlineConfirmation: null,
+    focusedNotificationIndex: 0,
+    expandedNotificationIds: [],
+  }, ["revisions", "notifications"]);
+}
+
+export function closeNotifications(state: AppState): AppState {
+  if (state.focusMode !== "notifications") {
+    return state;
+  }
+
+  return replaceFocusModeStack({
+    ...state,
+    expandedNotificationIds: [],
+  }, ["revisions"]);
+}
+
+export function getDisplayedNotifications(state: AppState): readonly EventLogEntry[] {
+  return [...state.eventLog].reverse();
+}
+
+export function getFocusedNotification(state: AppState): EventLogEntry | null {
+  return getDisplayedNotifications(state)[state.focusedNotificationIndex] ?? null;
+}
+
+export function expandFocusedNotification(state: AppState): AppState {
+  const focused = getFocusedNotification(state);
+  if (!focused || state.expandedNotificationIds.includes(focused.id)) {
+    return state;
+  }
+
+  return {
+    ...state,
+    expandedNotificationIds: [...state.expandedNotificationIds, focused.id],
+  };
+}
+
+export function collapseFocusedNotification(state: AppState): AppState {
+  const focused = getFocusedNotification(state);
+  if (!focused || !state.expandedNotificationIds.includes(focused.id)) {
+    return state;
+  }
+
+  return {
+    ...state,
+    expandedNotificationIds: state.expandedNotificationIds.filter((id) => id !== focused.id),
   };
 }
 
@@ -680,6 +756,10 @@ export function cancelOrBlurState(state: AppState): AppState {
     return closeDiffViewer(state);
   }
 
+  if (state.focusMode === "notifications") {
+    return closeNotifications(state);
+  }
+
   if (state.focusMode === "op-log") {
     return closeOperationLog(state);
   }
@@ -845,7 +925,7 @@ export function pushEvent(
   return {
     ...state,
     statusMessages: [...state.statusMessages, statusMessage],
-    eventLog: [...state.eventLog.slice(-99), event],
+    eventLog: appendBoundedEvent(state.eventLog, event, state.notificationHistoryLimit),
   };
 }
 
@@ -911,7 +991,19 @@ export function logEvent(
     level,
     createdAt,
   };
-  return { ...state, eventLog: [...state.eventLog.slice(-99), entry] };
+  return {
+    ...state,
+    eventLog: appendBoundedEvent(state.eventLog, entry, state.notificationHistoryLimit),
+  };
+}
+
+function appendBoundedEvent(
+  eventLog: readonly EventLogEntry[],
+  entry: EventLogEntry,
+  limit: number,
+): readonly EventLogEntry[] {
+  const safeLimit = Math.max(1, Math.floor(limit));
+  return [...eventLog, entry].slice(-safeLimit);
 }
 
 export function dismissStatusMessage(state: AppState, id?: string): AppState {

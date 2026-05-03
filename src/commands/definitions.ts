@@ -52,6 +52,9 @@ export type CommandController = Readonly<{
   revertOperation: () => void;
   showOperationDiff: () => void;
   scrollDiffViewer: (rowDelta: number, colDelta: number) => void;
+  openNotifications: () => void;
+  expandNotification: () => void;
+  collapseNotification: () => void;
   openSearch: () => void;
   nextSearchMatch: () => void;
   prevSearchMatch: () => void;
@@ -190,6 +193,30 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     canonicalKeys: ["O"],
     run: (controller) => controller.openOperationLog(),
     group: "global",
+  },
+  {
+    id: "open-notifications",
+    title: "Notifications",
+    description: "Show recent toast notifications",
+    canonicalKeys: ["`"],
+    run: (controller) => controller.openNotifications(),
+    group: "global",
+  },
+  {
+    id: "expand-notification",
+    title: "Expand",
+    description: "Show all lines of the focused notification",
+    canonicalKeys: ["l"],
+    run: (controller) => controller.expandNotification(),
+    group: "mode",
+  },
+  {
+    id: "collapse-notification",
+    title: "Collapse",
+    description: "Truncate the focused notification",
+    canonicalKeys: ["h"],
+    run: (controller) => controller.collapseNotification(),
+    group: "mode",
   },
   {
     id: "expand",

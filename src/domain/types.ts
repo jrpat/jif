@@ -21,7 +21,8 @@ export type FocusMode =
   | "command"
   | "revset"
   | "search"
-  | "diff-viewer";
+  | "diff-viewer"
+  | "notifications";
 export type AppLayout = "expanded" | "condensed" | "super-condensed";
 export type CommandBarKind = "jj" | "shell";
 
@@ -131,6 +132,9 @@ export type AppState = Readonly<{
   lastFailedCommand: FailedCommand | null;
   statusMessages: readonly StatusMessage[];
   eventLog: readonly EventLogEntry[];
+  notificationHistoryLimit: number;
+  focusedNotificationIndex: number;
+  expandedNotificationIds: readonly string[];
   loading: boolean;
   useShortFlags: boolean;
   layout: AppLayout;

@@ -102,6 +102,9 @@ export default {
     // shortFlags: true,
     // layout: "condensed",
   },
+  notifications: {
+    // historyLimit: 50,
+  },
   keymap: {
     normal: {
       // "ctrl-g": {
@@ -125,7 +128,7 @@ function renderConfigTypes(): string {
 declare global {
 namespace Jif {
   type AppLayout = "expanded" | "condensed" | "super-condensed";
-  type FocusMode = "revisions" | "files" | "inline-confirmation" | "command" | "revset" | "search";
+  type FocusMode = "revisions" | "files" | "inline-confirmation" | "command" | "revset" | "search" | "notifications";
   type StatusLevel = "info" | "success" | "warning" | "error";
   type RevisionMarker = "working-copy" | "bookmark" | "plain" | "immutable" | "elided";
   type CommandGroup = "global" | "mode" | "cancel";
@@ -150,7 +153,8 @@ namespace Jif {
     | "conflictTagFill" | "conflictTagText"
     | "textPrimary" | "textSecondary" | "textTertiary" | "textQuaternary"
     | "revsetPrefix" | "fileFocusMarker" | "fileStatusAccent"
-    | "statusInfo" | "statusSuccess" | "statusWarning" | "statusError";
+    | "statusInfo" | "statusSuccess" | "statusWarning" | "statusError"
+    | "statusInfoFill" | "statusSuccessFill" | "statusWarningFill" | "statusErrorFill";
 
   type ChangedFile = Readonly<{
     path: string;
@@ -216,6 +220,9 @@ namespace Jif {
     lastFailedCommand: FailedCommand | null;
     statusMessages: readonly StatusMessage[];
     eventLog: readonly EventLogEntry[];
+    notificationHistoryLimit: number;
+    focusedNotificationIndex: number;
+    expandedNotificationIds: readonly string[];
     loading: boolean;
     useShortFlags: boolean;
     layout: AppLayout;
@@ -276,6 +283,9 @@ namespace Jif {
     refreshRepository: () => void;
     absorb: () => void;
     abandonRevision: () => void;
+    openNotifications: () => void;
+    expandNotification: () => void;
+    collapseNotification: () => void;
     jj: (commandText: string, options?: JjCommandOptions) => Promise<void>;
     sh: (commandText: string, options?: ShellCommandOptions) => Promise<void>;
     jji: (commandText: string, options?: InteractiveJjCommandOptions) => Promise<void>;
@@ -302,7 +312,8 @@ namespace Jif {
     | "command"
     | "revset"
     | "search"
-    | "search-results";
+    | "search-results"
+    | "notifications";
 
   type UserKeyMap = Partial<Record<KeymapScope, Readonly<Record<string, UserKeyBinding>>>>;
 
@@ -318,6 +329,9 @@ namespace Jif {
     commands?: Readonly<{
       shortFlags?: boolean;
       layout?: AppLayout;
+    }>;
+    notifications?: Readonly<{
+      historyLimit?: number;
     }>;
   }>;
 }

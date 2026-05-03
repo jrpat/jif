@@ -25,6 +25,7 @@ export async function runJifApplication(
   const store = createAppStore(repoPath, {
     useShortFlags: config.commands.shortFlags,
     layout,
+    notificationHistoryLimit: config.notifications.historyLimit,
   });
   const client = new JjClient(repoPath);
 

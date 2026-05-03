@@ -91,6 +91,9 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     showOperationDiff: () => calls.push("showOperationDiff"),
     scrollDiffViewer: (rowDelta, colDelta) =>
       calls.push(`scrollDiffViewer(${rowDelta},${colDelta})`),
+    openNotifications: () => calls.push("openNotifications"),
+    expandNotification: () => calls.push("expandNotification"),
+    collapseNotification: () => calls.push("collapseNotification"),
     openSearch: () => calls.push("openSearch"),
     nextSearchMatch: () => calls.push("nextSearchMatch"),
     prevSearchMatch: () => calls.push("prevSearchMatch"),

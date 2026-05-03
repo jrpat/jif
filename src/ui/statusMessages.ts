@@ -44,3 +44,19 @@ export function getStatusColor(
       return colors.statusInfo;
   }
 }
+
+export function getStatusFillColor(
+  level: "info" | "success" | "warning" | "error",
+  colors: ResolvedAppConfig["colorScheme"]["semanticColors"],
+): string | undefined {
+  switch (level) {
+    case "success":
+      return colors.statusSuccessFill;
+    case "warning":
+      return colors.statusWarningFill;
+    case "error":
+      return colors.statusErrorFill;
+    default:
+      return colors.statusInfoFill;
+  }
+}

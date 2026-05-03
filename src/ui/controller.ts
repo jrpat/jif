@@ -98,6 +98,15 @@ export function createJifCommandController(args: Readonly<{
         }
       })();
     },
+    openNotifications() {
+      store.actions.openNotifications();
+    },
+    expandNotification() {
+      store.actions.expandFocusedNotification();
+    },
+    collapseNotification() {
+      store.actions.collapseFocusedNotification();
+    },
     openFocusedRevision() {
       const state = store.snapshot();
       const revision = getFocusedRevision(state);

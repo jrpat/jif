@@ -17,6 +17,7 @@ import {
   getExpandedRevision,
   getFocusedRevision,
   getMarkedRowIds,
+  getDisplayedNotifications,
   getOperationAffectedRowIds,
   revisionMatchesSearch,
   type CommandSegment,
@@ -28,6 +29,7 @@ import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/type
 import { createJifCommandController } from "./controller.ts";
 import { DiffViewer } from "./DiffViewer.tsx";
 import { InlineConfirmation } from "./InlineConfirmation.tsx";
+import { NotificationsOverlay } from "./NotificationsOverlay.tsx";
 import { OperationLogEntryItem } from "./OperationLogEntryItem.tsx";
 import { CommandPreview, CommandPrompt, RevsetPrompt, SearchPrompt } from "./prompts.tsx";
 import {
@@ -379,6 +381,7 @@ export function JifView(props: {
 
   let prevFocusedIndex = store.state.focusedRevisionIndex;
   let prevFocusedOperationIndex = store.state.focusedOperationLogIndex;
+  let prevFocusedNotificationIndex = store.state.focusedNotificationIndex;
 
   createRenderEffect(() => {
     if (store.state.focusMode === "op-log") {
@@ -425,6 +428,22 @@ export function JifView(props: {
       : Math.max(focusedIndex - margin, 0);
 
     scrollToKeepChildVisible(logViewport, `operation-log-entry-${marginIndex}`, direction);
+  });
+
+  createRenderEffect(() => {
+    if (store.state.focusMode !== "notifications" || !logViewport) {
+      return;
+    }
+
+    if (store.state.eventLog.length === 0) {
+      return;
+    }
+
+    const focusedIndex = store.state.focusedNotificationIndex;
+    const direction = focusedIndex >= prevFocusedNotificationIndex ? "down" : "up";
+    prevFocusedNotificationIndex = focusedIndex;
+
+    scrollToKeepChildVisible(logViewport, `notification-${focusedIndex}`, direction);
   });
 
   createRenderEffect(() => {
@@ -517,49 +536,61 @@ export function JifView(props: {
             >
               <box width="100%" flexDirection="column">
                 <Show
-                  when={store.state.focusMode === "op-log"}
+                  when={store.state.focusMode === "notifications"}
                   fallback={(
-                    <For each={store.state.revisions}>
-                      {(revision, index) => (
-                        <RevisionItem
-                          state={store.state}
-                          revision={revision}
-                          revisionChangeIdDisplayLength={revisionChangeIdDisplayLength()}
-                          index={index()}
-                          previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
-                          nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
-                          config={config}
-                          focusedRowId={getFocusedRevision(store.state)?.rowId ?? null}
-                          selectedRowIds={getMarkedRowIds(store.state)}
-                          expandedRowId={getExpandedRevision(store.state)?.rowId ?? null}
-                          commandTargetRowId={getCommandTargetRowId(store.state)}
-                          searchQuery={store.state.searchQuery}
-                        />
+                    <Show
+                      when={store.state.focusMode === "op-log"}
+                      fallback={(
+                        <For each={store.state.revisions}>
+                          {(revision, index) => (
+                            <RevisionItem
+                              state={store.state}
+                              revision={revision}
+                              revisionChangeIdDisplayLength={revisionChangeIdDisplayLength()}
+                              index={index()}
+                              previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
+                              nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
+                              config={config}
+                              focusedRowId={getFocusedRevision(store.state)?.rowId ?? null}
+                              selectedRowIds={getMarkedRowIds(store.state)}
+                              expandedRowId={getExpandedRevision(store.state)?.rowId ?? null}
+                              commandTargetRowId={getCommandTargetRowId(store.state)}
+                              searchQuery={store.state.searchQuery}
+                            />
+                          )}
+                        </For>
                       )}
-                    </For>
+                    >
+                      <Show
+                        when={store.state.operationLogEntries.length > 0}
+                        fallback={(
+                          <box width="100%" paddingX={1} paddingY={1}>
+                            <text fg={config.colorScheme.semanticColors.textTertiary}>
+                              {store.state.operationLogLoading ? "Loading operation log..." : "No operation log entries."}
+                            </text>
+                          </box>
+                        )}
+                      >
+                        <For each={store.state.operationLogEntries}>
+                          {(entry, index) => (
+                            <OperationLogEntryItem
+                              id={`operation-log-entry-${index()}`}
+                              entry={entry}
+                              focused={store.state.focusedOperationLogIndex === index()}
+                              config={config}
+                            />
+                          )}
+                        </For>
+                      </Show>
+                    </Show>
                   )}
                 >
-                  <Show
-                    when={store.state.operationLogEntries.length > 0}
-                    fallback={(
-                      <box width="100%" paddingX={1} paddingY={1}>
-                        <text fg={config.colorScheme.semanticColors.textTertiary}>
-                          {store.state.operationLogLoading ? "Loading operation log..." : "No operation log entries."}
-                        </text>
-                      </box>
-                    )}
-                  >
-                    <For each={store.state.operationLogEntries}>
-                      {(entry, index) => (
-                        <OperationLogEntryItem
-                          id={`operation-log-entry-${index()}`}
-                          entry={entry}
-                          focused={store.state.focusedOperationLogIndex === index()}
-                          config={config}
-                        />
-                      )}
-                    </For>
-                  </Show>
+                  <NotificationsOverlay
+                    entries={getDisplayedNotifications(store.state)}
+                    focusedIndex={store.state.focusedNotificationIndex}
+                    expandedIds={store.state.expandedNotificationIds}
+                    config={config}
+                  />
                 </Show>
               </box>
             </scrollbox>

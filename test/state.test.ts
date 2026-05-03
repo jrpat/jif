@@ -626,14 +626,16 @@ test("cancelOrBlurState dismisses error status messages", () => {
   expect(state.statusMessages[0]?.level).toBe("info");
 });
 
-test("pushEvent keeps a maximum of 100 entries in the event log", () => {
+test("pushEvent keeps at most notificationHistoryLimit entries in the event log", () => {
   let state = createState();
-  for (let i = 0; i < 105; i++) {
+  const limit = state.notificationHistoryLimit;
+  const overshoot = 5;
+  for (let i = 0; i < limit + overshoot; i++) {
     state = pushEvent(state, `event ${i}`, "info", i);
   }
-  expect(state.eventLog.length).toBe(100);
-  expect(state.eventLog[0]?.text).toBe("event 5");
-  expect(state.eventLog[99]?.text).toBe("event 104");
+  expect(state.eventLog.length).toBe(limit);
+  expect(state.eventLog[0]?.text).toBe(`event ${overshoot}`);
+  expect(state.eventLog[limit - 1]?.text).toBe(`event ${limit + overshoot - 1}`);
 });
 
 test("setLastFailedCommand stores retry metadata independently of status messages", () => {

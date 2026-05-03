@@ -251,6 +251,8 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Search Results";
     case "diff-viewer":
       return "Diff";
+    case "notifications":
+      return "Notifications";
   }
 }
 

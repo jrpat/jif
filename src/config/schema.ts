@@ -52,6 +52,10 @@ export type SemanticColorScheme = Readonly<{
   statusSuccess: SemanticColorValue;
   statusWarning: SemanticColorValue;
   statusError: SemanticColorValue;
+  statusInfoFill: SemanticColorValue;
+  statusSuccessFill: SemanticColorValue;
+  statusWarningFill: SemanticColorValue;
+  statusErrorFill: SemanticColorValue;
 }>;
 
 type SemanticColorKey = keyof SemanticColorScheme;
@@ -69,6 +73,9 @@ export type AppConfig = Readonly<{
     shortFlags?: boolean;
     layout?: AppLayout;
   }>;
+  notifications?: Readonly<{
+    historyLimit?: number;
+  }>;
 }>;
 
 export type ResolvedAppConfig = Readonly<{
@@ -83,6 +90,9 @@ export type ResolvedAppConfig = Readonly<{
   commands: Readonly<{
     shortFlags: boolean;
     layout: AppLayout;
+  }>;
+  notifications: Readonly<{
+    historyLimit: number;
   }>;
 }>;
 
@@ -138,6 +148,10 @@ const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   statusSuccess:          { source: "green",       opacity: 1.0  },
   statusWarning:          { source: "yellow",      opacity: 1.0  },
   statusError:            { source: "red",         opacity: 1.0  },
+  statusInfoFill:         { source: "blue",        opacity: 0.12 },
+  statusSuccessFill:      { source: "green",       opacity: 0.12 },
+  statusWarningFill:      { source: "yellow",      opacity: 0.12 },
+  statusErrorFill:        { source: "red",         opacity: 0.12 },
 };
 
 // ---------- Palette source → TerminalColors lookup ----------
@@ -256,6 +270,9 @@ export function resolveAppConfig(
     commands: {
       shortFlags: config.commands?.shortFlags ?? true,
       layout: config.commands?.layout ?? "condensed",
+    },
+    notifications: {
+      historyLimit: Math.max(1, Math.floor(config.notifications?.historyLimit ?? 50)),
     },
   };
 }

@@ -24,8 +24,12 @@ import {
   closeFocusedRevision,
   closeOperationLog,
   closeDiffViewer,
+  closeNotifications,
+  collapseFocusedNotification,
+  expandFocusedNotification,
   focusLogBottom,
   focusWorkingCopy,
+  openNotifications,
   openOperationLog,
   openDiffViewer,
   openRevsetInput,
@@ -74,7 +78,7 @@ export type AppStore = ReturnType<typeof createAppStore>;
 
 export function createAppStore(
   repoPath: string,
-  options?: { useShortFlags?: boolean; layout?: AppLayout },
+  options?: { useShortFlags?: boolean; layout?: AppLayout; notificationHistoryLimit?: number },
 ) {
   let state!: AppState;
   let setState!: ReturnType<typeof createStore<AppState>>[1];
@@ -160,6 +164,18 @@ export function createAppStore(
       },
       closeOperationLog() {
         mutate((currentState) => closeOperationLog(currentState));
+      },
+      openNotifications() {
+        mutate((currentState) => openNotifications(currentState));
+      },
+      closeNotifications() {
+        mutate((currentState) => closeNotifications(currentState));
+      },
+      expandFocusedNotification() {
+        mutate((currentState) => expandFocusedNotification(currentState));
+      },
+      collapseFocusedNotification() {
+        mutate((currentState) => collapseFocusedNotification(currentState));
       },
       openDiffViewer(content: string) {
         mutate((currentState) => openDiffViewer(currentState, content));

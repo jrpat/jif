@@ -12,7 +12,8 @@ export type Mode =
   | "revset"
   | "search"
   | "search-results"
-  | "diff-viewer";
+  | "diff-viewer"
+  | "notifications";
 
 export type ModeDefinition = Readonly<{
   id: Mode;
@@ -33,6 +34,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   search: { id: "search", inputPassthrough: true, label: "Search" },
   "search-results": { id: "search-results", parent: "normal", inputPassthrough: false, label: "Search Results" },
   "diff-viewer": { id: "diff-viewer", inputPassthrough: false, label: "Diff" },
+  notifications: { id: "notifications", inputPassthrough: false, label: "Notifications" },
 };
 
 export type Keymap = Readonly<Record<"_global" | Mode, Readonly<Record<string, string>>>>;
@@ -43,6 +45,7 @@ export const defaultKeymap: Keymap = {
     "ctrl-r": "refresh-repository",
     "ctrl-z": "suspend",
     q: "quit",
+    "`": "open-notifications",
   },
   normal: {
     j: "move-down",
@@ -129,6 +132,19 @@ export const defaultKeymap: Keymap = {
     H: "scroll-left-large",
     L: "scroll-right-large",
   },
+  notifications: {
+    j: "move-down",
+    down: "move-down",
+    k: "move-up",
+    up: "move-up",
+    G: "jump-to-bottom",
+    l: "expand-notification",
+    right: "expand-notification",
+    h: "collapse-notification",
+    left: "collapse-notification",
+    "`": "cancel",
+    "?": "shortcut-panel",
+  },
 };
 
 export function getActiveMode(state: AppState): Mode {
@@ -138,6 +154,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "inline-confirmation") return "inline-confirmation";
   if (state.focusMode === "diff-viewer") return "diff-viewer";
   if (state.focusMode === "op-log") return "op-log";
+  if (state.focusMode === "notifications") return "notifications";
   if (state.focusMode === "files") return "files";
   if (state.commandDraft?.config.kind === "rebase") return "rebase";
   if (state.commandDraft?.config.kind === "squash") return "squash";
