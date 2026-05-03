@@ -107,6 +107,10 @@ export function createCommandRunner(args: Readonly<{
         options.successFeedback === "status-toast" || options.failureFeedback === "status-toast"
           ? (args.createToastId?.() ?? `cmd-${Date.now()}`)
           : null;
+      const failureToastId =
+        options.failureFeedback === "none"
+          ? null
+          : toastId ?? args.createToastId?.() ?? `cmd-${Date.now()}`;
 
       const stopToastSpinner = startStatusToastSpinner(
         args.actions,
@@ -140,9 +144,9 @@ export function createCommandRunner(args: Readonly<{
           args.actions,
           command,
           error,
-          options.failureFeedback === "status-toast" ? toastId ?? undefined : undefined,
+          failureToastId ?? undefined,
         );
-        publishFailure(args.actions, toastId, message, options.failureFeedback);
+        publishFailure(args.actions, failureToastId, toastId, message, options.failureFeedback);
         if (options.showLoading) {
           args.actions.setLoading(false);
         }
@@ -258,19 +262,25 @@ function publishSuccess(
 
 function publishFailure(
   actions: CommandRunnerActions,
-  toastId: string | null,
+  failureToastId: string | null,
+  spinnerToastId: string | null,
   message: string,
   feedback: CommandFeedbackMode,
 ) {
   if (feedback === "status-toast") {
-    if (toastId !== null) {
-      actions.updateStatusMessage(toastId, message, "error");
+    if (spinnerToastId !== null) {
+      actions.updateStatusMessage(spinnerToastId, message, "error");
     }
     actions.logEvent(message, "error");
     return;
   }
 
   if (feedback === "event") {
-    actions.pushEvent(message, "error");
+    if (failureToastId !== null) {
+      actions.pushStatusMessage(failureToastId, message, "error");
+      actions.logEvent(message, "error");
+    } else {
+      actions.pushEvent(message, "error");
+    }
   }
 }

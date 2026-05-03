@@ -173,6 +173,7 @@ test("command runner records failures and clears loading for event-driven comman
       });
     },
     refreshRepository: async () => true,
+    createToastId: () => "failure-toast",
   });
 
   await runner.run({
@@ -186,8 +187,9 @@ test("command runner records failures and clears loading for event-driven comman
 
   expect(entries).toEqual([
     "setLoading:true",
-    "setLastFailedCommand:false:undo:stderr details:none",
-    "pushEvent:error:boom",
+    "setLastFailedCommand:false:undo:stderr details:failure-toast",
+    "pushStatusMessage:failure-toast:error:boom",
+    "logEvent:error:boom",
     "setLoading:false",
   ]);
 });
