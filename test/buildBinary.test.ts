@@ -31,11 +31,12 @@ test("defaultInstallOutfile writes a jif executable into the install bin dir", (
   expect(outfile).toBe("/tmp/custom-bin/jif");
 });
 
-test("createBuildConfig disables bunfig autoload for standalone binaries", () => {
+test("createBuildConfig disables Bun autoloads for standalone binaries", () => {
   const config = createBuildConfig({
     target: "bun-darwin-arm64",
     outfile: "/tmp/jif",
   });
 
   expect(config.compile?.autoloadBunfig).toBeFalse();
+  expect(config.compile?.autoloadDotenv).toBeFalse();
 });

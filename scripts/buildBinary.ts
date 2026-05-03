@@ -61,6 +61,7 @@ export function createBuildConfig(options: BuildBinaryOptions = {}) {
       target,
       outfile,
       autoloadBunfig: false,
+      autoloadDotenv: false,
     },
   };
 }
