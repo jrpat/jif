@@ -94,10 +94,8 @@ export const defaultKeymap: Keymap = {
   "op-log": {
     j: "move-down",
     down: "move-down",
-    J: "move-down",
     k: "move-up",
     up: "move-up",
-    K: "move-up",
     G: "jump-to-bottom",
     r: "restore-operation",
     R: "revert-operation",

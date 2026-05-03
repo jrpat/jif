@@ -10,7 +10,7 @@ But it's also *yours*, designed from the start to be molded to how you work. The
 
 ## Command Composition
 
-Every operation in jif — `rebase`, `squash`, `split`, `new`, `commit`, and the rest — is really just composing a `jj` command. As you press keys, the command bar shows the exact `jj` invocation being assembled, color-coded by piece (subcommand, target revision, selected files, flags, etc…). When you confirm, jif runs that command verbatim.
+Every operation in jif — `rebase`, `squash`, `split`, `new`, `commit`, and the rest — composes a `jj` command. The command bar shows that command being assembled as you press keys, color-coded to match the TUI: the focused revision in blue (its highlight color), selected revisions and files in green (the selection accent), etc…
 
 You get the ergonomics of a TUI porcelain without the CLI being hidden from you, and over time the visible command bar teaches you the underlying `jj` commands.
 
@@ -34,7 +34,7 @@ This launches the TUI against the current working directory.
 
 ## Keybindings
 
-Default keybindings, grouped by mode. Modes other than Global and Inline Confirmation inherit Normal-mode bindings on top of their own.
+Default keybindings, grouped by mode. Each mode is annotated below with whether it inherits Normal-mode bindings on top of its own. Global bindings are available in every mode and may be overridden by a mode-specific binding for the same key.
 
 ### Global
 
@@ -45,6 +45,7 @@ Available in every mode (mode-specific bindings can override these).
 | `ctrl-r` | refresh-repository | Refresh the revision log |
 | `ctrl-z` | suspend | Suspend the application and return to the shell |
 | `escape` | cancel | Cancel command composition or leave input mode |
+| `` ` `` | open-notifications | Open the notifications history panel |
 
 ### Normal
 
@@ -95,6 +96,7 @@ Viewing and navigating the revision log.
 |-----|---------|-------------|
 | `:` | command-bar | Run a jj subcommand |
 | `>` | shell-command-bar | Run a shell command |
+| `o` / `O` | open-operation-log | Open the repository operation log |
 | `q` | quit | Exit the application |
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 | `!` | force-last-command | Retry the last failed command with the override flag `jj` is asking for:<br>• `--ignore-immutable` — when the command refused because the target is immutable<br>• `--allow-backwards` — when a bookmark move was rejected as backwards/sideways |
@@ -127,6 +129,49 @@ Active after running a search. Inherits Normal.
 | `n` | search-next | Jump to the next search match |
 | `p` | search-prev | Jump to the previous search match |
 
+### Operation Log
+
+Active while the operation log panel is open. Does not inherit Normal.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `j` / `↓` | move-down | Focus the next operation |
+| `k` / `↑` | move-up | Focus the previous operation |
+| `G` | jump-to-bottom | Jump to the last operation in the log |
+| `r` | restore-operation | Restore the focused operation |
+| `R` | revert-operation | Revert the focused operation |
+| `d` | show-operation-diff | Show repository changes for the focused operation |
+| `?` | shortcut-panel | Expand or collapse the shortcut panel |
+
+### Notifications
+
+Active while the notifications history panel is open. Does not inherit Normal.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `j` / `↓` | move-down | Focus the next notification |
+| `k` / `↑` | move-up | Focus the previous notification |
+| `G` | jump-to-bottom | Jump to the last notification |
+| `l` / `→` | expand-notification | Show all lines of the focused notification |
+| `h` / `←` | collapse-notification | Truncate the focused notification |
+| `` ` `` | cancel | Close the notifications panel |
+| `?` | shortcut-panel | Expand or collapse the shortcut panel |
+
+### Diff Viewer
+
+Active while the full-screen diff viewer is open. Does not inherit Normal.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `j` | scroll-down | Scroll down one line |
+| `k` | scroll-up | Scroll up one line |
+| `h` | scroll-left | Scroll left one column |
+| `l` | scroll-right | Scroll right one column |
+| `J` | scroll-down-large | Scroll down ten lines |
+| `K` | scroll-up-large | Scroll up ten lines |
+| `H` | scroll-left-large | Scroll left ten columns |
+| `L` | scroll-right-large | Scroll right ten columns |
+
 ### Inline Confirmation
 
 Active in inline confirmation prompts.
@@ -147,6 +192,12 @@ Active in the command bar (`:`), revset prompt (`L`), and search prompt (`/`). K
 | `ctrl-k` / `ctrl-p` / `↑` | Move to the previous history entry or suggestion |
 | `enter` | Submit the current input (run the command, apply the revset, finalize the search) |
 | `tab` / `shift-tab` | Move to the next / previous suggestion |
+
+## Shell commands
+
+Shell commands invoked via `>` (or `cmd.sh()` from a custom keybinding) run in your login shell (`$SHELL -lc`) with the cwd jif was launched from. Login shells source `.zprofile` / `.bash_profile` / `.profile`, but **not** `.zshrc` / `.bashrc`, so aliases and functions defined only in your interactive rc files will not be available.
+
+If you want an alias to work from `>`, define it somewhere a non-interactive shell will see it — for zsh, that's `.zshenv` (sourced for every invocation) or `.zprofile` (sourced for login shells); for bash, `.bash_profile` or `.profile`.
 
 ## Configuration
 
@@ -171,6 +222,31 @@ jif loads the first existing file in this order from that directory:
 - `jif.config.ts`
 - `jif.config.js`
 
+### Layered config
+
+Configuration is assembled as a stack of layers, deep-merged from bottom to top. Later layers win on conflicting keys; values left `undefined` by a later layer do not clobber the earlier value.
+
+The stack, from lowest to highest precedence:
+
+1. Built-in defaults
+2. `--config-base FILE` layers, in the order they appear on the command line
+3. The user config (the file discovered in the jif config directory, or the file passed to `--config`)
+4. `--config-override FILE` layers, in the order they appear on the command line
+
+The merge is recursive for plain objects, but arrays and any object that contains a function value (most notably an inline keymap binding with `run` or `canExecute`) are replaced wholesale rather than merged. This keeps a layer that redefines a single key from producing a Frankenstein binding spliced together from two layers.
+
+The relevant flags:
+
+- `--config FILE` — replace the discovered user config entirely with `FILE`. Cannot be combined with another `--config`. Use this when you want a one-off run with a different user config without moving files around.
+- `--config-base FILE` — add `FILE` as a layer below the user config. Repeatable.
+- `--config-override FILE` — add `FILE` as a layer above the user config. Repeatable.
+
+A typical use is keeping a shared team config as a base layer and a personal override on top:
+
+```bash
+jif --config-base ~/work/team.jif.ts --config-override ~/.config/jif/personal-overrides.ts
+```
+
 ### Theme
 
 The color configuration supports `light`, `dark`, and `auto` theme mode. In `auto`, startup queries the terminal background color and picks the light or dark theme accordingly.
@@ -186,12 +262,6 @@ export default {
 	},
 } satisfies Jif.Config;
 ```
-
-### Shell commands
-
-Shell commands invoked via `>` (or `cmd.sh()` from a custom keybinding) run in your login shell (`$SHELL -lc`) with the cwd jif was launched from. Login shells source `.zprofile` / `.bash_profile` / `.profile`, but **not** `.zshrc` / `.bashrc`, so aliases and functions defined only in your interactive rc files will not be available.
-
-If you want an alias to work from `>`, define it somewhere a non-interactive shell will see it — for zsh, that's `.zshenv` (sourced for every invocation) or `.zprofile` (sourced for login shells); for bash, `.bash_profile` or `.profile`.
 
 ### Keybindings
 

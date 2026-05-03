@@ -1,9 +1,7 @@
 # Learning
 
-- If a user asks you to "learn" something, document it in the appropriate project guidance file before ending the task.
-- If the content is high-level agent behavior or workflow, add it to `AGENTS.md`.
-- If it fits an existing `.ai/*` guidance file, add it there.
-- If no existing `.ai` file is appropriate, create a new file in `.ai` and record it there.
+- If a user asks you to "learn" something, document it in the AGENTS.md file before ending the task.
+- When a change introduces a new user-facing surface — a default keyboard binding, a configuration option, a CLI flag, or any other behavior worth calling out — update `README.md` in the same change. Implementation details that a user would never set or invoke do not belong in the README.
 
 
 # Project Intent
@@ -50,10 +48,3 @@
 - Debug mode should launch against a freshly materialized sample repo instead of the ambient working directory:
   - `bun run index.ts --sample`
 
-
-# UI Command Conventions
-
-- Canonical shortcuts are Vim-style keys: `j/k` for movement and `h/l` for close/open.
-- Arrow keys can be behavior aliases, but canonical help should keep the Vim-style bindings.
-- The command bar shows only the `jj` subcommand text, never a leading `jj`.
-- `Escape` cancels the current in-progress command or exits command-bar focus.
