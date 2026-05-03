@@ -11,6 +11,12 @@ import {
   FALLBACK_PALETTE_LIGHT,
   type AppConfig,
 } from "../src/config/index.ts";
+import { runCommand } from "../src/jj/process.ts";
+
+async function initJjWorkspace(parentDir: string, name = "repo"): Promise<string> {
+  await runCommand(parentDir, ["jj", "git", "init", name]);
+  return join(parentDir, name);
+}
 
 test("resolveAppConfig resolves semantic colors from dark fallback palette", () => {
   const resolved = resolveAppConfig(defaultAppConfig, {
@@ -507,6 +513,175 @@ test("loadAppConfig throws when a layer file is missing", async () => {
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test("loadAppConfig auto-loads .jj/jif.config.ts from the workspace root resolved via jj", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-project-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+
+  try {
+    const xdgDir = join(tempDir, "xdg");
+    await mkdir(join(xdgDir, "jif"), { recursive: true });
+    process.env.XDG_CONFIG_HOME = xdgDir;
+
+    const workspace = await initJjWorkspace(tempDir);
+    await writeFile(
+      join(workspace, ".jj", "jif.config.ts"),
+      "export default { log: { scrollMargin: 11 } };\n",
+      "utf8",
+    );
+
+    // Start from a nested subdir to confirm jj resolves the workspace root.
+    const nested = join(workspace, "deep", "nested");
+    await mkdir(nested, { recursive: true });
+
+    const { resolved } = await loadAppConfig({ projectStartDir: nested });
+    expect(resolved.log.scrollMargin).toBe(11);
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}, 20000);
+
+test("loadAppConfig auto-loads .jj/jif.config.js when .ts is absent", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-project-js-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+
+  try {
+    const xdgDir = join(tempDir, "xdg");
+    await mkdir(join(xdgDir, "jif"), { recursive: true });
+    process.env.XDG_CONFIG_HOME = xdgDir;
+
+    const workspace = await initJjWorkspace(tempDir);
+    await writeFile(
+      join(workspace, ".jj", "jif.config.js"),
+      "export default { log: { scrollMargin: 12 } };\n",
+      "utf8",
+    );
+
+    const { resolved } = await loadAppConfig({ projectStartDir: workspace });
+    expect(resolved.log.scrollMargin).toBe(12);
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}, 20000);
+
+test("loadAppConfig project-local layer overrides user but is overridden by --config-override", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-project-layer-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+
+  try {
+    const xdgDir = join(tempDir, "xdg");
+    const xdgConfigDir = join(xdgDir, "jif");
+    await mkdir(xdgConfigDir, { recursive: true });
+    await writeFile(
+      join(xdgConfigDir, "config.ts"),
+      "export default { log: { scrollMargin: 1, revisionIdAdditionalChars: 1 } };\n",
+      "utf8",
+    );
+    process.env.XDG_CONFIG_HOME = xdgDir;
+
+    const workspace = await initJjWorkspace(tempDir);
+    await writeFile(
+      join(workspace, ".jj", "jif.config.ts"),
+      "export default { log: { scrollMargin: 2, revisionIdAdditionalChars: 2 } };\n",
+      "utf8",
+    );
+
+    const overridePath = join(tempDir, "override.ts");
+    await writeFile(
+      overridePath,
+      "export default { log: { revisionIdAdditionalChars: 9 } };\n",
+      "utf8",
+    );
+
+    const { resolved } = await loadAppConfig({
+      projectStartDir: workspace,
+      overrideLayerPaths: [overridePath],
+    });
+
+    expect(resolved.log.scrollMargin).toBe(2);
+    expect(resolved.log.revisionIdAdditionalChars).toBe(9);
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}, 20000);
+
+test("loadAppConfig prefers .jj/jif.config.ts over .jj/jif.config.js when both exist", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-project-precedence-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+
+  try {
+    const xdgDir = join(tempDir, "xdg");
+    await mkdir(join(xdgDir, "jif"), { recursive: true });
+    process.env.XDG_CONFIG_HOME = xdgDir;
+
+    const workspace = await initJjWorkspace(tempDir);
+    await writeFile(
+      join(workspace, ".jj", "jif.config.ts"),
+      "export default { log: { scrollMargin: 21 } };\n",
+      "utf8",
+    );
+    await writeFile(
+      join(workspace, ".jj", "jif.config.js"),
+      "export default { log: { scrollMargin: 22 } };\n",
+      "utf8",
+    );
+
+    const { resolved } = await loadAppConfig({ projectStartDir: workspace });
+    expect(resolved.log.scrollMargin).toBe(21);
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}, 20000);
+
+test("loadAppConfig is a no-op when projectStartDir is not inside a jj workspace", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-project-none-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+
+  try {
+    const xdgDir = join(tempDir, "xdg");
+    const xdgConfigDir = join(xdgDir, "jif");
+    await mkdir(xdgConfigDir, { recursive: true });
+    await writeFile(
+      join(xdgConfigDir, "config.ts"),
+      "export default { log: { scrollMargin: 7 } };\n",
+      "utf8",
+    );
+    process.env.XDG_CONFIG_HOME = xdgDir;
+
+    const isolated = join(tempDir, "isolated");
+    await mkdir(isolated, { recursive: true });
+
+    const { resolved } = await loadAppConfig({ projectStartDir: isolated });
+    expect(resolved.log.scrollMargin).toBe(7);
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}, 20000);
 
 test("loadAppConfig falls back to ~/.config/jif when XDG_CONFIG_HOME is unset", async () => {
   const tempDir = await mkdtemp(join(tmpdir(), "jif-home-"));

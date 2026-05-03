@@ -18,15 +18,6 @@ export async function main(argv: readonly string[]) {
     return;
   }
 
-  const { raw: rawConfig, resolved: loadedConfig } = await loadAppConfig({
-    replaceUserConfigPath: options.configReplacement,
-    baseLayerPaths: options.configBaseLayers,
-    overrideLayerPaths: options.configOverrideLayers,
-  });
-  const config = options.useLongFlags
-    ? { ...loadedConfig, commands: { ...loadedConfig.commands, shortFlags: false } }
-    : loadedConfig;
-
   const fixturePath = options.sampleName !== undefined
     ? resolve(`test/fixtures/${options.sampleName || "sample-repo"}.jsonl`)
     : undefined;
@@ -39,6 +30,16 @@ export async function main(argv: readonly string[]) {
         fixturePath,
       })).repoPath
     : process.cwd();
+
+  const { raw: rawConfig, resolved: loadedConfig } = await loadAppConfig({
+    replaceUserConfigPath: options.configReplacement,
+    baseLayerPaths: options.configBaseLayers,
+    overrideLayerPaths: options.configOverrideLayers,
+    projectStartDir: repoPath,
+  });
+  const config = options.useLongFlags
+    ? { ...loadedConfig, commands: { ...loadedConfig.commands, shortFlags: false } }
+    : loadedConfig;
 
   logShortcutDebug("startup", {
     argv: [...argv],

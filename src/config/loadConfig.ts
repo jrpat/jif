@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { TerminalColors } from "@opentui/core";
+import { runCommand } from "../jj/process.ts";
 import { mergeConfigLayers } from "./deepMerge.ts";
 import {
   defaultAppConfig,
@@ -18,12 +19,18 @@ export const CONFIG_CANDIDATES = [
   "jif.config.js",
 ] as const;
 
+export const PROJECT_CONFIG_CANDIDATES = [
+  "jif.config.ts",
+  "jif.config.js",
+] as const;
+
 export async function loadAppConfig(options: Readonly<{
   configDir?: string;
   palette?: TerminalColors | null;
   replaceUserConfigPath?: string;
   baseLayerPaths?: readonly string[];
   overrideLayerPaths?: readonly string[];
+  projectStartDir?: string;
 }> = {}): Promise<{ raw: AppConfig; resolved: ResolvedAppConfig }> {
   const palette = options.palette ?? null;
   const baseLayerPaths = options.baseLayerPaths ?? [];
@@ -32,6 +39,10 @@ export async function loadAppConfig(options: Readonly<{
   const userLayer = options.replaceUserConfigPath !== undefined
     ? await loadConfigFile(resolveLayerPath(options.replaceUserConfigPath))
     : await discoverUserConfig(options.configDir);
+
+  const projectLayer = options.projectStartDir !== undefined
+    ? await discoverProjectLocalConfig(options.projectStartDir)
+    : {};
 
   const baseLayers: AppConfig[] = [];
   for (const path of baseLayerPaths) {
@@ -47,6 +58,7 @@ export async function loadAppConfig(options: Readonly<{
     defaultAppConfig,
     ...baseLayers,
     userLayer,
+    projectLayer,
     ...overrideLayers,
   ]);
 
@@ -60,6 +72,31 @@ export function resolveUserConfigDir(): string {
   }
 
   return join(process.env.HOME || homedir(), ".config", "jif");
+}
+
+async function discoverProjectLocalConfig(startDir: string): Promise<AppConfig> {
+  const workspaceRoot = await resolveWorkspaceRoot(startDir);
+  if (workspaceRoot === null) return {};
+
+  const jjDir = join(workspaceRoot, ".jj");
+  for (const candidate of PROJECT_CONFIG_CANDIDATES) {
+    const configPath = join(jjDir, candidate);
+    if (await fileExists(configPath)) {
+      return loadConfigFile(configPath);
+    }
+  }
+
+  return {};
+}
+
+async function resolveWorkspaceRoot(startDir: string): Promise<string | null> {
+  try {
+    const result = await runCommand(resolve(startDir), ["jj", "workspace", "root"]);
+    const root = result.stdout.trim();
+    return root.length > 0 ? root : null;
+  } catch {
+    return null;
+  }
 }
 
 async function discoverUserConfig(configDir?: string): Promise<AppConfig> {
