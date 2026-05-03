@@ -176,7 +176,7 @@ test("parseOperationLogOutput groups multi-line ANSI entries by operation id", (
       lines: [
         "\u001b[1m\u001b[38;5;12m65d964491fc0\u001b[39m \u001b[38;5;3mjrpat@host\u001b[39m \u001b[4m\u001b[38;5;6mjif-3@\u001b[24m\u001b[39m \u001b[38;5;14m9 minutes ago\u001b[39m\u001b[0m",
         "\u001b[1mrebase commit 93f155d4a5345ccc3eb97e649e3ee0eab8878180 and 1 more\u001b[0m",
-        "\u001b[1m\u001b[38;5;13margs: jj --color always rebase -r q -r xm -d n\u001b[39m\u001b[0m",
+        "\u001b[1m\u001b[38;5;13margs: jj rebase -r q -r xm -d n\u001b[39m\u001b[0m",
       ],
     },
     {
@@ -220,6 +220,75 @@ test("parseOperationLogOutput preserves graph-prefixed operation lines", () => {
       ],
     },
   ]);
+});
+
+test("parseOperationLogOutput strips jif-injected --color from args lines", () => {
+  const output = [
+    "65d964491fc0 jrpat@host jif-3@ now",
+    "describe commit deadbeef",
+    "args: jj --color always describe -m hello",
+    "",
+    "96df2f0afa0c jrpat@host jif-3@ now",
+    "snapshot working copy",
+    "args: jj --color=never st",
+  ].join("\n");
+
+  const entries = parseOperationLogOutput(output);
+
+  expect(entries[0]?.lines[2]).toBe("args: jj describe -m hello");
+  expect(entries[1]?.lines[2]).toBe("args: jj st");
+});
+
+test("parseOperationLogOutput preserves ANSI escapes around the stripped flag", () => {
+  const output = [
+    "65d964491fc0 jrpat@host jif-3@ now",
+    "describe commit deadbeef",
+    "[1m[38;5;13margs: jj --color always describe -m hello[39m[0m",
+  ].join("\n");
+
+  const entries = parseOperationLogOutput(output);
+
+  expect(entries[0]?.lines[2]).toBe(
+    "[1m[38;5;13margs: jj describe -m hello[39m[0m",
+  );
+});
+
+test("parseOperationLogOutput strips --color from graph-prefixed args lines", () => {
+  const output = [
+    "@  65d964491fc0 jrpat@host jif-3@ now",
+    "│  describe commit deadbeef",
+    "│  args: jj --color always describe -m hello",
+  ].join("\n");
+
+  const entries = parseOperationLogOutput(output);
+
+  expect(entries[0]?.lines[2]).toBe("│  args: jj describe -m hello");
+});
+
+test("parseOperationLogOutput leaves non-args lines untouched even when they mention --color", () => {
+  const output = [
+    "65d964491fc0 jrpat@host jif-3@ now",
+    "set ui.color always (free-form description text)",
+    "args: jj config set --user ui.color always",
+  ].join("\n");
+
+  const entries = parseOperationLogOutput(output);
+
+  expect(entries[0]?.lines[1]).toBe("set ui.color always (free-form description text)");
+  expect(entries[0]?.lines[2]).toBe("args: jj config set --user ui.color always");
+});
+
+test("parseOperationLogOutput leaves args lines without --color byte-for-byte unchanged", () => {
+  const original = "[1m[38;5;13margs: jj rebase -r q -d n[39m[0m";
+  const output = [
+    "65d964491fc0 jrpat@host jif-3@ now",
+    "rebase",
+    original,
+  ].join("\n");
+
+  const entries = parseOperationLogOutput(output);
+
+  expect(entries[0]?.lines[2]).toBe(original);
 });
 
 test("loadOperationLog keeps jj graph output enabled", async () => {

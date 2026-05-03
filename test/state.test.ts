@@ -75,7 +75,7 @@ const OP_LOG_ENTRIES: readonly OperationLogEntry[] = [
     lines: [
       "65d964491fc0 jrpat@host jif-3@ 9 minutes ago",
       "rebase commit 93f155d4a5345ccc3eb97e649e3ee0eab8878180 and 1 more",
-      "args: jj --color always rebase -r q -r xm -d n",
+      "args: jj rebase -r q -r xm -d n",
     ],
   },
   {

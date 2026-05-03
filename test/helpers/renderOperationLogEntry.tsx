@@ -25,7 +25,7 @@ const entry: OperationLogEntry = {
   lines: [
     "\u001b[1m\u001b[38;5;12m65d964491fc0\u001b[39m\u001b[0m jrpat@host jif-3@ 9 minutes ago",
     "rebase commit 93f155d4a5345ccc3eb97e649e3ee0eab8878180 and 1 more",
-    "\u001b[38;5;13margs:\u001b[39m jj --color always rebase -r q -r xm -d n",
+    "\u001b[38;5;13margs:\u001b[39m jj rebase -r q -r xm -r more -d destination -k",
   ],
 };
 

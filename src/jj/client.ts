@@ -383,17 +383,28 @@ export function parseOperationLogOutput(output: string): readonly OperationLogEn
     if (operationId !== null) {
       flush();
       currentId = operationId;
-      currentLines = [line];
+      currentLines = [stripJifInternalFlagsFromArgsLine(line)];
       continue;
     }
 
     if (currentId !== null) {
-      currentLines.push(line);
+      currentLines.push(stripJifInternalFlagsFromArgsLine(line));
     }
   }
 
   flush();
   return entries;
+}
+
+// jif injects --color into argv so jj emits colored output through pipes.
+// jj records the argv it received in its op log; we strip that injection
+// here so the user's view matches what they typed. See spec/command-display.md.
+function stripJifInternalFlagsFromArgsLine(line: string): string {
+  const bare = line.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "");
+  if (!/(^|\s)args: jj /.test(bare)) {
+    return line;
+  }
+  return line.replace(/ --color(?:\s+|=)[^\s\x1b]+/g, "");
 }
 
 function buildLogTemplate(baseGraphRowCount: number): string {

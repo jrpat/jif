@@ -47,7 +47,7 @@ test("operation log entries render as focused multi-line ANSI rows without wrapp
   expect(result.renderedLineCount).toBe(3);
   expect(result.frame).toContain("65d964491fc0");
   expect(result.frame).toContain("rebase commit");
-  expect(renderedLines[2]).toContain("args: jj --color");
+  expect(renderedLines[2]).toContain("args: jj rebase");
   expect(renderedLines[2]).toContain("...");
   expect(result.idFg.slice(0, 3)).toEqual(expectedIdFg.slice(0, 3));
   expect(result.argsFg.slice(0, 3)).toEqual(expectedArgsFg.slice(0, 3));
