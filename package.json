@@ -21,7 +21,8 @@
     "vsc:local": "bun run --cwd ext/vscode install:local"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.10"
+    "@types/bun": "^1.3.10",
+    "@types/node": "^25.6.0"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"

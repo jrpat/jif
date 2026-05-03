@@ -299,6 +299,215 @@ test("loadAppConfig reads config.ts from XDG_CONFIG_HOME/jif", async () => {
   }
 });
 
+test("loadAppConfig with replaceUserConfigPath bypasses discovery", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-replace-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+
+  try {
+    const xdgDir = join(tempDir, "xdg");
+    const xdgConfigDir = join(xdgDir, "jif");
+    await mkdir(xdgConfigDir, { recursive: true });
+    await writeFile(
+      join(xdgConfigDir, "config.ts"),
+      "export default { log: { scrollMargin: 99 } };\n",
+      "utf8",
+    );
+
+    const explicitPath = join(tempDir, "explicit.ts");
+    await writeFile(
+      explicitPath,
+      "export default { log: { scrollMargin: 3 } };\n",
+      "utf8",
+    );
+
+    process.env.XDG_CONFIG_HOME = xdgDir;
+
+    const { raw, resolved } = await loadAppConfig({ replaceUserConfigPath: explicitPath });
+
+    expect(raw.log?.scrollMargin).toBe(3);
+    expect(resolved.log.scrollMargin).toBe(3);
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("loadAppConfig layers base under user and override above user", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-layers-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+
+  try {
+    const xdgDir = join(tempDir, "xdg");
+    const xdgConfigDir = join(xdgDir, "jif");
+    await mkdir(xdgConfigDir, { recursive: true });
+    await writeFile(
+      join(xdgConfigDir, "config.ts"),
+      "export default { log: { scrollMargin: 5, revisionIdAdditionalChars: 5 } };\n",
+      "utf8",
+    );
+
+    const basePath = join(tempDir, "base.ts");
+    await writeFile(
+      basePath,
+      "export default { log: { scrollMargin: 1, revisionIdAdditionalChars: 1 }, commands: { layout: 'super-condensed' } };\n",
+      "utf8",
+    );
+
+    const overridePath = join(tempDir, "override.ts");
+    await writeFile(
+      overridePath,
+      "export default { log: { revisionIdAdditionalChars: 9 } };\n",
+      "utf8",
+    );
+
+    process.env.XDG_CONFIG_HOME = xdgDir;
+
+    const { raw, resolved } = await loadAppConfig({
+      baseLayerPaths: [basePath],
+      overrideLayerPaths: [overridePath],
+    });
+
+    // user (5) wins over base (1) for scrollMargin; override doesn't touch it
+    expect(raw.log?.scrollMargin).toBe(5);
+    expect(resolved.log.scrollMargin).toBe(5);
+    // override (9) wins over user (5) for revisionIdAdditionalChars
+    expect(raw.log?.revisionIdAdditionalChars).toBe(9);
+    expect(resolved.log.revisionIdAdditionalChars).toBe(9);
+    // base-only key still flows through
+    expect(raw.commands?.layout).toBe("super-condensed");
+    expect(resolved.commands.layout).toBe("super-condensed");
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("loadAppConfig applies repeated base layers in argv order", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-base-order-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+
+  try {
+    const xdgDir = join(tempDir, "xdg");
+    await mkdir(join(xdgDir, "jif"), { recursive: true });
+    process.env.XDG_CONFIG_HOME = xdgDir;
+
+    const a = join(tempDir, "a.ts");
+    const b = join(tempDir, "b.ts");
+    await writeFile(a, "export default { log: { scrollMargin: 1 } };\n", "utf8");
+    await writeFile(b, "export default { log: { scrollMargin: 2 } };\n", "utf8");
+
+    const { resolved } = await loadAppConfig({ baseLayerPaths: [a, b] });
+    expect(resolved.log.scrollMargin).toBe(2);
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("loadAppConfig applies repeated override layers in argv order", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-override-order-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+
+  try {
+    const xdgDir = join(tempDir, "xdg");
+    await mkdir(join(xdgDir, "jif"), { recursive: true });
+    process.env.XDG_CONFIG_HOME = xdgDir;
+
+    const a = join(tempDir, "a.ts");
+    const b = join(tempDir, "b.ts");
+    await writeFile(a, "export default { log: { scrollMargin: 1 } };\n", "utf8");
+    await writeFile(b, "export default { log: { scrollMargin: 2 } };\n", "utf8");
+
+    const { resolved } = await loadAppConfig({ overrideLayerPaths: [a, b] });
+    expect(resolved.log.scrollMargin).toBe(2);
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("loadAppConfig combines replaceUserConfigPath with base and override layers", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-replace-mix-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+
+  try {
+    const xdgDir = join(tempDir, "xdg");
+    const xdgConfigDir = join(xdgDir, "jif");
+    await mkdir(xdgConfigDir, { recursive: true });
+    // Discovered file is intentionally bogus to prove it's bypassed
+    await writeFile(
+      join(xdgConfigDir, "config.ts"),
+      "export default { log: { scrollMargin: 99, revisionIdAdditionalChars: 99 } };\n",
+      "utf8",
+    );
+
+    const replacement = join(tempDir, "replacement.ts");
+    await writeFile(
+      replacement,
+      "export default { log: { scrollMargin: 5 } };\n",
+      "utf8",
+    );
+
+    const base = join(tempDir, "base.ts");
+    await writeFile(
+      base,
+      "export default { log: { revisionIdAdditionalChars: 1 } };\n",
+      "utf8",
+    );
+
+    const override = join(tempDir, "override.ts");
+    await writeFile(
+      override,
+      "export default { log: { revisionIdAdditionalChars: 7 } };\n",
+      "utf8",
+    );
+
+    process.env.XDG_CONFIG_HOME = xdgDir;
+
+    const { resolved } = await loadAppConfig({
+      replaceUserConfigPath: replacement,
+      baseLayerPaths: [base],
+      overrideLayerPaths: [override],
+    });
+
+    expect(resolved.log.scrollMargin).toBe(5);
+    expect(resolved.log.revisionIdAdditionalChars).toBe(7);
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("loadAppConfig throws when a layer file is missing", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-missing-"));
+  try {
+    const missing = join(tempDir, "does-not-exist.ts");
+    await expect(loadAppConfig({ baseLayerPaths: [missing] })).rejects.toThrow(missing);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test("loadAppConfig falls back to ~/.config/jif when XDG_CONFIG_HOME is unset", async () => {
   const tempDir = await mkdtemp(join(tmpdir(), "jif-home-"));
   const previousXdg = process.env.XDG_CONFIG_HOME;

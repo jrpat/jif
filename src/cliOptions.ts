@@ -3,6 +3,9 @@ export type CliOptions = Readonly<{
   sampleName: string | undefined;
   useLongFlags: boolean;
   explicitRepoPath: string | undefined;
+  configReplacement: string | undefined;
+  configBaseLayers: readonly string[];
+  configOverrideLayers: readonly string[];
 }>;
 
 export function parseCliOptions(argv: readonly string[]): CliOptions {
@@ -14,6 +17,9 @@ export function parseCliOptions(argv: readonly string[]): CliOptions {
     sampleName: readOptionalFlag(args, "--sample"),
     useLongFlags: args.includes("--long-flags"),
     explicitRepoPath: readFlagValue(args, "--repo"),
+    configReplacement: readUniqueFlagValue(args, "--config"),
+    configBaseLayers: readRepeatedFlagValues(args, "--config-base"),
+    configOverrideLayers: readRepeatedFlagValues(args, "--config-override"),
   };
 }
 
@@ -44,4 +50,34 @@ function readFlagValue(args: readonly string[], flag: string): string | undefine
 
   const inline = args.find((arg) => arg.startsWith(`${flag}=`));
   return inline?.slice(flag.length + 1);
+}
+
+function readUniqueFlagValue(args: readonly string[], flag: string): string | undefined {
+  const values = readRepeatedFlagValues(args, flag);
+  if (values.length === 0) return undefined;
+  if (values.length > 1) {
+    throw new Error(`${flag} may only be specified once`);
+  }
+  return values[0];
+}
+
+function readRepeatedFlagValues(args: readonly string[], flag: string): readonly string[] {
+  const out: string[] = [];
+  const inlinePrefix = `${flag}=`;
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
+    if (arg === flag) {
+      const next = args[i + 1];
+      if (next === undefined) {
+        throw new Error(`${flag} requires a path argument`);
+      }
+      out.push(next);
+      i++;
+    } else if (arg.startsWith(inlinePrefix)) {
+      out.push(arg.slice(inlinePrefix.length));
+    }
+  }
+
+  return out;
 }

@@ -18,7 +18,11 @@ export async function main(argv: readonly string[]) {
     return;
   }
 
-  const { raw: rawConfig, resolved: loadedConfig } = await loadAppConfig();
+  const { raw: rawConfig, resolved: loadedConfig } = await loadAppConfig({
+    replaceUserConfigPath: options.configReplacement,
+    baseLayerPaths: options.configBaseLayers,
+    overrideLayerPaths: options.configOverrideLayers,
+  });
   const config = options.useLongFlags
     ? { ...loadedConfig, commands: { ...loadedConfig.commands, shortFlags: false } }
     : loadedConfig;

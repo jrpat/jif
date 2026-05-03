@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { TerminalColors } from "@opentui/core";
+import { mergeConfigLayers } from "./deepMerge.ts";
 import {
   defaultAppConfig,
   resolveAppConfig,
@@ -20,22 +21,36 @@ export const CONFIG_CANDIDATES = [
 export async function loadAppConfig(options: Readonly<{
   configDir?: string;
   palette?: TerminalColors | null;
+  replaceUserConfigPath?: string;
+  baseLayerPaths?: readonly string[];
+  overrideLayerPaths?: readonly string[];
 }> = {}): Promise<{ raw: AppConfig; resolved: ResolvedAppConfig }> {
-  const configDir = options.configDir ?? resolveUserConfigDir();
   const palette = options.palette ?? null;
+  const baseLayerPaths = options.baseLayerPaths ?? [];
+  const overrideLayerPaths = options.overrideLayerPaths ?? [];
 
-  for (const candidate of CONFIG_CANDIDATES) {
-    const configPath = resolve(configDir, candidate);
-    if (!(await fileExists(configPath))) {
-      continue;
-    }
+  const userLayer = options.replaceUserConfigPath !== undefined
+    ? await loadConfigFile(resolveLayerPath(options.replaceUserConfigPath))
+    : await discoverUserConfig(options.configDir);
 
-    const module = await import(`${pathToFileURL(configPath).href}?t=${Date.now()}`);
-    const raw = (module.default ?? module.config ?? defaultAppConfig) as AppConfig;
-    return { raw, resolved: resolveAppConfig(raw, { palette }) };
+  const baseLayers: AppConfig[] = [];
+  for (const path of baseLayerPaths) {
+    baseLayers.push(await loadConfigFile(resolveLayerPath(path)));
   }
 
-  return { raw: defaultAppConfig, resolved: resolveAppConfig(defaultAppConfig, { palette }) };
+  const overrideLayers: AppConfig[] = [];
+  for (const path of overrideLayerPaths) {
+    overrideLayers.push(await loadConfigFile(resolveLayerPath(path)));
+  }
+
+  const raw = mergeConfigLayers([
+    defaultAppConfig,
+    ...baseLayers,
+    userLayer,
+    ...overrideLayers,
+  ]);
+
+  return { raw, resolved: resolveAppConfig(raw, { palette }) };
 }
 
 export function resolveUserConfigDir(): string {
@@ -45,6 +60,34 @@ export function resolveUserConfigDir(): string {
   }
 
   return join(process.env.HOME || homedir(), ".config", "jif");
+}
+
+async function discoverUserConfig(configDir?: string): Promise<AppConfig> {
+  const dir = configDir ?? resolveUserConfigDir();
+
+  for (const candidate of CONFIG_CANDIDATES) {
+    const configPath = resolve(dir, candidate);
+    if (await fileExists(configPath)) {
+      return loadConfigFile(configPath);
+    }
+  }
+
+  return {};
+}
+
+async function loadConfigFile(absolutePath: string): Promise<AppConfig> {
+  if (!(await fileExists(absolutePath))) {
+    throw new Error(`Config file not found: ${absolutePath}`);
+  }
+
+  const module = await import(`${pathToFileURL(absolutePath).href}?t=${Date.now()}`);
+  return (module.default ?? module.config ?? {}) as AppConfig;
+}
+
+function resolveLayerPath(input: string): string {
+  if (input === "~") return homedir();
+  if (input.startsWith("~/")) return resolve(homedir(), input.slice(2));
+  return resolve(input);
 }
 
 async function fileExists(path: string): Promise<boolean> {
