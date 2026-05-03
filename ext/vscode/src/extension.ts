@@ -74,6 +74,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.window.onDidChangeWindowState((state: vscode.WindowState) => {
       if (state.focused) {
         scheduler.schedule();
+        graphViewProvider.notifyTerminalFocus();
       }
     }),
   );

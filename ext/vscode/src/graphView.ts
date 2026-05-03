@@ -95,6 +95,10 @@ export class JifGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     void this.view?.webview.postMessage({ type: "blink" });
   }
 
+  notifyTerminalFocus(): void {
+    this.pty?.write("\x1b[I");
+  }
+
   dispose(): void {
     this.stopPty();
     while (this.disposables.length > 0) {
