@@ -5,6 +5,7 @@ node_modules/
 .home/
 .serena/
 .plan/
+.planning/
 dist/
 my/
 *.local.json

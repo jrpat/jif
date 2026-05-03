@@ -128,7 +128,6 @@ export class JjClient {
       "log",
       "--color",
       "always",
-      "--no-graph",
       "--ignore-working-copy",
       "--limit",
       String(limit),
@@ -414,7 +413,7 @@ function buildLogTemplate(baseGraphRowCount: number): string {
 
 function parseOperationIdFromLine(line: string): string | null {
   const plainLine = line.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").trimStart();
-  const match = plainLine.match(/^(?<id>[0-9a-f]{12,})\b/i);
+  const match = plainLine.match(/^(?:[^A-Za-z0-9]*\s*)?(?<id>[0-9a-f]{12,})\b/i);
   return match?.groups?.id ?? null;
 }
 

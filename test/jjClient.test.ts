@@ -11,6 +11,8 @@ import {
 import { runCommand } from "../src/jj/process.ts";
 import { createTempDir } from "./helpers/tempRepo.ts";
 
+const REPO_PATH = "/tmp/repo";
+
 test("resolveRepositoryLoadLimit accepts positive integer overrides and rejects invalid values", () => {
   expect(resolveRepositoryLoadLimit("25", 250)).toBe(25);
   expect(resolveRepositoryLoadLimit("0", 250)).toBe(250);
@@ -183,6 +185,78 @@ test("parseOperationLogOutput groups multi-line ANSI entries by operation id", (
         "\u001b[38;5;4m96df2f0afa0c\u001b[39m \u001b[38;5;3mjrpat@host\u001b[39m \u001b[4m\u001b[38;5;6mjif-3@\u001b[24m\u001b[39m \u001b[38;5;6m9 minutes ago\u001b[39m",
         "export git refs",
         "\u001b[38;5;5margs: jj git export\u001b[39m",
+      ],
+    },
+  ]);
+});
+
+test("parseOperationLogOutput preserves graph-prefixed operation lines", () => {
+  const output = [
+    "\u001b[1m\u001b[38;5;2m@\u001b[0m  \u001b[1m\u001b[38;5;12m65d964491fc0\u001b[39m jrpat@host jif-3@ 9 minutes ago\u001b[0m",
+    "│  \u001b[1mexport git refs\u001b[0m",
+    "│  \u001b[1m\u001b[38;5;13margs: jj git export\u001b[39m\u001b[0m",
+    "○  \u001b[38;5;4m96df2f0afa0c\u001b[39m jrpat@host jif-3@ 9 minutes ago",
+    "│  snapshot working copy",
+    "│  \u001b[38;5;5margs: jj st\u001b[39m",
+  ].join("\n");
+
+  const entries = parseOperationLogOutput(output);
+
+  expect(entries).toEqual([
+    {
+      id: "65d964491fc0",
+      lines: [
+        "\u001b[1m\u001b[38;5;2m@\u001b[0m  \u001b[1m\u001b[38;5;12m65d964491fc0\u001b[39m jrpat@host jif-3@ 9 minutes ago\u001b[0m",
+        "│  \u001b[1mexport git refs\u001b[0m",
+        "│  \u001b[1m\u001b[38;5;13margs: jj git export\u001b[39m\u001b[0m",
+      ],
+    },
+    {
+      id: "96df2f0afa0c",
+      lines: [
+        "○  \u001b[38;5;4m96df2f0afa0c\u001b[39m jrpat@host jif-3@ 9 minutes ago",
+        "│  snapshot working copy",
+        "│  \u001b[38;5;5margs: jj st\u001b[39m",
+      ],
+    },
+  ]);
+});
+
+test("loadOperationLog keeps jj graph output enabled", async () => {
+  const client = new JjClient(REPO_PATH);
+  let capturedArgs: readonly string[] = [];
+
+  (client as unknown as {
+    runJj(
+      args: readonly string[],
+      options?: { color?: boolean; cwd?: string },
+    ): Promise<{ stdout: string; stderr: string; exitCode: number }>;
+  }).runJj = async (args) => {
+    capturedArgs = args;
+    return {
+      stdout: [
+        "@  65d964491fc0 jrpat@host jif-3@ 9 minutes ago",
+        "│  export git refs",
+        "│  args: jj git export",
+      ].join("\n"),
+      stderr: "",
+      exitCode: 0,
+    };
+  };
+
+  const entries = await client.loadOperationLog(7);
+
+  expect(capturedArgs).not.toContain("--no-graph");
+  expect(capturedArgs).toContain("--ignore-working-copy");
+  expect(capturedArgs).toContain("--limit");
+  expect(capturedArgs).toContain("7");
+  expect(entries).toEqual([
+    {
+      id: "65d964491fc0",
+      lines: [
+        "@  65d964491fc0 jrpat@host jif-3@ 9 minutes ago",
+        "│  export git refs",
+        "│  args: jj git export",
       ],
     },
   ]);
