@@ -103,7 +103,7 @@ test("buildShortcutSummary creates a collapsed single-line help string", () => {
     createCommand("move-parent", "Move to Parent", ["J", "K"]),
     createCommand("edit-revision", "Edit Revision", ["e"]),
     createCommand("new-revision", "New Revision", ["n"]),
-    createCommand("show-diff", "Diff", ["d"]),
+    createCommand("show-revision-diff", "Diff", ["d"]),
     createCommand("commit", "Commit", ["c"]),
   ]);
   const baseSummary = ": command   ? help   j/k move";
@@ -123,7 +123,7 @@ test("buildShortcutSummary skips missing higher-priority actions and keeps fitti
     createCommand("move-up", "Move Up", ["k"]),
     createCommand("edit-revision", "Edit Revision", ["e"]),
     createCommand("new-revision", "New Revision", ["n"]),
-    createCommand("show-diff", "Diff", ["d"]),
+    createCommand("show-revision-diff", "Diff", ["d"]),
   ]);
   const expected = ": command   ? help   j/k move   e edit   n new   d diff";
 

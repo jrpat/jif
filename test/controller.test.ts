@@ -392,7 +392,7 @@ test("openFocusedRevision loads changed files and conflict flags for unloaded re
   harness.store.dispose();
 });
 
-test("showDiff uses an absolute file path for focused files", async () => {
+test("showFileDiff uses an absolute file path for focused files", async () => {
   const harness = createControllerHarness({
     revisions: [
       createRevision({
@@ -407,7 +407,7 @@ test("showDiff uses an absolute file path for focused files", async () => {
 
   harness.store.actions.openFocusedRevision();
 
-  harness.controller.showDiff();
+  harness.controller.showFileDiff();
 
   expect(harness.runInteractiveCommands).toEqual([
     quoteCommand(["diff", "-r", "a", join(REPO_PATH, "src/app.ts")]),

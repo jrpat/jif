@@ -72,7 +72,7 @@ export const defaultKeymap: Keymap = {
     e: "edit-revision",
     c: "commit",
     D: "describe",
-    d: "show-diff",
+    d: "show-revision-diff",
     " ": "toggle-revision-selection",
     "-": "toggle-flags",
     _: "cycle-layout",
@@ -89,6 +89,7 @@ export const defaultKeymap: Keymap = {
   files: {
     s: "split",
     r: "restore",
+    d: "show-file-diff",
     " ": "toggle-file-selection",
   },
   "op-log": {

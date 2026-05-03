@@ -27,7 +27,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const documentProvider = new JifDocumentContentProvider(repository);
   const scmProvider = new JifScmProvider(repository, repositoryRoot);
   const operationLogProvider = new JifOperationLogProvider(repository, repositoryRoot);
-  const graphViewProvider = new JifGraphViewProvider(context.extensionUri, repositoryRoot, outputChannel);
+  const graphViewProvider = new JifGraphViewProvider(context.extensionUri, repositoryRoot, repository, outputChannel);
 
   context.subscriptions.push(
     vscode.workspace.registerTextDocumentContentProvider(documentProvider.scheme, documentProvider),

@@ -305,7 +305,8 @@ namespace Jif {
     toggleShortcutPanel: () => void;
     commit: () => void;
     describe: () => void;
-    showDiff: () => void;
+    showRevisionDiff: () => void;
+    showFileDiff: () => void;
     openSearch: () => void;
     nextSearchMatch: () => void;
     prevSearchMatch: () => void;

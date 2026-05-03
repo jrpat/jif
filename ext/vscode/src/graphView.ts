@@ -1,7 +1,11 @@
 import path from "node:path";
 import * as vscode from "vscode";
 import * as nodePty from "node-pty";
+import type { JjRepository } from "@jif/jj-core";
 import { resolveGraphLaunchTarget } from "./jifRuntime.ts";
+import { createRevisionUri } from "./jjDocumentProvider.ts";
+import { JifPtyIpc } from "./ptyIpc.ts";
+import { buildDiffEntries } from "./scmProvider.ts";
 
 const FOCUS_BLINK_INTERVAL_MS = 1000 / 8;
 const FOCUS_BLINK_COUNT = 2;
@@ -16,6 +20,7 @@ export class JifGraphViewProvider implements vscode.WebviewViewProvider, vscode.
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly repositoryRoot: string,
+    private readonly repository: JjRepository,
     private readonly outputChannel: vscode.OutputChannel,
   ) {}
 
@@ -118,8 +123,20 @@ export class JifGraphViewProvider implements vscode.WebviewViewProvider, vscode.
       shellPath: process.env.SHELL,
     });
     this.outputChannel.appendLine(
+      `[graph] Extension root: ${this.extensionUri.fsPath}`,
+    );
+    this.outputChannel.appendLine(
       `[graph] Spawning ${launchTarget.jifCommand} via ${launchTarget.command} ${launchTarget.args.join(" ")} (${launchTarget.source}) in ${this.repositoryRoot}.`,
     );
+    if (launchTarget.configOverridePath) {
+      this.outputChannel.appendLine(
+        `[graph] Using config override at ${launchTarget.configOverridePath}.`,
+      );
+    } else {
+      this.outputChannel.appendLine(
+        `[graph] No VS Code config override found; q/d will use default bindings.`,
+      );
+    }
 
     try {
       const pty = this.spawnPty(launchTarget);
@@ -143,13 +160,25 @@ export class JifGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     this.pty = process;
     void this.view?.webview.postMessage({ type: "clear" });
 
+    let chunkCount = 0;
+    const ipc = new JifPtyIpc((payload) => this.handleIpcMessage(payload));
     process.onData((data) => {
       if (!this.hasReceivedPtyData) {
         this.hasReceivedPtyData = true;
-        this.outputChannel.appendLine("[graph] Received initial PTY output.");
+        this.outputChannel.appendLine(`[graph] Received initial PTY output (${data.length} bytes).`);
         void this.view?.webview.postMessage({ type: "status", message: "" });
       }
-      void this.view?.webview.postMessage({ type: "data", data });
+      chunkCount += 1;
+      const containsApc = data.includes("\x1b_jif-vscode:");
+      if (containsApc) {
+        this.outputChannel.appendLine(
+          `[graph] PTY chunk #${chunkCount} contains an APC marker (${data.length} bytes).`,
+        );
+      }
+      const forwarded = ipc.process(data);
+      if (forwarded.length > 0) {
+        void this.view?.webview.postMessage({ type: "data", data: forwarded });
+      }
     });
     process.onExit(({ exitCode }) => {
       this.outputChannel.appendLine(`[graph] PTY process exited with code ${exitCode}.`);
@@ -174,6 +203,72 @@ export class JifGraphViewProvider implements vscode.WebviewViewProvider, vscode.
   private stopPty(): void {
     this.pty?.kill();
     this.pty = null;
+  }
+
+  private handleIpcMessage(payload: unknown): void {
+    if (!isIpcMessage(payload)) {
+      this.outputChannel.appendLine(`[graph] Ignoring unknown IPC payload: ${JSON.stringify(payload)}`);
+      return;
+    }
+
+    this.outputChannel.appendLine(`[graph] IPC ${payload.kind}: ${JSON.stringify(payload)}`);
+
+    if (payload.kind === "debug") {
+      return;
+    }
+
+    if (payload.kind === "diff-file") {
+      void this.openFileDiff(payload.revisionId, payload.path);
+      return;
+    }
+
+    if (payload.kind === "diff-revision") {
+      void this.openRevisionDiff(payload.revisionId);
+      return;
+    }
+  }
+
+  private async openFileDiff(revisionId: string, filePath: string): Promise<void> {
+    const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(this.repositoryRoot, filePath);
+    const original = createRevisionUri(absolutePath, `${revisionId}-`);
+    const modified = createRevisionUri(absolutePath, revisionId);
+    const title = `${path.relative(this.repositoryRoot, absolutePath)} (${shortRevisionId(revisionId)})`;
+    try {
+      await vscode.commands.executeCommand("vscode.diff", original, modified, title);
+    } catch (error) {
+      this.reportIpcError("vscode.diff", error);
+    }
+  }
+
+  private async openRevisionDiff(revisionId: string): Promise<void> {
+    let result;
+    try {
+      result = await this.repository.show(revisionId);
+    } catch (error) {
+      this.reportIpcError(`jj show -r ${revisionId}`, error);
+      return;
+    }
+
+    if (result.fileStatuses.length === 0) {
+      void vscode.window.showInformationMessage(`Revision ${shortRevisionId(revisionId)} has no file changes.`);
+      return;
+    }
+
+    const entries = buildDiffEntries(result.fileStatuses, {
+      baseRevset: `${revisionId}-`,
+      targetRevset: revisionId,
+    });
+    const label = `Revision ${shortRevisionId(revisionId)}`;
+    try {
+      await vscode.commands.executeCommand("vscode.changes", label, entries);
+    } catch (error) {
+      this.reportIpcError("vscode.changes", error);
+    }
+  }
+
+  private reportIpcError(action: string, error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    this.outputChannel.appendLine(`[graph] ${action} failed: ${message}`);
   }
 
   private renderHtml(webview: vscode.Webview): string {
@@ -452,4 +547,31 @@ function isGraphMessage(
     return true;
   }
   return record.type === "resize" && typeof record.cols === "number" && typeof record.rows === "number";
+}
+
+type IpcMessage =
+  | { kind: "diff-revision"; revisionId: string }
+  | { kind: "diff-file"; revisionId: string; path: string }
+  | { kind: "debug"; message: string; data?: unknown };
+
+function isIpcMessage(payload: unknown): payload is IpcMessage {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+  const record = payload as Record<string, unknown>;
+  if (record.kind === "diff-revision" && typeof record.revisionId === "string") {
+    return true;
+  }
+  if (record.kind === "debug" && typeof record.message === "string") {
+    return true;
+  }
+  return (
+    record.kind === "diff-file" &&
+    typeof record.revisionId === "string" &&
+    typeof record.path === "string"
+  );
+}
+
+function shortRevisionId(revisionId: string): string {
+  return revisionId.length > 8 ? revisionId.slice(0, 8) : revisionId;
 }

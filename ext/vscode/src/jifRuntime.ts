@@ -6,6 +6,7 @@ export type GraphLaunchTarget = {
   args: string[];
   jifCommand: string;
   source: "bundled" | "path";
+  configOverridePath: string | null;
 };
 
 type ResolveGraphLaunchTargetOptions = {
@@ -28,6 +29,10 @@ export function resolveBundledJifPath(
   return path.resolve(extensionRoot, bundledJifRelativePath(platform));
 }
 
+export function resolveVscodeConfigOverridePath(extensionRoot: string): string {
+  return path.resolve(extensionRoot, "assets", "jif-vscode.config.ts");
+}
+
 export function resolveGraphLaunchTarget(options: ResolveGraphLaunchTargetOptions): GraphLaunchTarget {
   const platform = options.platform ?? process.platform;
   const exists = options.exists ?? existsSync;
@@ -36,20 +41,30 @@ export function resolveGraphLaunchTarget(options: ResolveGraphLaunchTargetOption
   const jifCommand = exists(bundledJifPath) ? bundledJifPath : (options.fallbackCommand ?? "jif");
   const source = exists(bundledJifPath) ? "bundled" : "path";
 
+  const overridePath = resolveVscodeConfigOverridePath(options.extensionRoot);
+  const configOverridePath = exists(overridePath) ? overridePath : null;
+  const overrideSuffix = configOverridePath
+    ? ` --config-override ${quoteForPosixShell(configOverridePath)}`
+    : "";
+
+  const execLine = `exec ${quoteForPosixShell(jifCommand)}${overrideSuffix}`;
+
   if (shellPath && path.isAbsolute(shellPath) && exists(shellPath)) {
     return {
       command: shellPath,
-      args: ["-lc", `exec ${quoteForPosixShell(jifCommand)}`],
+      args: ["-lc", execLine],
       jifCommand,
       source,
+      configOverridePath,
     };
   }
 
   return {
     command: "/bin/sh",
-    args: ["-lc", `exec ${quoteForPosixShell(jifCommand)}`],
+    args: ["-lc", execLine],
     jifCommand,
     source,
+    configOverridePath,
   };
 }
 

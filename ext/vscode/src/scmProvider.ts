@@ -3,7 +3,31 @@ import * as vscode from "vscode";
 import { buildChangeLabel, type FileStatus, type JjRepository, type RepositoryStatus } from "@jif/jj-core";
 import { createEmptyUri, createRevisionUri } from "./jjDocumentProvider.ts";
 
-type GroupDiffEntry = readonly [label: vscode.Uri, original: vscode.Uri, modified: vscode.Uri];
+export type DiffEntry = readonly [label: vscode.Uri, original: vscode.Uri, modified: vscode.Uri];
+
+type GroupDiffEntry = DiffEntry;
+
+export function buildDiffEntries(
+  fileStatuses: readonly FileStatus[],
+  options: {
+    baseRevset: string;
+    targetRevset: string | null;
+  },
+): readonly DiffEntry[] {
+  return fileStatuses.map((fileStatus) => {
+    const labelUri = vscode.Uri.file(fileStatus.path);
+    const originalPath = fileStatus.renamedFrom ?? fileStatus.path;
+    const originalUri = fileStatus.type === "A"
+      ? createEmptyUri(originalPath)
+      : createRevisionUri(originalPath, options.baseRevset);
+    const modifiedUri = fileStatus.type === "D"
+      ? createEmptyUri(fileStatus.path)
+      : options.targetRevset
+        ? createRevisionUri(fileStatus.path, options.targetRevset)
+        : vscode.Uri.file(fileStatus.path);
+    return [labelUri, originalUri, modifiedUri] as const;
+  });
+}
 
 export class JifScmProvider implements vscode.Disposable {
   private readonly sourceControl: vscode.SourceControl;
@@ -62,22 +86,10 @@ export class JifScmProvider implements vscode.Disposable {
     resourceStates: vscode.SourceControlResourceState[];
     diffEntries: GroupDiffEntry[];
   } {
-    const resourceStates: vscode.SourceControlResourceState[] = [];
-    const diffEntries: GroupDiffEntry[] = [];
-
-    for (const fileStatus of fileStatuses) {
-      const labelUri = vscode.Uri.file(fileStatus.path);
-      const originalPath = fileStatus.renamedFrom ?? fileStatus.path;
-      const originalUri = fileStatus.type === "A"
-        ? createEmptyUri(originalPath)
-        : createRevisionUri(originalPath, options.baseRevset);
-      const modifiedUri = fileStatus.type === "D"
-        ? createEmptyUri(fileStatus.path)
-        : options.targetRevset
-          ? createRevisionUri(fileStatus.path, options.targetRevset)
-          : vscode.Uri.file(fileStatus.path);
-
-      resourceStates.push({
+    const diffEntries = buildDiffEntries(fileStatuses, options);
+    const resourceStates: vscode.SourceControlResourceState[] = fileStatuses.map((fileStatus, index) => {
+      const [labelUri, originalUri, modifiedUri] = diffEntries[index]!;
+      return {
         resourceUri: labelUri,
         decorations: {
           strikeThrough: fileStatus.type === "D",
@@ -92,13 +104,12 @@ export class JifScmProvider implements vscode.Disposable {
             `${path.relative(this.repositoryRoot, fileStatus.path)} ${options.groupTitleSuffix}`,
           ],
         },
-      });
-      diffEntries.push([labelUri, originalUri, modifiedUri]);
-    }
+      };
+    });
 
     return {
       resourceStates,
-      diffEntries,
+      diffEntries: [...diffEntries],
     };
   }
 }

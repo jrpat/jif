@@ -48,7 +48,7 @@ const SHORTCUT_SUMMARY_SEGMENTS: readonly Readonly<{
   { commandIds: ["move-down", "move-up"], label: "move" },
   { commandIds: ["edit-revision"], label: "edit" },
   { commandIds: ["new-revision"], label: "new" },
-  { commandIds: ["show-diff"], label: "diff" },
+  { commandIds: ["show-revision-diff", "show-file-diff"], label: "diff" },
   { commandIds: ["commit"], label: "commit" },
 ];
 

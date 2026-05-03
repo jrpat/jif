@@ -21,7 +21,6 @@ import {
   getInlineConfirmation,
   getInlineConfirmationActualCommand,
   getSelectedRevisionIds,
-  isFileNavigationActive,
 } from "../state/store.ts";
 import { hasUserDescription } from "./revisionHeader.ts";
 
@@ -295,19 +294,21 @@ export function createJifCommandController(args: Readonly<{
       if (!revisionArg) return;
       void args.runInteractiveJjCommand(`describe -r ${revisionArg}`);
     },
-    showDiff() {
+    showRevisionDiff() {
       const state = store.snapshot();
       const revisionArg = getFocusedRevisionArg(state);
       if (!revisionArg) return;
-      if (isFileNavigationActive(state)) {
-        const file = getExpandedRevision(state)?.files[state.focusedFileIndex];
-        if (!file) return;
-        void args.runInteractiveJjCommand(
-          quoteCommand(["diff", "-r", revisionArg, join(state.repoPath, file.path)]),
-        );
-      } else {
-        void args.runInteractiveJjCommand(`show -r ${revisionArg}`);
-      }
+      void args.runInteractiveJjCommand(`show -r ${revisionArg}`);
+    },
+    showFileDiff() {
+      const state = store.snapshot();
+      const revisionArg = getFocusedRevisionArg(state);
+      if (!revisionArg) return;
+      const file = getExpandedRevision(state)?.files[state.focusedFileIndex];
+      if (!file) return;
+      void args.runInteractiveJjCommand(
+        quoteCommand(["diff", "-r", revisionArg, join(state.repoPath, file.path)]),
+      );
     },
     restoreOperation() {
       const operation = getFocusedOperationLogEntry(store.snapshot());

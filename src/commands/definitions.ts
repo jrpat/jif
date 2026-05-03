@@ -1,4 +1,4 @@
-import { getFocusedChildRevision, getFocusedOperationLogEntry, getFocusedParentRevision } from "../state/store.ts";
+import { getExpandedRevision, getFocusedChildRevision, getFocusedOperationLogEntry, getFocusedParentRevision } from "../state/store.ts";
 import type { AppState } from "../domain/types.ts";
 
 export type JjCommandOptions = Readonly<{
@@ -47,7 +47,8 @@ export type CommandController = Readonly<{
   toggleShortcutPanel: () => void;
   commit: () => void;
   describe: () => void;
-  showDiff: () => void;
+  showRevisionDiff: () => void;
+  showFileDiff: () => void;
   restoreOperation: () => void;
   revertOperation: () => void;
   showOperationDiff: () => void;
@@ -82,6 +83,12 @@ export type CommandDefinition = Readonly<{
 function focusedIsElided(state: AppState): boolean {
   const revision = state.revisions[state.focusedRevisionIndex];
   return revision?.marker === "elided";
+}
+
+function focusedFileExists(state: AppState): boolean {
+  if (focusedIsElided(state)) return false;
+  const expanded = getExpandedRevision(state);
+  return expanded !== null && expanded.files[state.focusedFileIndex] !== undefined;
 }
 
 export const commandDefinitions: readonly CommandDefinition[] = [
@@ -370,12 +377,21 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     group: "global",
   },
   {
-    id: "show-diff",
+    id: "show-revision-diff",
     title: "Diff",
-    description: "Show diff for the focused revision or file",
+    description: "Show diff for the focused revision",
     canonicalKeys: ["d"],
     canExecute: (state) => !focusedIsElided(state),
-    run: (controller) => controller.showDiff(),
+    run: (controller) => controller.showRevisionDiff(),
+    group: "global",
+  },
+  {
+    id: "show-file-diff",
+    title: "Diff",
+    description: "Show diff for the focused file",
+    canonicalKeys: ["d"],
+    canExecute: (state) => focusedFileExists(state),
+    run: (controller) => controller.showFileDiff(),
     group: "global",
   },
   {

@@ -1,6 +1,7 @@
 import { commandDefinitions, type CommandDefinition, type UserCommandController } from "../commands/definitions.ts";
-import type { AppState as BaseAppState } from "../domain/types.ts";
+import type { AppState as BaseAppState, ChangedFile, RevisionSummary } from "../domain/types.ts";
 import { defaultKeymap, type Keymap, type Mode } from "../modes.ts";
+import { getExpandedRevision } from "../state/store.ts";
 
 type KeymapScope = "_global" | Mode;
 type MutableKeymap = {
@@ -21,7 +22,8 @@ export type UserKeyBinding = string | UserKeybindingCommand;
 export type UserKeyMap = Partial<Record<KeymapScope, Readonly<Record<string, UserKeyBinding>>>>;
 
 export type UserAppState = BaseAppState & Readonly<{
-  rev: BaseAppState["revisions"][number] | null;
+  rev: RevisionSummary | null;
+  file: ChangedFile | null;
 }>;
 
 export type ResolvedConfiguredKeymap = Readonly<{
@@ -36,6 +38,9 @@ export function createUserAppState(state: BaseAppState): UserAppState {
     get(target, property, receiver) {
       if (property === "rev") {
         return target.revisions[target.focusedRevisionIndex] ?? null;
+      }
+      if (property === "file") {
+        return getExpandedRevision(target)?.files[target.focusedFileIndex] ?? null;
       }
 
       return Reflect.get(target, property, receiver);
