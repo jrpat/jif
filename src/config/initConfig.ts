@@ -1,10 +1,21 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { CONFIG_CANDIDATES, resolveUserConfigDir } from "./loadConfig.ts";
+import {
+  CONFIG_CANDIDATES,
+  PROJECT_CONFIG_CANDIDATES,
+  resolveUserConfigDir,
+  resolveWorkspaceRoot,
+} from "./loadConfig.ts";
 
 const GENERATED_TYPES_FILENAME = "jif.d.ts";
 
-export type InitUserConfigResult = Readonly<{
+type SeedConfigInputs = Readonly<{
+  configDir: string;
+  defaultConfigFilename: string;
+  candidateFilenames: readonly string[];
+}>;
+
+type SeedConfigResult = Readonly<{
   configDir: string;
   configPath: string;
   typesPath: string;
@@ -13,16 +24,49 @@ export type InitUserConfigResult = Readonly<{
   updatedTypes: boolean;
 }>;
 
+export type InitUserConfigResult = SeedConfigResult;
+
+export type InitProjectConfigResult = SeedConfigResult & Readonly<{
+  workspaceRoot: string;
+}>;
+
 export async function initUserConfig(options: Readonly<{
   configDir?: string;
 }> = {}): Promise<InitUserConfigResult> {
-  const configDir = options.configDir ?? resolveUserConfigDir();
+  return seedConfig({
+    configDir: options.configDir ?? resolveUserConfigDir(),
+    defaultConfigFilename: "config.ts",
+    candidateFilenames: CONFIG_CANDIDATES,
+  });
+}
+
+export async function initProjectConfig(options: Readonly<{
+  startDir: string;
+}>): Promise<InitProjectConfigResult> {
+  const workspaceRoot = await resolveWorkspaceRoot(options.startDir);
+  if (workspaceRoot === null) {
+    throw new Error(
+      `Not inside a JJ workspace: ${options.startDir}`,
+    );
+  }
+
+  const seeded = await seedConfig({
+    configDir: join(workspaceRoot, ".jj"),
+    defaultConfigFilename: "jif.config.ts",
+    candidateFilenames: PROJECT_CONFIG_CANDIDATES,
+  });
+
+  return { ...seeded, workspaceRoot };
+}
+
+async function seedConfig(inputs: SeedConfigInputs): Promise<SeedConfigResult> {
+  const { configDir, defaultConfigFilename, candidateFilenames } = inputs;
   const typesPath = join(configDir, GENERATED_TYPES_FILENAME);
 
   await mkdir(configDir, { recursive: true });
 
-  const existingConfigPath = await findExistingConfigPath(configDir);
-  const configPath = existingConfigPath ?? join(configDir, "config.ts");
+  const existingConfigPath = await findExistingConfigPath(configDir, candidateFilenames);
+  const configPath = existingConfigPath ?? join(configDir, defaultConfigFilename);
   const createdConfig = existingConfigPath === null
     ? await writeIfMissing(configPath, renderPlaceholderConfig())
     : false;
@@ -42,8 +86,11 @@ export async function initUserConfig(options: Readonly<{
   };
 }
 
-async function findExistingConfigPath(configDir: string): Promise<string | null> {
-  for (const candidate of CONFIG_CANDIDATES) {
+async function findExistingConfigPath(
+  configDir: string,
+  candidates: readonly string[],
+): Promise<string | null> {
+  for (const candidate of candidates) {
     const path = join(configDir, candidate);
     if (await fileExists(path)) {
       return path;

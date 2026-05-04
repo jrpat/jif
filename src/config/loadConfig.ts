@@ -89,7 +89,7 @@ async function discoverProjectLocalConfig(startDir: string): Promise<AppConfig> 
   return {};
 }
 
-async function resolveWorkspaceRoot(startDir: string): Promise<string | null> {
+export async function resolveWorkspaceRoot(startDir: string): Promise<string | null> {
   try {
     const result = await runCommand(resolve(startDir), ["jj", "workspace", "root"]);
     const root = result.stdout.trim();

@@ -1,23 +1,45 @@
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { parseCliOptions } from "./cliOptions.ts";
-import { initUserConfig } from "./config/initConfig.ts";
+import { parseCommand, type InitConfigOptions, type RunOptions } from "./cliOptions.ts";
+import { initProjectConfig, initUserConfig } from "./config/initConfig.ts";
 import { loadAppConfig } from "./config/loadConfig.ts";
 import { logShortcutDebug } from "./debug.ts";
 import { materializeSampleRepoCachedViaCli } from "./dev/sampleRepoLauncher.ts";
 import { runJifApplication } from "./app.ts";
 
 export async function main(argv: readonly string[]) {
-  const options = parseCliOptions(argv);
+  const command = parseCommand(argv);
 
-  if (options.command === "init-config") {
-    const result = await initUserConfig();
-    console.log(`Initialized user config in ${result.configDir}`);
-    console.log(`${result.createdConfig ? "Created" : "Kept"} ${result.configPath}`);
-    console.log(`${result.createdTypes ? "Created" : result.updatedTypes ? "Updated" : "Kept"} ${result.typesPath}`);
+  if (command.kind === "init-config") {
+    await runInitConfig(command.options);
     return;
   }
 
+  await runApp(argv, command.options);
+}
+
+async function runInitConfig(options: InitConfigOptions): Promise<void> {
+  if (options.project) {
+    const startDir = options.projectStartDir ?? process.cwd();
+    const result = await initProjectConfig({ startDir });
+    console.log(`Initialized project config in ${result.configDir}`);
+    console.log(`Workspace root: ${result.workspaceRoot}`);
+    console.log(`${result.createdConfig ? "Created" : "Kept"} ${result.configPath}`);
+    console.log(
+      `${result.createdTypes ? "Created" : result.updatedTypes ? "Updated" : "Kept"} ${result.typesPath}`,
+    );
+    return;
+  }
+
+  const result = await initUserConfig();
+  console.log(`Initialized user config in ${result.configDir}`);
+  console.log(`${result.createdConfig ? "Created" : "Kept"} ${result.configPath}`);
+  console.log(
+    `${result.createdTypes ? "Created" : result.updatedTypes ? "Updated" : "Kept"} ${result.typesPath}`,
+  );
+}
+
+async function runApp(argv: readonly string[], options: RunOptions): Promise<void> {
   const fixturePath = options.sampleName !== undefined
     ? resolve(`test/fixtures/${options.sampleName || "sample-repo"}.jsonl`)
     : undefined;

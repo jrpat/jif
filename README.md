@@ -201,12 +201,21 @@ If you want an alias to work from `>`, define it somewhere a non-interactive she
 
 ## Configuration
 
-Run `jif init-config` to create a starter config. The command creates:
+Run `jif init config` to create a starter user config. The command creates:
 
 - `config.ts` with a placeholder `Jif.Config` shape and commented examples
 - `jif.d.ts` with editor-facing types for autocomplete and inline docs
 
-If a config file already exists, `jif init-config` leaves it alone and only fills in missing support files.
+If a config file already exists, `jif init config` leaves it alone and only fills in missing support files.
+
+To seed a project-local config instead, pass `--project` (or `-p`):
+
+```bash
+jif init config -p          # uses the workspace containing the cwd
+jif init config -p path/to  # resolves the workspace root from a subdirectory
+```
+
+This writes `jif.config.ts` and `jif.d.ts` into the workspace's `.jj/` directory. The path argument may be any directory inside a JJ workspace; jif resolves it up to the workspace root (via `jj workspace root`) and seeds the config there. Without `-p`, `init config` seeds the user-level config described above.
 
 ### Config location
 

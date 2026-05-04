@@ -1,5 +1,6 @@
-export type CliOptions = Readonly<{
-  command: "run" | "init-config";
+import { parseArgs } from "node:util";
+
+export type RunOptions = Readonly<{
   sampleName: string | undefined;
   useLongFlags: boolean;
   explicitRepoPath: string | undefined;
@@ -8,12 +9,54 @@ export type CliOptions = Readonly<{
   configOverrideLayers: readonly string[];
 }>;
 
-export function parseCliOptions(argv: readonly string[]): CliOptions {
-  const command = argv[0] === "init-config" ? "init-config" : "run";
-  const args = command === "init-config" ? argv.slice(1) : argv;
+export type InitConfigOptions = Readonly<{
+  project: boolean;
+  projectStartDir: string | undefined;
+}>;
+
+export type Command =
+  | { readonly kind: "run"; readonly options: RunOptions }
+  | { readonly kind: "init-config"; readonly options: InitConfigOptions };
+
+export function parseCommand(argv: readonly string[]): Command {
+  if (argv[0] === "init") {
+    if (argv[1] === "config") {
+      return { kind: "init-config", options: parseInitConfigOptions(argv.slice(2)) };
+    }
+    const sub = argv[1] === undefined ? "" : ` ${argv[1]}`;
+    throw new Error(`Unknown command: jif init${sub}`);
+  }
+
+  return { kind: "run", options: parseRunOptions(argv) };
+}
+
+function parseInitConfigOptions(args: readonly string[]): InitConfigOptions {
+  const { values, positionals } = parseArgs({
+    args: [...args],
+    options: {
+      project: { type: "boolean", short: "p" },
+    },
+    allowPositionals: true,
+    strict: true,
+  });
+
+  const project = values.project === true;
+
+  if (!project && positionals.length > 0) {
+    throw new Error(`init config: positional argument requires --project (-p)`);
+  }
+  if (positionals.length > 1) {
+    throw new Error(`init config: only one path argument is allowed`);
+  }
 
   return {
-    command,
+    project,
+    projectStartDir: positionals[0],
+  };
+}
+
+function parseRunOptions(args: readonly string[]): RunOptions {
+  return {
     sampleName: readOptionalFlag(args, "--sample"),
     useLongFlags: args.includes("--long-flags"),
     explicitRepoPath: readFlagValue(args, "--repo"),
