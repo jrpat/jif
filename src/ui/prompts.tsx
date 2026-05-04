@@ -123,6 +123,7 @@ export function CommandPrompt(props: {
           syncPromptInput(el, displayedText());
         }}
         flexGrow={1}
+        marginRight={1}
         placeholder={props.placeholder}
         focused
         textColor={colors.textPrimary}
@@ -218,7 +219,11 @@ export function SearchPrompt(props: {
         <text fg={colors.textPrimary}>/ </text>
       </box>
       <input
+        ref={(el: InputRenderable) => {
+          el.editorView.setScrollMargin(0);
+        }}
         flexGrow={1}
+        marginRight={1}
         value={props.searchQuery}
         placeholder="search"
         focused={props.focused}
@@ -345,9 +350,11 @@ export function RevsetPrompt(props: {
       <input
         ref={(el: InputRenderable) => {
           input = el;
+          el.editorView.setScrollMargin(0);
           syncPromptInput(el, displayedText());
         }}
         flexGrow={1}
+        marginRight={1}
         focused
         textColor={colors.textPrimary}
         focusedTextColor={colors.textPrimary}
