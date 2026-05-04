@@ -4,6 +4,7 @@ import type {
   JjCommandOptions,
   ShellCommandOptions,
 } from "../commands/definitions.ts";
+import { isAlwaysInteractiveJjCommand } from "../commands/interactive-subcommands.ts";
 import type { RevisionSummary } from "../domain/types.ts";
 import type { JjClient } from "../jj/client.ts";
 import type { PersistenceService } from "../persistence/service.ts";
@@ -46,15 +47,17 @@ export function createJifRuntime(args: Readonly<{
           ? persistence.recordShellHistory(workspaceRoot, value)
           : persistence.recordCommandHistory(workspaceRoot, value)
         : undefined;
+      const interactive = executor === "jj" && isAlwaysInteractiveJjCommand(commandText);
 
       await commandRunner.run({
         commandText,
         executor,
+        interactive,
         cwd: executor === "shell" ? args.getShellCwd() : undefined,
         canExecute: commandCanExecute(state),
         cancelBeforeRun: true,
-        successFeedback: "status-toast",
-        failureFeedback: "status-toast",
+        successFeedback: interactive ? "none" : "status-toast",
+        failureFeedback: interactive ? "event" : "status-toast",
         recordHistory,
       });
     },

@@ -171,6 +171,75 @@ test("executeCurrentCommand for the jj command bar does not pass a cwd", async (
   harness.store.dispose();
 });
 
+test("executeCurrentCommand marks `jj diff` as interactive", async () => {
+  const harness = createRuntimeHarness({});
+
+  harness.store.actions.setCommandBarText("diff");
+
+  await harness.runtime.executeCurrentCommand(undefined, { recordHistory: true });
+
+  expect(harness.commandRuns).toHaveLength(1);
+  expect(harness.commandRuns[0]).toMatchObject({
+    commandText: "diff",
+    executor: "jj",
+    interactive: true,
+    successFeedback: "none",
+    failureFeedback: "event",
+  });
+  harness.store.dispose();
+});
+
+test("executeCurrentCommand marks `jj show` as interactive even with extra args", async () => {
+  const harness = createRuntimeHarness({});
+
+  harness.store.actions.setCommandBarText("show -r @");
+
+  await harness.runtime.executeCurrentCommand(undefined, { recordHistory: true });
+
+  expect(harness.commandRuns).toHaveLength(1);
+  expect(harness.commandRuns[0]).toMatchObject({
+    commandText: "show -r @",
+    executor: "jj",
+    interactive: true,
+  });
+  harness.store.dispose();
+});
+
+test("executeCurrentCommand does not mark non-interactive jj subcommands as interactive", async () => {
+  const harness = createRuntimeHarness({});
+
+  harness.store.actions.setCommandBarText("log");
+
+  await harness.runtime.executeCurrentCommand(undefined, { recordHistory: true });
+
+  expect(harness.commandRuns).toHaveLength(1);
+  expect(harness.commandRuns[0]).toMatchObject({
+    commandText: "log",
+    executor: "jj",
+    interactive: false,
+    successFeedback: "status-toast",
+    failureFeedback: "status-toast",
+  });
+  harness.store.dispose();
+});
+
+test("executeCurrentCommand does not mark shell commands as interactive", async () => {
+  const harness = createRuntimeHarness({});
+
+  harness.store.actions.focusShellCommandBar();
+  harness.store.actions.setCommandBarText("diff foo bar");
+
+  await harness.runtime.executeCurrentCommand(undefined, { recordHistory: true });
+
+  expect(harness.commandRuns).toHaveLength(1);
+  expect(harness.commandRuns[0]).toMatchObject({
+    commandText: "diff foo bar",
+    executor: "shell",
+    interactive: false,
+  });
+  harness.store.dispose();
+});
+
 test("runInteractiveJjCommand is a no-op when workspace root is unavailable", async () => {
   const harness = createRuntimeHarness({ workspaceRoot: null });
 
