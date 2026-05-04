@@ -19,12 +19,8 @@ export type Command =
   | { readonly kind: "init-config"; readonly options: InitConfigOptions };
 
 export function parseCommand(argv: readonly string[]): Command {
-  if (argv[0] === "init") {
-    if (argv[1] === "config") {
-      return { kind: "init-config", options: parseInitConfigOptions(argv.slice(2)) };
-    }
-    const sub = argv[1] === undefined ? "" : ` ${argv[1]}`;
-    throw new Error(`Unknown command: jif init${sub}`);
+  if (argv[0] === "init-config") {
+    return { kind: "init-config", options: parseInitConfigOptions(argv.slice(1)) };
   }
 
   return { kind: "run", options: parseRunOptions(argv) };

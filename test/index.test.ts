@@ -86,8 +86,8 @@ test("run command throws when --config-base has no value", () => {
   expect(() => parseCommand(["--config-base"])).toThrow();
 });
 
-test("init config dispatches to init-config kind with default options", () => {
-  expect(parseCommand(["init", "config"])).toEqual({
+test("init-config dispatches to init-config kind with default options", () => {
+  expect(parseCommand(["init-config"])).toEqual({
     kind: "init-config",
     options: {
       project: false,
@@ -96,8 +96,8 @@ test("init config dispatches to init-config kind with default options", () => {
   });
 });
 
-test("init config -p enables project mode without a path", () => {
-  expect(parseCommand(["init", "config", "-p"])).toEqual({
+test("init-config -p enables project mode without a path", () => {
+  expect(parseCommand(["init-config", "-p"])).toEqual({
     kind: "init-config",
     options: {
       project: true,
@@ -105,7 +105,7 @@ test("init config -p enables project mode without a path", () => {
     },
   });
 
-  expect(parseCommand(["init", "config", "--project"])).toEqual({
+  expect(parseCommand(["init-config", "--project"])).toEqual({
     kind: "init-config",
     options: {
       project: true,
@@ -114,8 +114,8 @@ test("init config -p enables project mode without a path", () => {
   });
 });
 
-test("init config -p <path> records the start directory", () => {
-  expect(parseCommand(["init", "config", "-p", "/some/dir"])).toEqual({
+test("init-config -p <path> records the start directory", () => {
+  expect(parseCommand(["init-config", "-p", "/some/dir"])).toEqual({
     kind: "init-config",
     options: {
       project: true,
@@ -123,7 +123,7 @@ test("init config -p <path> records the start directory", () => {
     },
   });
 
-  expect(parseCommand(["init", "config", "--project", "subdir"])).toEqual({
+  expect(parseCommand(["init-config", "--project", "subdir"])).toEqual({
     kind: "init-config",
     options: {
       project: true,
@@ -132,15 +132,10 @@ test("init config -p <path> records the start directory", () => {
   });
 });
 
-test("init config rejects a positional path without --project", () => {
-  expect(() => parseCommand(["init", "config", "/some/dir"])).toThrow();
+test("init-config rejects a positional path without --project", () => {
+  expect(() => parseCommand(["init-config", "/some/dir"])).toThrow();
 });
 
-test("init config rejects unknown flags", () => {
-  expect(() => parseCommand(["init", "config", "--config-base", "a.ts"])).toThrow();
-});
-
-test("init alone (without subcommand) throws", () => {
-  expect(() => parseCommand(["init"])).toThrow();
-  expect(() => parseCommand(["init", "bogus"])).toThrow();
+test("init-config rejects unknown flags", () => {
+  expect(() => parseCommand(["init-config", "--config-base", "a.ts"])).toThrow();
 });

@@ -19,11 +19,6 @@ export const CONFIG_CANDIDATES = [
   "jif.config.js",
 ] as const;
 
-export const PROJECT_CONFIG_CANDIDATES = [
-  "jif.config.ts",
-  "jif.config.js",
-] as const;
-
 export async function loadAppConfig(options: Readonly<{
   configDir?: string;
   palette?: TerminalColors | null;
@@ -74,13 +69,17 @@ export function resolveUserConfigDir(): string {
   return join(process.env.HOME || homedir(), ".config", "jif");
 }
 
+export function projectConfigDir(workspaceRoot: string): string {
+  return join(workspaceRoot, ".jj", "jif");
+}
+
 async function discoverProjectLocalConfig(startDir: string): Promise<AppConfig> {
   const workspaceRoot = await resolveWorkspaceRoot(startDir);
   if (workspaceRoot === null) return {};
 
-  const jjDir = join(workspaceRoot, ".jj");
-  for (const candidate of PROJECT_CONFIG_CANDIDATES) {
-    const configPath = join(jjDir, candidate);
+  const configDir = projectConfigDir(workspaceRoot);
+  for (const candidate of CONFIG_CANDIDATES) {
+    const configPath = join(configDir, candidate);
     if (await fileExists(configPath)) {
       return loadConfigFile(configPath);
     }

@@ -2,18 +2,13 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   CONFIG_CANDIDATES,
-  PROJECT_CONFIG_CANDIDATES,
+  projectConfigDir,
   resolveUserConfigDir,
   resolveWorkspaceRoot,
 } from "./loadConfig.ts";
 
 const GENERATED_TYPES_FILENAME = "jif.d.ts";
-
-type SeedConfigInputs = Readonly<{
-  configDir: string;
-  defaultConfigFilename: string;
-  candidateFilenames: readonly string[];
-}>;
+const DEFAULT_CONFIG_FILENAME = "config.ts";
 
 type SeedConfigResult = Readonly<{
   configDir: string;
@@ -33,11 +28,7 @@ export type InitProjectConfigResult = SeedConfigResult & Readonly<{
 export async function initUserConfig(options: Readonly<{
   configDir?: string;
 }> = {}): Promise<InitUserConfigResult> {
-  return seedConfig({
-    configDir: options.configDir ?? resolveUserConfigDir(),
-    defaultConfigFilename: "config.ts",
-    candidateFilenames: CONFIG_CANDIDATES,
-  });
+  return seedConfig(options.configDir ?? resolveUserConfigDir());
 }
 
 export async function initProjectConfig(options: Readonly<{
@@ -50,23 +41,17 @@ export async function initProjectConfig(options: Readonly<{
     );
   }
 
-  const seeded = await seedConfig({
-    configDir: join(workspaceRoot, ".jj"),
-    defaultConfigFilename: "jif.config.ts",
-    candidateFilenames: PROJECT_CONFIG_CANDIDATES,
-  });
-
+  const seeded = await seedConfig(projectConfigDir(workspaceRoot));
   return { ...seeded, workspaceRoot };
 }
 
-async function seedConfig(inputs: SeedConfigInputs): Promise<SeedConfigResult> {
-  const { configDir, defaultConfigFilename, candidateFilenames } = inputs;
+async function seedConfig(configDir: string): Promise<SeedConfigResult> {
   const typesPath = join(configDir, GENERATED_TYPES_FILENAME);
 
   await mkdir(configDir, { recursive: true });
 
-  const existingConfigPath = await findExistingConfigPath(configDir, candidateFilenames);
-  const configPath = existingConfigPath ?? join(configDir, defaultConfigFilename);
+  const existingConfigPath = await findExistingConfigPath(configDir);
+  const configPath = existingConfigPath ?? join(configDir, DEFAULT_CONFIG_FILENAME);
   const createdConfig = existingConfigPath === null
     ? await writeIfMissing(configPath, renderPlaceholderConfig())
     : false;
@@ -86,11 +71,8 @@ async function seedConfig(inputs: SeedConfigInputs): Promise<SeedConfigResult> {
   };
 }
 
-async function findExistingConfigPath(
-  configDir: string,
-  candidates: readonly string[],
-): Promise<string | null> {
-  for (const candidate of candidates) {
+async function findExistingConfigPath(configDir: string): Promise<string | null> {
+  for (const candidate of CONFIG_CANDIDATES) {
     const path = join(configDir, candidate);
     if (await fileExists(path)) {
       return path;

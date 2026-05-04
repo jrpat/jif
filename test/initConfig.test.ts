@@ -66,7 +66,7 @@ test("initUserConfig refreshes an existing jif.d.ts", async () => {
   expect(await readFile(typesPath, "utf8")).toContain("namespace Jif {");
 });
 
-test("initProjectConfig seeds jif.config.ts under the workspace .jj directory", async () => {
+test("initProjectConfig seeds config.ts under the workspace .jj/jif directory", async () => {
   const baseDir = await createTempDir("init-project-config");
   await runCommand(baseDir, ["jj", "git", "init", "repo"]);
   const workspaceRoot = join(baseDir, "repo");
@@ -74,9 +74,9 @@ test("initProjectConfig seeds jif.config.ts under the workspace .jj directory", 
   const result = await initProjectConfig({ startDir: workspaceRoot });
 
   expect(result.workspaceRoot).toBe(workspaceRoot);
-  expect(result.configDir).toBe(join(workspaceRoot, ".jj"));
-  expect(result.configPath).toBe(join(workspaceRoot, ".jj", "jif.config.ts"));
-  expect(result.typesPath).toBe(join(workspaceRoot, ".jj", "jif.d.ts"));
+  expect(result.configDir).toBe(join(workspaceRoot, ".jj", "jif"));
+  expect(result.configPath).toBe(join(workspaceRoot, ".jj", "jif", "config.ts"));
+  expect(result.typesPath).toBe(join(workspaceRoot, ".jj", "jif", "jif.d.ts"));
   expect(result.createdConfig).toBeTrue();
   expect(result.createdTypes).toBeTrue();
 
@@ -98,7 +98,7 @@ test("initProjectConfig resolves the workspace root from a nested subdirectory",
   const result = await initProjectConfig({ startDir: nested });
 
   expect(result.workspaceRoot).toBe(workspaceRoot);
-  expect(result.configPath).toBe(join(workspaceRoot, ".jj", "jif.config.ts"));
+  expect(result.configPath).toBe(join(workspaceRoot, ".jj", "jif", "config.ts"));
 }, 20000);
 
 test("initProjectConfig throws when not inside a JJ workspace", async () => {
@@ -113,7 +113,9 @@ test("initProjectConfig leaves an existing project config in place", async () =>
   const baseDir = await createTempDir("init-project-existing");
   await runCommand(baseDir, ["jj", "git", "init", "repo"]);
   const workspaceRoot = join(baseDir, "repo");
-  const existingPath = join(workspaceRoot, ".jj", "jif.config.ts");
+  const projectDir = join(workspaceRoot, ".jj", "jif");
+  await mkdir(projectDir, { recursive: true });
+  const existingPath = join(projectDir, "config.ts");
   const existing = "export default {};\n";
   await writeFile(existingPath, existing, "utf8");
 

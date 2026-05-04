@@ -514,7 +514,7 @@ test("loadAppConfig throws when a layer file is missing", async () => {
   }
 });
 
-test("loadAppConfig auto-loads .jj/jif.config.ts from the workspace root resolved via jj", async () => {
+test("loadAppConfig auto-loads .jj/jif/config.ts from the workspace root resolved via jj", async () => {
   const tempDir = await mkdtemp(join(tmpdir(), "jif-project-"));
   const previousXdg = process.env.XDG_CONFIG_HOME;
 
@@ -524,8 +524,9 @@ test("loadAppConfig auto-loads .jj/jif.config.ts from the workspace root resolve
     process.env.XDG_CONFIG_HOME = xdgDir;
 
     const workspace = await initJjWorkspace(tempDir);
+    await mkdir(join(workspace, ".jj", "jif"), { recursive: true });
     await writeFile(
-      join(workspace, ".jj", "jif.config.ts"),
+      join(workspace, ".jj", "jif", "config.ts"),
       "export default { log: { scrollMargin: 11 } };\n",
       "utf8",
     );
@@ -546,7 +547,7 @@ test("loadAppConfig auto-loads .jj/jif.config.ts from the workspace root resolve
   }
 }, 20000);
 
-test("loadAppConfig auto-loads .jj/jif.config.js when .ts is absent", async () => {
+test("loadAppConfig auto-loads .jj/jif/config.js when .ts is absent", async () => {
   const tempDir = await mkdtemp(join(tmpdir(), "jif-project-js-"));
   const previousXdg = process.env.XDG_CONFIG_HOME;
 
@@ -556,8 +557,9 @@ test("loadAppConfig auto-loads .jj/jif.config.js when .ts is absent", async () =
     process.env.XDG_CONFIG_HOME = xdgDir;
 
     const workspace = await initJjWorkspace(tempDir);
+    await mkdir(join(workspace, ".jj", "jif"), { recursive: true });
     await writeFile(
-      join(workspace, ".jj", "jif.config.js"),
+      join(workspace, ".jj", "jif", "config.js"),
       "export default { log: { scrollMargin: 12 } };\n",
       "utf8",
     );
@@ -590,8 +592,9 @@ test("loadAppConfig project-local layer overrides user but is overridden by --co
     process.env.XDG_CONFIG_HOME = xdgDir;
 
     const workspace = await initJjWorkspace(tempDir);
+    await mkdir(join(workspace, ".jj", "jif"), { recursive: true });
     await writeFile(
-      join(workspace, ".jj", "jif.config.ts"),
+      join(workspace, ".jj", "jif", "config.ts"),
       "export default { log: { scrollMargin: 2, revisionIdAdditionalChars: 2 } };\n",
       "utf8",
     );
@@ -620,7 +623,7 @@ test("loadAppConfig project-local layer overrides user but is overridden by --co
   }
 }, 20000);
 
-test("loadAppConfig prefers .jj/jif.config.ts over .jj/jif.config.js when both exist", async () => {
+test("loadAppConfig prefers .jj/jif/config.ts over .jj/jif/config.js when both exist", async () => {
   const tempDir = await mkdtemp(join(tmpdir(), "jif-project-precedence-"));
   const previousXdg = process.env.XDG_CONFIG_HOME;
 
@@ -630,13 +633,14 @@ test("loadAppConfig prefers .jj/jif.config.ts over .jj/jif.config.js when both e
     process.env.XDG_CONFIG_HOME = xdgDir;
 
     const workspace = await initJjWorkspace(tempDir);
+    await mkdir(join(workspace, ".jj", "jif"), { recursive: true });
     await writeFile(
-      join(workspace, ".jj", "jif.config.ts"),
+      join(workspace, ".jj", "jif", "config.ts"),
       "export default { log: { scrollMargin: 21 } };\n",
       "utf8",
     );
     await writeFile(
-      join(workspace, ".jj", "jif.config.js"),
+      join(workspace, ".jj", "jif", "config.js"),
       "export default { log: { scrollMargin: 22 } };\n",
       "utf8",
     );
