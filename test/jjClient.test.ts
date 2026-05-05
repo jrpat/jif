@@ -376,6 +376,41 @@ test("JjClient marks a real empty revision without loading changed files", async
   expect(workingCopy?.filesLoaded).toBeTrue();
 }, 20000);
 
+test("JjClient distinguishes a hidden remote-kept commit from its locally-edited sibling", async () => {
+  const baseDir = await createTempDir("client-hidden-sibling");
+  const upstream = join(baseDir, "upstream");
+  const work = join(baseDir, "work");
+
+  await runCommand(baseDir, ["git", "init", "--bare", upstream]);
+  await runCommand(baseDir, ["jj", "git", "clone", upstream, work]);
+  await Bun.write(
+    join(work, ".jj/repo/config.toml"),
+    'revset-aliases."immutable_heads()" = "none()"\n',
+  );
+
+  await Bun.write(join(work, "a.txt"), "hello\n");
+  await runCommand(work, ["jj", "describe", "-m", "A"]);
+  await runCommand(work, ["jj", "bookmark", "create", "main", "-r", "@"]);
+  await runCommand(work, ["jj", "git", "push", "--allow-new", "-b", "main"]);
+
+  await Bun.write(join(work, "a.txt"), "hello modified\n");
+  await runCommand(work, ["jj", "describe", "-m", "A modified"]);
+
+  const client = new JjClient(work);
+  const repository = await client.loadRepository(20);
+
+  const interesting = repository.revisions.filter((r) =>
+    r.bookmarks.some((b) => b.startsWith("main")),
+  );
+  expect(interesting).toHaveLength(2);
+
+  const prefixes = interesting.map((r) => r.revisionId.split("/")[0]);
+  expect(prefixes[0]).toBe(prefixes[1]);
+
+  const withSuffix = interesting.filter((r) => /\/\d+$/.test(r.revisionId));
+  expect(withSuffix).toHaveLength(1);
+}, 20000);
+
 test("JjClient resolves the actual workspace root from nested paths", async () => {
   const repo = await materializeSampleRepo({
     baseDir: await createTempDir("client-workspace-root"),

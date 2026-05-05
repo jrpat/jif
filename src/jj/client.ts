@@ -409,8 +409,8 @@ function stripJifInternalFlagsFromArgsLine(line: string): string {
 
 function buildLogTemplate(baseGraphRowCount: number): string {
   const shortChangeId = "change_id.shortest(8)";
-  const shortRevisionId = `${shortChangeId} ++ if(divergent, surround("/", "", change_offset))`;
-  const parentRevisionIds = 'parents.map(|p| p.change_id().shortest(8) ++ if(p.divergent(), surround("/", "", p.change_offset()))).join(",")';
+  const shortRevisionId = `${shortChangeId} ++ if(divergent || self.hidden(), surround("/", "", change_offset))`;
+  const parentRevisionIds = 'parents.map(|p| p.change_id().shortest(8) ++ if(p.divergent() || p.hidden(), surround("/", "", p.change_offset()))).join(",")';
   const rows = [
     `${shortRevisionId} ++ "${FIELD_SEPARATOR}" ++ "${ROW_KIND_HEADER}" ++ "${FIELD_SEPARATOR}" ++ ${shortRevisionId} ++ "${FIELD_SEPARATOR}" ++ commit_id ++ "${FIELD_SEPARATOR}" ++ description.first_line() ++ "${FIELD_SEPARATOR}" ++ bookmarks ++ "${FIELD_SEPARATOR}" ++ working_copies.map(|wc| wc.name()).join(",") ++ "${FIELD_SEPARATOR}" ++ ${shortChangeId}.prefix() ++ "${FIELD_SEPARATOR}" ++ empty ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ conflict ++ "${FIELD_SEPARATOR}" ++ ${parentRevisionIds} ++ "\\n"`,
   ];
