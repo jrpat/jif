@@ -260,7 +260,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   },
   {
     id: "force-last-command",
-    title: "Force",
+    title: "Retry + Force",
     description: "Retry the latest failed command with a force flag when supported",
     canonicalKeys: ["!"],
     run: (controller) => controller.forceLastCommand(),
