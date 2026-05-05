@@ -156,13 +156,16 @@ export class JifGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     });
   }
 
-  private attachProcess(process: nodePty.IPty): void {
-    this.pty = process;
+  private attachProcess(pty: nodePty.IPty): void {
+    this.pty = pty;
     void this.view?.webview.postMessage({ type: "clear" });
 
     let chunkCount = 0;
     const ipc = new JifPtyIpc((payload) => this.handleIpcMessage(payload));
-    process.onData((data) => {
+    pty.onData((data) => {
+      if (this.pty !== pty) {
+        return;
+      }
       if (!this.hasReceivedPtyData) {
         this.hasReceivedPtyData = true;
         this.outputChannel.appendLine(`[graph] Received initial PTY output (${data.length} bytes).`);
@@ -180,8 +183,11 @@ export class JifGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         void this.view?.webview.postMessage({ type: "data", data: forwarded });
       }
     });
-    process.onExit(({ exitCode }) => {
+    pty.onExit(({ exitCode }) => {
       this.outputChannel.appendLine(`[graph] PTY process exited with code ${exitCode}.`);
+      if (this.pty !== pty) {
+        return;
+      }
       void this.view?.webview.postMessage({ type: "exit", code: exitCode });
       if (!this.hasReceivedPtyData) {
         void this.view?.webview.postMessage({ type: "status", message: `jif exited before rendering anything (${exitCode}).` });
