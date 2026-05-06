@@ -46,7 +46,9 @@ export class JifScmProvider implements vscode.Disposable {
 
   async refresh(): Promise<void> {
     const workingCopy = await this.repository.getStatus({ snapshot: true });
-    this.renderWorkingCopy(workingCopy);
+    const parent = await this.repository.tryShow("@-");
+    const baseRevset = parent?.revision.commitId ?? "@-";
+    this.renderWorkingCopy(workingCopy, baseRevset);
   }
 
   async openAllChanges(group: vscode.SourceControlResourceGroup): Promise<void> {
@@ -62,9 +64,9 @@ export class JifScmProvider implements vscode.Disposable {
     this.sourceControl.dispose();
   }
 
-  private renderWorkingCopy(status: RepositoryStatus): void {
+  private renderWorkingCopy(status: RepositoryStatus, baseRevset: string): void {
     const rendered = this.buildResourceStates(status.fileStatuses, {
-      baseRevset: "@-",
+      baseRevset,
       targetRevset: null,
       groupTitleSuffix: "(Working Copy)",
     });
