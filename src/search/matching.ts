@@ -13,19 +13,48 @@ export type TextMatchRange = Readonly<{
 }>;
 
 const ANSI_ESCAPE_PATTERN = /\x1b\[[0-?]*[ -/]*[@-~]/g;
+const SEARCH_SCOPE_BY_FOCUS_MODE: Partial<Record<AppState["focusMode"], SearchScopeId>> = {
+  revisions: "revision-log",
+  files: "revision-log",
+  "op-log": "operation-log",
+};
+const SEARCH_VISIBLE_THROUGH_FOCUS_MODES = new Set<AppState["focusMode"]>([
+  "command",
+  "inline-confirmation",
+  "revset",
+  "search",
+]);
 
 export function getSearchScopeForState(
-  state: Pick<AppState, "focusMode" | "focusModeStack">,
-): SearchScopeId {
-  return state.focusMode === "op-log" || state.focusModeStack.includes("op-log")
-    ? "operation-log"
-    : "revision-log";
+  state: Pick<AppState, "focusMode">,
+): SearchScopeId | null {
+  return SEARCH_SCOPE_BY_FOCUS_MODE[state.focusMode] ?? null;
 }
 
 export function getActiveSearchScope(
-  state: Pick<AppState, "focusMode" | "focusModeStack" | "searchScope">,
-): SearchScopeId {
+  state: Pick<AppState, "focusMode" | "searchScope">,
+): SearchScopeId | null {
   return state.searchScope ?? getSearchScopeForState(state);
+}
+
+export function canSearchState(state: Pick<AppState, "focusMode">): boolean {
+  return getSearchScopeForState(state) !== null;
+}
+
+export function hasVisibleSearchScope(
+  state: Pick<AppState, "focusMode" | "focusModeStack" | "searchScope">,
+): boolean {
+  if (state.searchScope === null) {
+    return false;
+  }
+
+  return getVisibleSearchScopeForState(state) === state.searchScope;
+}
+
+export function hasVisibleSearchHighlights(
+  state: Pick<AppState, "focusMode" | "focusModeStack" | "searchQuery" | "searchScope">,
+): boolean {
+  return state.searchQuery !== "" && hasVisibleSearchScope(state);
 }
 
 export function getSearchableItems(state: AppState): readonly SearchableItem[] {
@@ -39,7 +68,36 @@ export function getSearchableItems(state: AppState): readonly SearchableItem[] {
       return state.revisions.map((revision, index) =>
         createRevisionSearchableItem(revision, index)
       );
+    case null:
+      return [];
   }
+}
+
+function getVisibleSearchScopeForState(
+  state: Pick<AppState, "focusMode" | "focusModeStack" | "searchScope">,
+): SearchScopeId | null {
+  const directScope = getSearchScopeForState(state);
+  if (directScope !== null) {
+    return directScope;
+  }
+
+  if (!SEARCH_VISIBLE_THROUGH_FOCUS_MODES.has(state.focusMode)) {
+    return null;
+  }
+
+  return state.searchScope ?? getSearchScopeFromStack(state.focusModeStack);
+}
+
+function getSearchScopeFromStack(focusModeStack: readonly AppState["focusMode"][]): SearchScopeId | null {
+  if (focusModeStack.includes("op-log")) {
+    return "operation-log";
+  }
+
+  if (focusModeStack.includes("revisions") || focusModeStack.includes("files")) {
+    return "revision-log";
+  }
+
+  return null;
 }
 
 export function getSearchMatchItems(

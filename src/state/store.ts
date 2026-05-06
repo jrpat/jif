@@ -650,17 +650,26 @@ export function clearLastFailedCommand(state: AppState): AppState {
 }
 
 export function openSearch(state: AppState): AppState {
+  const searchScope = getSearchScopeForState(state);
+  if (searchScope === null) {
+    return state;
+  }
+
   const nextState = {
     ...state,
     inlineConfirmation: null,
     searchQuery: "",
-    searchScope: getSearchScopeForState(state),
+    searchScope,
   };
   return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "search"]);
 }
 
 export function setSearchText(state: AppState, query: string): AppState {
   const searchScope = state.searchScope ?? getSearchScopeForState(state);
+  if (searchScope === null) {
+    return state;
+  }
+
   if (query === "") {
     return { ...state, searchQuery: "", searchScope };
   }
@@ -703,6 +712,7 @@ export function nextSearchMatch(state: AppState): AppState {
   const matches = getSearchMatchIndices(state);
   if (matches.length === 0) return state;
   const searchScope = getActiveSearchScope(state);
+  if (searchScope === null) return state;
   const focusedIndex = getFocusedSearchIndex(state, searchScope);
 
   const next =
@@ -714,6 +724,7 @@ export function prevSearchMatch(state: AppState): AppState {
   const matches = getSearchMatchIndices(state);
   if (matches.length === 0) return state;
   const searchScope = getActiveSearchScope(state);
+  if (searchScope === null) return state;
   const focusedIndex = getFocusedSearchIndex(state, searchScope);
 
   let prev: number | undefined;

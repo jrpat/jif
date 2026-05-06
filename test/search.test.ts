@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
-import { createInitialState, getSearchMatchIndices, nextSearchMatch, openOperationLog, openSearch, prevSearchMatch, setOperationLogEntries, setSearchText } from "../src/state/store.ts";
+import { createInitialState, finalizeSearch, getSearchMatchIndices, nextSearchMatch, openDiffViewer, openOperationLog, openSearch, prevSearchMatch, setOperationLogEntries, setSearchText } from "../src/state/store.ts";
 import type { AppState, RevisionSummary } from "../src/domain/types.ts";
+import { hasVisibleSearchHighlights } from "../src/search/matching.ts";
 
 function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSummary {
   const revisionId = overrides.revisionId ?? "aaaaaaaa";
@@ -76,4 +77,32 @@ test("operation-log search ignores ansi escape sequences", () => {
 
   expect(getSearchMatchIndices(state)).toEqual([0]);
   expect(state.focusedOperationLogIndex).toBe(0);
+});
+
+test("search does not open in unsupported views", () => {
+  let state = createInitialState("/tmp/repo");
+  state = openDiffViewer(state, "diff");
+
+  state = openSearch(state);
+
+  expect(state.focusMode).toBe("diff-viewer");
+  expect(state.searchScope).toBeNull();
+  expect(state.searchQuery).toBe("");
+});
+
+test("active search highlights only show while their scope is visible", () => {
+  let state: AppState = {
+    ...createInitialState("/tmp/repo"),
+    revisions: [
+      createRevision({ rowId: "one", revisionId: "aaaaaaaa", description: "first revision" }),
+    ],
+  };
+  state = openSearch(state);
+  state = setSearchText(state, "first");
+  state = finalizeSearch(state);
+
+  expect(hasVisibleSearchHighlights(state)).toBeTrue();
+
+  state = openDiffViewer(state, "diff");
+  expect(hasVisibleSearchHighlights(state)).toBeFalse();
 });

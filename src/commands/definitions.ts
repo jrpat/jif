@@ -1,5 +1,6 @@
 import { getExpandedRevision, getFocusedChildRevision, getFocusedOperationLogEntry, getFocusedParentRevision } from "../state/store.ts";
 import type { AppState } from "../domain/types.ts";
+import { canSearchState } from "../search/matching.ts";
 
 export type JjCommandOptions = Readonly<{
   cwd?: string;
@@ -513,6 +514,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Search",
     description: "Incremental search through the revision log",
     canonicalKeys: ["/"],
+    canExecute: canSearchState,
     run: (controller) => controller.openSearch(),
     group: "global",
   },

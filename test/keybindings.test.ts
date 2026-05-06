@@ -674,6 +674,7 @@ test("dispatchGlobalKey routes n to search-next when searchQuery is set", () => 
   const state: AppState = {
     ...createState(),
     searchQuery: "something",
+    searchScope: "revision-log",
   };
 
   const handled = dispatchGlobalKey({

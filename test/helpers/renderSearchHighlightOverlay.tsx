@@ -112,6 +112,65 @@ async function renderRevisionSearch(query: string) {
   }
 }
 
+async function renderInactiveRevisionWithEmoji() {
+  const store = createAppStore("/tmp/repo", { layout: "expanded" });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions: [
+      createRevision({
+        rowId: "curr",
+        revisionId: "current",
+        description: "🔒 StopStream cross-hatch",
+      }),
+    ],
+  });
+
+  let viewport: ScrollBoxRenderable | undefined;
+  const rendered = await testRender(() => (
+    <box width={64} height={6} position="relative">
+      <scrollbox
+        ref={(el: ScrollBoxRenderable) => {
+          viewport = el;
+        }}
+        width="100%"
+        height="100%"
+        scrollY
+      >
+        <For each={store.state.revisions}>
+          {(revision, index) => (
+            <RevisionItem
+              state={store.state}
+              revision={revision}
+              revisionChangeIdDisplayLength={4}
+              index={index()}
+              previousRowId={null}
+              nextRowId={null}
+              config={config}
+              focusedRowId={store.state.revisions[store.state.focusedRevisionIndex]?.rowId ?? null}
+              selectedRowIds={new Set()}
+              expandedRowId={null}
+              commandTargetRowId={null}
+            />
+          )}
+        </For>
+      </scrollbox>
+      <SearchHighlightLayer
+        state={store.state}
+        config={config}
+        getViewport={() => viewport}
+      />
+    </box>
+  ), { width: 64, height: 6 });
+
+  try {
+    await rendered.renderOnce();
+    return rendered.captureCharFrame();
+  } finally {
+    rendered.renderer.destroy();
+    store.dispose();
+  }
+}
+
 async function renderOperationLogSearch(query: string) {
   const store = createAppStore("/tmp/repo", { layout: "expanded" });
   const entries: readonly OperationLogEntry[] = [
@@ -173,6 +232,7 @@ const description = await renderRevisionSearch("anch");
 const bookmark = await renderRevisionSearch("ai");
 const visibleRevisionId = await renderRevisionSearch("rr");
 const updatedQuery = await renderRevisionSearch("vision");
+const inactiveEmoji = await renderInactiveRevisionWithEmoji();
 const operationLog = await renderOperationLogSearch("args");
 
 console.log(JSON.stringify({
@@ -180,5 +240,6 @@ console.log(JSON.stringify({
   bookmark,
   visibleRevisionId,
   updatedQuery,
+  inactiveEmoji,
   operationLog,
 }));

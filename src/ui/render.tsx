@@ -72,6 +72,7 @@ import { getActiveMode, getCommandsForMode, getDirectCommandsForMode } from "../
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { suspendProcessToShell } from "./suspend.ts";
+import { hasVisibleSearchHighlights, hasVisibleSearchScope } from "../search/matching.ts";
 import { SearchHighlightLayer } from "./searchOverlay.tsx";
 import { getStatusToastMaxBodyHeight } from "./statusMessages.ts";
 import {
@@ -276,6 +277,7 @@ export function JifView(props: {
   const showsRevsetPrompt = createMemo(() => store.state.focusMode === "revset");
   const showsSearchPrompt = createMemo(() =>
     !showsCommandPrompt() && !showsRevsetPrompt() &&
+    hasVisibleSearchScope(store.state) &&
     (store.state.focusMode === "search" || store.state.searchQuery !== "")
   );
   const showsPersistentShortcutPanel = createMemo(() =>
@@ -687,7 +689,7 @@ export function JifView(props: {
           onInteract={(id) => store.actions.touchStatusMessage(id)}
           onDismiss={(id) => store.actions.dismissStatusMessage(id)}
         />
-        <Show when={store.state.focusMode !== "diff-viewer"}>
+        <Show when={hasVisibleSearchHighlights(store.state)}>
           <SearchHighlightLayer
             state={store.state}
             config={config}

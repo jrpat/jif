@@ -103,6 +103,17 @@ test("resolveCommand returns null for unbound keys", () => {
   expect(resolveForState("z", state)).toBeNull();
 });
 
+test("search command only executes in searchable views", () => {
+  const searchCommand = commandDefinitions.find((command) => command.id === "search");
+  expect(searchCommand?.canExecute?.(createState())).toBeTrue();
+  expect(searchCommand?.canExecute?.({ ...createState(), focusMode: "op-log" })).toBeTrue();
+  expect(searchCommand?.canExecute?.({
+    ...createState(),
+    focusMode: "diff-viewer",
+    diffViewer: { content: "diff" },
+  })).toBeFalse();
+});
+
 test("resolveCommand returns null in command mode for browse keys", () => {
   const state: AppState = {
     ...createState(),

@@ -49,6 +49,7 @@ export function SearchHighlightLayer(props: Readonly<{
       top={0}
       width="100%"
       height="100%"
+      shouldFill={false}
       zIndex={5}
       renderAfter={function (this: Renderable, buffer: OptimizedBuffer) {
         drawSearchHighlights({
@@ -80,6 +81,10 @@ export function drawSearchHighlights(args: Readonly<{
   }
 
   const scope = getActiveSearchScope(args.state);
+  if (scope === null) {
+    return;
+  }
+
   const groups = collectSearchLineGroups({
     scope,
     root: viewport.content,

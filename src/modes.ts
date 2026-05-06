@@ -158,16 +158,16 @@ export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "revset") return "revset";
   if (state.focusMode === "search") return "search";
   if (state.focusMode === "inline-confirmation") return "inline-confirmation";
-  if (state.focusMode === "diff-viewer") return "diff-viewer";
   if (state.searchQuery !== "" && state.searchScope === "operation-log" && state.focusMode === "op-log") {
     return "op-log-search-results";
   }
+  if (state.focusMode === "diff-viewer") return "diff-viewer";
   if (state.focusMode === "op-log") return "op-log";
   if (state.focusMode === "notifications") return "notifications";
   if (state.focusMode === "files") return "files";
   if (state.commandDraft?.config.kind === "rebase") return "rebase";
   if (state.commandDraft?.config.kind === "squash") return "squash";
-  if (state.searchQuery !== "") return "search-results";
+  if (state.searchQuery !== "" && state.searchScope === "revision-log") return "search-results";
   return "normal";
 }
 

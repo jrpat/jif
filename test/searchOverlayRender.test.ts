@@ -22,6 +22,7 @@ test("search overlay highlights only matching visible substrings", async () => {
     bookmark: { frame: string; highlightTexts: string[] };
     visibleRevisionId: { frame: string; highlightTexts: string[] };
     updatedQuery: { frame: string; highlightTexts: string[] };
+    inactiveEmoji: string;
     operationLog: { frame: string; highlightTexts: string[] };
   };
 
@@ -38,6 +39,8 @@ test("search overlay highlights only matching visible substrings", async () => {
 
   expect(result.updatedQuery.highlightTexts).toContain("vision");
   expect(result.updatedQuery.highlightTexts).not.toContain("anch");
+
+  expect(result.inactiveEmoji).toContain("🔒 StopStream cross-hatch");
 
   expect(result.operationLog.frame).toContain("args:");
   expect(result.operationLog.highlightTexts).toContain("args");
