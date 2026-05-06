@@ -259,6 +259,7 @@ namespace Jif {
     revsetQuery: string;
     searchQuery: string;
     searchScope: SearchScopeId | null;
+    searchStartIndex: number | null;
     rev: RevisionSummary | null;
   }>;
 

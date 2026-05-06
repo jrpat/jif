@@ -122,7 +122,7 @@ Active while previewing a rebase. Inherits Normal.
 
 ### Search Results
 
-Active after running a search in a searchable view. Search updates incrementally as you type and highlights visible matching text with inverse video. The revision log and operation log are searchable; `n` and `p` move between matching revisions or operation log entries until the search is cleared.
+Active after running a search in a searchable view. Search updates incrementally as you type and highlights visible matching text with inverse video. The revision log and operation log are searchable; `n` and `p` move between matching revisions or operation log entries until the search is cleared. Pressing Enter keeps the focused match; pressing Escape cancels the search and restores the focus from before search started.
 
 | Key | Command | Description |
 |-----|---------|-------------|

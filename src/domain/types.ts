@@ -142,6 +142,7 @@ export type AppState = Readonly<{
   revsetQuery: string;
   searchQuery: string;
   searchScope: SearchScopeId | null;
+  searchStartIndex: number | null;
   diffViewer: DiffViewerState | null;
 }>;
 

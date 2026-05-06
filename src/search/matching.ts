@@ -12,12 +12,40 @@ export type TextMatchRange = Readonly<{
   end: number;
 }>;
 
+type FocusMode = AppState["focusMode"];
+type SearchScopeDefinition = Readonly<{
+  scope: SearchScopeId;
+  focusModes: readonly FocusMode[];
+  getFocusedIndex: (state: AppState) => number;
+  setFocusedIndex: (state: AppState, index: number) => AppState;
+  getItemCount: (state: AppState) => number;
+  getSearchableItems: (state: AppState) => readonly SearchableItem[];
+}>;
+
 const ANSI_ESCAPE_PATTERN = /\x1b\[[0-?]*[ -/]*[@-~]/g;
-const SEARCH_SCOPE_BY_FOCUS_MODE: Partial<Record<AppState["focusMode"], SearchScopeId>> = {
-  revisions: "revision-log",
-  files: "revision-log",
-  "op-log": "operation-log",
+const SEARCH_SCOPE_DEFINITIONS: Readonly<Record<SearchScopeId, SearchScopeDefinition>> = {
+  "revision-log": {
+    scope: "revision-log",
+    focusModes: ["revisions", "files"],
+    getFocusedIndex: (state) => state.focusedRevisionIndex,
+    setFocusedIndex: (state, index) => ({ ...state, focusedRevisionIndex: index }),
+    getItemCount: (state) => state.revisions.length,
+    getSearchableItems: (state) => state.revisions.map((revision, index) =>
+      createRevisionSearchableItem(revision, index)
+    ),
+  },
+  "operation-log": {
+    scope: "operation-log",
+    focusModes: ["op-log"],
+    getFocusedIndex: (state) => state.focusedOperationLogIndex,
+    setFocusedIndex: (state, index) => ({ ...state, focusedOperationLogIndex: index }),
+    getItemCount: (state) => state.operationLogEntries.length,
+    getSearchableItems: (state) => state.operationLogEntries.map((entry, index) =>
+      createOperationLogSearchableItem(entry, index)
+    ),
+  },
 };
+const SEARCH_SCOPE_LIST = Object.values(SEARCH_SCOPE_DEFINITIONS);
 const SEARCH_VISIBLE_THROUGH_FOCUS_MODES = new Set<AppState["focusMode"]>([
   "command",
   "inline-confirmation",
@@ -28,7 +56,7 @@ const SEARCH_VISIBLE_THROUGH_FOCUS_MODES = new Set<AppState["focusMode"]>([
 export function getSearchScopeForState(
   state: Pick<AppState, "focusMode">,
 ): SearchScopeId | null {
-  return SEARCH_SCOPE_BY_FOCUS_MODE[state.focusMode] ?? null;
+  return getSearchScopeForFocusMode(state.focusMode);
 }
 
 export function getActiveSearchScope(
@@ -59,18 +87,32 @@ export function hasVisibleSearchHighlights(
 
 export function getSearchableItems(state: AppState): readonly SearchableItem[] {
   const scope = getActiveSearchScope(state);
-  switch (scope) {
-    case "operation-log":
-      return state.operationLogEntries.map((entry, index) =>
-        createOperationLogSearchableItem(entry, index)
-      );
-    case "revision-log":
-      return state.revisions.map((revision, index) =>
-        createRevisionSearchableItem(revision, index)
-      );
-    case null:
-      return [];
+  return scope === null ? [] : SEARCH_SCOPE_DEFINITIONS[scope].getSearchableItems(state);
+}
+
+export function getFocusedSearchIndex(state: AppState, scope: SearchScopeId): number {
+  return SEARCH_SCOPE_DEFINITIONS[scope].getFocusedIndex(state);
+}
+
+export function setFocusedSearchIndex(
+  state: AppState,
+  scope: SearchScopeId,
+  index: number,
+): AppState {
+  return SEARCH_SCOPE_DEFINITIONS[scope].setFocusedIndex(state, index);
+}
+
+export function clampSearchIndex(
+  state: AppState,
+  scope: SearchScopeId,
+  index: number,
+): number {
+  const size = SEARCH_SCOPE_DEFINITIONS[scope].getItemCount(state);
+  if (size <= 0) {
+    return 0;
   }
+
+  return Math.min(Math.max(index, 0), size - 1);
 }
 
 function getVisibleSearchScopeForState(
@@ -88,16 +130,21 @@ function getVisibleSearchScopeForState(
   return state.searchScope ?? getSearchScopeFromStack(state.focusModeStack);
 }
 
-function getSearchScopeFromStack(focusModeStack: readonly AppState["focusMode"][]): SearchScopeId | null {
-  if (focusModeStack.includes("op-log")) {
-    return "operation-log";
-  }
-
-  if (focusModeStack.includes("revisions") || focusModeStack.includes("files")) {
-    return "revision-log";
+function getSearchScopeFromStack(focusModeStack: readonly FocusMode[]): SearchScopeId | null {
+  for (let index = focusModeStack.length - 1; index >= 0; index--) {
+    const scope = getSearchScopeForFocusMode(focusModeStack[index]!);
+    if (scope !== null) {
+      return scope;
+    }
   }
 
   return null;
+}
+
+function getSearchScopeForFocusMode(focusMode: FocusMode): SearchScopeId | null {
+  return SEARCH_SCOPE_LIST.find((definition) =>
+    definition.focusModes.includes(focusMode)
+  )?.scope ?? null;
 }
 
 export function getSearchMatchItems(

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createInitialState, finalizeSearch, getSearchMatchIndices, nextSearchMatch, openDiffViewer, openOperationLog, openSearch, prevSearchMatch, setOperationLogEntries, setSearchText } from "../src/state/store.ts";
+import { closeSearch, createInitialState, finalizeSearch, getSearchMatchIndices, nextSearchMatch, openDiffViewer, openOperationLog, openSearch, prevSearchMatch, setOperationLogEntries, setSearchText } from "../src/state/store.ts";
 import type { AppState, RevisionSummary } from "../src/domain/types.ts";
 import { hasVisibleSearchHighlights } from "../src/search/matching.ts";
 
@@ -42,6 +42,47 @@ test("revision search keeps incremental focus movement in revision scope", () =>
   expect(getSearchMatchIndices(state)).toEqual([1]);
 });
 
+test("canceling revision search restores the starting focus", () => {
+  let state: AppState = {
+    ...createInitialState("/tmp/repo"),
+    focusedRevisionIndex: 1,
+    revisions: [
+      createRevision({ rowId: "one", revisionId: "aaaaaaaa", description: "first revision" }),
+      createRevision({ rowId: "two", revisionId: "bbbbbbbb", description: "second revision" }),
+    ],
+  };
+
+  state = openSearch(state);
+  state = setSearchText(state, "first");
+  expect(state.focusedRevisionIndex).toBe(0);
+
+  state = closeSearch(state);
+  expect(state.focusMode).toBe("revisions");
+  expect(state.searchQuery).toBe("");
+  expect(state.searchScope).toBeNull();
+  expect(state.focusedRevisionIndex).toBe(1);
+});
+
+test("confirming revision search keeps the matched focus", () => {
+  let state: AppState = {
+    ...createInitialState("/tmp/repo"),
+    focusedRevisionIndex: 1,
+    revisions: [
+      createRevision({ rowId: "one", revisionId: "aaaaaaaa", description: "first revision" }),
+      createRevision({ rowId: "two", revisionId: "bbbbbbbb", description: "second revision" }),
+    ],
+  };
+
+  state = openSearch(state);
+  state = setSearchText(state, "first");
+  state = finalizeSearch(state);
+
+  expect(state.focusMode).toBe("revisions");
+  expect(state.searchQuery).toBe("first");
+  expect(state.searchScope).toBe("revision-log");
+  expect(state.focusedRevisionIndex).toBe(0);
+});
+
 test("operation-log search scopes matches and navigation to op-log entries", () => {
   let state = createInitialState("/tmp/repo");
   state = setOperationLogEntries(state, [
@@ -63,6 +104,28 @@ test("operation-log search scopes matches and navigation to op-log entries", () 
   expect(state.focusedOperationLogIndex).toBe(0);
 
   state = prevSearchMatch(state);
+  expect(state.focusedOperationLogIndex).toBe(1);
+});
+
+test("canceling operation-log search restores the starting focus", () => {
+  let state = createInitialState("/tmp/repo");
+  state = setOperationLogEntries(state, [
+    { id: "one", lines: ["65d964491fc0 first operation"] },
+    { id: "two", lines: ["96df2f0afa0c second operation"] },
+  ]);
+  state = {
+    ...openOperationLog(state),
+    focusedOperationLogIndex: 1,
+  };
+
+  state = openSearch(state);
+  state = setSearchText(state, "first");
+  expect(state.focusedOperationLogIndex).toBe(0);
+
+  state = closeSearch(state);
+  expect(state.focusMode).toBe("op-log");
+  expect(state.searchQuery).toBe("");
+  expect(state.searchScope).toBeNull();
   expect(state.focusedOperationLogIndex).toBe(1);
 });
 

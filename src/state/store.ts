@@ -19,9 +19,12 @@ import type {
 } from "../domain/types.ts";
 import { getRevisionArg } from "../domain/revisionIds.ts";
 import {
+  clampSearchIndex,
   getActiveSearchScope,
+  getFocusedSearchIndex,
   getSearchMatchItems,
   getSearchScopeForState,
+  setFocusedSearchIndex,
   textMatchesQuery,
 } from "../search/matching.ts";
 
@@ -139,6 +142,7 @@ export function createInitialState(
     revsetQuery: "",
     searchQuery: "",
     searchScope: null,
+    searchStartIndex: null,
     diffViewer: null,
   };
 }
@@ -660,6 +664,7 @@ export function openSearch(state: AppState): AppState {
     inlineConfirmation: null,
     searchQuery: "",
     searchScope,
+    searchStartIndex: getFocusedSearchIndex(state, searchScope),
   };
   return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "search"]);
 }
@@ -687,24 +692,28 @@ export function setSearchText(state: AppState, query: string): AppState {
     return nextState;
   }
 
-  return searchScope === "operation-log"
-    ? { ...nextState, focusedOperationLogIndex: firstMatchIndex }
-    : { ...nextState, focusedRevisionIndex: firstMatchIndex };
+  return setFocusedSearchIndex(nextState, searchScope, firstMatchIndex);
 }
 
 export function finalizeSearch(state: AppState): AppState {
-  return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
+  return replaceFocusModeStack({ ...state, searchStartIndex: null }, getBrowseFocusModeStack(state));
 }
 
 export function closeSearch(state: AppState): AppState {
   if (state.focusMode === "search") {
-    return replaceFocusModeStack({ ...state, searchQuery: "", searchScope: null }, getBrowseFocusModeStack(state));
+    return replaceFocusModeStack({
+      ...restoreSearchStartFocus(state),
+      searchQuery: "",
+      searchScope: null,
+      searchStartIndex: null,
+    }, getBrowseFocusModeStack(state));
   }
 
   return {
     ...state,
     searchQuery: "",
     searchScope: null,
+    searchStartIndex: null,
   };
 }
 
@@ -757,20 +766,16 @@ export function getSearchMatchIndices(state: AppState): number[] {
   return getSearchMatchItems(state).map((item) => item.index);
 }
 
-function getFocusedSearchIndex(state: AppState, searchScope: SearchScopeId): number {
-  return searchScope === "operation-log"
-    ? state.focusedOperationLogIndex
-    : state.focusedRevisionIndex;
-}
+function restoreSearchStartFocus(state: AppState): AppState {
+  if (state.searchScope === null || state.searchStartIndex === null) {
+    return state;
+  }
 
-function setFocusedSearchIndex(
-  state: AppState,
-  searchScope: SearchScopeId,
-  index: number,
-): AppState {
-  return searchScope === "operation-log"
-    ? { ...state, focusedOperationLogIndex: index }
-    : { ...state, focusedRevisionIndex: index };
+  return setFocusedSearchIndex(
+    state,
+    state.searchScope,
+    clampSearchIndex(state, state.searchScope, state.searchStartIndex),
+  );
 }
 
 export function cancelOrBlurState(state: AppState): AppState {
