@@ -155,7 +155,6 @@ async function renderRevisionItemWithConfirmation() {
         selectedRowIds={new Set()}
         expandedRowId={store.state.revisions[0]?.rowId ?? null}
         commandTargetRowId={null}
-        searchQuery=""
       />
     </box>
   ), { width: 52, height: 10 });

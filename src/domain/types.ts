@@ -25,6 +25,7 @@ export type FocusMode =
   | "notifications";
 export type AppLayout = "expanded" | "condensed" | "super-condensed";
 export type CommandBarKind = "jj" | "shell";
+export type SearchScopeId = "revision-log" | "operation-log";
 
 export type ChangedFile = Readonly<{
   path: string;
@@ -140,6 +141,7 @@ export type AppState = Readonly<{
   layout: AppLayout;
   revsetQuery: string;
   searchQuery: string;
+  searchScope: SearchScopeId | null;
   diffViewer: DiffViewerState | null;
 }>;
 

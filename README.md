@@ -122,7 +122,7 @@ Active while previewing a rebase. Inherits Normal.
 
 ### Search Results
 
-Active after running a search. Inherits Normal.
+Active after running a search in a searchable view. Search updates incrementally as you type and highlights visible matching text with inverse video. The revision log and operation log are searchable; `n` and `p` move between matching revisions or operation log entries until the search is cleared.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -141,6 +141,7 @@ Active while the operation log panel is open. Does not inherit Normal.
 | `r` | restore-operation | Restore the focused operation |
 | `R` | revert-operation | Revert the focused operation |
 | `d` | show-operation-diff | Show repository changes for the focused operation |
+| `/` | search | Incremental search through the operation log |
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 
 ### Notifications

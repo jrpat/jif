@@ -19,7 +19,6 @@ import {
   getMarkedRowIds,
   getDisplayedNotifications,
   getOperationAffectedRowIds,
-  revisionMatchesSearch,
   type CommandSegment,
 } from "../state/store.ts";
 import { logShortcutDebug } from "../debug.ts";
@@ -73,6 +72,7 @@ import { getActiveMode, getCommandsForMode, getDirectCommandsForMode } from "../
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { suspendProcessToShell } from "./suspend.ts";
+import { SearchHighlightLayer } from "./searchOverlay.tsx";
 import { getStatusToastMaxBodyHeight } from "./statusMessages.ts";
 import {
   bindViewRendererEvents,
@@ -555,7 +555,6 @@ export function JifView(props: {
                               selectedRowIds={getMarkedRowIds(store.state)}
                               expandedRowId={getExpandedRevision(store.state)?.rowId ?? null}
                               commandTargetRowId={getCommandTargetRowId(store.state)}
-                              searchQuery={store.state.searchQuery}
                             />
                           )}
                         </For>
@@ -688,6 +687,13 @@ export function JifView(props: {
           onInteract={(id) => store.actions.touchStatusMessage(id)}
           onDismiss={(id) => store.actions.dismissStatusMessage(id)}
         />
+        <Show when={store.state.focusMode !== "diff-viewer"}>
+          <SearchHighlightLayer
+            state={store.state}
+            config={config}
+            getViewport={() => logViewport}
+          />
+        </Show>
       </box>
     </Show>
   );
@@ -706,7 +712,6 @@ export function RevisionItem(props: {
   selectedRowIds: ReadonlySet<string>;
   expandedRowId: string | null;
   commandTargetRowId: string | null;
-  searchQuery: string;
 }) {
   const renderer = useRenderer();
   const colors = () => props.config.colorScheme.semanticColors;
@@ -730,7 +735,6 @@ export function RevisionItem(props: {
       )
   );
   const commandChipText = createMemo(() => getCommandChipTextForRevision(props.state, props.revision.rowId));
-  const isSearchMatch = () => revisionMatchesSearch(props.revision, props.searchQuery);
   const changedFileRows = createMemo(() => isExpanded() ? buildChangedFileDisplayRows(props.revision) : []);
   const rowState = createMemo(() =>
     getRevisionRowState(props.revision.rowId, props.focusedRowId, props.selectedRowIds) ?? "default",
@@ -1016,7 +1020,6 @@ export function RevisionItem(props: {
                             fg={descriptionColor()}
                             wrapMode="none"
                             truncate={true}
-                            attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
                           >
                             {props.revision.description}
                           </text>
@@ -1051,7 +1054,6 @@ export function RevisionItem(props: {
                           fg={descriptionColor()}
                           wrapMode="none"
                           truncate={true}
-                          attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
                         >
                           {props.revision.description}
                         </text>
@@ -1153,7 +1155,6 @@ export function RevisionItem(props: {
                   fg={descriptionColor()}
                   wrapMode="none"
                   truncate={true}
-                  attributes={isSearchMatch() ? TextAttributes.INVERSE : undefined}
                 >
                   {props.revision.description}
                 </text>

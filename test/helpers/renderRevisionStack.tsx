@@ -66,7 +66,6 @@ async function renderRevisionStack(
             selectedRowIds={new Set()}
             expandedRowId={expandedRowId}
             commandTargetRowId={null}
-            searchQuery=""
           />
         )}
       </For>
@@ -102,7 +101,6 @@ async function renderLayoutCycleAfterMount() {
         selectedRowIds={new Set()}
         expandedRowId={null}
         commandTargetRowId={null}
-        searchQuery=""
       />
     </box>
   ), { width: 32, height: 6 });
@@ -142,7 +140,6 @@ async function renderLongSuperCondensedDescription() {
         selectedRowIds={new Set()}
         expandedRowId={null}
         commandTargetRowId={null}
-        searchQuery=""
       />
     </box>
   ), { width: 24, height: 4 });
@@ -181,7 +178,6 @@ async function renderLongSuperCondensedDescriptionAfterResize() {
         selectedRowIds={new Set()}
         expandedRowId={null}
         commandTargetRowId={null}
-        searchQuery=""
       />
     </box>
   ), { width: 24, height: 4 });
@@ -228,7 +224,6 @@ async function renderDivergentFocusedRevision() {
             selectedRowIds={new Set()}
             expandedRowId={null}
             commandTargetRowId={null}
-            searchQuery=""
           />
         )}
       </For>
@@ -267,7 +262,6 @@ async function renderExpandedRevisionWithChips() {
         selectedRowIds={new Set()}
         expandedRowId={null}
         commandTargetRowId={null}
-        searchQuery=""
       />
     </box>
   ), { width: 64, height: 6 });
@@ -314,7 +308,6 @@ async function renderBookmarkChipAfterRefresh(layout: AppLayout) {
             selectedRowIds={new Set()}
             expandedRowId={null}
             commandTargetRowId={null}
-            searchQuery=""
           />
         )}
       </For>
@@ -376,7 +369,6 @@ async function renderCommandDraftChips(
             selectedRowIds={getMarkedRowIds(store.state)}
             expandedRowId={null}
             commandTargetRowId={getCommandTargetRowId(store.state)}
-            searchQuery=""
           />
         )}
       </For>

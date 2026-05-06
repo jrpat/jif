@@ -363,6 +363,25 @@ test("dispatchGlobalKey routes op-log actions to operation commands", () => {
   expect(calls).toEqual(["restoreOperation", "revertOperation", "showOperationDiff"]);
 });
 
+test("dispatchGlobalKey routes / to openSearch in op-log mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "op-log",
+    focusModeStack: ["revisions", "op-log"],
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "/",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["openSearch"]);
+});
+
 test("dispatchGlobalKey preserves h as collapse", () => {
   const calls: string[] = [];
   const state = createState();
@@ -655,6 +674,27 @@ test("dispatchGlobalKey routes n to search-next when searchQuery is set", () => 
   const state: AppState = {
     ...createState(),
     searchQuery: "something",
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "n",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["nextSearchMatch"]);
+});
+
+test("dispatchGlobalKey layers search-result keys over op-log mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "op-log",
+    focusModeStack: ["revisions", "op-log"],
+    searchQuery: "operation",
+    searchScope: "operation-log",
   };
 
   const handled = dispatchGlobalKey({

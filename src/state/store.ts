@@ -13,10 +13,17 @@ import type {
   OperationLogEntry,
   RepositoryData,
   RevisionSummary,
+  SearchScopeId,
   StatusMessage,
   StatusLevel,
 } from "../domain/types.ts";
 import { getRevisionArg } from "../domain/revisionIds.ts";
+import {
+  getActiveSearchScope,
+  getSearchMatchItems,
+  getSearchScopeForState,
+  textMatchesQuery,
+} from "../search/matching.ts";
 
 export const DRAFT_PLACEHOLDER = "░░░░";
 export const INLINE_CONFIRMATION_FILES_PLACEHOLDER = "…files…";
@@ -131,6 +138,7 @@ export function createInitialState(
     layout: options?.layout ?? "expanded",
     revsetQuery: "",
     searchQuery: "",
+    searchScope: null,
     diffViewer: null,
   };
 }
@@ -642,25 +650,37 @@ export function clearLastFailedCommand(state: AppState): AppState {
 }
 
 export function openSearch(state: AppState): AppState {
-  const nextState = { ...state, inlineConfirmation: null, searchQuery: "" };
+  const nextState = {
+    ...state,
+    inlineConfirmation: null,
+    searchQuery: "",
+    searchScope: getSearchScopeForState(state),
+  };
   return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "search"]);
 }
 
 export function setSearchText(state: AppState, query: string): AppState {
+  const searchScope = state.searchScope ?? getSearchScopeForState(state);
   if (query === "") {
-    return { ...state, searchQuery: "" };
+    return { ...state, searchQuery: "", searchScope };
   }
 
-  const firstMatchIndex = state.revisions.findIndex((r) =>
-    revisionMatchesSearch(r, query),
-  );
+  const searchState = { ...state, searchQuery: query, searchScope };
+  const firstMatchIndex = getSearchMatchItems(searchState, query)[0]?.index ?? -1;
 
-  return {
+  const nextState: AppState = {
     ...state,
     searchQuery: query,
-    focusedRevisionIndex:
-      firstMatchIndex >= 0 ? firstMatchIndex : state.focusedRevisionIndex,
+    searchScope,
   };
+
+  if (firstMatchIndex < 0) {
+    return nextState;
+  }
+
+  return searchScope === "operation-log"
+    ? { ...nextState, focusedOperationLogIndex: firstMatchIndex }
+    : { ...nextState, focusedRevisionIndex: firstMatchIndex };
 }
 
 export function finalizeSearch(state: AppState): AppState {
@@ -669,57 +689,77 @@ export function finalizeSearch(state: AppState): AppState {
 
 export function closeSearch(state: AppState): AppState {
   if (state.focusMode === "search") {
-    return replaceFocusModeStack({ ...state, searchQuery: "" }, getBrowseFocusModeStack(state));
+    return replaceFocusModeStack({ ...state, searchQuery: "", searchScope: null }, getBrowseFocusModeStack(state));
   }
 
   return {
     ...state,
     searchQuery: "",
+    searchScope: null,
   };
 }
 
 export function nextSearchMatch(state: AppState): AppState {
   const matches = getSearchMatchIndices(state);
   if (matches.length === 0) return state;
+  const searchScope = getActiveSearchScope(state);
+  const focusedIndex = getFocusedSearchIndex(state, searchScope);
 
   const next =
-    matches.find((i) => i > state.focusedRevisionIndex) ?? matches[0]!;
-  return { ...state, focusedRevisionIndex: next };
+    matches.find((i) => i > focusedIndex) ?? matches[0]!;
+  return setFocusedSearchIndex(state, searchScope, next);
 }
 
 export function prevSearchMatch(state: AppState): AppState {
   const matches = getSearchMatchIndices(state);
   if (matches.length === 0) return state;
+  const searchScope = getActiveSearchScope(state);
+  const focusedIndex = getFocusedSearchIndex(state, searchScope);
 
   let prev: number | undefined;
   for (let i = matches.length - 1; i >= 0; i--) {
-    if (matches[i]! < state.focusedRevisionIndex) {
+    if (matches[i]! < focusedIndex) {
       prev = matches[i];
       break;
     }
   }
-  return { ...state, focusedRevisionIndex: prev ?? matches[matches.length - 1]! };
+  return setFocusedSearchIndex(state, searchScope, prev ?? matches[matches.length - 1]!);
 }
 
 export function revisionMatchesSearch(
   revision: RevisionSummary,
   query: string,
 ): boolean {
-  if (query === "") return false;
-  const lowerQuery = query.toLowerCase();
-  return (
-    revision.revisionId.toLowerCase().includes(lowerQuery) ||
-    revision.description.toLowerCase().includes(lowerQuery) ||
-    revision.bookmarks.some((b) => b.toLowerCase().includes(lowerQuery)) ||
-    revision.workspaces.some((w) => w.toLowerCase().includes(lowerQuery))
+  return textMatchesQuery(
+    [
+      revision.revisionId,
+      revision.description.split(/\r?\n/, 1)[0] ?? "",
+      ...revision.bookmarks,
+      ...revision.workspaces,
+    ].join("\n"),
+    query,
   );
 }
 
 export function getSearchMatchIndices(state: AppState): number[] {
   if (state.searchQuery === "") return [];
-  return state.revisions
-    .map((r, i) => (revisionMatchesSearch(r, state.searchQuery) ? i : -1))
-    .filter((i) => i >= 0);
+  return getSearchMatchItems(state).map((item) => item.index);
+}
+
+function getFocusedSearchIndex(state: AppState, searchScope: SearchScopeId): number {
+  return searchScope === "operation-log"
+    ? state.focusedOperationLogIndex
+    : state.focusedRevisionIndex;
+}
+
+function setFocusedSearchIndex(
+  state: AppState,
+  searchScope: SearchScopeId,
+  index: number,
+): AppState {
+  return searchScope === "operation-log"
+    ? { ...state, focusedOperationLogIndex: index }
+    : { ...state, focusedRevisionIndex: index };
 }
 
 export function cancelOrBlurState(state: AppState): AppState {

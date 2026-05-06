@@ -157,7 +157,8 @@ function renderConfigTypes(): string {
 declare global {
 namespace Jif {
   type AppLayout = "expanded" | "condensed" | "super-condensed";
-  type FocusMode = "revisions" | "files" | "inline-confirmation" | "command" | "revset" | "search" | "notifications";
+  type FocusMode = "revisions" | "files" | "op-log" | "inline-confirmation" | "command" | "revset" | "search" | "diff-viewer" | "notifications";
+  type SearchScopeId = "revision-log" | "operation-log";
   type StatusLevel = "info" | "success" | "warning" | "error";
   type RevisionMarker = "working-copy" | "bookmark" | "plain" | "immutable" | "elided";
   type CommandGroup = "global" | "mode" | "cancel";
@@ -257,6 +258,7 @@ namespace Jif {
     layout: AppLayout;
     revsetQuery: string;
     searchQuery: string;
+    searchScope: SearchScopeId | null;
     rev: RevisionSummary | null;
   }>;
 
@@ -336,6 +338,7 @@ namespace Jif {
     | "_global"
     | "normal"
     | "files"
+    | "op-log"
     | "inline-confirmation"
     | "rebase"
     | "squash"
@@ -343,6 +346,8 @@ namespace Jif {
     | "revset"
     | "search"
     | "search-results"
+    | "op-log-search-results"
+    | "diff-viewer"
     | "notifications";
 
   type UserKeyMap = Partial<Record<KeymapScope, Readonly<Record<string, UserKeyBinding>>>>;

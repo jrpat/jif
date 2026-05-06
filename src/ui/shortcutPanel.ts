@@ -248,6 +248,7 @@ export function shortcutModeLabel(mode: Mode): string {
     case "search":
       return "Search";
     case "search-results":
+    case "op-log-search-results":
       return "Search Results";
     case "diff-viewer":
       return "Diff";

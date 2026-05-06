@@ -79,7 +79,6 @@ async function renderChipBackgrounds(args: {
         selectedRowIds={new Set()}
         expandedRowId={null}
         commandTargetRowId={null}
-        searchQuery=""
       />
     </box>
   ), { width: 48, height: 6 });
@@ -134,7 +133,6 @@ const rendered = await testRender(() => {
         selectedRowIds={new Set()}
         expandedRowId={null}
         commandTargetRowId={null}
-        searchQuery=""
       />
     </box>
   );

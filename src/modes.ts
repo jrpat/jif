@@ -12,6 +12,7 @@ export type Mode =
   | "revset"
   | "search"
   | "search-results"
+  | "op-log-search-results"
   | "diff-viewer"
   | "notifications";
 
@@ -33,6 +34,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   revset: { id: "revset", inputPassthrough: true, label: "Revset" },
   search: { id: "search", inputPassthrough: true, label: "Search" },
   "search-results": { id: "search-results", parent: "normal", inputPassthrough: false, label: "Search Results" },
+  "op-log-search-results": { id: "op-log-search-results", parent: "op-log", inputPassthrough: false, label: "Search Results" },
   "diff-viewer": { id: "diff-viewer", inputPassthrough: false, label: "Diff" },
   notifications: { id: "notifications", inputPassthrough: false, label: "Notifications" },
 };
@@ -101,6 +103,7 @@ export const defaultKeymap: Keymap = {
     r: "restore-operation",
     R: "revert-operation",
     d: "show-operation-diff",
+    "/": "search",
     "?": "shortcut-panel",
   },
   "inline-confirmation": {
@@ -118,6 +121,10 @@ export const defaultKeymap: Keymap = {
   revset: {},
   search: {},
   "search-results": {
+    n: "search-next",
+    p: "search-prev",
+  },
+  "op-log-search-results": {
     n: "search-next",
     p: "search-prev",
   },
@@ -152,6 +159,9 @@ export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "search") return "search";
   if (state.focusMode === "inline-confirmation") return "inline-confirmation";
   if (state.focusMode === "diff-viewer") return "diff-viewer";
+  if (state.searchQuery !== "" && state.searchScope === "operation-log" && state.focusMode === "op-log") {
+    return "op-log-search-results";
+  }
   if (state.focusMode === "op-log") return "op-log";
   if (state.focusMode === "notifications") return "notifications";
   if (state.focusMode === "files") return "files";
