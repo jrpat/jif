@@ -130,6 +130,7 @@ export function CommandPrompt(props: {
         focusedTextColor={colors.textPrimary}
         placeholderColor={colors.textQuaternary}
         cursorColor={colors.chromeBorderFocus}
+        cursorStyle={{ style: "line" }}
         onInput={(value) => {
           batch(() => {
             setDraftText(value);
@@ -231,6 +232,7 @@ export function SearchPrompt(props: {
         focusedTextColor={colors.textPrimary}
         placeholderColor={colors.textQuaternary}
         cursorColor={colors.chromeBorderFocus}
+        cursorStyle={{ style: "line" }}
         onInput={(value) => {
           store.actions.setSearchText(value);
         }}
@@ -359,6 +361,7 @@ export function RevsetPrompt(props: {
         textColor={colors.textPrimary}
         focusedTextColor={colors.textPrimary}
         cursorColor={colors.chromeBorderFocus}
+        cursorStyle={{ style: "line" }}
         onInput={(value) => {
           batch(() => {
             setText(value);
