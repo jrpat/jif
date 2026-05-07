@@ -131,6 +131,51 @@ test("dispatchGlobalKey routes ? to the shortcut panel toggle", () => {
   expect(calls).toEqual(["toggleShortcutPanel"]);
 });
 
+test("dispatchGlobalKey routes ctrl-; to the command bar", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "ctrl-;",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["focusCommandBar"]);
+});
+
+test("dispatchGlobalKey routes ctrl-. to the shell command bar", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "ctrl-.",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["focusShellCommandBar"]);
+});
+
+test("dispatchGlobalKey routes ctrl-l to the revset prompt", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "ctrl-l",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["openRevsetInput"]);
+});
+
 test("dispatchGlobalKey routes > to the shell command bar", () => {
   const calls: string[] = [];
   const state = createState();

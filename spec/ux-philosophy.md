@@ -64,6 +64,62 @@ rather than reconstructed later by per-command state checks.
 - Avoid per-command disambiguation that re-derives active keyboard context from
   incidental state after the key has already been matched.
 
+## Reward the Resident Hand
+
+jif is a tool to be lived in: opened early, kept open, reached for dozens of
+times an hour. That changes what "good ergonomics" means. For a tool a user
+visits occasionally, the right optimization target is discoverability — easy
+to learn, easy to remember. For a tool a user lives in, the right target is
+the *rhythm of frequent sequences*: the tiny finger transitions between one
+action and the next, repeated thousands of times a day, are the thing that
+adds up.
+
+Concretely: any time a frequent sequence of actions can be expressed as a
+chord that keeps the user's hand anchored on a modifier, jif should offer a
+spelling that supports that chord — even if a more "discoverable" spelling
+already exists for the same action. Keep the discoverable spelling for
+teaching and for first contact; add the chord-friendly spelling alongside
+it for the resident.
+
+These alternate spellings are intentionally not advertised in the shortcut
+panel. The shortcut panel is a teaching surface; the chord is for the user
+who has already internalized the action and is reaching past discovery into
+flow. Surfacing both spellings would clutter the teaching surface without
+helping the resident, who already knows.
+
+### Example: Ctrl-Anchored Prompt Entry
+
+The text-input prompts (command, shell, revset) navigate history with
+`Ctrl-J` / `Ctrl-K`. Reaching one of those prompts in the first place,
+however, requires releasing Ctrl: the canonical bindings are `:` (Shift+`;`),
+`>` (Shift+`.`), and `L` (Shift+`l`). A user who wants to "open the command
+bar and rerun the most recent command" must press `:`, release Shift,
+press `Ctrl-K`, then `Enter` — three distinct hand states.
+
+The alternate ctrl-anchored spellings collapse that into a single chord:
+
+- `Ctrl-;` opens the command prompt
+- `Ctrl-.` opens the shell prompt
+- `Ctrl-L` opens the revset prompt
+
+With the hand already anchored on Ctrl from these bindings, `Ctrl-K Enter`
+flows directly into rerunning the most recent history entry without the
+hand changing posture. The bookmark prompt deliberately does *not* get an
+alternate, because its autocomplete is over bookmarks rather than history,
+so the chord with `Ctrl-K` would not produce a recall action.
+
+### Implications
+
+- When a frequent action can be combined into a chord with an adjacent
+  follow-up action, provide an alternate binding that completes the chord
+  without breaking hand posture.
+- Keep the discoverable spelling as the primary binding and as the entry
+  in the shortcut panel.
+- Do not surface the alternate spelling in the shortcut panel; let it stay
+  an easter egg for the resident user.
+- Document the alternate in the spec so the rationale is recoverable, even
+  if the in-app help does not announce it.
+
 ## Protect Left-Side Density
 
 In revision rows, the left edge carries the densest and most decision-relevant
