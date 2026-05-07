@@ -76,20 +76,22 @@ test("condensed branch elbow rows keep gutter dividers aligned with focused and 
   expect(cycledToSuperCondensed).not.toContain("┌");
   expect(cycledToSuperCondensed).not.toContain("┐");
   const longSuperCondensedLines = longSuperCondensed.trimEnd().split("\n");
-  expect(longSuperCondensedLines[0]).toContain("this is a ");
+  expect(longSuperCondensedLines[0]).toContain("this is");
   expect(longSuperCondensedLines[0]).toContain("...");
-  expect(longSuperCondensedLines[0]).toContain("second");
+  expect(longSuperCondensedLines[0]).toContain("line");
   expect(longSuperCondensedLines[0]).not.toContain("…");
+  expect(longSuperCondensedLines[0]!.length).toBeLessThanOrEqual(24);
   expect(longSuperCondensedLines[1]?.trim() ?? "").toBe("");
 
   const resizedLongInitialLines = resizedLongSuperCondensed.initialFrame.trimEnd().split("\n");
-  expect(resizedLongInitialLines[0]).toContain("this is a ");
+  expect(resizedLongInitialLines[0]).toContain("this is");
   expect(resizedLongInitialLines[0]).toContain("...");
-  expect(resizedLongInitialLines[0]).toContain("second");
+  expect(resizedLongInitialLines[0]).toContain("line");
+  expect(resizedLongInitialLines[0]!.length).toBeLessThanOrEqual(24);
 
   const resizedLongSuperCondensedLines = resizedLongSuperCondensed.resizedFrame.trimEnd().split("\n");
-  expect(resizedLongSuperCondensedLines[0]).toContain("this is a very lon");
-  expect(resizedLongSuperCondensedLines[0]).not.toContain("...");
+  expect(resizedLongSuperCondensedLines[0]).toContain("this is a very");
+  expect(resizedLongSuperCondensedLines[0]!.length).toBeLessThanOrEqual(40);
   expect(resizedLongSuperCondensedLines[1]?.trim() ?? "").toBe("");
 
   expect(divergentFocused).toContain("sh/0 older divergent");

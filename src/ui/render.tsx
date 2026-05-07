@@ -1031,6 +1031,7 @@ export function RevisionItem(props: {
                         <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
                           <text
                             flexGrow={1}
+                            flexBasis={0}
                             minWidth={0}
                             fg={descriptionColor()}
                             wrapMode="none"
@@ -1145,7 +1146,7 @@ export function RevisionItem(props: {
             <Show
               when={props.revision.marker !== "elided"}
               fallback={
-                <text flexGrow={1} minWidth={0} fg={colors().textTertiary} wrapMode="none" truncate={true}>
+                <text flexGrow={1} flexBasis={0} minWidth={0} fg={colors().textTertiary} wrapMode="none" truncate={true}>
                   {props.revision.description}
                 </text>
               }
@@ -1162,6 +1163,7 @@ export function RevisionItem(props: {
               </Show>
               <text
                 flexGrow={1}
+                flexBasis={0}
                 minWidth={0}
                 fg={descriptionColor()}
                 wrapMode="none"
