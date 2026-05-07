@@ -25,7 +25,7 @@ import { logShortcutDebug } from "../debug.ts";
 import { DEFAULT_REPOSITORY_LOAD_LIMIT, type JjClient } from "../jj/client.ts";
 import { runInteractiveCommand } from "../jj/process.ts";
 import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/types.ts";
-import { createJifCommandController } from "./controller.ts";
+import { createJifCommandController, loadRevisionFiles } from "./controller.ts";
 import { DiffViewer } from "./DiffViewer.tsx";
 import { InlineConfirmation } from "./InlineConfirmation.tsx";
 import { NotificationsOverlay } from "./NotificationsOverlay.tsx";
@@ -511,6 +511,24 @@ export function JifView(props: {
       }
     });
     onCleanup(() => disposeScrollObserver());
+  });
+
+  createEffect(() => {
+    const expandedRowId = store.state.expandedRowId;
+    if (!expandedRowId) {
+      return;
+    }
+    const revision = store.state.revisions.find((r) => r.rowId === expandedRowId);
+    if (!revision || revision.filesLoaded) {
+      return;
+    }
+    void loadRevisionFiles({
+      client,
+      store,
+      rowId: revision.rowId,
+      revisionId: revision.revisionId,
+      hasConflict: revision.hasConflict,
+    });
   });
 
 

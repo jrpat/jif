@@ -248,18 +248,20 @@ export function applyRepositoryData(
     ...revision,
     ...resolveRevisionFiles(previousRevisions.get(revision.rowId), revision),
   }));
-  const focusedRowId = getFocusedRevision(state)?.rowId;
+  const previousFocusedRevision = getFocusedRevision(state);
+  const focusedRowId = reconcileRowId(previousFocusedRevision, revisions);
   const focusedRevisionIndex = clampIndex(
     focusedRowId
       ? revisions.findIndex((revision) => revision.rowId === focusedRowId)
       : 0,
     revisions.length,
   );
-  const expandedRowId =
-    state.expandedRowId &&
-    revisions.some((revision) => revision.rowId === state.expandedRowId)
-      ? state.expandedRowId
-      : null;
+  const previousExpandedRevision = state.expandedRowId
+    ? previousRevisions.get(state.expandedRowId) ?? null
+    : null;
+  const expandedRowId = state.expandedRowId
+    ? reconcileRowId(previousExpandedRevision, revisions)
+    : null;
   const inlineConfirmation = state.inlineConfirmation && expandedRowId === state.inlineConfirmation.rowId
     ? state.inlineConfirmation
     : null;
@@ -268,7 +270,7 @@ export function applyRepositoryData(
   const selectedRowIds = state.selectedRowIds.filter((id) => rowIdSet.has(id));
   const markedRowIds = state.markedRowIds.filter((id) => rowIdSet.has(id));
   const selectedFilePaths =
-    expandedRowId === state.expandedRowId
+    state.expandedRowId !== null && expandedRowId !== null
       ? state.selectedFilePaths
       : [];
 
@@ -1534,6 +1536,22 @@ function getExpandedFilesCount(
   }
 
   return revisions.find((revision) => revision.rowId === expandedRowId)?.files.length ?? 0;
+}
+
+function reconcileRowId(
+  previous: RevisionSummary | null | undefined,
+  revisions: readonly RevisionSummary[],
+): string | null {
+  if (!previous) {
+    return null;
+  }
+  if (revisions.some((revision) => revision.rowId === previous.rowId)) {
+    return previous.rowId;
+  }
+  const byRevisionId = revisions.find(
+    (revision) => revision.revisionId === previous.revisionId,
+  );
+  return byRevisionId?.rowId ?? null;
 }
 
 function resolveRevisionFiles(

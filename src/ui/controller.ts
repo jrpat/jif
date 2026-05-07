@@ -558,13 +558,26 @@ export function createJifCommandController(args: Readonly<{
   };
 }
 
-async function loadRevisionFiles(args: Readonly<{
-  client: ControllerClient;
+type RevisionFilesLoader = Pick<ControllerClient, "loadChangedFiles" | "loadConflictedFiles">;
+
+const inFlightFileLoadsByStore = new WeakMap<AppStore, Set<string>>();
+
+export async function loadRevisionFiles(args: Readonly<{
+  client: RevisionFilesLoader;
   store: AppStore;
   rowId: string;
   revisionId: string;
   hasConflict: boolean;
 }>) {
+  let inFlight = inFlightFileLoadsByStore.get(args.store);
+  if (!inFlight) {
+    inFlight = new Set();
+    inFlightFileLoadsByStore.set(args.store, inFlight);
+  }
+  if (inFlight.has(args.rowId)) {
+    return;
+  }
+  inFlight.add(args.rowId);
   try {
     const [files, conflictedPaths] = await Promise.all([
       args.client.loadChangedFiles(args.revisionId),
@@ -578,6 +591,8 @@ async function loadRevisionFiles(args: Readonly<{
     args.store.actions.setRevisionFiles(args.rowId, enrichedFiles);
   } catch (error) {
     reportError(args.store, error);
+  } finally {
+    inFlight.delete(args.rowId);
   }
 }
 

@@ -826,6 +826,35 @@ test("openFocusedRevision and refresh keep the exact divergent sibling identity"
   expect(refreshed.expandedRowId).toBe(SECOND_DIVERGENT_ROW_ID);
 });
 
+test("applyRepositoryData keeps the file list open when the expanded revision's commit id changes", () => {
+  let state = createState();
+  state = openFocusedRevision(state);
+  state = toggleFileSelection(state);
+
+  expect(state.focusMode).toBe("files");
+  expect(state.expandedRowId).toBe(FIRST_ROW_ID);
+  expect(state.selectedFilePaths).toEqual(["src/a.ts"]);
+
+  const newCommitId = "99999999";
+  const newRowId = createRowId(newCommitId, "aaaaaaaa");
+  const refreshed = applyRepositoryData(state, {
+    repoPath: state.repoPath,
+    revisions: [
+      {
+        ...state.revisions[0]!,
+        rowId: newRowId,
+        commitId: newCommitId,
+      },
+      state.revisions[1]!,
+    ],
+  });
+
+  expect(refreshed.focusMode).toBe("files");
+  expect(refreshed.expandedRowId).toBe(newRowId);
+  expect(refreshed.focusedRevisionIndex).toBe(0);
+  expect(refreshed.selectedFilePaths).toEqual(["src/a.ts"]);
+});
+
 test("applyRepositoryData preserves the focused row by rowId when revision ids collide", () => {
   const state = createDuplicateRevisionIdState();
 
