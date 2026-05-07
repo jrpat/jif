@@ -299,7 +299,9 @@ export function JifView(props: {
     })
   );
   const showsTransientShortcutPanel = createMemo(() =>
-    showsCommandPreview() && !showsPersistentShortcutPanel() && modeShortcutCommands().length > 0
+    !showsPersistentShortcutPanel() &&
+    modeShortcutCommands().length > 0 &&
+    (showsCommandPreview() || store.state.focusMode === "bookmark")
   );
   const expandedShortcutCommands = createMemo(() =>
     showsTransientShortcutPanel() ? modeShortcutCommands() : shortcutCommands()
@@ -631,6 +633,12 @@ export function JifView(props: {
             commandText={commandText()}
             prefix={store.state.commandBar.kind === "shell" ? "❯ " : "jj "}
             placeholder={store.state.commandBar.kind === "shell" ? "shell command" : "subcommand"}
+            bookmarkContext={store.state.commandBarBookmark
+              ? {
+                  initialCursorOffset: store.state.commandBarBookmark.initialCursorOffset,
+                  suggestions: store.state.commandBarBookmark.suggestions,
+                }
+              : null}
             onSubmit={(value) => {
               store.actions.setCommandBarText(value);
               void runtime.executeCurrentCommand(value, { recordHistory: true });
@@ -895,9 +903,14 @@ export function RevisionItem(props: {
       colors: colors(),
     })
   );
+  const isCommandSource = createMemo(() =>
+    props.state.commandDraft !== null &&
+    props.state.selectedRowIds.includes(props.revision.rowId) &&
+    !isCommandTarget()
+  );
   const commandChipBackgroundColor = createMemo(() =>
     getRevisionCommandChipBgColor({
-      rowState: effectiveRowState(),
+      rowState: isCommandSource() ? "selected" : effectiveRowState(),
       colors: colors(),
     })
   );
@@ -1106,7 +1119,7 @@ export function RevisionItem(props: {
           </box>
         }
       >
-        <box width="100%" flexDirection="row">
+        <box width="100%" flexDirection="row" position="relative">
           <box width={superGraphWidth()} flexDirection="row" height={1}>
             <For each={splitGraphTitleSegments(padRight(superGutterPlan().title, superGraphWidth()))}>
               {(segment) => (
@@ -1144,32 +1157,32 @@ export function RevisionItem(props: {
                 colors={colors()}
                 showTimestamp={false}
               />
-              <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
-                <box flexDirection="row" flexShrink={0}>
-                  <Show when={layoutSpec().sideChips.length > 0}>
-                    <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
-                    <box width={1} />
-                  </Show>
-                </box>
-                <text
-                  flexGrow={1}
-                  minWidth={0}
-                  fg={descriptionColor()}
-                  wrapMode="none"
-                  truncate={true}
-                >
-                  {props.revision.description}
-                </text>
-              </box>
-              {layoutSpec().commandChip ? (
-                <CommandChip
-                  text={layoutSpec().commandChip!.text}
-                  backgroundColor={commandChipBackgroundColor()}
-                  colors={colors()}
-                />
-              ) : null}
+              <Show when={layoutSpec().sideChips.length > 0}>
+                <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
+              </Show>
+              <text
+                flexGrow={1}
+                minWidth={0}
+                fg={descriptionColor()}
+                wrapMode="none"
+                truncate={true}
+              >
+                {props.revision.description}
+              </text>
             </Show>
           </box>
+          {layoutSpec().commandChip?.placement === "overlay" ? (
+            <text
+              position="absolute"
+              right={0}
+              top={0}
+              zIndex={50}
+              fg={colors().chromeFillOne}
+              bg={commandChipBackgroundColor()}
+            >
+              {` ${layoutSpec().commandChip!.text} `}
+            </text>
+          ) : null}
         </box>
         <For each={superGutterPlan().tail}>
           {(graphLine) => (

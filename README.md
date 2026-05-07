@@ -120,6 +120,23 @@ Active while previewing a rebase. Inherits Normal.
 |-----|---------|-------------|
 | `s` | rebase-descendants | Toggle whether descendants are included in the rebase |
 
+### Bookmark
+
+Pressing `b` from Normal mode enters Bookmark mode and waits for the next keystroke. Each sub-key opens a `jj bookmark` flow scoped to the focused revision. Press Escape to leave Bookmark mode without doing anything.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `c` | bookmark-create | Open the command bar with `b create  -r <focused>` and the cursor positioned to type a new bookmark name |
+| `m` | bookmark-move-from | Begin a bookmark move from the focused revision; navigate to pick the destination, then `enter` to run `b move -f <from> -t <to>` |
+| `M` | bookmark-move-to | Open the command bar with `b move  -t <focused>` and bookmark-name autocomplete sorted by graph distance to the focused revision |
+| `d` | bookmark-delete | Open the command bar with `b delete ` and bookmark-name autocomplete |
+| `f` | bookmark-forget | Open the command bar with `b forget ` and bookmark-name autocomplete |
+| `s` | bookmark-set | Open the command bar with `b set  -r <focused>` and bookmark-name autocomplete |
+| `t` | bookmark-track | Open the command bar with `b track ` and bookmark-name autocomplete |
+| `u` | bookmark-untrack | Open the command bar with `b untrack ` and bookmark-name autocomplete |
+
+Bookmark autocomplete is sorted with the closest ancestor bookmark first (visually at the bottom of the suggestion list), then more distant ancestors, then descendants by ascending distance, then any unrelated bookmarks. For Move-to, bookmarks already pointing at the focused revision are excluded; for the other prompts they appear at the highest priority (closest to the cursor).
+
 ### Search Results
 
 Active after running a search in a searchable view. Search updates incrementally as you type and highlights visible matching text with inverse video. The revision log and operation log are searchable; `n` and `p` move between matching revisions or operation log entries until the search is cleared. Pressing Enter keeps the focused match; pressing Escape cancels the search and restores the focus from before search started.

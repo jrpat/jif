@@ -70,7 +70,7 @@ export function buildRevisionLayoutSpec(
     sideChips,
     commandChip: options.commandChipText
       ? {
-          placement: options.mode === "condensed" ? "overlay" : "inline",
+          placement: options.mode === "expanded" ? "inline" : "overlay",
           text: options.commandChipText,
         }
       : null,

@@ -1,7 +1,9 @@
 import type {
   AppLayout,
   AppState,
+  BookmarkSuggestion,
   ChangedFile,
+  CommandBarBookmarkContext,
   CommandBarKind,
   CommandBarState,
   CommandDraftConfig,
@@ -43,6 +45,12 @@ export const draftConfigs = {
     kind: "squash" as const,
     template: "squash ${selected.map(s => `${arg('-f --from')} ${s}`).join(' ')} ${arg('-t --into')} ${target}",
     badgeText: "into",
+    sourceBadgeText: "from",
+  },
+  "bookmark-move-from": {
+    kind: "bookmark-move" as const,
+    template: "b move ${selected.map(s => `${arg('-f --from')} ${s}`).join(' ')} ${arg('-t --to')} ${target}",
+    badgeText: "to",
     sourceBadgeText: "from",
   },
 } satisfies Record<string, CommandDraftConfig>;
@@ -144,6 +152,7 @@ export function createInitialState(
     searchScope: null,
     searchStartIndex: null,
     diffViewer: null,
+    commandBarBookmark: null,
   };
 }
 
@@ -450,6 +459,61 @@ export function openFocusedRevision(state: AppState): AppState {
   return replaceFocusModeStack(nextState, ["revisions", "files"]);
 }
 
+export function enterBookmarkLeader(state: AppState): AppState {
+  if (state.focusMode === "bookmark") {
+    return state;
+  }
+
+  return replaceFocusModeStack({
+    ...state,
+    inlineConfirmation: null,
+  }, [...getBrowseFocusModeStack(state), "bookmark"]);
+}
+
+export function exitBookmarkLeader(state: AppState): AppState {
+  if (state.focusMode !== "bookmark") {
+    return state;
+  }
+
+  return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
+}
+
+export function startBookmarkPrompt(
+  state: AppState,
+  prefill: string,
+  cursorOffset: number,
+  options: { focusedRevisionId: string; suggestions: readonly BookmarkSuggestion[] | null },
+): AppState {
+  const baseStack = state.focusMode === "bookmark"
+    ? getBrowseFocusModeStack(state)
+    : getBrowseFocusModeStack(state);
+  const bookmarkContext: CommandBarBookmarkContext | null = options.suggestions === null
+    ? null
+    : {
+        focusedRevisionId: options.focusedRevisionId,
+        initialCursorOffset: cursorOffset,
+        suggestions: options.suggestions,
+      };
+
+  return replaceFocusModeStack({
+    ...state,
+    inlineConfirmation: null,
+    commandBar: {
+      kind: "jj",
+      text: prefill,
+      manual: true,
+    },
+    commandBarBookmark: bookmarkContext,
+  }, [...baseStack, "command"]);
+}
+
+export function clearCommandBarBookmark(state: AppState): AppState {
+  if (state.commandBarBookmark === null) {
+    return state;
+  }
+  return { ...state, commandBarBookmark: null };
+}
+
 export function openOperationLog(state: AppState): AppState {
   return replaceFocusModeStack({
     ...state,
@@ -611,6 +675,7 @@ export function cancelCommandState(state: AppState): AppState {
     ...state,
     inlineConfirmation: null,
     commandBar: createEmptyCommandBar(),
+    commandBarBookmark: null,
     commandDraft: null,
     selectedRowIds: [],
     markedRowIds: [],
@@ -625,6 +690,7 @@ export function cancelCommandDraft(state: AppState): AppState {
   return {
     ...state,
     commandBar: createEmptyCommandBar(),
+    commandBarBookmark: null,
     commandDraft: null,
     selectedRowIds: [],
     markedRowIds: [],
@@ -795,6 +861,11 @@ export function cancelOrBlurState(state: AppState): AppState {
     return closeInlineConfirmation(state);
   }
 
+  if (state.focusMode === "bookmark") {
+    const withoutDraft = state.commandDraft !== null ? cancelCommandDraft(state) : state;
+    return exitBookmarkLeader(withoutDraft);
+  }
+
   if (state.shortcutPanelExpanded) {
     return closeShortcutPanel(state);
   }
@@ -873,7 +944,7 @@ export function toggleFileSelection(state: AppState): AppState {
 export function startCommandDraft(
   state: AppState,
   config: CommandDraftConfig,
-  options?: { descendantRevisionIds?: readonly string[] },
+  options?: { descendantRevisionIds?: readonly string[]; focusDirection?: "down" | "up" },
 ): AppState {
   const revision = getFocusedRevision(state);
   if (!revision) {
@@ -884,6 +955,8 @@ export function startCommandDraft(
   const sourceIds = hasPreSelection
     ? state.selectedRowIds
     : [revision.rowId];
+  const direction = options?.focusDirection ?? "down";
+  const delta = direction === "up" ? -1 : 1;
 
   return {
     ...state,
@@ -891,7 +964,7 @@ export function startCommandDraft(
     inlineConfirmation: null,
     focusedRevisionIndex: hasPreSelection
       ? state.focusedRevisionIndex
-      : clampIndex(state.focusedRevisionIndex + 1, state.revisions.length),
+      : clampIndex(state.focusedRevisionIndex + delta, state.revisions.length),
     selectedRowIds: sourceIds,
     markedRowIds: hasPreSelection ? state.markedRowIds : [],
     commandDraft: {

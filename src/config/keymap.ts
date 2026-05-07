@@ -105,6 +105,8 @@ function cloneKeymap(source: Keymap): MutableKeymap {
     "op-log-search-results": { ...source["op-log-search-results"] },
     "diff-viewer": { ...source["diff-viewer"] },
     notifications: { ...source.notifications },
+    bookmark: { ...source.bookmark },
+    "bookmark-move": { ...source["bookmark-move"] },
   };
 }
 
@@ -137,4 +139,6 @@ const KEYMAP_SCOPES: readonly KeymapScope[] = [
   "op-log-search-results",
   "diff-viewer",
   "notifications",
+  "bookmark",
+  "bookmark-move",
 ];

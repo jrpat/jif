@@ -22,7 +22,8 @@ export type FocusMode =
   | "revset"
   | "search"
   | "diff-viewer"
-  | "notifications";
+  | "notifications"
+  | "bookmark";
 export type AppLayout = "expanded" | "condensed" | "super-condensed";
 export type CommandBarKind = "jj" | "shell";
 export type SearchScopeId = "revision-log" | "operation-log";
@@ -61,13 +62,28 @@ export type RepositoryData = Readonly<{
   revisions: readonly RevisionSummary[];
 }>;
 
-export type CommandDraftKind = "rebase" | "squash";
+export type CommandDraftKind = "rebase" | "squash" | "bookmark-move";
 
 export type CommandDraftConfig = Readonly<{
   kind: CommandDraftKind;
   template: string;
   badgeText: string;
   sourceBadgeText: string;
+}>;
+
+export type BookmarkSuggestionBucket = "current" | "behind" | "ahead" | "other";
+
+export type BookmarkSuggestion = Readonly<{
+  name: string;
+  targetChangeId: string;
+  bucket: BookmarkSuggestionBucket;
+  distance: number;
+}>;
+
+export type CommandBarBookmarkContext = Readonly<{
+  focusedRevisionId: string;
+  initialCursorOffset: number;
+  suggestions: readonly BookmarkSuggestion[];
 }>;
 
 export type CommandDraft = Readonly<{
@@ -144,6 +160,7 @@ export type AppState = Readonly<{
   searchScope: SearchScopeId | null;
   searchStartIndex: number | null;
   diffViewer: DiffViewerState | null;
+  commandBarBookmark: CommandBarBookmarkContext | null;
 }>;
 
 export type SampleRepoMaterialization = Readonly<{

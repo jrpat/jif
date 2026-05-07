@@ -33,6 +33,15 @@ export type CommandController = Readonly<{
   startSquash: () => void;
   startNewRevision: () => void;
   editRevision: () => void;
+  enterBookmarkMode: () => void;
+  startBookmarkCreate: () => void;
+  startBookmarkMoveFrom: () => void;
+  startBookmarkMoveTo: () => void;
+  startBookmarkDelete: () => void;
+  startBookmarkForget: () => void;
+  startBookmarkSet: () => void;
+  startBookmarkTrack: () => void;
+  startBookmarkUntrack: () => void;
   toggleSelection: () => void;
   toggleFileSelection: () => void;
   restoreFiles: () => void;
@@ -558,5 +567,81 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.abandonRevision(),
     group: "global",
+  },
+  {
+    id: "enter-bookmark-mode",
+    title: "Bookmark",
+    description: "Enter bookmark mode",
+    canonicalKeys: ["b"],
+    run: (controller) => controller.enterBookmarkMode(),
+    group: "global",
+  },
+  {
+    id: "bookmark-create",
+    title: "Create",
+    description: "Create a bookmark on the focused revision",
+    canonicalKeys: ["c"],
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startBookmarkCreate(),
+    group: "mode",
+  },
+  {
+    id: "bookmark-move-from",
+    title: "Move From",
+    description: "Move a bookmark from the focused revision to another",
+    canonicalKeys: ["m"],
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startBookmarkMoveFrom(),
+    group: "mode",
+  },
+  {
+    id: "bookmark-move-to",
+    title: "Move To",
+    description: "Move a bookmark to the focused revision",
+    canonicalKeys: ["M"],
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startBookmarkMoveTo(),
+    group: "mode",
+  },
+  {
+    id: "bookmark-delete",
+    title: "Delete",
+    description: "Delete a bookmark",
+    canonicalKeys: ["d"],
+    run: (controller) => controller.startBookmarkDelete(),
+    group: "mode",
+  },
+  {
+    id: "bookmark-forget",
+    title: "Forget",
+    description: "Forget a bookmark",
+    canonicalKeys: ["f"],
+    run: (controller) => controller.startBookmarkForget(),
+    group: "mode",
+  },
+  {
+    id: "bookmark-set",
+    title: "Set",
+    description: "Set a bookmark to the focused revision",
+    canonicalKeys: ["s"],
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startBookmarkSet(),
+    group: "mode",
+  },
+  {
+    id: "bookmark-track",
+    title: "Track",
+    description: "Track a remote bookmark",
+    canonicalKeys: ["t"],
+    run: (controller) => controller.startBookmarkTrack(),
+    group: "mode",
+  },
+  {
+    id: "bookmark-untrack",
+    title: "Untrack",
+    description: "Untrack a remote bookmark",
+    canonicalKeys: ["u"],
+    run: (controller) => controller.startBookmarkUntrack(),
+    group: "mode",
   },
 ];

@@ -7,12 +7,18 @@ import { buildCompletionItems, extractLastToken, matchCompletions, type Completi
 import type { AppStore } from "../state/appStore.ts";
 import type { CommandSegment } from "../state/store.ts";
 import type { ResolvedAppConfig } from "../config/schema.ts";
+import type { BookmarkSuggestion } from "../domain/types.ts";
 import { AutocompleteList, type AutocompleteListItem } from "./AutocompleteList.tsx";
 import {
   getAutocompleteAction,
   moveAutocompleteSelection,
   type AutocompleteFlow,
 } from "./autocomplete.ts";
+
+export type BookmarkPromptContext = Readonly<{
+  initialCursorOffset: number;
+  suggestions: readonly BookmarkSuggestion[];
+}>;
 
 export function CommandPrompt(props: {
   store: AppStore;
@@ -24,19 +30,24 @@ export function CommandPrompt(props: {
   placeholder: string;
   onSubmit: (value: string) => void;
   onHeightChange?: (height: number) => void;
+  bookmarkContext?: BookmarkPromptContext | null;
 }) {
   const { store, config } = props;
   const colors = config.colorScheme.semanticColors;
   const flow: AutocompleteFlow = "bottom-to-top";
   const [historyEntries, setHistoryEntries] = createSignal<string[]>([]);
   const [draftText, setDraftText] = createSignal(props.commandText);
+  const [cursorOffset, setCursorOffset] = createSignal<number>(
+    props.bookmarkContext?.initialCursorOffset ?? props.commandText.length,
+  );
   const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null);
+  const [pendingInitialSync, setPendingInitialSync] = createSignal(true);
   let input: InputRenderable | undefined;
 
   createEffect(() => {
     const workspaceRoot = props.workspaceRoot;
 
-    if (!workspaceRoot) {
+    if (!workspaceRoot || props.bookmarkContext) {
       setHistoryEntries([]);
       setSelectedIndex(null);
       return;
@@ -51,18 +62,41 @@ export function CommandPrompt(props: {
       batch(() => {
         setDraftText(nextText);
         setSelectedIndex(null);
+        setCursorOffset(props.bookmarkContext?.initialCursorOffset ?? nextText.length);
+        setPendingInitialSync(true);
       });
     }
   });
 
-  const filteredHistory = createMemo(() => matchHistoryEntries(draftText(), historyEntries()));
+  const filteredHistory = createMemo(() => {
+    if (props.bookmarkContext) return [];
+    return matchHistoryEntries(draftText(), historyEntries());
+  });
 
-  const autocompleteItems = createMemo<AutocompleteListItem[]>(() =>
-    filteredHistory().map((entry) => ({
+  const tokenAtCursor = createMemo(() => extractTokenAtCursor(draftText(), cursorOffset()));
+
+  const filteredBookmarks = createMemo<readonly BookmarkSuggestion[]>(() => {
+    const ctx = props.bookmarkContext;
+    if (!ctx) return [];
+    const { token } = tokenAtCursor();
+    if (token.length === 0) return ctx.suggestions;
+    const matches = ctx.suggestions.filter((s) => s.name.toLowerCase().includes(token.toLowerCase()));
+    return matches.length > 0 ? matches : ctx.suggestions;
+  });
+
+  const autocompleteItems = createMemo<AutocompleteListItem[]>(() => {
+    if (props.bookmarkContext) {
+      return filteredBookmarks().map((s) => ({
+        id: `bookmark:${s.name}`,
+        tag: "bm",
+        text: s.name,
+      }));
+    }
+    return filteredHistory().map((entry) => ({
       id: entry,
       text: entry,
-    }))
-  );
+    }));
+  });
 
   const displayedText = createMemo(() => {
     const index = selectedIndex();
@@ -70,11 +104,37 @@ export function CommandPrompt(props: {
       return draftText();
     }
 
+    if (props.bookmarkContext) {
+      const suggestion = filteredBookmarks()[index];
+      if (!suggestion) return draftText();
+      const { start, end } = tokenAtCursor();
+      return draftText().slice(0, start) + suggestion.name + draftText().slice(end);
+    }
+
     return filteredHistory()[index] ?? draftText();
   });
 
+  const displayedCursorOffset = createMemo<number | null>(() => {
+    if (pendingInitialSync()) {
+      return props.bookmarkContext?.initialCursorOffset ?? draftText().length;
+    }
+    const index = selectedIndex();
+    if (index !== null && props.bookmarkContext) {
+      const suggestion = filteredBookmarks()[index];
+      if (suggestion) {
+        const { start } = tokenAtCursor();
+        return start + suggestion.name.length;
+      }
+    }
+    return null;
+  });
+
   createEffect(() => {
-    syncPromptInput(input, displayedText());
+    const cursor = displayedCursorOffset();
+    syncPromptInput(input, displayedText(), cursor === null ? undefined : cursor);
+    if (pendingInitialSync()) {
+      setPendingInitialSync(false);
+    }
   });
 
   useKeyboard((event) => {
@@ -82,11 +142,12 @@ export function CommandPrompt(props: {
       return;
     }
 
+    const itemCount = props.bookmarkContext ? filteredBookmarks().length : filteredHistory().length;
     const action = getAutocompleteAction(event, flow);
-    if (action !== null) {
+    if (action !== null && itemCount > 0) {
       event.preventDefault();
       setSelectedIndex((currentIndex) =>
-        moveAutocompleteSelection(currentIndex, filteredHistory().length, action)
+        moveAutocompleteSelection(currentIndex, itemCount, action)
       );
       return;
     }
@@ -97,6 +158,7 @@ export function CommandPrompt(props: {
       batch(() => {
         setDraftText(finalText);
         setSelectedIndex(null);
+        setCursorOffset(displayedCursorOffset() ?? finalText.length);
         store.actions.setCommandBarText(finalText);
       });
       props.onSubmit(finalText);
@@ -120,7 +182,9 @@ export function CommandPrompt(props: {
         ref={(el: InputRenderable) => {
           input = el;
           el.editorView.setScrollMargin(0);
-          syncPromptInput(el, displayedText());
+          const cursor = displayedCursorOffset();
+          syncPromptInput(el, displayedText(), cursor === null ? undefined : cursor);
+          setPendingInitialSync(false);
         }}
         flexGrow={1}
         marginRight={1}
@@ -135,12 +199,27 @@ export function CommandPrompt(props: {
           batch(() => {
             setDraftText(value);
             setSelectedIndex(null);
+            const nextCursor = input?.cursorOffset ?? value.length;
+            setCursorOffset(nextCursor);
             store.actions.setCommandBarText(value);
           });
         }}
       />
     </PromptShell>
   );
+}
+
+function extractTokenAtCursor(text: string, cursor: number): { start: number; end: number; token: string } {
+  const safeCursor = Math.max(0, Math.min(cursor, text.length));
+  let start = safeCursor;
+  while (start > 0 && !/\s/.test(text[start - 1]!)) {
+    start -= 1;
+  }
+  let end = safeCursor;
+  while (end < text.length && !/\s/.test(text[end]!)) {
+    end += 1;
+  }
+  return { start, end, token: text.slice(start, end) };
 }
 
 export function CommandPreview(props: {
@@ -445,13 +524,27 @@ function getRevsetSuggestionText(
   return currentText.slice(0, start) + nextValue;
 }
 
-function syncPromptInput(input: InputRenderable | undefined, text: string) {
-  if (!input || input.plainText === text) {
+function syncPromptInput(input: InputRenderable | undefined, text: string, cursorOffset?: number) {
+  if (!input) {
     return;
   }
 
-  input.setText(text);
-  input.cursorOffset = text.length;
+  const textChanged = input.plainText !== text;
+  if (textChanged) {
+    input.setText(text);
+  }
+
+  if (cursorOffset === undefined) {
+    if (textChanged) {
+      input.cursorOffset = text.length;
+    }
+    return;
+  }
+
+  const target = Math.max(0, Math.min(cursorOffset, text.length));
+  if (input.cursorOffset !== target) {
+    input.cursorOffset = target;
+  }
 }
 
 function completionKindLabel(kind: CompletionItem["kind"]): string {

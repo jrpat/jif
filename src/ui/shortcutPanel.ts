@@ -254,6 +254,10 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Diff";
     case "notifications":
       return "Notifications";
+    case "bookmark":
+      return "Bookmark";
+    case "bookmark-move":
+      return "Bookmark Move";
   }
 }
 
@@ -403,6 +407,7 @@ function hasCancelableState(state: AppState): boolean {
     state.statusMessages.length > 0 ||
     state.focusMode === "command" ||
     state.focusMode === "inline-confirmation" ||
+    state.focusMode === "bookmark" ||
     state.commandDraft !== null ||
     state.selectedRowIds.length > 0 ||
     state.focusMode === "files"

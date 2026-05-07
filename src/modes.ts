@@ -14,7 +14,9 @@ export type Mode =
   | "search-results"
   | "op-log-search-results"
   | "diff-viewer"
-  | "notifications";
+  | "notifications"
+  | "bookmark"
+  | "bookmark-move";
 
 export type ModeDefinition = Readonly<{
   id: Mode;
@@ -37,6 +39,8 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   "op-log-search-results": { id: "op-log-search-results", parent: "op-log", inputPassthrough: false, label: "Search Results" },
   "diff-viewer": { id: "diff-viewer", inputPassthrough: false, label: "Diff" },
   notifications: { id: "notifications", inputPassthrough: false, label: "Notifications" },
+  bookmark: { id: "bookmark", parent: "normal", inputPassthrough: false, label: "Bookmark" },
+  "bookmark-move": { id: "bookmark-move", parent: "normal", inputPassthrough: false, label: "Bookmark Move" },
 };
 
 export type Keymap = Readonly<Record<"_global" | Mode, Readonly<Record<string, string>>>>;
@@ -90,6 +94,7 @@ export const defaultKeymap: Keymap = {
     a: "abandon",
     o: "open-operation-log",
     O: "open-operation-log",
+    b: "enter-bookmark-mode",
   },
   files: {
     s: "split",
@@ -154,6 +159,17 @@ export const defaultKeymap: Keymap = {
     "`": "cancel",
     "?": "shortcut-panel",
   },
+  bookmark: {
+    c: "bookmark-create",
+    m: "bookmark-move-from",
+    M: "bookmark-move-to",
+    d: "bookmark-delete",
+    f: "bookmark-forget",
+    s: "bookmark-set",
+    t: "bookmark-track",
+    u: "bookmark-untrack",
+  },
+  "bookmark-move": {},
 };
 
 export function getActiveMode(state: AppState): Mode {
@@ -170,6 +186,8 @@ export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "files") return "files";
   if (state.commandDraft?.config.kind === "rebase") return "rebase";
   if (state.commandDraft?.config.kind === "squash") return "squash";
+  if (state.commandDraft?.config.kind === "bookmark-move") return "bookmark-move";
+  if (state.focusMode === "bookmark") return "bookmark";
   if (state.searchQuery !== "" && state.searchScope === "revision-log") return "search-results";
   return "normal";
 }

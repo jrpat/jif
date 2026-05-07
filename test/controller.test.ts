@@ -113,6 +113,15 @@ function createControllerHarness(harnessOptions: Readonly<{
       async resolveDescendants() {
         return ["bbbbbbbb"];
       },
+      async loadBookmarkTargets() {
+        return [];
+      },
+      async loadAncestorChangeIds() {
+        return [];
+      },
+      async loadDescendantChangeIds() {
+        return [];
+      },
     },
     destroy: () => {},
     suspend: () => {

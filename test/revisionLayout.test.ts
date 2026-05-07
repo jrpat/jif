@@ -92,7 +92,7 @@ test("condensed layout preserves a second graph row when it carries branch topol
   expect(layout.visibleGraphMode).toBe("keep-second-row");
 });
 
-test("super-condensed layout keeps the single-row header and inlined command target", () => {
+test("super-condensed layout overlays the command chip so it isn't clipped by long descriptions", () => {
   const layout = buildRevisionLayoutSpec(
     createRevision({ bookmarks: [], workspaces: [] }),
     {
@@ -107,7 +107,7 @@ test("super-condensed layout keeps the single-row header and inlined command tar
   expect(layout.visibleGraphMode).toBe("fold-first-two");
   expect(layout.sideChips).toEqual([]);
   expect(layout.commandChip).toEqual({
-    placement: "inline",
+    placement: "overlay",
     text: "onto",
   });
 });

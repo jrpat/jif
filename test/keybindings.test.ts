@@ -101,6 +101,15 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     refreshRepository: () => calls.push("refreshRepository"),
     absorb: () => calls.push("absorb"),
     abandonRevision: () => calls.push("abandonRevision"),
+    enterBookmarkMode: () => calls.push("enterBookmarkMode"),
+    startBookmarkCreate: () => calls.push("startBookmarkCreate"),
+    startBookmarkMoveFrom: () => calls.push("startBookmarkMoveFrom"),
+    startBookmarkMoveTo: () => calls.push("startBookmarkMoveTo"),
+    startBookmarkDelete: () => calls.push("startBookmarkDelete"),
+    startBookmarkForget: () => calls.push("startBookmarkForget"),
+    startBookmarkSet: () => calls.push("startBookmarkSet"),
+    startBookmarkTrack: () => calls.push("startBookmarkTrack"),
+    startBookmarkUntrack: () => calls.push("startBookmarkUntrack"),
     jj: async () => {
       calls.push("jj");
     },

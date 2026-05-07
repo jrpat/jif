@@ -222,6 +222,76 @@ export class JjClient {
     }
   }
 
+  async loadBookmarkTargets(): Promise<readonly { name: string; changeId: string }[]> {
+    try {
+      const template = `if(remote, "", name ++ "\\t" ++ self.normal_target().change_id().shortest(8) ++ "\\n")`;
+      const result = await this.runJj([
+        "bookmark",
+        "list",
+        "--color",
+        "never",
+        "-T",
+        template,
+      ]);
+      const seen = new Set<string>();
+      const targets: { name: string; changeId: string }[] = [];
+      for (const line of result.stdout.split("\n")) {
+        if (line.length === 0) continue;
+        const tab = line.indexOf("\t");
+        if (tab < 0) continue;
+        const name = line.slice(0, tab).trim();
+        const changeId = line.slice(tab + 1).trim();
+        if (name.length === 0 || changeId.length === 0) continue;
+        if (name.includes("@")) continue;
+        if (seen.has(name)) continue;
+        seen.add(name);
+        targets.push({ name, changeId });
+      }
+      return targets;
+    } catch {
+      return [];
+    }
+  }
+
+  async loadAncestorChangeIds(focusedChangeId: string, limit = 200): Promise<readonly string[]> {
+    return this.loadChangeIdsForRevset(`ancestors(${focusedChangeId}) ~ ${focusedChangeId}`, limit);
+  }
+
+  async loadDescendantChangeIds(focusedChangeId: string, limit = 200): Promise<readonly string[]> {
+    return this.loadChangeIdsForRevset(`descendants(${focusedChangeId}) ~ ${focusedChangeId}`, limit, { reversed: true });
+  }
+
+  private async loadChangeIdsForRevset(
+    revset: string,
+    limit: number,
+    options?: { reversed?: boolean },
+  ): Promise<readonly string[]> {
+    try {
+      const args = [
+        "log",
+        "-r",
+        revset,
+        "--no-graph",
+        "--color",
+        "never",
+        "--limit",
+        String(limit),
+        "-T",
+        `change_id.shortest(8) ++ "\\n"`,
+      ];
+      if (options?.reversed) {
+        args.push("--reversed");
+      }
+      const result = await this.runJj(args);
+      return result.stdout
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+    } catch {
+      return [];
+    }
+  }
+
   async loadTags(): Promise<string[]> {
     try {
       const result = await this.runJj(["tag", "list", "--color", "never"]);

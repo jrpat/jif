@@ -6,8 +6,9 @@ import type {
   JjCommandOptions,
   ShellCommandOptions,
 } from "../commands/definitions.ts";
-import type { AppLayout, ChangedFile, FocusMode, OperationLogEntry } from "../domain/types.ts";
-import { getRevisionArg } from "../domain/revisionIds.ts";
+import type { AppLayout, BookmarkSuggestion, ChangedFile, FocusMode, OperationLogEntry } from "../domain/types.ts";
+import { getChangeIdFromRevisionId, getRevisionArg } from "../domain/revisionIds.ts";
+import { buildBookmarkSuggestions, type BookmarkTarget } from "../state/bookmarkSuggestions.ts";
 import { buildForceRetryPlan } from "../jj/forceRetry.ts";
 import { quoteCommand } from "../jj/process.ts";
 import type { AppStore } from "../state/appStore.ts";
@@ -30,6 +31,9 @@ type ControllerClient = Readonly<{
   loadOperationLog(): Promise<readonly OperationLogEntry[]>;
   loadOperationDiff(operationId: string): Promise<string>;
   resolveDescendants(revisionId: string): Promise<readonly string[]>;
+  loadBookmarkTargets(): Promise<readonly BookmarkTarget[]>;
+  loadAncestorChangeIds(focusedChangeId: string): Promise<readonly string[]>;
+  loadDescendantChangeIds(focusedChangeId: string): Promise<readonly string[]>;
 }>;
 
 type ExecuteCurrentCommand = (
@@ -233,6 +237,90 @@ export function createJifCommandController(args: Readonly<{
           reportError(store, error);
         }
       })();
+    },
+    enterBookmarkMode() {
+      store.actions.enterBookmarkLeader();
+    },
+    startBookmarkCreate() {
+      const state = store.snapshot();
+      const revision = getFocusedRevision(state);
+      if (!revision) return;
+      const useShort = state.useShortFlags;
+      const revFlag = useShort ? "-r" : "--revision";
+      const revisionArg = getRevisionArg(revision.revisionId, revision.changeIdPrefixLength);
+      const prefill = `b create  ${revFlag} ${revisionArg}`;
+      const cursorOffset = "b create ".length;
+      store.actions.startBookmarkPrompt(prefill, cursorOffset, {
+        focusedRevisionId: revision.revisionId,
+        suggestions: null,
+      });
+    },
+    startBookmarkMoveFrom() {
+      store.actions.startCommandDraft(draftConfigs["bookmark-move-from"], { focusDirection: "up" });
+    },
+    startBookmarkMoveTo() {
+      const state = store.snapshot();
+      const revision = getFocusedRevision(state);
+      if (!revision) return;
+      const useShort = state.useShortFlags;
+      const toFlag = useShort ? "-t" : "--to";
+      const revisionArg = getRevisionArg(revision.revisionId, revision.changeIdPrefixLength);
+      const prefill = `b move  ${toFlag} ${revisionArg}`;
+      const cursorOffset = "b move ".length;
+      void openBookmarkPromptWithSuggestions({
+        prefill,
+        cursorOffset,
+        revision,
+        includeCurrent: false,
+        client,
+        store,
+      });
+    },
+    startBookmarkDelete() {
+      void openBookmarkPromptSimple({
+        keyword: "delete",
+        client,
+        store,
+      });
+    },
+    startBookmarkForget() {
+      void openBookmarkPromptSimple({
+        keyword: "forget",
+        client,
+        store,
+      });
+    },
+    startBookmarkSet() {
+      const state = store.snapshot();
+      const revision = getFocusedRevision(state);
+      if (!revision) return;
+      const useShort = state.useShortFlags;
+      const revFlag = useShort ? "-r" : "--revision";
+      const revisionArg = getRevisionArg(revision.revisionId, revision.changeIdPrefixLength);
+      const prefill = `b set  ${revFlag} ${revisionArg}`;
+      const cursorOffset = "b set ".length;
+      void openBookmarkPromptWithSuggestions({
+        prefill,
+        cursorOffset,
+        revision,
+        includeCurrent: true,
+        client,
+        store,
+      });
+    },
+    startBookmarkTrack() {
+      void openBookmarkPromptSimple({
+        keyword: "track",
+        client,
+        store,
+      });
+    },
+    startBookmarkUntrack() {
+      void openBookmarkPromptSimple({
+        keyword: "untrack",
+        client,
+        store,
+      });
     },
     startSplit() {
       const state = store.snapshot();
@@ -496,6 +584,57 @@ async function loadRevisionFiles(args: Readonly<{
 function reportError(store: AppStore, error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   store.actions.pushEvent(message, "error");
+}
+
+async function openBookmarkPromptWithSuggestions(args: Readonly<{
+  prefill: string;
+  cursorOffset: number;
+  revision: { revisionId: string };
+  includeCurrent: boolean;
+  client: ControllerClient;
+  store: AppStore;
+}>) {
+  try {
+    const focusedChangeId = getChangeIdFromRevisionId(args.revision.revisionId);
+    const [bookmarks, ancestors, descendants] = await Promise.all([
+      args.client.loadBookmarkTargets(),
+      args.client.loadAncestorChangeIds(focusedChangeId),
+      args.client.loadDescendantChangeIds(focusedChangeId),
+    ]);
+    const suggestions: readonly BookmarkSuggestion[] = buildBookmarkSuggestions(
+      bookmarks,
+      focusedChangeId,
+      ancestors,
+      descendants,
+      { includeCurrent: args.includeCurrent },
+    );
+    args.store.actions.startBookmarkPrompt(args.prefill, args.cursorOffset, {
+      focusedRevisionId: args.revision.revisionId,
+      suggestions,
+    });
+  } catch (error) {
+    reportError(args.store, error);
+  }
+}
+
+async function openBookmarkPromptSimple(args: Readonly<{
+  keyword: "delete" | "forget" | "track" | "untrack";
+  client: ControllerClient;
+  store: AppStore;
+}>) {
+  const state = args.store.snapshot();
+  const revision = getFocusedRevision(state);
+  if (!revision) return;
+  const prefill = `b ${args.keyword} `;
+  const cursorOffset = prefill.length;
+  await openBookmarkPromptWithSuggestions({
+    prefill,
+    cursorOffset,
+    revision,
+    includeCurrent: true,
+    client: args.client,
+    store: args.store,
+  });
 }
 
 function squashNeedsInteractiveShell(state: ReturnType<AppStore["snapshot"]>): boolean {

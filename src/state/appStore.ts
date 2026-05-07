@@ -3,6 +3,7 @@ import { createStore, reconcile, unwrap } from "solid-js/store";
 import type {
   AppLayout,
   AppState,
+  BookmarkSuggestion,
   ChangedFile,
   CommandDraftConfig,
   FailedCommand,
@@ -25,6 +26,9 @@ import {
   closeOperationLog,
   closeDiffViewer,
   closeNotifications,
+  enterBookmarkLeader,
+  exitBookmarkLeader,
+  startBookmarkPrompt,
   collapseFocusedNotification,
   expandFocusedNotification,
   focusLogBottom,
@@ -210,8 +214,24 @@ export function createAppStore(
       dismissStatusMessage(id?: string) {
         mutate((currentState) => dismissStatusMessage(currentState, id));
       },
-      startCommandDraft(config: CommandDraftConfig, options?: { descendantRevisionIds?: readonly string[] }) {
+      startCommandDraft(
+        config: CommandDraftConfig,
+        options?: { descendantRevisionIds?: readonly string[]; focusDirection?: "down" | "up" },
+      ) {
         mutate((currentState) => startCommandDraft(currentState, config, options));
+      },
+      enterBookmarkLeader() {
+        mutate((currentState) => enterBookmarkLeader(currentState));
+      },
+      exitBookmarkLeader() {
+        mutate((currentState) => exitBookmarkLeader(currentState));
+      },
+      startBookmarkPrompt(
+        prefill: string,
+        cursorOffset: number,
+        options: { focusedRevisionId: string; suggestions: readonly BookmarkSuggestion[] | null },
+      ) {
+        mutate((currentState) => startBookmarkPrompt(currentState, prefill, cursorOffset, options));
       },
       toggleRevisionSelection() {
         mutate((currentState) => toggleRevisionSelection(currentState));
