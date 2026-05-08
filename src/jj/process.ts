@@ -1,7 +1,4 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 
 export class CommandExecutionError extends Error {
   readonly command: readonly string[];
@@ -82,146 +79,42 @@ export async function executeShellCommand(
   return stderr || stdout || `Executed: ${commandText.trim()}`;
 }
 
+// Run a command interactively: stdin and stdout are inherited so any TUI the
+// child program draws (e.g. jj's builtin diff editor or $EDITOR) renders to
+// the real terminal. stderr is piped so we can attach the captured text to a
+// failure toast without it ever scrolling the user's screen during the run.
+//
+// We deliberately do NOT wrap the child in `script(1)` or any pty mediator.
+// An earlier implementation did so to capture a transcript, but the pty layer
+// left the parent terminal's mode tracking subtly out of sync after the child
+// exited with non-zero (e.g. q/ctrl-c from `jj split`, :cq from vim), which
+// broke the renderer's diff baseline on resume.
 export async function runInteractiveCommand(
   cwd: string,
   command: readonly string[],
 ): Promise<void> {
-  const capture = await createInteractiveTranscriptCapture();
-  const stopObserve = observeTTYChanges();
   const proc = Bun.spawn({
-    cmd: capture ? [capture.scriptPath, "-q", capture.outputPath, ...command] : [...command],
+    cmd: [...command],
     cwd,
     stdin: "inherit",
     stdout: "inherit",
-    stderr: "inherit",
+    stderr: "pipe",
     env: { ...process.env },
   });
-  const exitCode = await proc.exited;
-  const rawModeChanged = stopObserve?.() ?? false;
-  const transcript = capture ? await readInteractiveTranscript(capture.outputPath) : "";
-  if (capture) {
-    await rm(capture.tempDir, { recursive: true, force: true }).catch(() => {});
-  }
+
+  const [exitCode, stderr] = await Promise.all([
+    proc.exited,
+    new Response(proc.stderr).text(),
+  ]);
 
   if (exitCode !== 0) {
-    if (!rawModeChanged) {
-      process.stderr.write("\nPress any key to continue... ");
-      await waitForKeypress();
-    }
     throw new CommandExecutionError({
       command,
       cwd,
       exitCode,
-      stderr: transcript,
+      stderr: stderr.trim(),
     });
   }
-
-  if (!rawModeChanged) {
-    process.stderr.write("\nPress any key to continue... ");
-    await waitForKeypress();
-  }
-}
-
-async function createInteractiveTranscriptCapture(): Promise<{
-  scriptPath: string;
-  tempDir: string;
-  outputPath: string;
-} | null> {
-  const scriptPath = typeof Bun.which === "function" ? Bun.which("script") : null;
-  if (!scriptPath) {
-    return null;
-  }
-
-  const tempDir = await mkdtemp(join(tmpdir(), "jif-script-"));
-  return {
-    scriptPath,
-    tempDir,
-    outputPath: join(tempDir, "transcript"),
-  };
-}
-
-async function readInteractiveTranscript(outputPath: string): Promise<string> {
-  try {
-    return (await readFile(outputPath, "utf8"))
-      .replace(/\r/g, "\n")
-      .trim();
-  } catch {
-    return "";
-  }
-}
-
-function waitForKeypress(): Promise<void> {
-  return new Promise((resolve) => {
-    const stdin = process.stdin;
-    const wasRaw = stdin.isRaw;
-    stdin.setRawMode(true);
-    stdin.resume();
-    stdin.once("data", () => {
-      stdin.setRawMode(wasRaw);
-      stdin.pause();
-      resolve();
-    });
-  });
-}
-
-function observeTTYChanges(): (() => boolean) | null {
-  if (!process.stdin.isTTY) return null;
-
-  const initial = getTerminalState();
-  if (!initial) return null;
-
-  let changed = false;
-  const interval = setInterval(() => {
-    const current = getTerminalState();
-    if (!current) return;
-    for (let i = 0; i < initial.length; i++) {
-      if (initial[i] !== current[i]) {
-        changed = true;
-        clearInterval(interval);
-        return;
-      }
-    }
-  }, 100);
-
-  return () => {
-    clearInterval(interval);
-    return changed;
-  };
-}
-
-// macOS struct termios is 72 bytes. tcgetattr reads the terminal state
-// so we can detect when a child process (like a pager) enters raw mode.
-const TERMIOS_SIZE = 72;
-const STDIN_FD = 0;
-
-let _tcgetattr: ((fd: number, buf: ReturnType<typeof import("bun:ffi").ptr>) => number) | null =
-  null;
-let _ffiLoaded = false;
-
-function loadFFI() {
-  if (_ffiLoaded) return;
-  _ffiLoaded = true;
-  try {
-    const ffi = require("bun:ffi");
-    const lib = ffi.dlopen("libSystem.B.dylib", {
-      tcgetattr: {
-        args: [ffi.FFIType.i32, ffi.FFIType.pointer],
-        returns: ffi.FFIType.i32,
-      },
-    });
-    _tcgetattr = (fd, bufPtr) => lib.symbols.tcgetattr(fd, bufPtr);
-  } catch {
-    // FFI unavailable — prompting will be skipped
-  }
-}
-
-function getTerminalState(): Uint8Array | null {
-  loadFFI();
-  if (!_tcgetattr) return null;
-  const ffi = require("bun:ffi");
-  const buf = new Uint8Array(TERMIOS_SIZE);
-  const result = _tcgetattr(STDIN_FD, ffi.ptr(buf));
-  return result === 0 ? buf : null;
 }
 
 export function quoteCommand(command: readonly string[]): string {

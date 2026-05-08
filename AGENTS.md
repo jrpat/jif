@@ -48,3 +48,8 @@
 - Debug mode should launch against a freshly materialized sample repo instead of the ambient working directory:
   - `bun run index.ts --sample`
 
+
+# User-specific Instructions
+
+If the user has user-specific instructions, they can be found in [@my/AGENTS.md](my/agents.md). Read them immediately after reading this file.
+
