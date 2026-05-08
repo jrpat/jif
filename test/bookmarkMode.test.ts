@@ -138,8 +138,8 @@ describe("bookmark leader mode", () => {
   test("startBookmarkPrompt without suggestions clears the bookmark context", () => {
     const state = startBookmarkPrompt(
       enterBookmarkLeader(createState()),
-      "b create  -r b",
-      "b create ".length,
+      "b move  -t b",
+      "b move ".length,
       {
         focusedRevisionId: "bbbbbbbb",
         suggestions: null,
@@ -147,6 +147,22 @@ describe("bookmark leader mode", () => {
     );
 
     expect(state.commandBarBookmark).toBeNull();
+  });
+
+  test("startBookmarkPrompt with empty suggestions preserves cursor offset", () => {
+    const state = startBookmarkPrompt(
+      enterBookmarkLeader(createState()),
+      "b create  -r b",
+      "b create ".length,
+      {
+        focusedRevisionId: "bbbbbbbb",
+        suggestions: [],
+      },
+    );
+
+    expect(state.commandBarBookmark).not.toBeNull();
+    expect(state.commandBarBookmark?.initialCursorOffset).toBe("b create ".length);
+    expect(state.commandBarBookmark?.suggestions).toHaveLength(0);
   });
 
   test("cancelling a bookmark prompt clears commandBarBookmark", () => {

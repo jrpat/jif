@@ -252,7 +252,7 @@ export function createJifCommandController(args: Readonly<{
       const cursorOffset = "b create ".length;
       store.actions.startBookmarkPrompt(prefill, cursorOffset, {
         focusedRevisionId: revision.revisionId,
-        suggestions: null,
+        suggestions: [],
       });
     },
     startBookmarkMoveFrom() {
