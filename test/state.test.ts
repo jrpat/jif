@@ -881,6 +881,33 @@ test("setRevisionFiles targets a single row by rowId when revision ids collide",
   expect(next.revisions[1]?.files).toEqual([{ status: "A", path: "src/only-second.ts" }]);
 });
 
+test("applyRepositoryData focuses the next revision when the focused row is removed", () => {
+  const state = createBranchedNavigationState();
+  expect(state.focusedRevisionIndex).toBe(3);
+  expect(state.revisions[3]?.rowId).toBe(BRANCH_PARENT_ROW_ID);
+
+  const refreshed = applyRepositoryData(state, {
+    repoPath: state.repoPath,
+    revisions: state.revisions.filter((_, index) => index !== 3),
+  });
+
+  expect(refreshed.focusedRevisionIndex).toBe(3);
+  expect(refreshed.revisions[3]?.rowId).toBe(BRANCH_ROOT_ROW_ID);
+});
+
+test("applyRepositoryData focuses the previous revision when the last focused row is removed", () => {
+  const state = { ...createBranchedNavigationState(), focusedRevisionIndex: 4 };
+  expect(state.revisions[4]?.rowId).toBe(BRANCH_ROOT_ROW_ID);
+
+  const refreshed = applyRepositoryData(state, {
+    repoPath: state.repoPath,
+    revisions: state.revisions.slice(0, 4),
+  });
+
+  expect(refreshed.focusedRevisionIndex).toBe(3);
+  expect(refreshed.revisions[3]?.rowId).toBe(BRANCH_PARENT_ROW_ID);
+});
+
 test("focusWorkingCopy selects the new working-copy revision after repository refresh", () => {
   const state = createState();
 

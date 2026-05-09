@@ -248,13 +248,10 @@ export function applyRepositoryData(
     ...revision,
     ...resolveRevisionFiles(previousRevisions.get(revision.rowId), revision),
   }));
-  const previousFocusedRevision = getFocusedRevision(state);
-  const focusedRowId = reconcileRowId(previousFocusedRevision, revisions);
-  const focusedRevisionIndex = clampIndex(
-    focusedRowId
-      ? revisions.findIndex((revision) => revision.rowId === focusedRowId)
-      : 0,
-    revisions.length,
+  const focusedRevisionIndex = reconcileFocusedRevisionIndex(
+    state.revisions,
+    state.focusedRevisionIndex,
+    revisions,
   );
   const previousExpandedRevision = state.expandedRowId
     ? previousRevisions.get(state.expandedRowId) ?? null
@@ -1552,6 +1549,41 @@ function reconcileRowId(
     (revision) => revision.revisionId === previous.revisionId,
   );
   return byRevisionId?.rowId ?? null;
+}
+
+function reconcileFocusedRevisionIndex(
+  previousRevisions: readonly RevisionSummary[],
+  previousFocusedIndex: number,
+  nextRevisions: readonly RevisionSummary[],
+): number {
+  if (nextRevisions.length === 0) {
+    return 0;
+  }
+
+  const findInNext = (revision: RevisionSummary | undefined): number => {
+    if (!revision) return -1;
+    const byRowId = nextRevisions.findIndex((r) => r.rowId === revision.rowId);
+    if (byRowId !== -1) return byRowId;
+    return nextRevisions.findIndex((r) => r.revisionId === revision.revisionId);
+  };
+
+  const direct = findInNext(previousRevisions[previousFocusedIndex]);
+  if (direct !== -1) return direct;
+
+  for (let offset = 1; offset < previousRevisions.length; offset++) {
+    const nextIdx = previousFocusedIndex + offset;
+    if (nextIdx < previousRevisions.length) {
+      const found = findInNext(previousRevisions[nextIdx]);
+      if (found !== -1) return found;
+    }
+    const prevIdx = previousFocusedIndex - offset;
+    if (prevIdx >= 0) {
+      const found = findInNext(previousRevisions[prevIdx]);
+      if (found !== -1) return found;
+    }
+  }
+
+  return 0;
 }
 
 function resolveRevisionFiles(
