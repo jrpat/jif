@@ -1,6 +1,9 @@
-import type { ScrollBoxRenderable } from "@opentui/core";
+import type { MouseEvent, ScrollBoxRenderable } from "@opentui/core";
 
 type BottomAwareScrollBox = Pick<ScrollBoxRenderable, "scrollBy" | "scrollTop" | "scrollHeight" | "viewport">;
+
+type MouseEventHandler = (event: MouseEvent) => void;
+type WithMouseEvent = { onMouseEvent: MouseEventHandler };
 
 export function isScrollboxAtBottom(scrollbox: BottomAwareScrollBox, threshold = 0): boolean {
   const maxScrollTop = Math.max(0, scrollbox.scrollHeight - scrollbox.viewport.height);
@@ -22,8 +25,25 @@ export function observeScrollboxBottomReached(
     }
   }) as ScrollBy;
 
+  // Mouse wheel and scrollbar drag in OpenTUI mutate scrollTop directly inside
+  // ScrollBoxRenderable.onMouseEvent, bypassing scrollBy. Wrap that path too so
+  // reaching the bottom via the mouse triggers the callback.
+  const mouseTarget = scrollbox as unknown as Partial<WithMouseEvent>;
+  const originalOnMouseEvent = mouseTarget.onMouseEvent?.bind(scrollbox);
+  if (originalOnMouseEvent) {
+    mouseTarget.onMouseEvent = (event: MouseEvent) => {
+      originalOnMouseEvent(event);
+      if ((event.type === "scroll" || event.type === "drag") && isScrollboxAtBottom(scrollbox, threshold)) {
+        onBottomReached();
+      }
+    };
+  }
+
   return () => {
     scrollbox.scrollBy = originalScrollBy as ScrollBy;
+    if (originalOnMouseEvent) {
+      mouseTarget.onMouseEvent = originalOnMouseEvent;
+    }
   };
 }
 

@@ -142,6 +142,46 @@ test("observeScrollboxBottomReached hooks scrollBy and fires when the viewport r
   expect(triggered).toBe(1);
 });
 
+test("observeScrollboxBottomReached fires when mouse-wheel scrolling reaches the bottom", () => {
+  // Mouse wheel events in OpenTUI's ScrollBoxRenderable mutate scrollTop directly
+  // from inside onMouseEvent, bypassing scrollBy. The observer must hook that
+  // path too, otherwise reaching the bottom by mouse never triggers the callback.
+  let scrollTop = 0;
+  let triggered = 0;
+  const scrollbox = {
+    get scrollTop() {
+      return scrollTop;
+    },
+    set scrollTop(value: number) {
+      scrollTop = value;
+    },
+    scrollHeight: 20,
+    viewport: { height: 10 },
+    scrollBy() {},
+    onMouseEvent(event: { type: string; scroll?: { delta: number; direction: "up" | "down" } }) {
+      if (event.type === "scroll" && event.scroll?.direction === "down") {
+        scrollTop += event.scroll.delta;
+      }
+    },
+  } as unknown as ScrollBoxRenderable & {
+    onMouseEvent: (event: { type: string; scroll?: { delta: number; direction: "up" | "down" } }) => void;
+  };
+
+  const dispose = observeScrollboxBottomReached(scrollbox, () => {
+    triggered += 1;
+  });
+
+  scrollbox.onMouseEvent({ type: "scroll", scroll: { delta: 5, direction: "down" } });
+  expect(triggered).toBe(0);
+
+  scrollbox.onMouseEvent({ type: "scroll", scroll: { delta: 5, direction: "down" } });
+  expect(triggered).toBe(1);
+
+  dispose();
+  scrollbox.onMouseEvent({ type: "scroll", scroll: { delta: 1, direction: "down" } });
+  expect(triggered).toBe(1);
+});
+
 test("observeScrollboxInteraction hooks scrollBy and fires for scroll attempts until disposed", () => {
   let triggered = 0;
   const scrollbox = {
