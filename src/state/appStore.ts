@@ -32,6 +32,9 @@ import {
   collapseFocusedNotification,
   expandFocusedNotification,
   focusLogBottom,
+  focusNotificationAt,
+  focusOperationLogEntryAt,
+  focusRevisionAt,
   focusWorkingCopy,
   openNotifications,
   openOperationLog,
@@ -147,6 +150,15 @@ export function createAppStore(
       },
       moveFocus(delta: number) {
         mutate((currentState) => moveFocus(currentState, delta));
+      },
+      focusRevisionAt(index: number) {
+        mutate((currentState) => focusRevisionAt(currentState, index));
+      },
+      focusOperationLogEntryAt(index: number) {
+        mutate((currentState) => focusOperationLogEntryAt(currentState, index));
+      },
+      focusNotificationAt(index: number) {
+        mutate((currentState) => focusNotificationAt(currentState, index));
       },
       moveFocusToParent() {
         mutate((currentState) => moveFocusToParent(currentState));

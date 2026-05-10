@@ -1,4 +1,5 @@
 import { createEffect, createMemo } from "solid-js";
+import { MouseButton, type MouseEvent } from "@opentui/core";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { OperationLogEntry } from "../domain/types.ts";
 import { parseAnsiToStyledText } from "./ansiToStyledText.ts";
@@ -35,6 +36,7 @@ export function OperationLogEntryItem(props: Readonly<{
   focused: boolean;
   config: ResolvedAppConfig;
   id?: string;
+  onMouseFocus?: () => void;
 }>) {
   const backgroundColor = createMemo(() =>
     getRevisionRowBackgroundColor({
@@ -46,7 +48,16 @@ export function OperationLogEntryItem(props: Readonly<{
   );
 
   return (
-    <box id={props.id} width="100%" flexDirection="column" backgroundColor={backgroundColor()}>
+    <box
+      id={props.id}
+      width="100%"
+      flexDirection="column"
+      backgroundColor={backgroundColor()}
+      onMouseDown={(event: MouseEvent) => {
+        if (event.button !== MouseButton.LEFT) return;
+        props.onMouseFocus?.();
+      }}
+    >
       {props.entry.lines.map((line) => (
         <OperationLogAnsiLine
           line={line}

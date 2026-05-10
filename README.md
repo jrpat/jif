@@ -211,6 +211,10 @@ Active in the command bar (`:`), revset prompt (`L`), and search prompt (`/`). K
 | `enter` | Submit the current input (run the command, apply the revset, finalize the search) |
 | `tab` / `shift-tab` | Move to the next / previous suggestion |
 
+## Mouse
+
+Left-clicking an entry in any of the list-style views — the revision log, the operation log, and the notifications panel — moves focus to that entry. Mouse wheel scrolling and scrollbar dragging continue to work as before.
+
 ## Shell commands
 
 Shell commands invoked via `>` (or `cmd.sh()` from a custom keybinding) run in your login shell (`$SHELL -lc`) with the cwd jif was launched from. Login shells source `.zprofile` / `.bash_profile` / `.profile`, but **not** `.zshrc` / `.bashrc`, so aliases and functions defined only in your interactive rc files will not be available.

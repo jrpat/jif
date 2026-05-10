@@ -1,4 +1,5 @@
 import { For, Show, createEffect, createMemo } from "solid-js";
+import { MouseButton, type MouseEvent } from "@opentui/core";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { EventLogEntry } from "../domain/types.ts";
 import { parseAnsiToStyledText } from "./ansiToStyledText.ts";
@@ -11,6 +12,7 @@ export function NotificationsOverlay(props: Readonly<{
   focusedIndex: number;
   expandedIds: readonly string[];
   config: ResolvedAppConfig;
+  onFocusEntry?: (index: number) => void;
 }>) {
   const colors = () => props.config.colorScheme.semanticColors;
   const expandedSet = createMemo(() => new Set(props.expandedIds));
@@ -33,6 +35,7 @@ export function NotificationsOverlay(props: Readonly<{
               focused={props.focusedIndex === index()}
               expanded={expandedSet().has(entry.id)}
               config={props.config}
+              onMouseFocus={() => props.onFocusEntry?.(index())}
             />
           )}
         </For>
@@ -47,6 +50,7 @@ function NotificationCard(props: Readonly<{
   focused: boolean;
   expanded: boolean;
   config: ResolvedAppConfig;
+  onMouseFocus?: () => void;
 }>) {
   const colors = () => props.config.colorScheme.semanticColors;
   const lines = createMemo(() => props.entry.text.split(/\r\n|\r|\n/));
@@ -71,6 +75,10 @@ function NotificationCard(props: Readonly<{
       borderColor={borderColor()}
       backgroundColor={backgroundColor()}
       paddingX={1}
+      onMouseDown={(event: MouseEvent) => {
+        if (event.button !== MouseButton.LEFT) return;
+        props.onMouseFocus?.();
+      }}
     >
       <box width="100%" flexDirection="row">
         <text fg={borderColor()}>{labelForLevel(props.entry.level)}</text>

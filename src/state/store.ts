@@ -395,6 +395,55 @@ export function moveFocusToChild(state: AppState): AppState {
   }, ["revisions"]);
 }
 
+export function focusRevisionAt(state: AppState, index: number): AppState {
+  if (state.revisions.length === 0) {
+    return state;
+  }
+
+  const clamped = clampIndex(index, state.revisions.length);
+  if (clamped === state.focusedRevisionIndex) {
+    return state;
+  }
+
+  return {
+    ...state,
+    focusedRevisionIndex: clamped,
+    focusedFileIndex: 0,
+  };
+}
+
+export function focusOperationLogEntryAt(state: AppState, index: number): AppState {
+  if (state.operationLogEntries.length === 0) {
+    return state;
+  }
+
+  const clamped = clampIndex(index, state.operationLogEntries.length);
+  if (clamped === state.focusedOperationLogIndex) {
+    return state;
+  }
+
+  return {
+    ...state,
+    focusedOperationLogIndex: clamped,
+  };
+}
+
+export function focusNotificationAt(state: AppState, index: number): AppState {
+  if (state.eventLog.length === 0) {
+    return state;
+  }
+
+  const clamped = clampIndex(index, state.eventLog.length);
+  if (clamped === state.focusedNotificationIndex) {
+    return state;
+  }
+
+  return {
+    ...state,
+    focusedNotificationIndex: clamped,
+  };
+}
+
 export function focusWorkingCopy(state: AppState): AppState {
   const index = state.revisions.findIndex((r) => r.marker === "working-copy");
   if (index === -1) {

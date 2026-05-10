@@ -1,4 +1,4 @@
-import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core";
+import { MouseButton, TextAttributes, type MouseEvent, type ScrollBoxRenderable } from "@opentui/core";
 import { For, Show, createEffect, createMemo, createRenderEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { useKeyboard, useRenderer } from "@opentui/solid";
@@ -577,6 +577,7 @@ export function JifView(props: {
                               selectedRowIds={getMarkedRowIds(store.state)}
                               expandedRowId={getExpandedRevision(store.state)?.rowId ?? null}
                               commandTargetRowId={getCommandTargetRowId(store.state)}
+                              onMouseFocus={() => store.actions.focusRevisionAt(index())}
                             />
                           )}
                         </For>
@@ -599,6 +600,7 @@ export function JifView(props: {
                               entry={entry}
                               focused={store.state.focusedOperationLogIndex === index()}
                               config={config}
+                              onMouseFocus={() => store.actions.focusOperationLogEntryAt(index())}
                             />
                           )}
                         </For>
@@ -611,6 +613,7 @@ export function JifView(props: {
                     focusedIndex={store.state.focusedNotificationIndex}
                     expandedIds={store.state.expandedNotificationIds}
                     config={config}
+                    onFocusEntry={(index) => store.actions.focusNotificationAt(index)}
                   />
                 </Show>
               </box>
@@ -740,6 +743,7 @@ export function RevisionItem(props: {
   selectedRowIds: ReadonlySet<string>;
   expandedRowId: string | null;
   commandTargetRowId: string | null;
+  onMouseFocus?: () => void;
 }) {
   const renderer = useRenderer();
   const colors = () => props.config.colorScheme.semanticColors;
@@ -951,6 +955,10 @@ export function RevisionItem(props: {
       width="100%"
       flexDirection="column"
       opacity={anyExpanded() && !isExpanded() ? 0.6 : 1}
+      onMouseDown={(event: MouseEvent) => {
+        if (event.button !== MouseButton.LEFT) return;
+        props.onMouseFocus?.();
+      }}
     >
       <Show
         when={layoutSpec().mode === "super-condensed"}

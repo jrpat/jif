@@ -16,6 +16,9 @@ import {
   focusCommandBar,
   focusShellCommandBar,
   focusLogBottom,
+  focusNotificationAt,
+  focusOperationLogEntryAt,
+  focusRevisionAt,
   getFocusedRevisionArg,
   focusWorkingCopy,
   getDisplayedCommandSegments,
@@ -777,6 +780,63 @@ test("focusWorkingCopy is a no-op when no working copy exists", () => {
 
   state = focusWorkingCopy(state);
   expect(state.focusedRevisionIndex).toBe(before);
+});
+
+test("focusRevisionAt sets focusedRevisionIndex when index changes", () => {
+  let state = createState();
+  expect(state.focusedRevisionIndex).toBe(0);
+
+  state = focusRevisionAt(state, 1);
+  expect(state.focusedRevisionIndex).toBe(1);
+  expect(state.focusedFileIndex).toBe(0);
+});
+
+test("focusRevisionAt clamps out-of-range indexes", () => {
+  let state = createState();
+
+  state = focusRevisionAt(state, 99);
+  expect(state.focusedRevisionIndex).toBe(state.revisions.length - 1);
+
+  state = focusRevisionAt(state, -5);
+  expect(state.focusedRevisionIndex).toBe(0);
+});
+
+test("focusRevisionAt is a no-op when there are no revisions", () => {
+  const state = { ...createState(), revisions: [] };
+  expect(focusRevisionAt(state, 0)).toEqual(state);
+});
+
+test("focusOperationLogEntryAt sets focusedOperationLogIndex", () => {
+  let state = { ...createState(), operationLogEntries: OP_LOG_ENTRIES };
+
+  state = focusOperationLogEntryAt(state, 1);
+  expect(state.focusedOperationLogIndex).toBe(1);
+
+  state = focusOperationLogEntryAt(state, 99);
+  expect(state.focusedOperationLogIndex).toBe(OP_LOG_ENTRIES.length - 1);
+});
+
+test("focusOperationLogEntryAt is a no-op when the operation log is empty", () => {
+  const state = createState();
+  expect(focusOperationLogEntryAt(state, 0)).toEqual(state);
+});
+
+test("focusNotificationAt sets focusedNotificationIndex", () => {
+  let state = createState();
+  state = pushEvent(state, "first", "info");
+  state = pushEvent(state, "second", "info");
+  state = pushEvent(state, "third", "info");
+
+  state = focusNotificationAt(state, 2);
+  expect(state.focusedNotificationIndex).toBe(2);
+
+  state = focusNotificationAt(state, 99);
+  expect(state.focusedNotificationIndex).toBe(state.eventLog.length - 1);
+});
+
+test("focusNotificationAt is a no-op when the event log is empty", () => {
+  const state = createState();
+  expect(focusNotificationAt(state, 0)).toEqual(state);
 });
 
 test("focusLogBottom jumps to the last revision", () => {
