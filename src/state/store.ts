@@ -793,15 +793,22 @@ export function setSearchText(state: AppState, query: string): AppState {
     return { ...state, searchQuery: "", searchScope };
   }
 
-  const searchState = { ...state, searchQuery: query, searchScope };
-  const firstMatchIndex = getSearchMatchItems(searchState, query)[0]?.index ?? -1;
-
   const nextState: AppState = {
     ...state,
     searchQuery: query,
     searchScope,
   };
 
+  // Only snap to the first match while the search prompt is the focused input.
+  // The prompt remounts whenever an overlay (command bar, etc.) opens and
+  // closes over it, and OpenTUI's <input> emits a synthetic INPUT event when
+  // its initial `value` is applied — without this guard, that spurious event
+  // pulls focus back to the first match every time.
+  if (state.focusMode !== "search") {
+    return nextState;
+  }
+
+  const firstMatchIndex = getSearchMatchItems(nextState, query)[0]?.index ?? -1;
   if (firstMatchIndex < 0) {
     return nextState;
   }

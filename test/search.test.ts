@@ -83,6 +83,29 @@ test("confirming revision search keeps the matched focus", () => {
   expect(state.focusedRevisionIndex).toBe(0);
 });
 
+test("setSearchText after finalize does not snap focus back to the first match", () => {
+  let state: AppState = {
+    ...createInitialState("/tmp/repo"),
+    revisions: [
+      createRevision({ rowId: "one", revisionId: "aaaaaaaa", description: "first revision" }),
+      createRevision({ rowId: "two", revisionId: "bbbbbbbb", description: "first second" }),
+      createRevision({ rowId: "three", revisionId: "cccccccc", description: "first third" }),
+    ],
+  };
+
+  state = openSearch(state);
+  state = setSearchText(state, "first");
+  state = finalizeSearch(state);
+  expect(state.focusedRevisionIndex).toBe(0);
+
+  state = { ...state, focusedRevisionIndex: 2 };
+
+  state = setSearchText(state, "first");
+
+  expect(state.focusedRevisionIndex).toBe(2);
+  expect(state.searchQuery).toBe("first");
+});
+
 test("operation-log search scopes matches and navigation to op-log entries", () => {
   let state = createInitialState("/tmp/repo");
   state = setOperationLogEntries(state, [
