@@ -129,12 +129,12 @@ export const defaultKeymap: Keymap = {
   revset: {},
   search: {},
   "search-results": {
-    n: "search-next",
-    p: "search-prev",
+    "ctrl-n": "search-next",
+    "ctrl-p": "search-prev",
   },
   "op-log-search-results": {
-    n: "search-next",
-    p: "search-prev",
+    "ctrl-n": "search-next",
+    "ctrl-p": "search-prev",
   },
   "diff-viewer": {
     j: "scroll-down",

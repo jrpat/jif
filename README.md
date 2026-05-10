@@ -139,12 +139,12 @@ Bookmark autocomplete is sorted with the closest ancestor bookmark first (visual
 
 ### Search Results
 
-Active after running a search in a searchable view. Search updates incrementally as you type and highlights visible matching text with inverse video. The revision log and operation log are searchable; `n` and `p` move between matching revisions or operation log entries until the search is cleared. Pressing Enter keeps the focused match; pressing Escape cancels the search and restores the focus from before search started.
+Active after running a search in a searchable view. Search updates incrementally as you type and highlights visible matching text with inverse video. The revision log and operation log are searchable; `Ctrl+n` and `Ctrl+p` move between matching revisions or operation log entries until the search is cleared. Pressing Enter keeps the focused match; pressing Escape cancels the search and restores the focus from before search started.
 
 | Key | Command | Description |
 |-----|---------|-------------|
-| `n` | search-next | Jump to the next search match |
-| `p` | search-prev | Jump to the previous search match |
+| `Ctrl+n` | search-next | Jump to the next search match |
+| `Ctrl+p` | search-prev | Jump to the previous search match |
 
 ### Operation Log
 

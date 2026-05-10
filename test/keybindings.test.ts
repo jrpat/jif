@@ -723,7 +723,7 @@ test("dispatchGlobalKey passes keys through in search mode", () => {
   expect(calls).toEqual([]);
 });
 
-test("dispatchGlobalKey routes n to search-next when searchQuery is set", () => {
+test("dispatchGlobalKey routes ctrl-n to search-next when searchQuery is set", () => {
   const calls: string[] = [];
   const state: AppState = {
     ...createState(),
@@ -732,7 +732,7 @@ test("dispatchGlobalKey routes n to search-next when searchQuery is set", () => 
   };
 
   const handled = dispatchGlobalKey({
-    normalizedKey: "n",
+    normalizedKey: "ctrl-n",
     state,
     commands: commandDefinitions,
     controller: createController(calls),
@@ -753,7 +753,7 @@ test("dispatchGlobalKey layers search-result keys over op-log mode", () => {
   };
 
   const handled = dispatchGlobalKey({
-    normalizedKey: "n",
+    normalizedKey: "ctrl-n",
     state,
     commands: commandDefinitions,
     controller: createController(calls),
