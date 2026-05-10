@@ -51,7 +51,7 @@ export const defaultKeymap: Keymap = {
     "ctrl-r": "refresh-repository",
     "ctrl-z": "suspend",
     q: "quit",
-    "`": "open-notifications",
+    "~": "open-notifications",
   },
   normal: {
     j: "move-down",
@@ -156,7 +156,7 @@ export const defaultKeymap: Keymap = {
     right: "expand-notification",
     h: "collapse-notification",
     left: "collapse-notification",
-    "`": "cancel",
+    "~": "cancel",
     "?": "shortcut-panel",
   },
   bookmark: {

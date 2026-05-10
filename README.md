@@ -45,7 +45,7 @@ Available in every mode (mode-specific bindings can override these).
 | `ctrl-r` | refresh-repository | Refresh the revision log |
 | `ctrl-z` | suspend | Suspend the application and return to the shell |
 | `escape` | cancel | Cancel command composition or leave input mode |
-| `` ` `` | open-notifications | Open the notifications history panel |
+| `~` | open-notifications | Open the notifications history panel |
 
 ### Normal
 
@@ -172,7 +172,7 @@ Active while the notifications history panel is open. Does not inherit Normal.
 | `G` | jump-to-bottom | Jump to the last notification |
 | `l` / `→` | expand-notification | Show all lines of the focused notification |
 | `h` / `←` | collapse-notification | Truncate the focused notification |
-| `` ` `` | cancel | Close the notifications panel |
+| `~` | cancel | Close the notifications panel |
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 
 ### Diff Viewer

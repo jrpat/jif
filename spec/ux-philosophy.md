@@ -120,6 +120,53 @@ so the chord with `Ctrl-K` would not produce a recall action.
 - Document the alternate in the spec so the rationale is recoverable, even
   if the in-app help does not announce it.
 
+## Keep Inverses Apart
+
+Default keybindings should respect the physical keyboard, not just mnemonic
+logic. Two keys that perform opposing or undoing actions — open vs. dismiss,
+advance vs. retreat — must not sit adjacent on a US QWERTY layout. A single
+fat-finger slip should never produce the inverse of the intended outcome.
+
+This compounds with jif's other ergonomics commitments. "Reward the Resident
+Hand" assumes the keyboard is lived in for hours; small physical missteps
+happen constantly, and the cost of each one is paid thousands of times.
+"Do the Thing, Rely on Undo" trades confirmation prompts for trust in undo,
+but undo only forgives the *intended* action — a slip that opens what you
+meant to close (or vice versa) is recoverable in keystrokes but not in
+flow, because the user's mental state was already correct. The tool ends up
+fighting the user instead of carrying them.
+
+The relevant question for any new default binding is therefore not only "is
+this letter mnemonic?" but "what's adjacent, and what does it do?" If the
+adjacent key inverts the action, choose a different key.
+
+### Example: Notifications History
+
+The notifications panel was originally opened with `` ` ``, the unshifted
+backtick in the upper-left corner. `Escape` is the global cancel/dismiss,
+sits immediately above the backtick, and is also the key that closes the
+notifications panel once open. A user reaching for one and landing on the
+other did the *opposite* of what they intended — opened a panel they meant
+to close, or closed a panel they meant to open.
+
+The fix was to move the binding to `~` (Shift+`` ` ``). The action stays in
+the same corner of the keyboard, preserving the mnemonic and the muscle
+memory, but the Shift requirement means a slip onto `Escape` no longer
+fires the notification toggle. The modifier acts as a guard against drift.
+
+### Implications
+
+- Audit physical neighbors, not just letter mnemonics, when introducing a
+  default binding — especially for global bindings and for any
+  "open dismissable surface" / "dismiss" pair.
+- Same-key + modifier pairs (`u` / `U` for undo / redo) are safe: a slipped
+  modifier keeps the user on the same conceptual axis.
+- When a corner key is the natural choice but its unshifted form sits next
+  to `Escape` or another inverse, prefer the shifted form. The modifier is
+  the guard.
+- Do not paper over a layout problem with confirmation prompts — that fights
+  "Do the Thing, Rely on Undo". Fix the layout instead.
+
 ## Protect Left-Side Density
 
 In revision rows, the left edge carries the densest and most decision-relevant

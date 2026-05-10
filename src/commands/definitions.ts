@@ -215,7 +215,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     id: "open-notifications",
     title: "Notifications",
     description: "Show recent toast notifications",
-    canonicalKeys: ["`"],
+    canonicalKeys: ["~"],
     run: (controller) => controller.openNotifications(),
     group: "global",
   },
