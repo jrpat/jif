@@ -175,6 +175,9 @@ export function JifView(props: {
         setRevsetQuery: (query) => {
           store.actions.setRevsetQuery(query);
         },
+        focusWorkingCopy: () => {
+          store.actions.focusWorkingCopy();
+        },
       });
       setReady(true);
       const disposeFocusRefresh = bindRefreshOnFocus(renderer, () => refreshRepository());

@@ -52,6 +52,9 @@ test("startInitialRepositoryLoad awaits palette detection before refreshing", as
     setRevsetQuery: (query) => {
       events.push(`revset.set:${query}`);
     },
+    focusWorkingCopy: () => {
+      events.push("focus-working-copy");
+    },
   });
 
   expect(result).toEqual({
@@ -63,6 +66,9 @@ test("startInitialRepositoryLoad awaits palette detection before refreshing", as
   const refreshIndex = events.indexOf("refresh:all():21");
   expect(paletteIndex).toBeGreaterThanOrEqual(0);
   expect(refreshIndex).toBeGreaterThan(paletteIndex);
+  // focus on the working-copy revision must run after the refresh lands
+  const focusIndex = events.indexOf("focus-working-copy");
+  expect(focusIndex).toBeGreaterThan(refreshIndex);
 });
 
 test("startInitialRepositoryLoad prefers saved revset over default revset", async () => {
@@ -75,6 +81,7 @@ test("startInitialRepositoryLoad prefers saved revset over default revset", asyn
     refreshRepository: async (revset, limit) => revset === "mine()" && limit === 34,
     setWorkspaceRoot: () => {},
     setRevsetQuery: () => {},
+    focusWorkingCopy: () => {},
   });
 
   expect(result).toEqual({

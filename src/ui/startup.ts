@@ -113,6 +113,7 @@ export function startInitialRepositoryLoad(args: {
   refreshRepository: (revset?: string, limit?: number) => Promise<unknown>;
   setWorkspaceRoot: (workspaceRoot: string | null) => void;
   setRevsetQuery: (query: string) => void;
+  focusWorkingCopy: () => void;
 }): Promise<InitialRepositoryLoad> {
   return (async (): Promise<InitialRepositoryLoad> => {
     const [, workspaceRoot, defaultRevset] = await Promise.all([
@@ -133,6 +134,7 @@ export function startInitialRepositoryLoad(args: {
     }
 
     await args.refreshRepository(initialRevset || undefined, args.initialRevisionLimit);
+    args.focusWorkingCopy();
 
     return {
       workspaceRoot,
