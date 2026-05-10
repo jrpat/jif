@@ -7,6 +7,7 @@ export type Mode =
   | "op-log"
   | "inline-confirmation"
   | "rebase"
+  | "restore"
   | "squash"
   | "command"
   | "revset"
@@ -31,6 +32,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   "op-log": { id: "op-log", inputPassthrough: false, label: "Op Log" },
   "inline-confirmation": { id: "inline-confirmation", inputPassthrough: false, label: "Confirm" },
   rebase: { id: "rebase", parent: "normal", inputPassthrough: false, label: "Rebase" },
+  restore: { id: "restore", parent: "normal", inputPassthrough: false, label: "Restore" },
   squash: { id: "squash", parent: "normal", inputPassthrough: false, label: "Squash" },
   command: { id: "command", inputPassthrough: true, label: "Command" },
   revset: { id: "revset", inputPassthrough: true, label: "Revset" },
@@ -74,6 +76,7 @@ export const defaultKeymap: Keymap = {
     "?": "shortcut-panel",
     enter: "confirm",
     r: "rebase",
+    R: "restore-revision",
     s: "split",
     S: "squash",
     n: "new-revision",
@@ -124,6 +127,7 @@ export const defaultKeymap: Keymap = {
   rebase: {
     s: "rebase-descendants",
   },
+  restore: {},
   squash: {},
   command: {},
   revset: {},
@@ -185,6 +189,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "notifications") return "notifications";
   if (state.focusMode === "files") return "files";
   if (state.commandDraft?.config.kind === "rebase") return "rebase";
+  if (state.commandDraft?.config.kind === "restore") return "restore";
   if (state.commandDraft?.config.kind === "squash") return "squash";
   if (state.commandDraft?.config.kind === "bookmark-move") return "bookmark-move";
   if (state.focusMode === "bookmark") return "bookmark";

@@ -239,6 +239,8 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Confirm";
     case "rebase":
       return "Rebase";
+    case "restore":
+      return "Restore";
     case "squash":
       return "Squash";
     case "command":
@@ -393,6 +395,7 @@ function commandHasImmediateEffect(
     case "inline-confirmation-next-option":
       return state.focusMode === "inline-confirmation" && state.inlineConfirmation !== null;
     case "rebase":
+    case "restore-revision":
     case "squash":
       return state.focusMode === "revisions" && getFocusedRevision(state) !== null;
     case "jump-to-working-copy":

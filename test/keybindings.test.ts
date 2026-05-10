@@ -65,6 +65,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     focusCommandBar: () => calls.push("focusCommandBar"),
     focusShellCommandBar: () => calls.push("focusShellCommandBar"),
     startRebase: () => calls.push("startRebase"),
+    startRestore: () => calls.push("startRestore"),
     startSplit: () => calls.push("startSplit"),
     startSquash: () => calls.push("startSquash"),
     startNewRevision: () => calls.push("startNewRevision"),

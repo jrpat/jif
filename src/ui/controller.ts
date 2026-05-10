@@ -238,6 +238,14 @@ export function createJifCommandController(args: Readonly<{
         }
       })();
     },
+    startRestore() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (!revision) {
+        return;
+      }
+
+      store.actions.startCommandDraft(draftConfigs.restore);
+    },
     enterBookmarkMode() {
       store.actions.enterBookmarkLeader();
     },

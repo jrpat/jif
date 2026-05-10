@@ -138,6 +138,10 @@ test("getDirectCommandsForMode returns only rebase-local bindings", () => {
   expect(commands.map((command) => command.id)).toEqual(["rebase-descendants"]);
 });
 
+test("R triggers restore-revision in normal mode", () => {
+  expect(resolveForState("R", createState())).toBe("restore-revision");
+});
+
 test("inline confirmation uses a dedicated mode with local option navigation", () => {
   let state = createState();
   state = {

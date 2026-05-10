@@ -520,6 +520,16 @@ test("rebase command text updates when descendants are toggled", () => {
   expect(getDisplayedCommandText(state)).toBe("rebase -s a -d b");
 });
 
+test("restore composes -f / -t and advances focus to the next revision", () => {
+  let state = createState();
+  expect(state.focusedRevisionIndex).toBe(0);
+
+  state = startCommandDraft(state, draftConfigs.restore);
+
+  expect(state.focusedRevisionIndex).toBe(1);
+  expect(getDisplayedCommandText(state)).toBe("restore -f a -t b");
+});
+
 test("pushEvent appends visible status messages instead of replacing them", () => {
   let state = createState();
   state = pushEvent(state, "command failed", "error");

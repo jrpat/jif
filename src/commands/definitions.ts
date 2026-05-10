@@ -29,6 +29,7 @@ export type CommandController = Readonly<{
   focusShellCommandBar: () => void;
   forceLastCommand: () => void;
   startRebase: () => void;
+  startRestore: () => void;
   startSplit: () => void;
   startSquash: () => void;
   startNewRevision: () => void;
@@ -323,6 +324,15 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     canonicalKeys: ["r"],
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.startRebase(),
+    group: "global",
+  },
+  {
+    id: "restore-revision",
+    title: "Restore",
+    description: "Restore the focused revision from another",
+    canonicalKeys: ["R"],
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startRestore(),
     group: "global",
   },
   {

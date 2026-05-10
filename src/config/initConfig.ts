@@ -342,6 +342,7 @@ namespace Jif {
     | "op-log"
     | "inline-confirmation"
     | "rebase"
+    | "restore"
     | "squash"
     | "command"
     | "revset"

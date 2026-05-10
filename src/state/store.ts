@@ -53,6 +53,12 @@ export const draftConfigs = {
     badgeText: "to",
     sourceBadgeText: "from",
   },
+  restore: {
+    kind: "restore" as const,
+    template: "restore ${selected.map(s => `${arg('-f --from')} ${s}`).join(' ')} ${arg('-t --to')} ${target}",
+    badgeText: "to",
+    sourceBadgeText: "from",
+  },
 } satisfies Record<string, CommandDraftConfig>;
 
 export type TemplateContext = Readonly<{

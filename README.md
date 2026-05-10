@@ -84,6 +84,7 @@ Viewing and navigating the revision log.
 | `e` | edit-revision | Edit the focused revision |
 | `n` | new-revision | Create a new revision from the focused revision |
 | `r` | rebase | Start a rebase from the focused revision |
+| `R` | restore-revision | Restore the focused revision from another |
 | `s` | split | Split the focused revision, or use the current file selection |
 | `S` | squash | Squash the focused revision into another |
 | `u` | undo | Undo the last operation |
@@ -119,6 +120,10 @@ Active while previewing a rebase. Inherits Normal.
 | Key | Command | Description |
 |-----|---------|-------------|
 | `s` | rebase-descendants | Toggle whether descendants are included in the rebase |
+
+### Restore
+
+Active while previewing a restore. Inherits Normal. Composes `jj restore -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run.
 
 ### Bookmark
 
