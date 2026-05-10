@@ -5,7 +5,7 @@ import { matchHistoryEntries } from "../history/store.ts";
 import type { JjClient } from "../jj/client.ts";
 import { buildCompletionItems, extractLastToken, matchCompletions, type CompletionItem } from "../revset/completions.ts";
 import type { AppStore } from "../state/appStore.ts";
-import type { CommandSegment } from "../state/store.ts";
+import { getFocusedRevisionArg, type CommandSegment } from "../state/store.ts";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { BookmarkSuggestion } from "../domain/types.ts";
 import { AutocompleteList, type AutocompleteListItem } from "./AutocompleteList.tsx";
@@ -150,6 +150,23 @@ export function CommandPrompt(props: {
         moveAutocompleteSelection(currentIndex, itemCount, action)
       );
       return;
+    }
+
+    if (event.ctrl && event.name === "'" && input) {
+      const arg = getFocusedRevisionArg(store.state);
+      if (arg) {
+        event.preventDefault();
+        input.insertText(arg);
+        const nextText = input.plainText;
+        const nextCursor = input.cursorOffset;
+        batch(() => {
+          setDraftText(nextText);
+          setSelectedIndex(null);
+          setCursorOffset(nextCursor);
+          store.actions.setCommandBarText(nextText);
+        });
+        return;
+      }
     }
 
     if (event.name === "return") {
