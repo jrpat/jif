@@ -71,6 +71,7 @@ import { dispatchGlobalKey } from "./keybindings.ts";
 import { getActiveMode, getCommandsForMode, getDirectCommandsForMode } from "../modes.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
+import { createFocusClickGuard } from "./focusClickGuard.ts";
 import { suspendProcessToShell } from "./suspend.ts";
 import { hasVisibleSearchHighlights, hasVisibleSearchScope } from "../search/matching.ts";
 import { SearchHighlightLayer } from "./searchOverlay.tsx";
@@ -148,6 +149,8 @@ export function JifView(props: {
     refreshRepository,
   });
   const configuredKeymap = resolveConfiguredKeymap(rawConfig.keymap);
+  const focusClickGuard = createFocusClickGuard(renderer);
+  onCleanup(() => focusClickGuard.dispose());
   let logViewport: ScrollBoxRenderable | undefined;
   let diffViewport: ScrollBoxRenderable | undefined;
   const detectAndApplyPalette = createPaletteDetector({
@@ -577,7 +580,10 @@ export function JifView(props: {
                               selectedRowIds={getMarkedRowIds(store.state)}
                               expandedRowId={getExpandedRevision(store.state)?.rowId ?? null}
                               commandTargetRowId={getCommandTargetRowId(store.state)}
-                              onMouseFocus={() => store.actions.focusRevisionAt(index())}
+                              onMouseFocus={() => {
+                                if (focusClickGuard.isWithinFocusGrace()) return;
+                                store.actions.focusRevisionAt(index());
+                              }}
                             />
                           )}
                         </For>
@@ -600,7 +606,10 @@ export function JifView(props: {
                               entry={entry}
                               focused={store.state.focusedOperationLogIndex === index()}
                               config={config}
-                              onMouseFocus={() => store.actions.focusOperationLogEntryAt(index())}
+                              onMouseFocus={() => {
+                                if (focusClickGuard.isWithinFocusGrace()) return;
+                                store.actions.focusOperationLogEntryAt(index());
+                              }}
                             />
                           )}
                         </For>
@@ -613,7 +622,10 @@ export function JifView(props: {
                     focusedIndex={store.state.focusedNotificationIndex}
                     expandedIds={store.state.expandedNotificationIds}
                     config={config}
-                    onFocusEntry={(index) => store.actions.focusNotificationAt(index)}
+                    onFocusEntry={(index) => {
+                      if (focusClickGuard.isWithinFocusGrace()) return;
+                      store.actions.focusNotificationAt(index);
+                    }}
                   />
                 </Show>
               </box>
