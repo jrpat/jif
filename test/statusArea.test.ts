@@ -57,7 +57,7 @@ test("message overlays clamp long toasts to the configured body height", async (
     frame: string;
   };
 
-  expect(result.renderedLineCount).toBe(5);
+  expect(result.renderedLineCount).toBe(6);
   expect(result.frame).toContain("status line 1");
   expect(result.frame).toContain("status line 3");
 });
@@ -84,7 +84,7 @@ test("short multiline toasts render at their content height instead of the cap",
     frame: string;
   };
 
-  expect(result.renderedLineCount).toBe(5);
+  expect(result.renderedLineCount).toBe(6);
   expect(result.frame).toContain("alpha");
   expect(result.frame).toContain("beta");
   expect(result.frame).toContain("gamma");

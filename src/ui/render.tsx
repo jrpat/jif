@@ -512,7 +512,7 @@ export function JifView(props: {
     }
 
     const disposeScrollObserver = observeScrollboxBottomReached(logViewport, () => {
-      if (store.state.focusMode === "revisions" && isScrollboxAtBottom(logViewport)) {
+      if (store.state.focusMode === "revisions" && isScrollboxAtBottom(logViewport!)) {
         void maybeLoadMoreRevisions();
       }
     });

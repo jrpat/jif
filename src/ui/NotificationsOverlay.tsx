@@ -1,11 +1,17 @@
-import { For, Show, createEffect, createMemo } from "solid-js";
+import { For, Show, createMemo } from "solid-js";
 import { MouseButton, type MouseEvent } from "@opentui/core";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { EventLogEntry } from "../domain/types.ts";
-import { parseAnsiToStyledText } from "./ansiToStyledText.ts";
+import { ScrollableAnsiBody } from "./scrollableAnsiBody.tsx";
 import { getStatusColor, getStatusFillColor } from "./statusMessages.ts";
 
 const COLLAPSED_LINE_LIMIT = 5;
+
+type EntryViewModel = Readonly<{
+  entry: EventLogEntry;
+  totalLines: number;
+  visibleLines: readonly string[];
+}>;
 
 export function NotificationsOverlay(props: Readonly<{
   entries: readonly EventLogEntry[];
@@ -17,6 +23,14 @@ export function NotificationsOverlay(props: Readonly<{
   const colors = () => props.config.colorScheme.semanticColors;
   const expandedSet = createMemo(() => new Set(props.expandedIds));
 
+  const entryViewModels = createMemo<readonly EntryViewModel[]>(() =>
+    props.entries.map((entry) => {
+      const lines = entry.text.split(/\r\n|\r|\n/);
+      const visibleLines = expandedSet().has(entry.id) ? lines : lines.slice(0, COLLAPSED_LINE_LIMIT);
+      return { entry, totalLines: lines.length, visibleLines };
+    }),
+  );
+
   return (
     <Show
       when={props.entries.length > 0}
@@ -27,13 +41,12 @@ export function NotificationsOverlay(props: Readonly<{
       )}
     >
       <box width="100%" flexDirection="column" paddingX={1} paddingY={1}>
-        <For each={props.entries}>
-          {(entry, index) => (
+        <For each={entryViewModels()}>
+          {(model, index) => (
             <NotificationCard
               id={`notification-${index()}`}
-              entry={entry}
+              model={model}
               focused={props.focusedIndex === index()}
-              expanded={expandedSet().has(entry.id)}
               config={props.config}
               onMouseFocus={() => props.onFocusEntry?.(index())}
             />
@@ -46,24 +59,18 @@ export function NotificationsOverlay(props: Readonly<{
 
 function NotificationCard(props: Readonly<{
   id: string;
-  entry: EventLogEntry;
+  model: EntryViewModel;
   focused: boolean;
-  expanded: boolean;
   config: ResolvedAppConfig;
   onMouseFocus?: () => void;
 }>) {
   const colors = () => props.config.colorScheme.semanticColors;
-  const lines = createMemo(() => props.entry.text.split(/\r\n|\r|\n/));
-  const totalLines = () => lines().length;
-  const visibleLines = createMemo(() =>
-    props.expanded ? lines() : lines().slice(0, COLLAPSED_LINE_LIMIT)
-  );
-  const hiddenCount = () => Math.max(0, totalLines() - visibleLines().length);
-  const borderColor = createMemo(() => getStatusColor(props.entry.level, colors()));
+  const hiddenCount = () => Math.max(0, props.model.totalLines - props.model.visibleLines.length);
+  const borderColor = createMemo(() => getStatusColor(props.model.entry.level, colors()));
   const backgroundColor = createMemo(() =>
-    props.focused ? getStatusFillColor(props.entry.level, colors()) : undefined
+    props.focused ? getStatusFillColor(props.model.entry.level, colors()) : undefined
   );
-  const timestamp = createMemo(() => formatTimestamp(props.entry.createdAt));
+  const timestamp = createMemo(() => formatTimestamp(props.model.entry.createdAt));
 
   return (
     <box
@@ -81,43 +88,21 @@ function NotificationCard(props: Readonly<{
       }}
     >
       <box width="100%" flexDirection="row">
-        <text fg={borderColor()}>{labelForLevel(props.entry.level)}</text>
+        <text fg={borderColor()}>{labelForLevel(props.model.entry.level)}</text>
         <box flexGrow={1} />
         <text fg={colors().textTertiary}>{timestamp()}</text>
       </box>
-      <For each={visibleLines()}>
-        {(line) => <NotificationLine line={line} config={props.config} />}
-      </For>
+      <ScrollableAnsiBody
+        text={props.model.visibleLines.join("\n")}
+        bodyHeight={props.model.visibleLines.length}
+        config={props.config}
+        backgroundColor={backgroundColor()}
+      />
       <Show when={hiddenCount() > 0}>
         <text fg={colors().textTertiary}>
           {`+${hiddenCount()} more line${hiddenCount() === 1 ? "" : "s"} (l to expand)`}
         </text>
       </Show>
-    </box>
-  );
-}
-
-function NotificationLine(props: Readonly<{
-  line: string;
-  config: ResolvedAppConfig;
-}>) {
-  let textRef: any;
-
-  createEffect(() => {
-    if (textRef) {
-      textRef.content = parseAnsiToStyledText(props.line, props.config.terminalPalette);
-    }
-  });
-
-  return (
-    <box width="100%" height={1} overflow="hidden">
-      <text
-        ref={textRef}
-        width="100%"
-        fg={props.config.colorScheme.semanticColors.textPrimary}
-        wrapMode="none"
-        truncate
-      />
     </box>
   );
 }

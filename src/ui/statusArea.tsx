@@ -4,7 +4,7 @@ import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "so
 import type { StatusMessage } from "../domain/types.ts";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { ShortcutGrid, ShortcutSummarySegment } from "./shortcutPanel.ts";
-import { parseAnsiToStyledText } from "./ansiToStyledText.ts";
+import { ScrollableAnsiBody } from "./scrollableAnsiBody.tsx";
 import { observeScrollboxInteraction } from "./scroll.ts";
 import {
   getStatusColor,
@@ -253,7 +253,6 @@ function StatusToast(props: {
   const bodyHeight = createMemo(() =>
     getStatusToastBodyHeight(props.message.text, props.maxBodyHeight)
   );
-  const isScrollable = createMemo(() => bodyHeight() === props.maxBodyHeight);
 
   createEffect(() => {
     if (props.message.level !== "success") return;
@@ -265,7 +264,6 @@ function StatusToast(props: {
   });
 
   let bodyRef: ScrollBoxRenderable | undefined;
-  let textRef: any;
 
   createEffect(() => {
     if (!bodyRef) {
@@ -274,12 +272,6 @@ function StatusToast(props: {
 
     const dispose = observeScrollboxInteraction(bodyRef, props.onInteract);
     onCleanup(dispose);
-  });
-
-  createEffect(() => {
-    if (textRef) {
-      textRef.content = parseAnsiToStyledText(props.message.text, props.config.terminalPalette);
-    }
   });
 
   return (
@@ -291,34 +283,15 @@ function StatusToast(props: {
       borderColor={getStatusColor(props.message.level, colors)}
       paddingX={1}
     >
-      <Show
-        when={isScrollable()}
-        fallback={(
-          <box width="100%" height={bodyHeight()} backgroundColor={colors.chromeFillOne}>
-            <text ref={textRef} fg={colors.textPrimary} wrapMode="word" />
-          </box>
-        )}
-      >
-        <scrollbox
-          id={`status-toast-body-${props.message.id}`}
-          ref={(el: ScrollBoxRenderable) => {
-            bodyRef = el;
-          }}
-          width="100%"
-          maxHeight={props.maxBodyHeight}
-          scrollY
-          backgroundColor={colors.chromeFillOne}
-          scrollbarOptions={{
-            trackOptions: {
-              backgroundColor: colors.chromeFillThree,
-              foregroundColor: colors.chromeScrollbarThumb,
-            },
-          }}
-          onMouseScroll={() => props.onInteract()}
-        >
-          <text ref={textRef} fg={colors.textPrimary} wrapMode="word" />
-        </scrollbox>
-      </Show>
+      <ScrollableAnsiBody
+        id={`status-toast-body-${props.message.id}`}
+        text={props.message.text}
+        bodyHeight={bodyHeight()}
+        config={props.config}
+        backgroundColor={colors.chromeFillOne}
+        registerScrollbox={(el) => { bodyRef = el; }}
+        onMouseScroll={() => props.onInteract()}
+      />
     </box>
   );
 }
