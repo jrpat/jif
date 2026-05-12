@@ -156,6 +156,15 @@
 {"kind":"writeFile","path":"test/integration.test.ts","content":"export const integrationTests = [\"materialize sample repo\"];\n"}
 {"kind":"jj","args":["describe","-m","test: materialize sample jj repo in integration"]}
 {"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["new"]}
+{"kind":"writeFile","path":"docs/glossary.md","content":"# Glossary\n\n- Revision: a jj change.\n"}
+{"kind":"writeFile","path":"docs/onboarding/getting-started/configuring-fixtures/sample-walkthrough.md","content":"# Sample Walkthrough\n\nWalk through configuring the deterministic fixture for local UI work.\n"}
+{"kind":"writeFile","path":"src/log.ts","content":"export function logLine(message) {\n  return `[jif] ${message}`;\n}\n"}
+{"kind":"writeFile","path":"src/services/revision-pipeline/file-listing/long-path-handler.ts","content":"export function describeLongPath(path) {\n  return path.split(\"/\").join(\" / \");\n}\n"}
+{"kind":"writeFile","path":"test/io.test.ts","content":"export const ioTests = [\"reads and writes\"];\n"}
+{"kind":"writeFile","path":"test/scenarios/long-paths/expected-truncation-output.json","content":"{\n  \"paths\": [\"short\", \"long\"]\n}\n"}
+{"kind":"jj","args":["describe","-m","test(fixture): exercise short and long changed-file paths"]}
+{"kind":"jj","args":["bookmark","set","main"]}
 {"kind":"jj","args":["new","main"]}
 {"kind":"writeFile","path":"docs/compact-branch.md","content":"# Compact Branch Fixture\n\nThis branch exists to exercise condensed graph elbows.\n"}
 {"kind":"jj","args":["describe","-m","docs(sample): seed compact branch fixture"]}

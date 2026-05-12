@@ -1417,6 +1417,7 @@ function ChangedFileRowContent(props: {
       })}
     >
       <text
+        flexShrink={0}
         fg={
           rowState().focused
             ? colors.fileFocusMarker
@@ -1425,10 +1426,13 @@ function ChangedFileRowContent(props: {
       >
         {rowState().marker}
       </text>
-      <text fg={rowState().selected ? colors.rowSelectedAccent : colors.textTertiary}>
+      <text
+        flexShrink={0}
+        fg={rowState().selected ? colors.rowSelectedAccent : colors.textTertiary}
+      >
         {rowState().selected ? "✓" : " "}
       </text>
-      <text fg={colors.fileStatusAccent}>{row.file.status}</text>
+      <text flexShrink={0} fg={colors.fileStatusAccent}>{row.file.status}</text>
       <text
         flexShrink={1}
         minWidth={0}
