@@ -324,16 +324,19 @@ namespace Jif {
     jji: (commandText: string, options?: InteractiveJjCommandOptions) => Promise<void>;
   }>;
 
+  type UserAliasBinding = Readonly<{ command: string; canonical: false }>;
+
   type UserKeybindingCommand = Readonly<{
     id?: string;
     title: string;
     description: string;
+    canonical?: false;
     canExecute?: (state: AppState) => boolean;
     run: (controller: UserCommandController, state: AppState) => void | Promise<void>;
     group?: CommandGroup;
   }>;
 
-  type UserKeyBinding = string | UserKeybindingCommand;
+  type UserKeyBinding = string | UserAliasBinding | UserKeybindingCommand;
 
   type KeymapScope =
     | "_global"

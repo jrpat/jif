@@ -3,7 +3,11 @@ import { resolveConfiguredKeymap } from "../src/config/index.ts";
 import { commandDefinitions, type CommandDefinition } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
 import { createInitialState, draftConfigs, openFocusedRevision, startCommandDraft } from "../src/state/store.ts";
-import { getActiveMode, getCommandsForMode, defaultKeymap } from "../src/modes.ts";
+import {
+  collectCanonicalBindingsForMode,
+  defaultKeymap,
+  getActiveMode,
+} from "../src/modes.ts";
 import {
   buildShortcutEntries,
   buildShortcutGrid,
@@ -11,17 +15,29 @@ import {
   buildShortcutSummarySegments,
   computeShortcutPanelHeight,
   formatShortcutKeyLabel,
-  getShortcutPanelCommands,
+  getShortcutPanelBindings,
   normalizeShortcutSortKey,
   shortcutModeLabel,
+  type ShortcutPanelBinding,
+  type ShortcutPanelBindingInput,
 } from "../src/ui/shortcutPanel.ts";
 
-function createCommand(
-  id: string,
-  title: string,
-  canonicalKeys: readonly string[],
-): Pick<CommandDefinition, "id" | "title" | "canonicalKeys"> {
-  return { id, title, canonicalKeys };
+function makeBinding(commandId: string, title: string, key: string): ShortcutPanelBinding {
+  return { key, command: { id: commandId, title } };
+}
+
+function bindingsForMode(
+  state: AppState,
+  keymap = defaultKeymap,
+  commands: readonly CommandDefinition[] = commandDefinitions,
+): readonly ShortcutPanelBindingInput[] {
+  const byId = new Map(commands.map((command) => [command.id, command] as const));
+  const resolved: ShortcutPanelBindingInput[] = [];
+  for (const { key, commandId } of collectCanonicalBindingsForMode(getActiveMode(state), keymap)) {
+    const command = byId.get(commandId);
+    if (command) resolved.push({ key, command });
+  }
+  return resolved;
 }
 
 function createState(): AppState {
@@ -75,17 +91,18 @@ test("normalizeShortcutSortKey strips leading modifiers for sorting", () => {
 
 test("buildShortcutEntries sorts plain keys before modified keys with the same base key", () => {
   const entries = buildShortcutEntries([
-    createCommand("focus-filter", "Filter", ["c-f"]),
-    createCommand("find", "Find", ["f"]),
-    createCommand("quit", "Quit", ["q"]),
+    makeBinding("focus-filter", "Filter", "c-f"),
+    makeBinding("find", "Find", "f"),
+    makeBinding("quit", "Quit", "q"),
   ]);
 
   expect(entries.map((entry) => entry.keyLabel)).toEqual(["f", "⌃f", "q"]);
 });
 
-test("buildShortcutEntries expands multiple canonical keys into separate entries", () => {
+test("buildShortcutEntries emits one entry per binding", () => {
   const entries = buildShortcutEntries([
-    createCommand("move-down", "Move Down", ["j", "down"]),
+    makeBinding("move-down", "Move Down", "j"),
+    makeBinding("move-down", "Move Down", "down"),
   ]);
 
   expect(entries.map((entry) => entry.id)).toEqual([
@@ -96,15 +113,16 @@ test("buildShortcutEntries expands multiple canonical keys into separate entries
 
 test("buildShortcutSummary creates a collapsed single-line help string", () => {
   const entries = buildShortcutEntries([
-    createCommand("command-bar", "Command Bar", [":"]),
-    createCommand("shortcut-panel", "Shortcuts", ["?"]),
-    createCommand("move-down", "Move Down", ["j"]),
-    createCommand("move-up", "Move Up", ["k"]),
-    createCommand("move-parent", "Move to Parent", ["J", "K"]),
-    createCommand("edit-revision", "Edit Revision", ["e"]),
-    createCommand("new-revision", "New Revision", ["n"]),
-    createCommand("show-revision-diff", "Diff", ["d"]),
-    createCommand("commit", "Commit", ["c"]),
+    makeBinding("command-bar", "Command Bar", ":"),
+    makeBinding("shortcut-panel", "Shortcuts", "?"),
+    makeBinding("move-down", "Move Down", "j"),
+    makeBinding("move-up", "Move Up", "k"),
+    makeBinding("move-parent", "Move to Parent", "J"),
+    makeBinding("move-parent", "Move to Parent", "K"),
+    makeBinding("edit-revision", "Edit Revision", "e"),
+    makeBinding("new-revision", "New Revision", "n"),
+    makeBinding("show-revision-diff", "Diff", "d"),
+    makeBinding("commit", "Commit", "c"),
   ]);
   const baseSummary = ": command   ? help   j/k move";
   const summaryWithEdit = `${baseSummary}   e edit`;
@@ -117,13 +135,13 @@ test("buildShortcutSummary creates a collapsed single-line help string", () => {
 
 test("buildShortcutSummary skips missing higher-priority actions and keeps fitting later ones", () => {
   const entries = buildShortcutEntries([
-    createCommand("command-bar", "Command Bar", [":"]),
-    createCommand("shortcut-panel", "Shortcuts", ["?"]),
-    createCommand("move-down", "Move Down", ["j"]),
-    createCommand("move-up", "Move Up", ["k"]),
-    createCommand("edit-revision", "Edit Revision", ["e"]),
-    createCommand("new-revision", "New Revision", ["n"]),
-    createCommand("show-revision-diff", "Diff", ["d"]),
+    makeBinding("command-bar", "Command Bar", ":"),
+    makeBinding("shortcut-panel", "Shortcuts", "?"),
+    makeBinding("move-down", "Move Down", "j"),
+    makeBinding("move-up", "Move Up", "k"),
+    makeBinding("edit-revision", "Edit Revision", "e"),
+    makeBinding("new-revision", "New Revision", "n"),
+    makeBinding("show-revision-diff", "Diff", "d"),
   ]);
   const expected = ": command   ? help   j/k move   e edit   n new   d diff";
 
@@ -132,12 +150,13 @@ test("buildShortcutSummary skips missing higher-priority actions and keeps fitti
 
 test("buildShortcutSummary ignores move-parent in the collapsed status bar", () => {
   const entries = buildShortcutEntries([
-    createCommand("command-bar", "Command Bar", [":"]),
-    createCommand("shortcut-panel", "Shortcuts", ["?"]),
-    createCommand("move-down", "Move Down", ["j"]),
-    createCommand("move-up", "Move Up", ["k"]),
-    createCommand("move-parent", "Move to Parent", ["J", "K"]),
-    createCommand("edit-revision", "Edit Revision", ["e"]),
+    makeBinding("command-bar", "Command Bar", ":"),
+    makeBinding("shortcut-panel", "Shortcuts", "?"),
+    makeBinding("move-down", "Move Down", "j"),
+    makeBinding("move-up", "Move Up", "k"),
+    makeBinding("move-parent", "Move to Parent", "J"),
+    makeBinding("move-parent", "Move to Parent", "K"),
+    makeBinding("edit-revision", "Edit Revision", "e"),
   ]);
   const expected = ": command   ? help   j/k move   e edit";
 
@@ -146,12 +165,13 @@ test("buildShortcutSummary ignores move-parent in the collapsed status bar", () 
 
 test("buildShortcutSummarySegments keeps key labels separate for bold rendering", () => {
   const entries = buildShortcutEntries([
-    createCommand("command-bar", "Command Bar", [":"]),
-    createCommand("shortcut-panel", "Shortcuts", ["?"]),
-    createCommand("move-down", "Move Down", ["j"]),
-    createCommand("move-up", "Move Up", ["k"]),
-    createCommand("move-parent", "Move to Parent", ["J", "K"]),
-    createCommand("edit-revision", "Edit Revision", ["e"]),
+    makeBinding("command-bar", "Command Bar", ":"),
+    makeBinding("shortcut-panel", "Shortcuts", "?"),
+    makeBinding("move-down", "Move Down", "j"),
+    makeBinding("move-up", "Move Up", "k"),
+    makeBinding("move-parent", "Move to Parent", "J"),
+    makeBinding("move-parent", "Move to Parent", "K"),
+    makeBinding("edit-revision", "Edit Revision", "e"),
   ]);
 
   expect(buildShortcutSummarySegments(entries, 38)).toEqual([
@@ -164,6 +184,7 @@ test("buildShortcutSummarySegments keeps key labels separate for bold rendering"
 
 test("formatShortcutKeyLabel uses symbolic labels for space and modifiers", () => {
   expect(formatShortcutKeyLabel("space")).toBe("⎵");
+  expect(formatShortcutKeyLabel(" ")).toBe("⎵");
   expect(formatShortcutKeyLabel("ctrl-r")).toBe("⌃r");
   expect(formatShortcutKeyLabel("ctrl-alt-space")).toBe("⌃⌥⎵");
   expect(formatShortcutKeyLabel("enter")).toBe("ret");
@@ -177,11 +198,11 @@ test("formatShortcutKeyLabel uses symbolic labels for space and modifiers", () =
 
 test("buildShortcutGrid packs entries top to bottom before moving right", () => {
   const entries = buildShortcutEntries([
-    createCommand("a", "Alpha", ["a"]),
-    createCommand("b", "Bravo", ["b"]),
-    createCommand("c", "Charlie", ["c"]),
-    createCommand("d", "Delta", ["d"]),
-    createCommand("e", "Echo", ["e"]),
+    makeBinding("a", "Alpha", "a"),
+    makeBinding("b", "Bravo", "b"),
+    makeBinding("c", "Charlie", "c"),
+    makeBinding("d", "Delta", "d"),
+    makeBinding("e", "Echo", "e"),
   ]);
 
   const grid = buildShortcutGrid(entries, 50);
@@ -196,8 +217,8 @@ test("buildShortcutGrid packs entries top to bottom before moving right", () => 
 
 test("buildShortcutGrid falls back to one column in narrow terminals", () => {
   const entries = buildShortcutEntries([
-    createCommand("a", "Alpha", ["a"]),
-    createCommand("b", "Bravo", ["b"]),
+    makeBinding("a", "Alpha", "a"),
+    makeBinding("b", "Bravo", "b"),
   ]);
 
   const grid = buildShortcutGrid(entries, 20);
@@ -224,9 +245,10 @@ test("shortcutModeLabel formats the current mode for the panel header", () => {
   expect(shortcutModeLabel("squash")).toBe("Squash");
 });
 
-test("getShortcutPanelCommands includes immediate revision actions in revision mode", () => {
-  const commands = getShortcutPanelCommands(createState(), getCommandsForMode(getActiveMode(createState()), defaultKeymap, commandDefinitions));
-  const ids = commands.map((command) => command.id);
+test("getShortcutPanelBindings includes immediate revision actions in revision mode", () => {
+  const state = createState();
+  const bindings = getShortcutPanelBindings(state, bindingsForMode(state));
+  const ids = bindings.map(({ command }) => command.id);
 
   expect(ids).toContain("absorb");
   expect(ids).toContain("force-last-command");
@@ -235,12 +257,12 @@ test("getShortcutPanelCommands includes immediate revision actions in revision m
   expect(ids).toContain("edit-revision");
 });
 
-test("getShortcutPanelCommands narrows rebase draft shortcuts to draft-relevant actions", () => {
+test("getShortcutPanelBindings narrows rebase draft shortcuts to draft-relevant actions", () => {
   let state = createState();
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
 
-  const commands = getShortcutPanelCommands(state, getCommandsForMode(getActiveMode(state), defaultKeymap, commandDefinitions));
-  const ids = commands.map((command) => command.id);
+  const bindings = getShortcutPanelBindings(state, bindingsForMode(state));
+  const ids = bindings.map(({ command }) => command.id);
 
   expect(ids).toContain("move-down");
   expect(ids).toContain("move-up");
@@ -256,12 +278,12 @@ test("getShortcutPanelCommands narrows rebase draft shortcuts to draft-relevant 
   expect(ids).not.toContain("edit-revset");
 });
 
-test("getShortcutPanelCommands narrows file mode shortcuts to file-relevant actions", () => {
+test("getShortcutPanelBindings narrows file mode shortcuts to file-relevant actions", () => {
   let state = createState();
   state = openFocusedRevision(state);
 
-  const commands = getShortcutPanelCommands(state, getCommandsForMode(getActiveMode(state), defaultKeymap, commandDefinitions));
-  const ids = commands.map((command) => command.id);
+  const bindings = getShortcutPanelBindings(state, bindingsForMode(state));
+  const ids = bindings.map(({ command }) => command.id);
 
   expect(ids).toContain("split");
   expect(ids).toContain("restore");
@@ -277,7 +299,7 @@ test("getShortcutPanelCommands narrows file mode shortcuts to file-relevant acti
   expect(ids).not.toContain("edit-revset");
 });
 
-test("getShortcutPanelCommands includes inline configured commands from the merged keymap", () => {
+test("getShortcutPanelBindings includes inline configured commands from the merged keymap", () => {
   const state = createState();
   const resolved = resolveConfiguredKeymap({
     normal: {
@@ -289,10 +311,20 @@ test("getShortcutPanelCommands includes inline configured commands from the merg
     },
   });
 
-  const commands = getShortcutPanelCommands(
-    state,
-    getCommandsForMode(getActiveMode(state), resolved.keymap, resolved.commands),
-  );
+  const bindings = getShortcutPanelBindings(state, bindingsForMode(state, resolved.keymap, resolved.commands));
+  expect(bindings.find(({ command }) => command.id === "user:normal:g")?.command.title).toBe("Custom Action");
+});
 
-  expect(commands.find((command) => command.id === "user:normal:g")?.title).toBe("Custom Action");
+test("collectCanonicalBindingsForMode excludes alias bindings (canonical: false)", () => {
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      x: { command: "move-down", canonical: false },
+    },
+  });
+
+  const keys = collectCanonicalBindingsForMode("normal", resolved.keymap).map((b) => b.key);
+
+  expect(keys).toContain("j");
+  expect(keys).not.toContain("x");
+  expect(keys).not.toContain("down");
 });

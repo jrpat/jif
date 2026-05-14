@@ -34,6 +34,7 @@ const KEY_LABEL_ABBREVIATIONS: Readonly<Record<string, string>> = {
   escape: "esc",
   enter: "ret",
   space: "⎵",
+  " ": "⎵",
   left: "←",
   right: "→",
   down: "↓",
@@ -61,6 +62,11 @@ export type ShortcutEntry = Readonly<{
   sortKey: string;
 }>;
 
+export type ShortcutPanelBinding = Readonly<{
+  key: string;
+  command: Pick<CommandDefinition, "id" | "title">;
+}>;
+
 export type ShortcutGrid = Readonly<{
   rows: readonly (readonly ShortcutEntry[])[];
   columnCount: number;
@@ -80,22 +86,20 @@ export function normalizeShortcutSortKey(keyLabel: string): string {
 }
 
 export function buildShortcutEntries(
-  commands: readonly Pick<CommandDefinition, "id" | "title" | "canonicalKeys">[],
+  bindings: readonly ShortcutPanelBinding[],
 ): readonly ShortcutEntry[] {
-  return commands
-    .flatMap((command) =>
-      command.canonicalKeys.map((rawKeyLabel) => {
-        const keyLabel = formatShortcutKeyLabel(rawKeyLabel);
-        return {
-          id: `${command.id}:${rawKeyLabel}`,
-          commandId: command.id,
-          hasModifier: hasShortcutModifier(rawKeyLabel),
-          keyLabel,
-          title: command.title,
-          sortKey: normalizeShortcutSortKey(rawKeyLabel),
-        };
-      })
-    )
+  return bindings
+    .map(({ key: rawKeyLabel, command }) => {
+      const keyLabel = formatShortcutKeyLabel(rawKeyLabel);
+      return {
+        id: `${command.id}:${rawKeyLabel}`,
+        commandId: command.id,
+        hasModifier: hasShortcutModifier(rawKeyLabel),
+        keyLabel,
+        title: command.title,
+        sortKey: normalizeShortcutSortKey(rawKeyLabel),
+      };
+    })
     .sort(compareShortcutEntries);
 }
 
@@ -180,14 +184,19 @@ export function buildShortcutGrid(
   };
 }
 
-export function getShortcutPanelCommands(
+export type ShortcutPanelBindingInput = Readonly<{
+  key: string;
+  command: CommandDefinition;
+}>;
+
+export function getShortcutPanelBindings(
   state: AppState,
-  commands: readonly CommandDefinition[],
-): readonly CommandDefinition[] {
-  const actionable = commands.filter((command) => commandHasImmediateEffect(state, command));
+  bindings: readonly ShortcutPanelBindingInput[],
+): readonly ShortcutPanelBindingInput[] {
+  const actionable = bindings.filter(({ command }) => commandHasImmediateEffect(state, command));
 
   if (state.commandDraft !== null) {
-    return actionable.filter((command) =>
+    return actionable.filter(({ command }) =>
       NAVIGATION_COMMAND_IDS.has(command.id) ||
       command.group === "mode" ||
       command.group === "cancel" ||
@@ -197,7 +206,7 @@ export function getShortcutPanelCommands(
   }
 
   if (state.focusMode === "inline-confirmation") {
-    return actionable.filter((command) =>
+    return actionable.filter(({ command }) =>
       command.group === "mode" ||
       command.group === "cancel" ||
       command.id === "shortcut-panel" ||
@@ -206,7 +215,7 @@ export function getShortcutPanelCommands(
   }
 
   if (state.focusMode === "files") {
-    return actionable.filter((command) =>
+    return actionable.filter(({ command }) =>
       NAVIGATION_COMMAND_IDS.has(command.id) ||
       command.group === "mode" ||
       command.group === "cancel" ||

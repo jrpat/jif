@@ -45,7 +45,19 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   "bookmark-move": { id: "bookmark-move", parent: "normal", inputPassthrough: false, label: "Bookmark Move" },
 };
 
-export type Keymap = Readonly<Record<"_global" | Mode, Readonly<Record<string, string>>>>;
+export type KeymapBinding =
+  | string
+  | Readonly<{ command: string; canonical: false }>;
+
+export type Keymap = Readonly<Record<"_global" | Mode, Readonly<Record<string, KeymapBinding>>>>;
+
+export const bindingCommand = (binding: KeymapBinding): string =>
+  typeof binding === "string" ? binding : binding.command;
+
+export const isCanonicalBinding = (binding: KeymapBinding): boolean =>
+  typeof binding === "string";
+
+const alias = (command: string): KeymapBinding => ({ command, canonical: false });
 
 export const defaultKeymap: Keymap = {
   _global: {
@@ -57,21 +69,21 @@ export const defaultKeymap: Keymap = {
   },
   normal: {
     j: "move-down",
-    down: "move-down",
+    down: alias("move-down"),
     k: "move-up",
-    up: "move-up",
+    up: alias("move-up"),
     G: "jump-to-bottom",
     J: "move-parent",
     K: "move-child",
-    Z: "suspend",
+    Z: alias("suspend"),
     l: "expand",
-    right: "expand",
+    right: alias("expand"),
     h: "collapse",
-    left: "collapse",
+    left: alias("collapse"),
     ":": "command-bar",
-    "ctrl-;": "command-bar",
+    "ctrl-;": alias("command-bar"),
     ">": "shell-command-bar",
-    "ctrl-.": "shell-command-bar",
+    "ctrl-.": alias("shell-command-bar"),
     "!": "force-last-command",
     "?": "shortcut-panel",
     enter: "confirm",
@@ -91,11 +103,11 @@ export const defaultKeymap: Keymap = {
     U: "redo",
     "@": "jump-to-working-copy",
     L: "edit-revset",
-    "ctrl-l": "edit-revset",
+    "ctrl-l": alias("edit-revset"),
     "/": "search",
     A: "absorb",
     a: "abandon",
-    o: "open-operation-log",
+    o: alias("open-operation-log"),
     O: "open-operation-log",
     b: "enter-bookmark-mode",
   },
@@ -107,9 +119,9 @@ export const defaultKeymap: Keymap = {
   },
   "op-log": {
     j: "move-down",
-    down: "move-down",
+    down: alias("move-down"),
     k: "move-up",
-    up: "move-up",
+    up: alias("move-up"),
     G: "jump-to-bottom",
     r: "restore-operation",
     R: "revert-operation",
@@ -119,9 +131,9 @@ export const defaultKeymap: Keymap = {
   },
   "inline-confirmation": {
     h: "inline-confirmation-prev-option",
-    left: "inline-confirmation-prev-option",
+    left: alias("inline-confirmation-prev-option"),
     l: "inline-confirmation-next-option",
-    right: "inline-confirmation-next-option",
+    right: alias("inline-confirmation-next-option"),
     enter: "confirm",
   },
   rebase: {
@@ -152,14 +164,14 @@ export const defaultKeymap: Keymap = {
   },
   notifications: {
     j: "move-down",
-    down: "move-down",
+    down: alias("move-down"),
     k: "move-up",
-    up: "move-up",
+    up: alias("move-up"),
     G: "jump-to-bottom",
     l: "expand-notification",
-    right: "expand-notification",
+    right: alias("expand-notification"),
     h: "collapse-notification",
-    left: "collapse-notification",
+    left: alias("collapse-notification"),
     "~": "cancel",
     "?": "shortcut-panel",
   },
@@ -202,7 +214,8 @@ export function resolveCommand(
   key: string,
   keymap: Keymap = defaultKeymap,
 ): string | null {
-  return getModeBindings(mode, keymap)[key] ?? null;
+  const binding = getModeBindings(mode, keymap)[key];
+  return binding === undefined ? null : bindingCommand(binding);
 }
 
 export function getCommandsForMode(
@@ -219,8 +232,43 @@ export function getDirectCommandsForMode(
   keymap: Keymap,
   definitions: readonly CommandDefinition[],
 ): readonly CommandDefinition[] {
-  const ids = new Set(Object.values(keymap[mode] ?? {}));
+  const ids = new Set(Object.values(keymap[mode] ?? {}).map(bindingCommand));
   return definitions.filter((def) => ids.has(def.id));
+}
+
+export type CanonicalKeyBinding = Readonly<{ key: string; commandId: string }>;
+
+export function collectCanonicalBindingsForMode(
+  mode: Mode,
+  keymap: Keymap,
+): readonly CanonicalKeyBinding[] {
+  const modeBindings = getModeBindings(mode, keymap);
+  const results: CanonicalKeyBinding[] = [];
+  for (const [key, binding] of Object.entries(modeBindings)) {
+    if (isCanonicalBinding(binding)) {
+      results.push({ key, commandId: bindingCommand(binding) });
+    }
+  }
+  for (const [key, binding] of Object.entries(keymap._global ?? {})) {
+    if (key in modeBindings) continue;
+    if (isCanonicalBinding(binding)) {
+      results.push({ key, commandId: bindingCommand(binding) });
+    }
+  }
+  return results;
+}
+
+export function collectDirectCanonicalBindingsForMode(
+  mode: Mode,
+  keymap: Keymap,
+): readonly CanonicalKeyBinding[] {
+  const results: CanonicalKeyBinding[] = [];
+  for (const [key, binding] of Object.entries(keymap[mode] ?? {})) {
+    if (isCanonicalBinding(binding)) {
+      results.push({ key, commandId: bindingCommand(binding) });
+    }
+  }
+  return results;
 }
 
 function collectBoundCommandIds(
@@ -229,14 +277,14 @@ function collectBoundCommandIds(
   collected: Set<string> = new Set(),
 ): ReadonlySet<string> {
   const modeBindings = getModeBindings(mode, keymap);
-  for (const commandId of Object.values(modeBindings)) {
-    collected.add(commandId);
+  for (const binding of Object.values(modeBindings)) {
+    collected.add(bindingCommand(binding));
   }
 
   if (keymap._global) {
-    for (const [key, commandId] of Object.entries(keymap._global)) {
+    for (const [key, binding] of Object.entries(keymap._global)) {
       if (!(key in modeBindings)) {
-        collected.add(commandId);
+        collected.add(bindingCommand(binding));
       }
     }
   }
@@ -247,7 +295,7 @@ function collectBoundCommandIds(
 function getModeBindings(
   mode: Mode,
   keymap: Keymap,
-): Readonly<Record<string, string>> {
+): Readonly<Record<string, KeymapBinding>> {
   const def = modeDefinitions[mode];
   const parentBindings = def.parent ? getModeBindings(def.parent, keymap) : {};
   return {

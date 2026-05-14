@@ -357,6 +357,30 @@ export default {
 } satisfies Jif.Config;
 ```
 
+Every binding shows up in the shortcut panel by default. To bind an alias key that should *not* appear in the panel, write the binding as an object with `canonical: false`:
+
+```ts
+export default {
+	keymap: {
+		normal: {
+			// alias for `move-down`; works but stays out of the shortcut panel
+			x: { command: "move-down", canonical: false },
+		},
+	},
+} satisfies Jif.Config;
+```
+
+Inline commands accept the same flag:
+
+```ts
+"ctrl-q": {
+	title: "Quick Action",
+	description: "Hidden from the shortcut panel",
+	canonical: false,
+	run: (cmd, app) => { /* … */ },
+},
+```
+
 Inline handlers receive as arguments:
 
 - `cmd` — the command controller. See [TODO](TODO) for full documentation, but the most useful methods are:

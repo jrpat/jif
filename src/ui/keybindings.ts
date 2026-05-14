@@ -4,6 +4,7 @@ import type { AppState } from "../domain/types.ts";
 import {
   type Keymap,
   type Mode,
+  bindingCommand,
   defaultKeymap,
   getActiveMode,
   modeDefinitions,
@@ -40,10 +41,11 @@ export function dispatchGlobalKey(options: {
     return false;
   }
 
-  const globalCommandId = keymap._global[normalizedKey];
-  if (!globalCommandId) {
+  const globalBinding = keymap._global[normalizedKey];
+  if (!globalBinding) {
     return false;
   }
+  const globalCommandId = bindingCommand(globalBinding);
 
   const command = commands.find((c) => c.id === globalCommandId);
   if (!command) {

@@ -1,23 +1,26 @@
 import { commandDefinitions, type CommandDefinition, type UserCommandController } from "../commands/definitions.ts";
 import type { AppState as BaseAppState, ChangedFile, RevisionSummary } from "../domain/types.ts";
-import { defaultKeymap, type Keymap, type Mode } from "../modes.ts";
+import { defaultKeymap, type Keymap, type KeymapBinding, type Mode } from "../modes.ts";
 import { getExpandedRevision } from "../state/store.ts";
 
 type KeymapScope = "_global" | Mode;
 type MutableKeymap = {
-  [Scope in KeymapScope]: Record<string, string>;
+  [Scope in KeymapScope]: Record<string, KeymapBinding>;
 };
+
+export type UserAliasBinding = Readonly<{ command: string; canonical: false }>;
 
 export type UserKeybindingCommand = Readonly<{
   id?: string;
   title: string;
   description: string;
+  canonical?: false;
   canExecute?: (state: UserAppState) => boolean;
   run: (controller: UserCommandController, state: UserAppState) => void | Promise<void>;
   group?: CommandDefinition["group"];
 }>;
 
-export type UserKeyBinding = string | UserKeybindingCommand;
+export type UserKeyBinding = string | UserAliasBinding | UserKeybindingCommand;
 
 export type UserKeyMap = Partial<Record<KeymapScope, Readonly<Record<string, UserKeyBinding>>>>;
 
@@ -64,22 +67,25 @@ export function resolveConfiguredKeymap(userKeymap?: UserKeyMap): ResolvedConfig
         continue;
       }
 
-      const id = toUserCommandId(binding.id ?? `${scope}:${key}`);
-      const existing = commandsById.get(id);
-      const canonicalKeys = mergeCanonicalKeys(existing?.canonicalKeys, key);
+      if (isAliasBinding(binding)) {
+        keymap[scope][key] = { command: binding.command, canonical: false };
+        continue;
+      }
 
+      const id = toUserCommandId(binding.id ?? `${scope}:${key}`);
       commandsById.set(id, {
         id,
         title: binding.title,
         description: binding.description,
-        canonicalKeys,
         canExecute: binding.canExecute
           ? (state) => binding.canExecute!(createUserAppState(state))
           : undefined,
         run: (controller, state) => binding.run(controller, createUserAppState(state)),
         group: binding.group,
       });
-      keymap[scope][key] = id;
+      keymap[scope][key] = binding.canonical === false
+        ? { command: id, canonical: false }
+        : id;
     }
   }
 
@@ -87,6 +93,12 @@ export function resolveConfiguredKeymap(userKeymap?: UserKeyMap): ResolvedConfig
     keymap: keymap as Keymap,
     commands: [...commandsById.values()],
   };
+}
+
+function isAliasBinding(
+  binding: UserAliasBinding | UserKeybindingCommand,
+): binding is UserAliasBinding {
+  return "command" in binding && !("run" in binding);
 }
 
 function cloneKeymap(source: Keymap): MutableKeymap {
@@ -115,14 +127,6 @@ function toUserCommandId(value: string): string {
   return value.startsWith(USER_COMMAND_ID_PREFIX)
     ? value
     : `${USER_COMMAND_ID_PREFIX}${value}`;
-}
-
-function mergeCanonicalKeys(existing: readonly string[] | undefined, key: string): readonly string[] {
-  if (!existing || existing.length === 0) {
-    return [key];
-  }
-
-  return existing.includes(key) ? existing : [...existing, key];
 }
 
 const KEYMAP_SCOPES: readonly KeymapScope[] = [

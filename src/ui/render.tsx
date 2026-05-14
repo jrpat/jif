@@ -60,15 +60,20 @@ import {
   buildShortcutSummary,
   buildShortcutSummarySegments,
   computeShortcutPanelHeight,
-  getShortcutPanelCommands,
+  getShortcutPanelBindings,
   shortcutModeLabel,
   type ShortcutGrid,
+  type ShortcutPanelBindingInput,
   type ShortcutSummarySegment,
 } from "./shortcutPanel.ts";
 import { resolveBottomChromeLayout } from "./bottomChrome.ts";
 import { normalizeKey } from "./keyboard.ts";
 import { dispatchGlobalKey } from "./keybindings.ts";
-import { getActiveMode, getCommandsForMode, getDirectCommandsForMode } from "../modes.ts";
+import {
+  collectCanonicalBindingsForMode,
+  collectDirectCanonicalBindingsForMode,
+  getActiveMode,
+} from "../modes.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { createFocusClickGuard } from "./focusClickGuard.ts";
@@ -246,19 +251,32 @@ export function JifView(props: {
     )
   );
   const activeMode = createMemo(() => getActiveMode(store.state));
-  const visibleCommands = createMemo(() =>
-    getCommandsForMode(activeMode(), configuredKeymap.keymap, configuredKeymap.commands)
+  const commandsById = new Map(
+    configuredKeymap.commands.map((command) => [command.id, command] as const),
   );
-  const directModeCommands = createMemo(() =>
-    getDirectCommandsForMode(activeMode(), configuredKeymap.keymap, configuredKeymap.commands)
+  const resolveBindings = (
+    raw: readonly { key: string; commandId: string }[],
+  ): readonly ShortcutPanelBindingInput[] => {
+    const resolved: ShortcutPanelBindingInput[] = [];
+    for (const { key, commandId } of raw) {
+      const command = commandsById.get(commandId);
+      if (command) resolved.push({ key, command });
+    }
+    return resolved;
+  };
+  const visibleBindings = createMemo(() =>
+    resolveBindings(collectCanonicalBindingsForMode(activeMode(), configuredKeymap.keymap))
   );
-  const shortcutCommands = createMemo(() =>
-    getShortcutPanelCommands(store.state, visibleCommands())
+  const directModeBindings = createMemo(() =>
+    resolveBindings(collectDirectCanonicalBindingsForMode(activeMode(), configuredKeymap.keymap))
   );
-  const modeShortcutCommands = createMemo(() =>
-    getShortcutPanelCommands(store.state, directModeCommands())
+  const shortcutBindings = createMemo(() =>
+    getShortcutPanelBindings(store.state, visibleBindings())
   );
-  const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutCommands()));
+  const modeShortcutBindings = createMemo(() =>
+    getShortcutPanelBindings(store.state, directModeBindings())
+  );
+  const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutBindings()));
   const shortcutContentWidth = createMemo(() => Math.max(1, terminalSize().width - 4));
   const shortcutSummarySegments = createMemo(() =>
     buildShortcutSummarySegments(shortcutEntries(), shortcutContentWidth())
@@ -306,13 +324,13 @@ export function JifView(props: {
   );
   const showsTransientShortcutPanel = createMemo(() =>
     !showsPersistentShortcutPanel() &&
-    modeShortcutCommands().length > 0 &&
+    modeShortcutBindings().length > 0 &&
     (showsCommandPreview() || store.state.focusMode === "bookmark")
   );
-  const expandedShortcutCommands = createMemo(() =>
-    showsTransientShortcutPanel() ? modeShortcutCommands() : shortcutCommands()
+  const expandedShortcutBindings = createMemo(() =>
+    showsTransientShortcutPanel() ? modeShortcutBindings() : shortcutBindings()
   );
-  const expandedShortcutEntries = createMemo(() => buildShortcutEntries(expandedShortcutCommands()));
+  const expandedShortcutEntries = createMemo(() => buildShortcutEntries(expandedShortcutBindings()));
   const expandedShortcutGrid = createMemo(() =>
     buildShortcutGrid(expandedShortcutEntries(), shortcutContentWidth())
   );

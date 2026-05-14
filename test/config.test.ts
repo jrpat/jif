@@ -190,7 +190,6 @@ test("resolveConfiguredKeymap preserves built-in bindings while adding inline co
   expect(command).toBeDefined();
   expect(command?.title).toBe("Custom Search");
   expect(command?.description).toBe("Run a custom search action");
-  expect(command?.canonicalKeys).toEqual(["g"]);
   expect(typeof command?.run).toBe("function");
 });
 
@@ -213,9 +212,37 @@ test("resolveConfiguredKeymap preserves explicit ids for inline commands", () =>
 
   const command = resolved.commands.find((entry) => entry.id === "user:custom.refresh");
   expect(command).toBeDefined();
-  expect(command?.canonicalKeys).toEqual(["ctrl-x"]);
   expect(command?.group).toBe("global");
   expect(typeof command?.run).toBe("function");
+});
+
+test("resolveConfiguredKeymap accepts alias bindings with canonical: false", () => {
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      x: { command: "move-down", canonical: false },
+    },
+  });
+
+  expect(resolved.keymap.normal.x).toEqual({ command: "move-down", canonical: false });
+  expect(resolved.keymap.normal.j).toBe("move-down");
+});
+
+test("resolveConfiguredKeymap respects canonical: false on inline commands", () => {
+  const run = () => {};
+
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        title: "Hidden Command",
+        description: "Hidden from the shortcut panel",
+        canonical: false,
+        run,
+      },
+    },
+  });
+
+  expect(resolved.keymap.normal.g).toEqual({ command: "user:normal:g", canonical: false });
+  expect(resolved.commands.find((entry) => entry.id === "user:normal:g")).toBeDefined();
 });
 
 test("resolveConfiguredKeymap namespaces explicit user ids away from built-in command ids", () => {

@@ -95,7 +95,7 @@ test("suspend uses ctrl-z canonically and Z as a normal-mode alias", () => {
   expect(defaultKeymap._global["ctrl-z"]).toBe("suspend");
   expect(resolveForState("Z", state)).toBe("suspend");
   expect(resolveForState("Z", revsetState)).toBeNull();
-  expect(commandDefinitions.find((command) => command.id === "suspend")?.canonicalKeys).toEqual(["ctrl-z"]);
+  expect(defaultKeymap.normal.Z).toEqual({ command: "suspend", canonical: false });
 });
 
 test("resolveCommand returns null for unbound keys", () => {
@@ -189,7 +189,7 @@ test("undo and redo resolve in normal mode", () => {
   const state = createState();
   expect(resolveForState("u", state)).toBe("undo");
   expect(resolveForState("U", state)).toBe("redo");
-  expect(commandDefinitions.find((command) => command.id === "jump-to-bottom")?.canonicalKeys).toEqual(["G"]);
+  expect(defaultKeymap.normal.G).toBe("jump-to-bottom");
 });
 
 test("absorb resolves on shift-a in normal mode", () => {
@@ -209,7 +209,6 @@ test("shortcut panel toggle uses ? in normal mode", () => {
   expect(resolveForState("!", state)).toBe("force-last-command");
   expect(resolveForState(">", state)).toBe("shell-command-bar");
   expect(defaultKeymap.normal[">"]).toBe("shell-command-bar");
-  expect(commandDefinitions.find((command) => command.id === "shell-command-bar")?.canonicalKeys).toEqual([">"]);
 
   const revsetState: AppState = { ...state, focusMode: "revset" };
   expect(resolveForState("?", revsetState)).toBeNull();
