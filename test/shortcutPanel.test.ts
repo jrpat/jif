@@ -5,6 +5,8 @@ import type { AppState } from "../src/domain/types.ts";
 import { createInitialState, draftConfigs, openFocusedRevision, startCommandDraft } from "../src/state/store.ts";
 import {
   collectCanonicalBindingsForMode,
+  collectDirectCanonicalBindingsForMode,
+  collectInheritedAndGlobalCanonicalBindings,
   defaultKeymap,
   getActiveMode,
 } from "../src/modes.ts";
@@ -313,6 +315,37 @@ test("getShortcutPanelBindings includes inline configured commands from the merg
 
   const bindings = getShortcutPanelBindings(state, bindingsForMode(state, resolved.keymap, resolved.commands));
   expect(bindings.find(({ command }) => command.id === "user:normal:g")?.command.title).toBe("Custom Action");
+});
+
+test("collectDirectCanonicalBindingsForMode is mode-specific and excludes parents and globals", () => {
+  const keys = collectDirectCanonicalBindingsForMode("files", defaultKeymap).map((b) => b.key);
+  // files mode binds only s, r, d, and space directly
+  expect(keys).toContain("s");
+  expect(keys).toContain("r");
+  expect(keys).toContain("d");
+  expect(keys).toContain(" ");
+  // inherited from normal parent — must NOT appear here
+  expect(keys).not.toContain("j");
+  expect(keys).not.toContain("G");
+  // globals — must NOT appear here
+  expect(keys).not.toContain("q");
+  expect(keys).not.toContain("ctrl-z");
+});
+
+test("collectInheritedAndGlobalCanonicalBindings returns parent + globals, minus direct shadowed", () => {
+  const keys = collectInheritedAndGlobalCanonicalBindings("files", defaultKeymap).map((b) => b.key);
+  // inherited from normal
+  expect(keys).toContain("j");
+  expect(keys).toContain("G");
+  // globals
+  expect(keys).toContain("q");
+  expect(keys).toContain("ctrl-z");
+  expect(keys).toContain("escape");
+  // direct files-mode bindings — must NOT appear in the bottom set
+  expect(keys).not.toContain("s");
+  expect(keys).not.toContain("r");
+  expect(keys).not.toContain("d");
+  expect(keys).not.toContain(" ");
 });
 
 test("collectCanonicalBindingsForMode excludes alias bindings (canonical: false)", () => {

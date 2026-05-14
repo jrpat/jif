@@ -80,6 +80,19 @@ export type ShortcutSummarySegment = Readonly<{
   label: string;
 }>;
 
+export type ShortcutPanelLayout =
+  | Readonly<{ kind: "single"; grid: ShortcutGrid }>
+  | Readonly<{ kind: "split"; topGrid: ShortcutGrid; bottomGrid: ShortcutGrid }>;
+
+export function shortcutLayoutRowCount(layout: ShortcutPanelLayout): number {
+  if (layout.kind === "single") return layout.grid.rows.length;
+  const topRows = layout.topGrid.rows.length;
+  const bottomRows = layout.bottomGrid.rows.length;
+  if (topRows === 0) return bottomRows;
+  if (bottomRows === 0) return topRows;
+  return topRows + bottomRows + 1;
+}
+
 export function normalizeShortcutSortKey(keyLabel: string): string {
   const shortcut = splitShortcutKey(keyLabel);
   return shortcut?.baseKey ?? keyLabel;

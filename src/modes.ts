@@ -242,15 +242,30 @@ export function collectCanonicalBindingsForMode(
   mode: Mode,
   keymap: Keymap,
 ): readonly CanonicalKeyBinding[] {
-  const modeBindings = getModeBindings(mode, keymap);
+  return [
+    ...collectDirectCanonicalBindingsForMode(mode, keymap),
+    ...collectInheritedAndGlobalCanonicalBindings(mode, keymap),
+  ];
+}
+
+export function collectInheritedAndGlobalCanonicalBindings(
+  mode: Mode,
+  keymap: Keymap,
+): readonly CanonicalKeyBinding[] {
+  const directBindings = keymap[mode] ?? {};
+  const def = modeDefinitions[mode];
+  const parentBindings = def.parent ? getModeBindings(def.parent, keymap) : {};
+
   const results: CanonicalKeyBinding[] = [];
-  for (const [key, binding] of Object.entries(modeBindings)) {
+  for (const [key, binding] of Object.entries(parentBindings)) {
+    if (key in directBindings) continue;
     if (isCanonicalBinding(binding)) {
       results.push({ key, commandId: bindingCommand(binding) });
     }
   }
   for (const [key, binding] of Object.entries(keymap._global ?? {})) {
-    if (key in modeBindings) continue;
+    if (key in directBindings) continue;
+    if (key in parentBindings) continue;
     if (isCanonicalBinding(binding)) {
       results.push({ key, commandId: bindingCommand(binding) });
     }

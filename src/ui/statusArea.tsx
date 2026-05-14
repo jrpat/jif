@@ -3,7 +3,7 @@ import type { ScrollBoxRenderable } from "@opentui/core";
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import type { StatusMessage } from "../domain/types.ts";
 import type { ResolvedAppConfig } from "../config/schema.ts";
-import type { ShortcutGrid, ShortcutSummarySegment } from "./shortcutPanel.ts";
+import type { ShortcutGrid, ShortcutPanelLayout, ShortcutSummarySegment } from "./shortcutPanel.ts";
 import { ScrollableAnsiBody } from "./scrollableAnsiBody.tsx";
 import { observeScrollboxInteraction } from "./scroll.ts";
 import {
@@ -16,7 +16,7 @@ import { SPINNER_INTERVAL_MS, formatSpinnerText } from "./spinner.ts";
 export function StatusArea(props: {
   shortcutSummary: string;
   shortcutSummarySegments: readonly ShortcutSummarySegment[];
-  shortcutGrid: ShortcutGrid;
+  shortcutLayout: ShortcutPanelLayout;
   expanded: boolean;
   currentModeLabel: string;
   panelBodyHeight: number;
@@ -131,49 +131,107 @@ export function StatusArea(props: {
           }}
         >
           <Show
-            when={props.shortcutGrid.rows.length > 0}
+            when={!isLayoutEmpty(props.shortcutLayout)}
             fallback={
               <box width="100%" paddingX={1}>
                 <text fg={colors.textTertiary}>No shortcuts for this mode.</text>
               </box>
             }
           >
-            <box width="100%" flexDirection="column" paddingX={1}>
-              <For each={props.shortcutGrid.rows}>
-                {(row) => (
-                  <box width="100%" flexDirection="row" gap={props.shortcutGrid.gap}>
-                    <For each={row}>
-                      {(entry) => (
-                        <box
-                          width={props.shortcutGrid.columnWidth}
-                          minWidth={0}
-                          flexDirection="row"
-                        >
-                          <box width={props.shortcutGrid.keyWidth} flexShrink={0}>
-                            <text
-                              fg={colors.chromeBorderFocus}
-                              attributes={TextAttributes.BOLD}
-                              truncate
-                            >
-                              {entry.keyLabel}
-                            </text>
-                          </box>
-                          <box flexGrow={1} minWidth={0}>
-                            <text fg={colors.textSecondary} truncate>
-                              {` ${entry.title}`}
-                            </text>
-                          </box>
-                        </box>
-                      )}
-                    </For>
-                  </box>
-                )}
-              </For>
-            </box>
+            <Show
+              when={props.shortcutLayout.kind === "single"}
+              fallback={
+                <SplitShortcutBody
+                  layout={props.shortcutLayout as Extract<ShortcutPanelLayout, { kind: "split" }>}
+                  colors={colors}
+                />
+              }
+            >
+              <ShortcutGridBody
+                grid={(props.shortcutLayout as Extract<ShortcutPanelLayout, { kind: "single" }>).grid}
+                colors={colors}
+              />
+            </Show>
           </Show>
         </scrollbox>
       </box>
     </Show>
+  );
+}
+
+function isLayoutEmpty(layout: ShortcutPanelLayout): boolean {
+  if (layout.kind === "single") return layout.grid.rows.length === 0;
+  return layout.topGrid.rows.length === 0 && layout.bottomGrid.rows.length === 0;
+}
+
+function dividerWidth(topGrid: ShortcutGrid, bottomGrid: ShortcutGrid): number {
+  const span = (grid: ShortcutGrid) =>
+    grid.columnCount * grid.columnWidth + Math.max(0, grid.columnCount - 1) * grid.gap;
+  return Math.max(1, span(topGrid), span(bottomGrid));
+}
+
+function ShortcutGridBody(props: {
+  grid: ShortcutGrid;
+  colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
+}) {
+  return (
+    <box width="100%" flexDirection="column" paddingX={1}>
+      <For each={props.grid.rows}>
+        {(row) => (
+          <box width="100%" flexDirection="row" gap={props.grid.gap}>
+            <For each={row}>
+              {(entry) => (
+                <box
+                  width={props.grid.columnWidth}
+                  minWidth={0}
+                  flexDirection="row"
+                >
+                  <box width={props.grid.keyWidth} flexShrink={0}>
+                    <text
+                      fg={props.colors.chromeBorderFocus}
+                      attributes={TextAttributes.BOLD}
+                      truncate
+                    >
+                      {entry.keyLabel}
+                    </text>
+                  </box>
+                  <box flexGrow={1} minWidth={0}>
+                    <text fg={props.colors.textSecondary} truncate>
+                      {` ${entry.title}`}
+                    </text>
+                  </box>
+                </box>
+              )}
+            </For>
+          </box>
+        )}
+      </For>
+    </box>
+  );
+}
+
+function SplitShortcutBody(props: {
+  layout: Extract<ShortcutPanelLayout, { kind: "split" }>;
+  colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
+}) {
+  const hasTop = () => props.layout.topGrid.rows.length > 0;
+  const hasBottom = () => props.layout.bottomGrid.rows.length > 0;
+  return (
+    <box width="100%" flexDirection="column">
+      <Show when={hasTop()}>
+        <ShortcutGridBody grid={props.layout.topGrid} colors={props.colors} />
+      </Show>
+      <Show when={hasTop() && hasBottom()}>
+        <box width="100%" height={1} paddingX={1}>
+          <text fg={props.colors.chromeBorderIdle} truncate>
+            {"─".repeat(dividerWidth(props.layout.topGrid, props.layout.bottomGrid))}
+          </text>
+        </box>
+      </Show>
+      <Show when={hasBottom()}>
+        <ShortcutGridBody grid={props.layout.bottomGrid} colors={props.colors} />
+      </Show>
+    </box>
   );
 }
 

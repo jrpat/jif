@@ -61,9 +61,10 @@ import {
   buildShortcutSummarySegments,
   computeShortcutPanelHeight,
   getShortcutPanelBindings,
+  shortcutLayoutRowCount,
   shortcutModeLabel,
-  type ShortcutGrid,
   type ShortcutPanelBindingInput,
+  type ShortcutPanelLayout,
   type ShortcutSummarySegment,
 } from "./shortcutPanel.ts";
 import { resolveBottomChromeLayout } from "./bottomChrome.ts";
@@ -72,6 +73,7 @@ import { dispatchGlobalKey } from "./keybindings.ts";
 import {
   collectCanonicalBindingsForMode,
   collectDirectCanonicalBindingsForMode,
+  collectInheritedAndGlobalCanonicalBindings,
   getActiveMode,
 } from "../modes.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
@@ -270,11 +272,17 @@ export function JifView(props: {
   const directModeBindings = createMemo(() =>
     resolveBindings(collectDirectCanonicalBindingsForMode(activeMode(), configuredKeymap.keymap))
   );
+  const inheritedAndGlobalBindings = createMemo(() =>
+    resolveBindings(collectInheritedAndGlobalCanonicalBindings(activeMode(), configuredKeymap.keymap))
+  );
   const shortcutBindings = createMemo(() =>
     getShortcutPanelBindings(store.state, visibleBindings())
   );
   const modeShortcutBindings = createMemo(() =>
     getShortcutPanelBindings(store.state, directModeBindings())
+  );
+  const shortcutInheritedBindings = createMemo(() =>
+    getShortcutPanelBindings(store.state, inheritedAndGlobalBindings())
   );
   const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutBindings()));
   const shortcutContentWidth = createMemo(() => Math.max(1, terminalSize().width - 4));
@@ -287,6 +295,10 @@ export function JifView(props: {
   const shortcutGrid = createMemo(() =>
     buildShortcutGrid(shortcutEntries(), shortcutContentWidth())
   );
+  const shortcutLayout = createMemo<ShortcutPanelLayout>(() => ({
+    kind: "single",
+    grid: shortcutGrid(),
+  }));
   const shortcutPanelHeight = createMemo(() =>
     computeShortcutPanelHeight(terminalSize().height)
   );
@@ -294,7 +306,7 @@ export function JifView(props: {
     getStatusToastMaxBodyHeight(terminalSize().height)
   );
   const shortcutPanelBodyHeight = createMemo(() =>
-    Math.max(1, Math.min(shortcutGrid().rows.length, Math.max(1, shortcutPanelHeight() - 3)))
+    Math.max(1, Math.min(shortcutLayoutRowCount(shortcutLayout()), Math.max(1, shortcutPanelHeight() - 3)))
   );
   const [promptSurfaceHeight, setPromptSurfaceHeight] = createSignal(3);
   const showsCommandPrompt = createMemo(() => store.state.focusMode === "command");
@@ -334,8 +346,31 @@ export function JifView(props: {
   const expandedShortcutGrid = createMemo(() =>
     buildShortcutGrid(expandedShortcutEntries(), shortcutContentWidth())
   );
+  const persistentDirectGrid = createMemo(() =>
+    buildShortcutGrid(buildShortcutEntries(modeShortcutBindings()), shortcutContentWidth())
+  );
+  const persistentInheritedGrid = createMemo(() =>
+    buildShortcutGrid(buildShortcutEntries(shortcutInheritedBindings()), shortcutContentWidth())
+  );
+  const expandedShortcutLayout = createMemo<ShortcutPanelLayout>(() => {
+    if (
+      showsPersistentShortcutPanel() &&
+      !showsTransientShortcutPanel() &&
+      activeMode() !== "normal"
+    ) {
+      return {
+        kind: "split",
+        topGrid: persistentDirectGrid(),
+        bottomGrid: persistentInheritedGrid(),
+      };
+    }
+    return { kind: "single", grid: expandedShortcutGrid() };
+  });
   const expandedShortcutPanelBodyHeight = createMemo(() =>
-    Math.max(1, Math.min(expandedShortcutGrid().rows.length, Math.max(1, shortcutPanelHeight() - 3)))
+    Math.max(
+      1,
+      Math.min(shortcutLayoutRowCount(expandedShortcutLayout()), Math.max(1, shortcutPanelHeight() - 3)),
+    )
   );
   const expandedShortcutPanelRenderedHeight = createMemo(() => expandedShortcutPanelBodyHeight() + 4);
   const loadingIndicatorText = createMemo(() => {
@@ -667,7 +702,7 @@ export function JifView(props: {
           <StatusArea
             shortcutSummary={shortcutSummary()}
             shortcutSummarySegments={shortcutSummarySegments()}
-            shortcutGrid={expandedShortcutGrid()}
+            shortcutLayout={expandedShortcutLayout()}
             expanded
             currentModeLabel={shortcutModeLabel(activeMode())}
             panelBodyHeight={expandedShortcutPanelBodyHeight()}
@@ -734,7 +769,7 @@ export function JifView(props: {
           <StatusArea
             shortcutSummary={shortcutSummary()}
             shortcutSummarySegments={shortcutSummarySegments()}
-            shortcutGrid={shortcutGrid()}
+            shortcutLayout={shortcutLayout()}
             expanded={false}
             currentModeLabel={shortcutModeLabel(activeMode())}
             panelBodyHeight={shortcutPanelBodyHeight()}
