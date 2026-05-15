@@ -56,6 +56,19 @@ export class HistoryStore {
     await writeFile(path, `${nextHistory.join("\n")}\n`, "utf8");
     return nextHistory;
   }
+
+  async remove(kind: HistoryKind, value: string): Promise<string[]> {
+    const history = await this.load(kind);
+    const nextHistory = history.filter((entry) => entry !== value);
+    if (nextHistory.length === history.length) {
+      return history;
+    }
+    const path = resolveHistoryFilePath(this.workspaceRoot, kind);
+    await mkdir(dirname(path), { recursive: true });
+    const contents = nextHistory.length === 0 ? "" : `${nextHistory.join("\n")}\n`;
+    await writeFile(path, contents, "utf8");
+    return nextHistory;
+  }
 }
 
 export function matchHistoryEntries(query: string, entries: readonly string[]): string[] {

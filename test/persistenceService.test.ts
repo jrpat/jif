@@ -41,25 +41,35 @@ test("persistence service routes workspace history and settings through a histor
         entries.push(`record:${workspaceRoot}:${kind}:${value}`);
         return [value];
       },
+      async remove(kind, value) {
+        entries.push(`remove:${workspaceRoot}:${kind}:${value}`);
+        return [];
+      },
     }),
   });
 
   expect(await service.loadCommandHistory("/tmp/workspace")).toEqual(["command-history:entry"]);
   expect(await service.recordCommandHistory("/tmp/workspace", "describe -r a")).toEqual(["describe -r a"]);
+  expect(await service.removeCommandHistory("/tmp/workspace", "describe -r a")).toEqual([]);
   expect(await service.loadShellHistory("/tmp/workspace")).toEqual(["shell-history:entry"]);
   expect(await service.recordShellHistory("/tmp/workspace", "pwd | cat")).toEqual(["pwd | cat"]);
+  expect(await service.removeShellHistory("/tmp/workspace", "pwd | cat")).toEqual([]);
   expect(await service.loadRevsetHistory("/tmp/workspace")).toEqual(["revset-history:entry"]);
   expect(await service.recordRevsetHistory("/tmp/workspace", "main..@")).toEqual(["main..@"]);
+  expect(await service.removeRevsetHistory("/tmp/workspace", "main..@")).toEqual([]);
   expect(await service.loadActiveRevset("/tmp/workspace")).toBe("active-revset:value");
   await service.saveActiveRevset("/tmp/workspace", "trunk()..");
 
   expect(entries).toEqual([
     "load:/tmp/workspace:command-history",
     "record:/tmp/workspace:command-history:describe -r a",
+    "remove:/tmp/workspace:command-history:describe -r a",
     "load:/tmp/workspace:shell-history",
     "record:/tmp/workspace:shell-history:pwd | cat",
+    "remove:/tmp/workspace:shell-history:pwd | cat",
     "load:/tmp/workspace:revset-history",
     "record:/tmp/workspace:revset-history:main..@",
+    "remove:/tmp/workspace:revset-history:main..@",
     "loadSetting:/tmp/workspace:active-revset",
     "saveSetting:/tmp/workspace:active-revset:trunk()..",
   ]);

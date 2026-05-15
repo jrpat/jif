@@ -226,6 +226,7 @@ Active in the command bar (`:`), revset prompt (`L`), and search prompt (`/`). K
 |-----|-------------|
 | `ctrl-j` / `ctrl-n` / `↓` | Move to the next history entry or suggestion |
 | `ctrl-k` / `ctrl-p` / `↑` | Move to the previous history entry or suggestion |
+| `ctrl-x` | Delete the highlighted suggestion from saved history (no-op for suggestions from non-history sources like revset completions) |
 | `ctrl-'` | (`:` and `>` command bars) Insert the focused revision's shortest unique change-id prefix at the cursor |
 | `enter` | Submit the current input (run the command, apply the revset, finalize the search) |
 | `tab` / `shift-tab` | Move to the next / previous suggestion |

@@ -25,6 +25,7 @@ export function CommandPrompt(props: {
   config: ResolvedAppConfig;
   workspaceRoot: string | null;
   loadHistory: (workspaceRoot: string) => Promise<string[]>;
+  removeHistory?: (workspaceRoot: string, entry: string) => Promise<string[]>;
   commandText: string;
   prefix: string;
   placeholder: string;
@@ -149,6 +150,25 @@ export function CommandPrompt(props: {
       setSelectedIndex((currentIndex) =>
         moveAutocompleteSelection(currentIndex, itemCount, action)
       );
+      return;
+    }
+
+    if (event.ctrl && event.name === "x" && !props.bookmarkContext) {
+      const index = selectedIndex();
+      if (index === null) return;
+      const entry = filteredHistory()[index];
+      if (entry === undefined) return;
+      event.preventDefault();
+      removeHistoryEntryAtIndex({
+        entry,
+        currentIndex: index,
+        historyEntries: historyEntries(),
+        visibleCountAfterRemoval: (remaining) => matchHistoryEntries(draftText(), remaining).length,
+        setHistoryEntries,
+        setSelectedIndex,
+        workspaceRoot: props.workspaceRoot,
+        removeHistory: props.removeHistory,
+      });
       return;
     }
 
@@ -343,6 +363,7 @@ export function RevsetPrompt(props: {
   config: ResolvedAppConfig;
   workspaceRoot: string | null;
   loadHistory: (workspaceRoot: string) => Promise<string[]>;
+  removeHistory?: (workspaceRoot: string, entry: string) => Promise<string[]>;
   onApply: (query: string) => void | Promise<void>;
   onCancel: () => void;
   onHeightChange?: (height: number) => void;
@@ -417,6 +438,25 @@ export function RevsetPrompt(props: {
       setSelectedIndex((currentIndex) =>
         moveAutocompleteSelection(currentIndex, suggestions().length, action)
       );
+      return;
+    }
+
+    if (event.ctrl && event.name === "x") {
+      const index = selectedIndex();
+      if (index === null) return;
+      const item = suggestions()[index];
+      if (!item || item.tag !== "hs") return;
+      event.preventDefault();
+      removeHistoryEntryAtIndex({
+        entry: item.text,
+        currentIndex: index,
+        historyEntries: historyEntries(),
+        visibleCountAfterRemoval: (remaining) => remaining.length,
+        setHistoryEntries,
+        setSelectedIndex,
+        workspaceRoot: props.workspaceRoot,
+        removeHistory: props.removeHistory,
+      });
       return;
     }
 
@@ -561,6 +601,31 @@ function syncPromptInput(input: InputRenderable | undefined, text: string, curso
   const target = Math.max(0, Math.min(cursorOffset, text.length));
   if (input.cursorOffset !== target) {
     input.cursorOffset = target;
+  }
+}
+
+function removeHistoryEntryAtIndex(args: {
+  entry: string;
+  currentIndex: number;
+  historyEntries: readonly string[];
+  visibleCountAfterRemoval: (remaining: readonly string[]) => number;
+  setHistoryEntries: (entries: string[]) => void;
+  setSelectedIndex: (index: number | null) => void;
+  workspaceRoot: string | null;
+  removeHistory?: (workspaceRoot: string, entry: string) => Promise<string[]>;
+}): void {
+  const remaining = args.historyEntries.filter((entry) => entry !== args.entry);
+  const visibleCount = args.visibleCountAfterRemoval(remaining);
+  batch(() => {
+    args.setHistoryEntries(remaining);
+    if (visibleCount === 0) {
+      args.setSelectedIndex(null);
+    } else if (args.currentIndex >= visibleCount) {
+      args.setSelectedIndex(visibleCount - 1);
+    }
+  });
+  if (args.workspaceRoot && args.removeHistory) {
+    void args.removeHistory(args.workspaceRoot, args.entry);
   }
 }
 

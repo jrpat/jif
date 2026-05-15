@@ -95,6 +95,34 @@ describe("HistoryStore", () => {
     expect(history).toEqual(["log"]);
   });
 
+  test("remove deletes a matching entry and persists the result", async () => {
+    const { store } = await createStore();
+    await store.record("command-history", "log");
+    await store.record("command-history", "undo");
+    await store.record("command-history", "rebase -r a -d b");
+
+    const afterRemove = await store.remove("command-history", "undo");
+    expect(afterRemove).toEqual(["rebase -r a -d b", "log"]);
+    expect(await store.load("command-history")).toEqual(["rebase -r a -d b", "log"]);
+  });
+
+  test("remove is a no-op when no entry matches", async () => {
+    const { store } = await createStore();
+    await store.record("command-history", "log");
+
+    const afterRemove = await store.remove("command-history", "undo");
+    expect(afterRemove).toEqual(["log"]);
+    expect(await store.load("command-history")).toEqual(["log"]);
+  });
+
+  test("remove empties the history file when the last entry is removed", async () => {
+    const { store } = await createStore();
+    await store.record("command-history", "log");
+
+    expect(await store.remove("command-history", "log")).toEqual([]);
+    expect(await store.load("command-history")).toEqual([]);
+  });
+
   test("saveSetting writes and loadSetting reads a single value", async () => {
     const { store } = await createStore();
     await store.saveSetting("active-revset", "trunk()..");

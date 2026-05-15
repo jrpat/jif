@@ -773,6 +773,9 @@ export function JifView(props: {
             loadHistory={(root) => store.state.commandBar.kind === "shell"
               ? persistence.loadShellHistory(root)
               : persistence.loadCommandHistory(root)}
+            removeHistory={(root, entry) => store.state.commandBar.kind === "shell"
+              ? persistence.removeShellHistory(root, entry)
+              : persistence.removeCommandHistory(root, entry)}
             commandText={commandText()}
             prefix={store.state.commandBar.kind === "shell" ? "❯ " : "jj "}
             placeholder={store.state.commandBar.kind === "shell" ? "shell command" : "subcommand"}
@@ -796,6 +799,7 @@ export function JifView(props: {
             config={config}
             workspaceRoot={workspaceRoot()}
             loadHistory={(root) => persistence.loadRevsetHistory(root)}
+            removeHistory={(root, entry) => persistence.removeRevsetHistory(root, entry)}
             onApply={runtime.applyRevsetQuery}
             onCancel={() => {
               store.actions.closeRevsetInput();
