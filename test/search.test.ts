@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { closeSearch, createInitialState, finalizeSearch, getSearchMatchIndices, nextSearchMatch, openDiffViewer, openOperationLog, openSearch, prevSearchMatch, setOperationLogEntries, setSearchText } from "../src/state/store.ts";
+import { closeSearch, createInitialState, finalizeSearch, getSearchMatchIndices, nextSearchMatch, openDiffViewer, openEvolog, openOperationLog, openSearch, prevSearchMatch, setEvologEntries, setOperationLogEntries, setSearchText } from "../src/state/store.ts";
 import type { AppState, RevisionSummary } from "../src/domain/types.ts";
 import { hasVisibleSearchHighlights } from "../src/search/matching.ts";
 
@@ -150,6 +150,27 @@ test("canceling operation-log search restores the starting focus", () => {
   expect(state.searchQuery).toBe("");
   expect(state.searchScope).toBeNull();
   expect(state.focusedOperationLogIndex).toBe(1);
+});
+
+test("evolog search scopes matches and navigation to evolog entries", () => {
+  let state = createInitialState("/tmp/repo");
+  state = setEvologEntries(state, [
+    { id: "one", lines: ["@  xuntkrpo dafa8495", "│  first evolution"] },
+    { id: "two", lines: ["○  xuntkrpo/1 f5029c4b", "│  second evolution"] },
+  ]);
+  state = openEvolog(state, "xuntkrpo");
+  state = openSearch(state);
+  state = setSearchText(state, "evolution");
+
+  expect(state.searchScope).toBe("evolog");
+  expect(state.focusedEvologIndex).toBe(0);
+  expect(getSearchMatchIndices(state)).toEqual([0, 1]);
+
+  state = nextSearchMatch(state);
+  expect(state.focusedEvologIndex).toBe(1);
+
+  state = prevSearchMatch(state);
+  expect(state.focusedEvologIndex).toBe(0);
 });
 
 test("operation-log search ignores ansi escape sequences", () => {

@@ -5,6 +5,7 @@ export type Mode =
   | "normal"
   | "files"
   | "op-log"
+  | "evolog"
   | "inline-confirmation"
   | "rebase"
   | "restore"
@@ -14,6 +15,7 @@ export type Mode =
   | "search"
   | "search-results"
   | "op-log-search-results"
+  | "evolog-search-results"
   | "diff-viewer"
   | "notifications"
   | "bookmark"
@@ -30,6 +32,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   normal: { id: "normal", inputPassthrough: false, label: "Revisions" },
   files: { id: "files", parent: "normal", inputPassthrough: false, label: "Files" },
   "op-log": { id: "op-log", inputPassthrough: false, label: "Op Log" },
+  evolog: { id: "evolog", inputPassthrough: false, label: "Evolog" },
   "inline-confirmation": { id: "inline-confirmation", inputPassthrough: false, label: "Confirm" },
   rebase: { id: "rebase", parent: "normal", inputPassthrough: false, label: "Rebase" },
   restore: { id: "restore", parent: "normal", inputPassthrough: false, label: "Restore" },
@@ -39,6 +42,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   search: { id: "search", inputPassthrough: true, label: "Search" },
   "search-results": { id: "search-results", parent: "normal", inputPassthrough: false, label: "Search Results" },
   "op-log-search-results": { id: "op-log-search-results", parent: "op-log", inputPassthrough: false, label: "Search Results" },
+  "evolog-search-results": { id: "evolog-search-results", parent: "evolog", inputPassthrough: false, label: "Search Results" },
   "diff-viewer": { id: "diff-viewer", inputPassthrough: false, label: "Diff" },
   notifications: { id: "notifications", inputPassthrough: false, label: "Notifications" },
   bookmark: { id: "bookmark", parent: "normal", inputPassthrough: false, label: "Bookmark" },
@@ -109,6 +113,7 @@ export const defaultKeymap: Keymap = {
     a: "abandon",
     o: alias("open-operation-log"),
     O: "open-operation-log",
+    E: "open-evolog",
     b: "enter-bookmark-mode",
   },
   files: {
@@ -126,6 +131,15 @@ export const defaultKeymap: Keymap = {
     r: "restore-operation",
     R: "revert-operation",
     d: "show-operation-diff",
+    "/": "search",
+    "?": "shortcut-panel",
+  },
+  evolog: {
+    j: "move-down",
+    down: alias("move-down"),
+    k: "move-up",
+    up: alias("move-up"),
+    G: "jump-to-bottom",
     "/": "search",
     "?": "shortcut-panel",
   },
@@ -149,6 +163,10 @@ export const defaultKeymap: Keymap = {
     "ctrl-p": "search-prev",
   },
   "op-log-search-results": {
+    "ctrl-n": "search-next",
+    "ctrl-p": "search-prev",
+  },
+  "evolog-search-results": {
     "ctrl-n": "search-next",
     "ctrl-p": "search-prev",
   },
@@ -196,8 +214,12 @@ export function getActiveMode(state: AppState): Mode {
   if (state.searchQuery !== "" && state.searchScope === "operation-log" && state.focusMode === "op-log") {
     return "op-log-search-results";
   }
+  if (state.searchQuery !== "" && state.searchScope === "evolog" && state.focusMode === "evolog") {
+    return "evolog-search-results";
+  }
   if (state.focusMode === "diff-viewer") return "diff-viewer";
   if (state.focusMode === "op-log") return "op-log";
+  if (state.focusMode === "evolog") return "evolog";
   if (state.focusMode === "notifications") return "notifications";
   if (state.focusMode === "files") return "files";
   if (state.commandDraft?.config.kind === "rebase") return "rebase";

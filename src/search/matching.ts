@@ -44,6 +44,16 @@ const SEARCH_SCOPE_DEFINITIONS: Readonly<Record<SearchScopeId, SearchScopeDefini
       createOperationLogSearchableItem(entry, index)
     ),
   },
+  "evolog": {
+    scope: "evolog",
+    focusModes: ["evolog"],
+    getFocusedIndex: (state) => state.focusedEvologIndex,
+    setFocusedIndex: (state, index) => ({ ...state, focusedEvologIndex: index }),
+    getItemCount: (state) => state.evologEntries.length,
+    getSearchableItems: (state) => state.evologEntries.map((entry, index) =>
+      createEvologSearchableItem(entry, index)
+    ),
+  },
 };
 const SEARCH_SCOPE_LIST = Object.values(SEARCH_SCOPE_DEFINITIONS);
 const SEARCH_VISIBLE_THROUGH_FOCUS_MODES = new Set<AppState["focusMode"]>([
@@ -221,6 +231,18 @@ function createOperationLogSearchableItem(
   return {
     scope: "operation-log",
     id: `operation-log-entry-${index}`,
+    index,
+    text: entry.lines.map(stripAnsi).join("\n"),
+  };
+}
+
+function createEvologSearchableItem(
+  entry: OperationLogEntry,
+  index: number,
+): SearchableItem {
+  return {
+    scope: "evolog",
+    id: `evolog-entry-${index}`,
     index,
     text: entry.lines.map(stripAnsi).join("\n"),
   };

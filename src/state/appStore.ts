@@ -24,6 +24,7 @@ import {
   clearStatusMessage,
   closeFocusedRevision,
   closeOperationLog,
+  closeEvolog,
   closeDiffViewer,
   closeNotifications,
   enterBookmarkLeader,
@@ -34,10 +35,12 @@ import {
   focusLogBottom,
   focusNotificationAt,
   focusOperationLogEntryAt,
+  focusEvologEntryAt,
   focusRevisionAt,
   focusWorkingCopy,
   openNotifications,
   openOperationLog,
+  openEvolog,
   openDiffViewer,
   openRevsetInput,
   closeRevsetInput,
@@ -74,6 +77,8 @@ import {
   setLoading,
   setOperationLogEntries,
   setOperationLogLoading,
+  setEvologEntries,
+  setEvologLoading,
   setRevisionFiles,
   touchStatusMessage,
   toggleRebaseDescendants,
@@ -120,6 +125,9 @@ export function createAppStore(
       setOperationLogLoading(loading: boolean) {
         mutate((currentState) => setOperationLogLoading(currentState, loading));
       },
+      setEvologLoading(loading: boolean) {
+        mutate((currentState) => setEvologLoading(currentState, loading));
+      },
       pushEvent(text: string, level: StatusLevel) {
         mutate((currentState) => pushEvent(currentState, text, level));
       },
@@ -148,6 +156,9 @@ export function createAppStore(
       setOperationLogEntries(operationLogEntries: AppState["operationLogEntries"]) {
         mutate((currentState) => setOperationLogEntries(currentState, operationLogEntries));
       },
+      setEvologEntries(evologEntries: AppState["evologEntries"]) {
+        mutate((currentState) => setEvologEntries(currentState, evologEntries));
+      },
       moveFocus(delta: number) {
         mutate((currentState) => moveFocus(currentState, delta));
       },
@@ -156,6 +167,9 @@ export function createAppStore(
       },
       focusOperationLogEntryAt(index: number) {
         mutate((currentState) => focusOperationLogEntryAt(currentState, index));
+      },
+      focusEvologEntryAt(index: number) {
+        mutate((currentState) => focusEvologEntryAt(currentState, index));
       },
       focusNotificationAt(index: number) {
         mutate((currentState) => focusNotificationAt(currentState, index));
@@ -180,6 +194,12 @@ export function createAppStore(
       },
       closeOperationLog() {
         mutate((currentState) => closeOperationLog(currentState));
+      },
+      openEvolog(label: string) {
+        mutate((currentState) => openEvolog(currentState, label));
+      },
+      closeEvolog() {
+        mutate((currentState) => closeEvolog(currentState));
       },
       openNotifications() {
         mutate((currentState) => openNotifications(currentState));

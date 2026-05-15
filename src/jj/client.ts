@@ -138,6 +138,21 @@ export class JjClient {
     return parseOperationLogOutput(result.stdout);
   }
 
+  async loadEvolog(revisionArg: string): Promise<readonly OperationLogEntry[]> {
+    const result = await this.runJj([
+      "evolog",
+      "-r",
+      revisionArg,
+      "--color",
+      "always",
+      "--ignore-working-copy",
+    ], {
+      color: true,
+    });
+
+    return parseEvolutionLogOutput(result.stdout);
+  }
+
   async loadOperationDiff(operationId: string): Promise<string> {
     const result = await this.runJj([
       "operation",
@@ -460,6 +475,55 @@ export function parseOperationLogOutput(output: string): readonly OperationLogEn
     if (currentId !== null) {
       currentLines.push(stripJifInternalFlagsFromArgsLine(line));
     }
+  }
+
+  flush();
+  return entries;
+}
+
+const EVOLOG_GRAPH_NODE_CHARS = new Set(["@", "○", "◆", "×", "*", "+"]);
+const EVOLOG_OPERATION_ID_PATTERN = /--\s+operation\s+([0-9a-f]{8,})/;
+
+export function parseEvolutionLogOutput(output: string): readonly OperationLogEntry[] {
+  const entries: OperationLogEntry[] = [];
+  let currentLines: string[] = [];
+  let currentIndex = 0;
+
+  const flush = () => {
+    if (currentLines.length === 0) {
+      return;
+    }
+
+    let id: string | null = null;
+    for (const line of currentLines) {
+      const plain = line.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "");
+      const match = plain.match(EVOLOG_OPERATION_ID_PATTERN);
+      if (match) {
+        id = match[1] ?? null;
+        break;
+      }
+    }
+
+    entries.push({
+      id: id ?? `evolog-${currentIndex}`,
+      lines: currentLines,
+    });
+    currentIndex += 1;
+    currentLines = [];
+  };
+
+  for (const line of output.split("\n")) {
+    const plain = line.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "").trimStart();
+    const firstChar = plain.charAt(0);
+    if (firstChar.length > 0 && EVOLOG_GRAPH_NODE_CHARS.has(firstChar)) {
+      flush();
+    }
+
+    if (currentLines.length === 0 && line.length === 0) {
+      continue;
+    }
+
+    currentLines.push(line);
   }
 
   flush();

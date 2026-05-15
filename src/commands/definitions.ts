@@ -19,6 +19,7 @@ export type CommandController = Readonly<{
   moveFocusToChild: () => void;
   focusLogBottom: () => void;
   openOperationLog: () => void;
+  openEvolog: () => void;
   openFocusedRevision: () => void;
   closeFocusedRevision: () => void;
   quit: () => void;
@@ -195,6 +196,17 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Operation Log",
     description: "Show the repository operation log",
     run: (controller) => controller.openOperationLog(),
+    group: "global",
+  },
+  {
+    id: "open-evolog",
+    title: "Evolog",
+    description: "Show the evolution log for the focused revision",
+    canExecute: (state) => {
+      const revision = state.revisions[state.focusedRevisionIndex];
+      return revision !== undefined && revision.marker !== "elided";
+    },
+    run: (controller) => controller.openEvolog(),
     group: "global",
   },
   {

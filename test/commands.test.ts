@@ -103,6 +103,26 @@ test("resolveCommand returns null for unbound keys", () => {
   expect(resolveForState("z", state)).toBeNull();
 });
 
+test("open-evolog canExecute is false when no focused revision or marker is elided", () => {
+  const command = commandDefinitions.find((c) => c.id === "open-evolog");
+  expect(command).toBeDefined();
+  expect(command?.canExecute?.(createState())).toBeTrue();
+
+  const elidedState: AppState = {
+    ...createState(),
+    revisions: [{ ...createState().revisions[0]!, marker: "elided" }],
+    focusedRevisionIndex: 0,
+  };
+  expect(command?.canExecute?.(elidedState)).toBeFalse();
+
+  const emptyState: AppState = { ...createState(), revisions: [] };
+  expect(command?.canExecute?.(emptyState)).toBeFalse();
+});
+
+test("E resolves to open-evolog in normal mode", () => {
+  expect(resolveForState("E", createState())).toBe("open-evolog");
+});
+
 test("search command only executes in searchable views", () => {
   const searchCommand = commandDefinitions.find((command) => command.id === "search");
   expect(searchCommand?.canExecute?.(createState())).toBeTrue();

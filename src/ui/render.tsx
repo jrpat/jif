@@ -444,10 +444,11 @@ export function JifView(props: {
 
   let prevFocusedIndex = store.state.focusedRevisionIndex;
   let prevFocusedOperationIndex = store.state.focusedOperationLogIndex;
+  let prevFocusedEvologIndex = store.state.focusedEvologIndex;
   let prevFocusedNotificationIndex = store.state.focusedNotificationIndex;
 
   createRenderEffect(() => {
-    if (store.state.focusMode === "op-log") {
+    if (store.state.focusMode === "op-log" || store.state.focusMode === "evolog") {
       return;
     }
 
@@ -491,6 +492,28 @@ export function JifView(props: {
       : Math.max(focusedIndex - margin, 0);
 
     scrollToKeepChildVisible(logViewport, `operation-log-entry-${marginIndex}`, direction);
+  });
+
+  createRenderEffect(() => {
+    if (store.state.focusMode !== "evolog" || !logViewport) {
+      return;
+    }
+
+    const focusedEntry = store.state.evologEntries[store.state.focusedEvologIndex];
+    if (!focusedEntry) {
+      return;
+    }
+
+    const focusedIndex = store.state.focusedEvologIndex;
+    const direction = focusedIndex >= prevFocusedEvologIndex ? "down" : "up";
+    prevFocusedEvologIndex = focusedIndex;
+
+    const margin = config.log.scrollMargin;
+    const marginIndex = direction === "down"
+      ? Math.min(focusedIndex + margin, store.state.evologEntries.length - 1)
+      : Math.max(focusedIndex - margin, 0);
+
+    scrollToKeepChildVisible(logViewport, `evolog-entry-${marginIndex}`, direction);
   });
 
   createRenderEffect(() => {
@@ -622,27 +645,58 @@ export function JifView(props: {
                     <Show
                       when={store.state.focusMode === "op-log"}
                       fallback={(
-                        <For each={store.state.revisions}>
-                          {(revision, index) => (
-                            <RevisionItem
-                              state={store.state}
-                              revision={revision}
-                              revisionChangeIdDisplayLength={revisionChangeIdDisplayLength()}
-                              index={index()}
-                              previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
-                              nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
-                              config={config}
-                              focusedRowId={getFocusedRevision(store.state)?.rowId ?? null}
-                              selectedRowIds={getMarkedRowIds(store.state)}
-                              expandedRowId={getExpandedRevision(store.state)?.rowId ?? null}
-                              commandTargetRowId={getCommandTargetRowId(store.state)}
-                              onMouseFocus={() => {
-                                if (focusClickGuard.isWithinFocusGrace()) return;
-                                store.actions.focusRevisionAt(index());
-                              }}
-                            />
+                        <Show
+                          when={store.state.focusMode === "evolog"}
+                          fallback={(
+                            <For each={store.state.revisions}>
+                              {(revision, index) => (
+                                <RevisionItem
+                                  state={store.state}
+                                  revision={revision}
+                                  revisionChangeIdDisplayLength={revisionChangeIdDisplayLength()}
+                                  index={index()}
+                                  previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
+                                  nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
+                                  config={config}
+                                  focusedRowId={getFocusedRevision(store.state)?.rowId ?? null}
+                                  selectedRowIds={getMarkedRowIds(store.state)}
+                                  expandedRowId={getExpandedRevision(store.state)?.rowId ?? null}
+                                  commandTargetRowId={getCommandTargetRowId(store.state)}
+                                  onMouseFocus={() => {
+                                    if (focusClickGuard.isWithinFocusGrace()) return;
+                                    store.actions.focusRevisionAt(index());
+                                  }}
+                                />
+                              )}
+                            </For>
                           )}
-                        </For>
+                        >
+                          <Show
+                            when={store.state.evologEntries.length > 0}
+                            fallback={(
+                              <box width="100%" paddingX={1} paddingY={1}>
+                                <text fg={config.colorScheme.semanticColors.textTertiary}>
+                                  {store.state.evologLoading ? "Loading evolog..." : "No evolog entries."}
+                                </text>
+                              </box>
+                            )}
+                          >
+                            <For each={store.state.evologEntries}>
+                              {(entry, index) => (
+                                <OperationLogEntryItem
+                                  id={`evolog-entry-${index()}`}
+                                  entry={entry}
+                                  focused={store.state.focusedEvologIndex === index()}
+                                  config={config}
+                                  onMouseFocus={() => {
+                                    if (focusClickGuard.isWithinFocusGrace()) return;
+                                    store.actions.focusEvologEntryAt(index());
+                                  }}
+                                />
+                              )}
+                            </For>
+                          </Show>
+                        </Show>
                       )}
                     >
                       <Show

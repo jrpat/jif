@@ -98,6 +98,7 @@ Viewing and navigating the revision log.
 | `:` | command-bar | Run a jj subcommand |
 | `>` | shell-command-bar | Run a shell command |
 | `o` / `O` | open-operation-log | Open the repository operation log |
+| `E` | open-evolog | Open the evolution log for the focused revision |
 | `q` | quit | Exit the application |
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 | `!` | force-last-command | Retry the last failed command with the override flag `jj` is asking for:<br>• `--ignore-immutable` — when the command refused because the target is immutable<br>• `--allow-backwards` — when a bookmark move was rejected as backwards/sideways |
@@ -144,7 +145,7 @@ Bookmark autocomplete is sorted with the closest ancestor bookmark first (visual
 
 ### Search Results
 
-Active after running a search in a searchable view. Search updates incrementally as you type and highlights visible matching text with inverse video. The revision log and operation log are searchable; `Ctrl+n` and `Ctrl+p` move between matching revisions or operation log entries until the search is cleared. Pressing Enter keeps the focused match; pressing Escape cancels the search and restores the focus from before search started.
+Active after running a search in a searchable view. Search updates incrementally as you type and highlights visible matching text with inverse video. The revision log, operation log, and evolog are searchable; `Ctrl+n` and `Ctrl+p` move between matching entries until the search is cleared. Pressing Enter keeps the focused match; pressing Escape cancels the search and restores the focus from before search started.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -164,6 +165,18 @@ Active while the operation log panel is open. Does not inherit Normal.
 | `R` | revert-operation | Revert the focused operation |
 | `d` | show-operation-diff | Show repository changes for the focused operation |
 | `/` | search | Incremental search through the operation log |
+| `?` | shortcut-panel | Expand or collapse the shortcut panel |
+
+### Evolog
+
+Active while the evolog panel is open. Opened from Normal with `E` for the focused revision. Does not inherit Normal.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `j` / `↓` | move-down | Focus the next evolog entry |
+| `k` / `↑` | move-up | Focus the previous evolog entry |
+| `G` | jump-to-bottom | Jump to the last evolog entry |
+| `/` | search | Incremental search through the evolog |
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 
 ### Notifications

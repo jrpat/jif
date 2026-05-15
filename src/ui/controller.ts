@@ -29,6 +29,7 @@ type ControllerClient = Readonly<{
   loadChangedFiles(revisionId: string): Promise<readonly ChangedFile[]>;
   loadConflictedFiles(revisionId: string): Promise<ReadonlySet<string>>;
   loadOperationLog(): Promise<readonly OperationLogEntry[]>;
+  loadEvolog(revisionArg: string): Promise<readonly OperationLogEntry[]>;
   loadOperationDiff(operationId: string): Promise<string>;
   resolveDescendants(revisionId: string): Promise<readonly string[]>;
   loadBookmarkTargets(): Promise<readonly BookmarkTarget[]>;
@@ -98,6 +99,30 @@ export function createJifCommandController(args: Readonly<{
           reportError(store, error);
         } finally {
           store.actions.setOperationLogLoading(false);
+        }
+      })();
+    },
+    openEvolog() {
+      const state = store.snapshot();
+      const revision = getFocusedRevision(state);
+      const revisionArg = getFocusedRevisionArg(state);
+      if (!revision || revisionArg === null || revision.marker === "elided") {
+        store.actions.pushEvent("Cannot show evolog: no revision focused", "warning");
+        return;
+      }
+
+      const label = `${revision.revisionId} ${firstLine(revision.description)}`.trim();
+      store.actions.openEvolog(label);
+      store.actions.setEvologEntries([]);
+      store.actions.setEvologLoading(true);
+      void (async () => {
+        try {
+          const entries = await client.loadEvolog(revisionArg);
+          store.actions.setEvologEntries(entries);
+        } catch (error) {
+          reportError(store, error);
+        } finally {
+          store.actions.setEvologLoading(false);
         }
       })();
     },
@@ -602,6 +627,10 @@ export async function loadRevisionFiles(args: Readonly<{
   } finally {
     inFlight.delete(args.rowId);
   }
+}
+
+function firstLine(value: string): string {
+  return value.split(/\r?\n/, 1)[0] ?? "";
 }
 
 function reportError(store: AppStore, error: unknown) {

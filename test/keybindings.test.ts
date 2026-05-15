@@ -56,6 +56,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     moveFocusToChild: () => calls.push("moveFocusToChild"),
     focusLogBottom: () => calls.push("focusLogBottom"),
     openOperationLog: () => calls.push("openOperationLog"),
+    openEvolog: () => calls.push("openEvolog"),
     openFocusedRevision: () => calls.push("openFocusedRevision"),
     closeFocusedRevision: () => calls.push("closeFocusedRevision"),
     quit: () => calls.push("quit"),
@@ -381,6 +382,21 @@ test("dispatchGlobalKey routes O to the operation log", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["openOperationLog"]);
+});
+
+test("dispatchGlobalKey routes E to open-evolog", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "E",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["openEvolog"]);
 });
 
 test("dispatchGlobalKey routes op-log actions to operation commands", () => {

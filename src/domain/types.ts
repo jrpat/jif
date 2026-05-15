@@ -17,6 +17,7 @@ export type FocusMode =
   | "revisions"
   | "files"
   | "op-log"
+  | "evolog"
   | "inline-confirmation"
   | "command"
   | "revset"
@@ -26,7 +27,7 @@ export type FocusMode =
   | "bookmark";
 export type AppLayout = "expanded" | "condensed" | "super-condensed";
 export type CommandBarKind = "jj" | "shell";
-export type SearchScopeId = "revision-log" | "operation-log";
+export type SearchScopeId = "revision-log" | "operation-log" | "evolog";
 
 export type ChangedFile = Readonly<{
   path: string;
@@ -133,12 +134,16 @@ export type AppState = Readonly<{
   revisions: readonly RevisionSummary[];
   operationLogEntries: readonly OperationLogEntry[];
   operationLogLoading: boolean;
+  evologEntries: readonly OperationLogEntry[];
+  evologLoading: boolean;
+  evologRevisionLabel: string;
   focusMode: FocusMode;
   focusModeStack: readonly FocusMode[];
   inlineConfirmation?: InlineConfirmation | null;
   shortcutPanelExpanded: boolean;
   focusedRevisionIndex: number;
   focusedOperationLogIndex: number;
+  focusedEvologIndex: number;
   expandedRowId: string | null;
   focusedFileIndex: number;
   selectedRowIds: readonly string[];

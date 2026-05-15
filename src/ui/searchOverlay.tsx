@@ -213,7 +213,11 @@ function getVisibleText(renderable: TextRenderableLike): string {
 }
 
 function findSearchItemAncestorId(renderable: Renderable, scope: SearchScopeId): string | null {
-  const prefix = scope === "operation-log" ? "operation-log-entry-" : "revision-";
+  const prefix = scope === "operation-log"
+    ? "operation-log-entry-"
+    : scope === "evolog"
+      ? "evolog-entry-"
+      : "revision-";
   let current: Renderable | null = renderable;
 
   while (current) {

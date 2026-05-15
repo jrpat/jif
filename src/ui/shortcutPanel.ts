@@ -257,6 +257,8 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Files";
     case "op-log":
       return "Op Log";
+    case "evolog":
+      return "Evolog";
     case "inline-confirmation":
       return "Confirm";
     case "rebase":
@@ -273,6 +275,7 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Search";
     case "search-results":
     case "op-log-search-results":
+    case "evolog-search-results":
       return "Search Results";
     case "diff-viewer":
       return "Diff";

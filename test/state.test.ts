@@ -17,6 +17,7 @@ import {
   focusShellCommandBar,
   focusLogBottom,
   focusNotificationAt,
+  focusEvologEntryAt,
   focusOperationLogEntryAt,
   focusRevisionAt,
   getFocusedRevisionArg,
@@ -36,6 +37,8 @@ import {
   moveFocusToParent,
   openDiffViewer,
   openOperationLog,
+  openEvolog,
+  closeEvolog,
   openFocusedRevision,
   closeShortcutPanel,
   toggleShortcutPanel,
@@ -358,6 +361,74 @@ test("cancelOrBlurState exits operation log mode", () => {
 
   expect(state.focusMode).toBe("revisions");
   expect(state.focusModeStack).toEqual(["revisions"]);
+});
+
+const EVOLOG_ENTRIES: readonly OperationLogEntry[] = [
+  { id: "35bf4e939772", lines: ["@  xuntkrpo dafa8495", "│  third"] },
+  { id: "fbb9651ace30", lines: ["○  xuntkrpo/1 f5029c4b (hidden)", "│  second"] },
+  { id: "0c0c798bfcf6", lines: ["○  xuntkrpo/2 a44bb4e6 (hidden)", "│  first"] },
+];
+
+test("openEvolog enters a dedicated browse mode", () => {
+  const state = openEvolog({
+    ...createState(),
+    evologEntries: EVOLOG_ENTRIES,
+    focusedEvologIndex: 2,
+  }, "xuntkrpo third");
+
+  expect(state.focusMode).toBe("evolog");
+  expect(state.focusModeStack).toEqual(["revisions", "evolog"]);
+  expect(state.evologRevisionLabel).toBe("xuntkrpo third");
+  expect(state.focusedEvologIndex).toBe(0);
+});
+
+test("moveFocus navigates evolog entries without changing revision focus", () => {
+  const state = moveFocus(openEvolog({
+    ...createState(),
+    evologEntries: EVOLOG_ENTRIES,
+  }, "label"), 1);
+
+  expect(state.focusedEvologIndex).toBe(1);
+  expect(state.focusedRevisionIndex).toBe(0);
+});
+
+test("focusLogBottom jumps to the last evolog entry", () => {
+  const state = focusLogBottom(openEvolog({
+    ...createState(),
+    evologEntries: EVOLOG_ENTRIES,
+  }, "label"));
+
+  expect(state.focusedEvologIndex).toBe(EVOLOG_ENTRIES.length - 1);
+});
+
+test("cancelOrBlurState exits evolog mode", () => {
+  const state = cancelOrBlurState(openEvolog({
+    ...createState(),
+    evologEntries: EVOLOG_ENTRIES,
+  }, "label"));
+
+  expect(state.focusMode).toBe("revisions");
+  expect(state.focusModeStack).toEqual(["revisions"]);
+});
+
+test("closeEvolog is a no-op when not in evolog mode", () => {
+  const before = createState();
+  const after = closeEvolog(before);
+  expect(after).toBe(before);
+});
+
+test("focusEvologEntryAt sets focusedEvologIndex", () => {
+  let state = { ...createState(), evologEntries: EVOLOG_ENTRIES };
+  state = focusEvologEntryAt(state, 2);
+  expect(state.focusedEvologIndex).toBe(2);
+  state = focusEvologEntryAt(state, 99);
+  expect(state.focusedEvologIndex).toBe(EVOLOG_ENTRIES.length - 1);
+});
+
+test("focusEvologEntryAt is a no-op when the evolog is empty", () => {
+  const before = { ...createState(), evologEntries: [] as readonly OperationLogEntry[] };
+  const after = focusEvologEntryAt(before, 1);
+  expect(after).toBe(before);
 });
 
 test("moveFocusToParent focuses the nearest visible parent revision", () => {

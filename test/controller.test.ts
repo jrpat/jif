@@ -68,6 +68,8 @@ function createControllerHarness(harnessOptions: Readonly<{
   runJjResult?: boolean;
   runInteractiveResult?: boolean;
   operationLogEntries?: readonly OperationLogEntry[];
+  evologEntries?: readonly OperationLogEntry[];
+  evologCalls?: string[];
   diffViewport?: ScrollBoxRenderable;
 }>) {
   const store = createAppStore(REPO_PATH);
@@ -106,6 +108,10 @@ function createControllerHarness(harnessOptions: Readonly<{
       },
       async loadOperationLog() {
         return harnessOptions.operationLogEntries ?? [];
+      },
+      async loadEvolog(revisionArg: string) {
+        harnessOptions.evologCalls?.push(revisionArg);
+        return harnessOptions.evologEntries ?? [];
       },
       async loadOperationDiff() {
         return "fake diff";
@@ -431,6 +437,51 @@ test("cycleLayout persists the updated layout after mutating store state", () =>
 
   expect(harness.store.state.layout).toBe("condensed");
   expect(harness.persistedLayouts).toEqual(["condensed"]);
+  harness.store.dispose();
+});
+
+test("openEvolog loads entries against the focused revision and enters evolog mode", async () => {
+  const evologEntries: readonly OperationLogEntry[] = [
+    { id: "35bf4e939772", lines: ["@  xuntkrpo dafa8495"] },
+  ];
+  const evologCalls: string[] = [];
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "first" }),
+    ],
+    evologEntries,
+    evologCalls,
+  });
+
+  harness.controller.openEvolog();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(harness.store.state.focusMode).toBe("evolog");
+  expect(harness.store.state.evologEntries).toEqual(evologEntries);
+  expect(evologCalls.length).toBe(1);
+  harness.store.dispose();
+});
+
+test("openEvolog is a no-op when the focused revision is elided", async () => {
+  const evologCalls: string[] = [];
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "elided",
+        revisionId: "elided",
+        description: "",
+        marker: "elided",
+      }),
+    ],
+    evologCalls,
+  });
+
+  harness.controller.openEvolog();
+  await Promise.resolve();
+
+  expect(harness.store.state.focusMode).toBe("revisions");
+  expect(evologCalls.length).toBe(0);
   harness.store.dispose();
 });
 

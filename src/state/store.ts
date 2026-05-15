@@ -131,12 +131,16 @@ export function createInitialState(
     revisions: [],
     operationLogEntries: [],
     operationLogLoading: false,
+    evologEntries: [],
+    evologLoading: false,
+    evologRevisionLabel: "",
     focusMode: "revisions",
     focusModeStack: ["revisions"],
     inlineConfirmation: null,
     shortcutPanelExpanded: false,
     focusedRevisionIndex: 0,
     focusedOperationLogIndex: 0,
+    focusedEvologIndex: 0,
     expandedRowId: null,
     focusedFileIndex: 0,
     selectedRowIds: [],
@@ -333,6 +337,16 @@ export function moveFocus(state: AppState, delta: number): AppState {
     };
   }
 
+  if (state.focusMode === "evolog") {
+    return {
+      ...state,
+      focusedEvologIndex: clampIndex(
+        state.focusedEvologIndex + delta,
+        state.evologEntries.length,
+      ),
+    };
+  }
+
   if (state.focusMode === "notifications") {
     return {
       ...state,
@@ -474,6 +488,17 @@ export function focusLogBottom(state: AppState): AppState {
     };
   }
 
+  if (state.focusMode === "evolog") {
+    if (state.evologEntries.length === 0) {
+      return state;
+    }
+
+    return {
+      ...state,
+      focusedEvologIndex: state.evologEntries.length - 1,
+    };
+  }
+
   if (state.focusMode === "notifications") {
     if (state.eventLog.length === 0) {
       return state;
@@ -599,6 +624,57 @@ export function setOperationLogLoading(state: AppState, operationLogLoading: boo
   return {
     ...state,
     operationLogLoading,
+  };
+}
+
+export function openEvolog(state: AppState, revisionLabel: string): AppState {
+  return replaceFocusModeStack({
+    ...state,
+    inlineConfirmation: null,
+    evologRevisionLabel: revisionLabel,
+    focusedEvologIndex: 0,
+  }, ["revisions", "evolog"]);
+}
+
+export function closeEvolog(state: AppState): AppState {
+  if (state.focusMode !== "evolog") {
+    return state;
+  }
+
+  return replaceFocusModeStack(state, ["revisions"]);
+}
+
+export function setEvologEntries(
+  state: AppState,
+  evologEntries: readonly OperationLogEntry[],
+): AppState {
+  return {
+    ...state,
+    evologEntries,
+    focusedEvologIndex: clampIndex(state.focusedEvologIndex, evologEntries.length),
+  };
+}
+
+export function setEvologLoading(state: AppState, evologLoading: boolean): AppState {
+  return {
+    ...state,
+    evologLoading,
+  };
+}
+
+export function focusEvologEntryAt(state: AppState, index: number): AppState {
+  if (state.evologEntries.length === 0) {
+    return state;
+  }
+
+  const clamped = clampIndex(index, state.evologEntries.length);
+  if (clamped === state.focusedEvologIndex) {
+    return state;
+  }
+
+  return {
+    ...state,
+    focusedEvologIndex: clamped,
   };
 }
 
@@ -950,6 +1026,10 @@ export function cancelOrBlurState(state: AppState): AppState {
 
   if (state.focusMode === "op-log") {
     return closeOperationLog(state);
+  }
+
+  if (state.focusMode === "evolog") {
+    return closeEvolog(state);
   }
 
   if (state.commandDraft !== null) {
@@ -1681,6 +1761,10 @@ function getBrowseFocusModeStack(
 ): readonly FocusMode[] {
   if (state.focusModeStack.includes("op-log")) {
     return ["revisions", "op-log"];
+  }
+
+  if (state.focusModeStack.includes("evolog")) {
+    return ["revisions", "evolog"];
   }
 
   return state.expandedRowId !== null ? ["revisions", "files"] : ["revisions"];

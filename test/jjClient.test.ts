@@ -4,6 +4,7 @@ import { materializeSampleRepo } from "../src/dev/sampleRepo.ts";
 import {
   JjClient,
   parseLogOutput,
+  parseEvolutionLogOutput,
   parseOperationLogOutput,
   resolveRepositoryLoadLimit,
   tokenizeCommandText,
@@ -289,6 +290,79 @@ test("parseOperationLogOutput leaves args lines without --color byte-for-byte un
   const entries = parseOperationLogOutput(output);
 
   expect(entries[0]?.lines[2]).toBe(original);
+});
+
+test("parseEvolutionLogOutput splits entries on graph-node glyphs and extracts operation ids", () => {
+  const output = [
+    "@  xuntkrpo jrp@maild.name 2026-05-15 06:30:40 dafa8495",
+    "│  third",
+    "│  -- operation 35bf4e939772 describe commit f5029c4b0880",
+    "○  xuntkrpo/1 jrp@maild.name 2026-05-15 06:30:40 f5029c4b (hidden)",
+    "│  second",
+    "│  -- operation fbb9651ace30 describe commit a44bb4e65445",
+    "○  xuntkrpo/2 jrp@maild.name 2026-05-15 06:30:40 a44bb4e6 (hidden)",
+    "│  first",
+    "│  -- operation 0c0c798bfcf6 describe commit e7dd6f6fdce4",
+  ].join("\n");
+
+  const entries = parseEvolutionLogOutput(output);
+
+  expect(entries.length).toBe(3);
+  expect(entries[0]?.id).toBe("35bf4e939772");
+  expect(entries[0]?.lines[0]).toBe("@  xuntkrpo jrp@maild.name 2026-05-15 06:30:40 dafa8495");
+  expect(entries[1]?.id).toBe("fbb9651ace30");
+  expect(entries[2]?.id).toBe("0c0c798bfcf6");
+});
+
+test("parseEvolutionLogOutput preserves ANSI escapes in entry lines", () => {
+  const output = [
+    "[1m[38;5;2m@[0m  [1m[38;5;13mx[38;5;8muntkrpo[39m",
+    "│  [1mthird[0m",
+    "│  [38;5;8m--[39m operation [38;5;4m35bf4e939772[39m describe",
+  ].join("\n");
+
+  const entries = parseEvolutionLogOutput(output);
+
+  expect(entries.length).toBe(1);
+  expect(entries[0]?.id).toBe("35bf4e939772");
+  expect(entries[0]?.lines.length).toBe(3);
+});
+
+test("parseEvolutionLogOutput falls back to a synthesized id when no operation id is present", () => {
+  const output = [
+    "@  xuntkrpo jrp@maild.name 2026-05-15 06:30:40 dafa8495",
+    "│  third",
+  ].join("\n");
+
+  const entries = parseEvolutionLogOutput(output);
+
+  expect(entries.length).toBe(1);
+  expect(entries[0]?.id).toBe("evolog-0");
+});
+
+test("loadEvolog passes --color and --ignore-working-copy with -r", async () => {
+  const client = new JjClient(REPO_PATH);
+  let capturedArgs: readonly string[] = [];
+
+  (client as unknown as {
+    runJj: (
+      args: readonly string[],
+    ) => Promise<{ stdout: string; stderr: string }>;
+  }).runJj = async (args: readonly string[]) => {
+    capturedArgs = args;
+    return { stdout: "", stderr: "" };
+  };
+
+  await client.loadEvolog("abcd1234");
+
+  expect(capturedArgs).toEqual([
+    "evolog",
+    "-r",
+    "abcd1234",
+    "--color",
+    "always",
+    "--ignore-working-copy",
+  ]);
 });
 
 test("loadOperationLog keeps jj graph output enabled", async () => {
