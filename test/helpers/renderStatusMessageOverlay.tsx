@@ -34,6 +34,8 @@ const rendered = await testRender(
 );
 
 await rendered.renderOnce();
+await rendered.renderOnce();
+await rendered.renderOnce();
 
 const frame = rendered.captureCharFrame();
 rendered.renderer.destroy();

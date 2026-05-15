@@ -26,7 +26,7 @@ export function ScrollableAnsiBody(props: Readonly<{
       id={props.id}
       ref={(el: ScrollBoxRenderable) => props.registerScrollbox?.(el)}
       width="100%"
-      height={props.bodyHeight + 1}
+      height={props.bodyHeight}
       scrollX
       scrollY
       backgroundColor={props.backgroundColor}
