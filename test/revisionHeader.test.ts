@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import type { RevisionSummary } from "../src/domain/types.ts";
 import {
   buildRevisionChangeIdSegments,
+  formatRelativeAgo,
   getRevisionChangeIdDisplayLength,
   getRevisionCommandChipBgColor,
   getRevisionChangeIdColors,
@@ -32,18 +33,14 @@ function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSumma
   };
 }
 
-test("buildRevisionChangeIdSegments appends timestamps only in expanded layout", () => {
+test("buildRevisionChangeIdSegments renders only change-id segments", () => {
   const revision = createRevision();
 
-  const expandedText = buildRevisionChangeIdSegments(revision, { showTimestamp: true })
-    .map((segment) => segment.text)
-    .join("");
-  const condensedText = buildRevisionChangeIdSegments(revision, { showTimestamp: false })
+  const text = buildRevisionChangeIdSegments(revision)
     .map((segment) => segment.text)
     .join("");
 
-  expect(expandedText).toBe("abcdefgh · 2026-03-30 07:22:39");
-  expect(condensedText).toBe("abcdefgh");
+  expect(text).toBe("abcdefgh");
 });
 
 test("getRevisionChangeIdDisplayLength uses the longest unique prefix by default", () => {
@@ -81,7 +78,6 @@ test("buildRevisionChangeIdSegments truncates the rendered change id to the shar
   });
 
   const segments = buildRevisionChangeIdSegments(revision, {
-    showTimestamp: false,
     displayLength: 4,
   });
 
@@ -98,7 +94,6 @@ test("buildRevisionChangeIdSegments omits the suffix segment when the unique pre
   });
 
   const segments = buildRevisionChangeIdSegments(revision, {
-    showTimestamp: false,
     displayLength: 4,
   });
 
@@ -113,7 +108,7 @@ test("buildRevisionChangeIdSegments styles divergent suffix like the prefix", ()
     revisionId: "abcdefgh/1",
   });
 
-  const segments = buildRevisionChangeIdSegments(revision, { showTimestamp: false });
+  const segments = buildRevisionChangeIdSegments(revision);
 
   expect(segments).toEqual([
     { kind: "prefix", text: "abc" },
@@ -128,7 +123,7 @@ test("buildRevisionChangeIdSegments does not add a divergent suffix for non-dive
     revisionId: "abcdefgh",
   });
 
-  const segments = buildRevisionChangeIdSegments(revision, { showTimestamp: false });
+  const segments = buildRevisionChangeIdSegments(revision);
 
   expect(segments).toEqual([
     { kind: "prefix", text: "ab" },
@@ -228,6 +223,52 @@ test("getRevisionChangeIdColors keeps default suffix dimmed", () => {
     prefix: "prefix",
     suffix: "suffix",
   });
+});
+
+test("formatRelativeAgo returns empty string for blank or malformed timestamps", () => {
+  const now = new Date(2026, 4, 15, 12, 0, 0);
+
+  expect(formatRelativeAgo("", now)).toBe("");
+  expect(formatRelativeAgo("   ", now)).toBe("");
+  expect(formatRelativeAgo("not a date", now)).toBe("");
+});
+
+test("formatRelativeAgo formats sub-week deltas as days with natural rounding", () => {
+  const now = new Date(2026, 4, 15, 12, 0, 0);
+
+  expect(formatRelativeAgo("2026-05-15 11:59:59", now)).toBe("0d");
+  expect(formatRelativeAgo("2026-05-15 00:00:00", now)).toBe("1d");
+  expect(formatRelativeAgo("2026-05-12 12:00:00", now)).toBe("3d");
+  expect(formatRelativeAgo("2026-05-09 12:00:00", now)).toBe("6d");
+});
+
+test("formatRelativeAgo switches to weeks once rounded days reach 7", () => {
+  const now = new Date(2026, 4, 15, 12, 0, 0);
+
+  expect(formatRelativeAgo("2026-05-08 12:00:00", now)).toBe("1w");
+  expect(formatRelativeAgo("2026-04-17 12:00:00", now)).toBe("4w");
+  expect(formatRelativeAgo("2026-03-27 12:00:00", now)).toBe("7w");
+});
+
+test("formatRelativeAgo switches to months once rounded weeks reach 8", () => {
+  const now = new Date(2026, 4, 15, 12, 0, 0);
+
+  expect(formatRelativeAgo("2026-03-15 12:00:00", now)).toBe("2mo");
+  expect(formatRelativeAgo("2025-11-15 12:00:00", now)).toBe("6mo");
+  expect(formatRelativeAgo("2025-08-15 12:00:00", now)).toBe("9mo");
+});
+
+test("formatRelativeAgo switches to years past 12 months", () => {
+  const now = new Date(2026, 4, 15, 12, 0, 0);
+
+  expect(formatRelativeAgo("2024-05-15 12:00:00", now)).toBe("2y");
+  expect(formatRelativeAgo("2016-05-15 12:00:00", now)).toBe("10y");
+});
+
+test("formatRelativeAgo clamps future timestamps to zero days", () => {
+  const now = new Date(2026, 4, 15, 12, 0, 0);
+
+  expect(formatRelativeAgo("2026-06-01 12:00:00", now)).toBe("0d");
 });
 
 test("getRevisionSelectionMarker shows a light check for selected rows", () => {

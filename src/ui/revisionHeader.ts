@@ -6,7 +6,7 @@ const NO_DESCRIPTION_PLACEHOLDER = "(no description)";
 const EMPTY_NO_DESCRIPTION_PLACEHOLDER = "(empty) (no description)";
 
 export type RevisionChangeIdSegment = Readonly<{
-  kind: "prefix" | "suffix" | "separator" | "timestamp";
+  kind: "prefix" | "suffix";
   text: string;
 }>;
 
@@ -59,8 +59,8 @@ export function getRevisionCommandChipBgColor(options: Readonly<{
 }
 
 export function buildRevisionChangeIdSegments(
-  revision: Pick<RevisionSummary, "revisionId" | "changeIdPrefixLength" | "localTimestamp">,
-  options: Readonly<{ showTimestamp: boolean; displayLength?: number }>,
+  revision: Pick<RevisionSummary, "revisionId" | "changeIdPrefixLength">,
+  options: Readonly<{ displayLength?: number }> = {},
 ): readonly RevisionChangeIdSegment[] {
   const changeId = getChangeIdFromRevisionId(revision.revisionId);
   const visibleChangeIdLength = options.displayLength === undefined
@@ -87,12 +87,46 @@ export function buildRevisionChangeIdSegments(
     });
   }
 
-  if (options.showTimestamp && revision.localTimestamp.trim().length > 0) {
-    segments.push({ kind: "separator", text: " · " });
-    segments.push({ kind: "timestamp", text: revision.localTimestamp });
+  return segments;
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const DAYS_PER_MONTH = 30.4375;
+const DAYS_PER_YEAR = 365.25;
+
+function parseLocalTimestamp(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(value.trim());
+  if (!match) {
+    return null;
   }
 
-  return segments;
+  const [, y, mo, d, h, mi, se] = match;
+  return new Date(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(se));
+}
+
+export function formatRelativeAgo(timestamp: string, now: Date = new Date()): string {
+  const parsed = parseLocalTimestamp(timestamp);
+  if (!parsed) {
+    return "";
+  }
+
+  const diffDays = Math.max(0, (now.getTime() - parsed.getTime()) / MS_PER_DAY);
+  const days = Math.round(diffDays);
+  if (days < 7) {
+    return `${days}d`;
+  }
+
+  const weeks = Math.round(diffDays / 7);
+  if (weeks < 8) {
+    return `${weeks}w`;
+  }
+
+  const months = Math.round(diffDays / DAYS_PER_MONTH);
+  if (months < 12) {
+    return `${months}mo`;
+  }
+
+  return `${Math.round(diffDays / DAYS_PER_YEAR)}y`;
 }
 
 export function getRevisionDescriptionColor(

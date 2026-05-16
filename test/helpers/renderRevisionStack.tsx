@@ -19,7 +19,7 @@ function createRevision(
     changeIdPrefixLength: 2,
     commitId: `${revisionId.replace("/", "")}commit`,
     description,
-    localTimestamp: "2026-04-15 12:00:00",
+    localTimestamp: "",
     bookmarks: [],
     workspaces: [],
     graphRows,

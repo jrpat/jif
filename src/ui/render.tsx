@@ -46,6 +46,7 @@ import {
 import { buildRevisionLayoutSpec, type RevisionSideChip } from "./revisionLayout.ts";
 import {
   buildRevisionChangeIdSegments,
+  formatRelativeAgo,
   getRevisionChangeIdDisplayLength,
   getRevisionCommandChipBgColor,
   getRevisionChangeIdColors,
@@ -1062,7 +1063,7 @@ export function RevisionItem(props: {
       colors: colors(),
     })
   );
-  const showExpandedTimestamp = () => layoutSpec().mode === "expanded";
+  const relativeAgo = createMemo(() => formatRelativeAgo(props.revision.localTimestamp));
   const superGutterPlan = createMemo(() => buildRevisionGutterPlan({
     graphRows: props.revision.graphRows,
     baseGraphRowCount: layoutSpec().baseGraphRowCount,
@@ -1162,9 +1163,9 @@ export function RevisionItem(props: {
                           displayLength={revisionChangeIdDisplayLength()}
                           rowState={effectiveRowState()}
                           colors={colors()}
-                          showTimestamp={showExpandedTimestamp()}
                         />
                         <box flexGrow={1} />
+                        <DateChip text={relativeAgo()} colors={colors()} />
                         {layoutSpec().commandChip ? (
                           <CommandChip
                             text={layoutSpec().commandChip!.text}
@@ -1208,7 +1209,6 @@ export function RevisionItem(props: {
                         displayLength={revisionChangeIdDisplayLength()}
                         rowState={effectiveRowState()}
                         colors={colors()}
-                        showTimestamp={showExpandedTimestamp()}
                       />
                       <Show when={layoutSpec().sideChips.length > 0}>
                         <box width={1} />
@@ -1226,6 +1226,7 @@ export function RevisionItem(props: {
                           {props.revision.description}
                         </text>
                       </box>
+                      <DateChip text={relativeAgo()} colors={colors()} />
                     </box>
                     {layoutSpec().commandChip?.placement === "overlay" ? (
                       <text
@@ -1308,7 +1309,6 @@ export function RevisionItem(props: {
                 displayLength={revisionChangeIdDisplayLength()}
                 rowState={effectiveRowState()}
                 colors={colors()}
-                showTimestamp={false}
               />
               <Show when={layoutSpec().sideChips.length > 0}>
                 <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
@@ -1323,6 +1323,7 @@ export function RevisionItem(props: {
               >
                 {props.revision.description}
               </text>
+              <DateChip text={relativeAgo()} colors={colors()} />
             </Show>
           </box>
           {layoutSpec().commandChip?.placement === "overlay" ? (
@@ -1404,15 +1405,13 @@ export function RevisionItem(props: {
 }
 
 function RevisionChangeId(props: {
-  revision: Pick<RevisionSummary, "revisionId" | "changeIdPrefixLength" | "localTimestamp">;
+  revision: Pick<RevisionSummary, "revisionId" | "changeIdPrefixLength">;
   displayLength: number;
   rowState: RevisionRowState;
   colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
-  showTimestamp: boolean;
 }) {
   const segments = createMemo(() =>
     buildRevisionChangeIdSegments(props.revision, {
-      showTimestamp: props.showTimestamp,
       displayLength: props.displayLength,
     })
   );
@@ -1454,6 +1453,23 @@ function CommandChip(props: {
     <text fg={props.colors.chromeFillOne} bg={props.backgroundColor}>
       {` ${props.text} `}
     </text>
+  );
+}
+
+function DateChip(props: {
+  text: string;
+  colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
+}) {
+  return (
+    <Show when={props.text.length > 0}>
+      <text
+        flexShrink={0}
+        fg={props.colors.textTertiary}
+        bg={props.colors.chromeFillOne}
+      >
+        {` ${props.text} `}
+      </text>
+    </Show>
   );
 }
 
