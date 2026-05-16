@@ -2,6 +2,7 @@ import path from "node:path";
 import * as vscode from "vscode";
 import * as nodePty from "node-pty";
 import type { JjRepository } from "@jif/jj-core";
+import { GRAPH_VIEW_TERMINAL_LEFT_PADDING_CH } from "./graphViewLayout.ts";
 import { resolveGraphLaunchTarget } from "./jifRuntime.ts";
 import { createRevisionUri } from "./jjDocumentProvider.ts";
 import { JifPtyIpc } from "./ptyIpc.ts";
@@ -309,7 +310,7 @@ export class JifGraphViewProvider implements vscode.WebviewViewProvider, vscode.
       #terminal {
         position: absolute;
         inset: 0;
-        padding-left: 0.5ch;
+        padding-left: ${GRAPH_VIEW_TERMINAL_LEFT_PADDING_CH}ch;
         box-sizing: border-box;
         overflow: hidden;
       }
