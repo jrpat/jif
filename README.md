@@ -103,6 +103,7 @@ Viewing and navigating the revision log.
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 | `!` | force-last-command | Retry the last failed command with the override flag `jj` is asking for:<br>• `--ignore-immutable` — when the command refused because the target is immutable<br>• `--allow-backwards` — when a bookmark move was rejected as backwards/sideways |
 | `-` | toggle-flags | Toggle the command bar between short and long flag names while composing a command |
+| `;` | enter-extras-mode | Enter Extras mode, a clean-slate scope for keys you define yourself (see [Extras](#extras)) |
 
 ### Files
 
@@ -142,6 +143,26 @@ Pressing `b` from Normal mode enters Bookmark mode and waits for the next keystr
 | `u` | bookmark-untrack | Open the command bar with `b untrack ` and bookmark-name autocomplete |
 
 Bookmark autocomplete is sorted with the closest ancestor bookmark first (visually at the bottom of the suggestion list), then more distant ancestors, then descendants by ascending distance, then any unrelated bookmarks. For Move-to, bookmarks already pointing at the focused revision are excluded; for the other prompts they appear at the highest priority (closest to the cursor).
+
+### Extras
+
+Pressing `;` from Normal mode enters Extras mode — a clean-slate scope for keys you define yourself in `keymap.extras`. The shortcut panel opens automatically and lists exactly the keys bound under `extras` (plus globals: `escape`, `q`, `ctrl-r`, `~`). With no bindings configured, the panel shows a placeholder pointing to the config. Press Escape to leave Extras mode.
+
+```ts
+export default {
+	keymap: {
+		extras: {
+			d: {
+				title: "Deploy",
+				description: "Run the deploy script",
+				run: (cmd) => cmd.sh("./scripts/deploy.sh"),
+			},
+		},
+	},
+} satisfies Jif.Config;
+```
+
+Unlike most modes, Extras does not inherit Normal-mode bindings — the entire alphabetic keyspace is yours to bind without shadowing built-in commands.
 
 ### Search Results
 

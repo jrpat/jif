@@ -23,6 +23,7 @@ export function StatusArea(props: {
   actionLabel?: string | null;
   config: ResolvedAppConfig;
   loadingIndicatorText?: string | null;
+  emptyMessage?: string;
 }) {
   const colors = props.config.colorScheme.semanticColors;
   const [loadingFrameIndex, setLoadingFrameIndex] = createSignal(0);
@@ -134,7 +135,9 @@ export function StatusArea(props: {
             when={!isLayoutEmpty(props.shortcutLayout)}
             fallback={
               <box width="100%" paddingX={1}>
-                <text fg={colors.textTertiary}>No shortcuts for this mode.</text>
+                <text fg={colors.textTertiary}>
+                  {props.emptyMessage ?? "No shortcuts for this mode."}
+                </text>
               </box>
             }
           >

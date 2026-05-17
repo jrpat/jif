@@ -19,7 +19,8 @@ export type Mode =
   | "diff-viewer"
   | "notifications"
   | "bookmark"
-  | "bookmark-move";
+  | "bookmark-move"
+  | "extras";
 
 export type ModeDefinition = Readonly<{
   id: Mode;
@@ -47,6 +48,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   notifications: { id: "notifications", inputPassthrough: false, label: "Notifications" },
   bookmark: { id: "bookmark", parent: "normal", inputPassthrough: false, label: "Bookmark" },
   "bookmark-move": { id: "bookmark-move", parent: "normal", inputPassthrough: false, label: "Bookmark Move" },
+  extras: { id: "extras", inputPassthrough: false, label: "Extras" },
 };
 
 export type KeymapBinding =
@@ -115,6 +117,7 @@ export const defaultKeymap: Keymap = {
     O: "open-operation-log",
     E: "open-evolog",
     b: "enter-bookmark-mode",
+    ";": "enter-extras-mode",
   },
   files: {
     s: "split",
@@ -204,6 +207,7 @@ export const defaultKeymap: Keymap = {
     u: "bookmark-untrack",
   },
   "bookmark-move": {},
+  extras: {},
 };
 
 export function getActiveMode(state: AppState): Mode {
@@ -227,6 +231,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.commandDraft?.config.kind === "squash") return "squash";
   if (state.commandDraft?.config.kind === "bookmark-move") return "bookmark-move";
   if (state.focusMode === "bookmark") return "bookmark";
+  if (state.focusMode === "extras") return "extras";
   if (state.searchQuery !== "" && state.searchScope === "revision-log") return "search-results";
   return "normal";
 }

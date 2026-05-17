@@ -104,6 +104,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     absorb: () => calls.push("absorb"),
     abandonRevision: () => calls.push("abandonRevision"),
     enterBookmarkMode: () => calls.push("enterBookmarkMode"),
+    enterExtrasMode: () => calls.push("enterExtrasMode"),
     startBookmarkCreate: () => calls.push("startBookmarkCreate"),
     startBookmarkMoveFrom: () => calls.push("startBookmarkMoveFrom"),
     startBookmarkMoveTo: () => calls.push("startBookmarkMoveTo"),

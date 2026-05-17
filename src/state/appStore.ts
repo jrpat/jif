@@ -29,6 +29,8 @@ import {
   closeNotifications,
   enterBookmarkLeader,
   exitBookmarkLeader,
+  enterExtrasMode,
+  exitExtrasMode,
   startBookmarkPrompt,
   collapseFocusedNotification,
   expandFocusedNotification,
@@ -257,6 +259,12 @@ export function createAppStore(
       },
       exitBookmarkLeader() {
         mutate((currentState) => exitBookmarkLeader(currentState));
+      },
+      enterExtrasMode() {
+        mutate((currentState) => enterExtrasMode(currentState));
+      },
+      exitExtrasMode() {
+        mutate((currentState) => exitExtrasMode(currentState));
       },
       startBookmarkPrompt(
         prefill: string,

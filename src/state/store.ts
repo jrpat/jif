@@ -557,6 +557,25 @@ export function exitBookmarkLeader(state: AppState): AppState {
   return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
 }
 
+export function enterExtrasMode(state: AppState): AppState {
+  if (state.focusMode === "extras") {
+    return state;
+  }
+
+  return replaceFocusModeStack({
+    ...state,
+    inlineConfirmation: null,
+  }, [...getBrowseFocusModeStack(state), "extras"]);
+}
+
+export function exitExtrasMode(state: AppState): AppState {
+  if (state.focusMode !== "extras") {
+    return state;
+  }
+
+  return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
+}
+
 export function startBookmarkPrompt(
   state: AppState,
   prefill: string,
@@ -1001,6 +1020,11 @@ export function cancelOrBlurState(state: AppState): AppState {
   if (state.focusMode === "bookmark") {
     const withoutDraft = state.commandDraft !== null ? cancelCommandDraft(state) : state;
     return exitBookmarkLeader(withoutDraft);
+  }
+
+  if (state.focusMode === "extras") {
+    const withoutDraft = state.commandDraft !== null ? cancelCommandDraft(state) : state;
+    return exitExtrasMode(withoutDraft);
   }
 
   if (state.shortcutPanelExpanded) {
