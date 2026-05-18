@@ -69,6 +69,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     startRestore: () => calls.push("startRestore"),
     startSplit: () => calls.push("startSplit"),
     startSquash: () => calls.push("startSquash"),
+    startInterdiff: () => calls.push("startInterdiff"),
     startNewRevision: () => calls.push("startNewRevision"),
     editRevision: () => calls.push("editRevision"),
     toggleSelection: () => calls.push("toggleSelection"),

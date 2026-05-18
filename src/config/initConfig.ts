@@ -291,6 +291,7 @@ namespace Jif {
     startRebase: () => void;
     startSplit: () => void;
     startSquash: () => void;
+    startInterdiff: () => void;
     startNewRevision: () => void;
     editRevision: () => void;
     toggleSelection: () => void;
@@ -348,6 +349,7 @@ namespace Jif {
     | "rebase"
     | "restore"
     | "squash"
+    | "interdiff"
     | "command"
     | "revset"
     | "search"

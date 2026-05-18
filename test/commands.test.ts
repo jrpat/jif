@@ -162,6 +162,20 @@ test("R triggers restore-revision in normal mode", () => {
   expect(resolveForState("R", createState())).toBe("restore-revision");
 });
 
+test("i starts interdiff in normal mode and composes jj interdiff -f/-t", () => {
+  const state = createState();
+  expect(resolveForState("i", state)).toBe("interdiff");
+
+  const drafted = startCommandDraft(state, draftConfigs.interdiff);
+  expect(getActiveMode(drafted)).toBe("interdiff");
+  expect(drafted.commandDraft?.config.kind).toBe("interdiff");
+  expect(drafted.commandDraft?.config.sourceBadgeText).toBe("from");
+  expect(drafted.commandDraft?.config.badgeText).toBe("to");
+  expect(drafted.commandDraft?.config.template).toContain("interdiff");
+  expect(drafted.commandDraft?.config.template).toContain("-f --from");
+  expect(drafted.commandDraft?.config.template).toContain("-t --to");
+});
+
 test("inline confirmation uses a dedicated mode with local option navigation", () => {
   let state = createState();
   state = {

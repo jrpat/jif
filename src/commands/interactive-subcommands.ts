@@ -3,6 +3,7 @@ import { tokenizeCommandText } from "../jj/client.ts";
 export const ALWAYS_INTERACTIVE_JJ_SUBCOMMANDS: readonly string[] = [
   "diff",
   "show",
+  "interdiff",
 ];
 
 export function isAlwaysInteractiveJjCommand(commandText: string): boolean {

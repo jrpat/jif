@@ -59,6 +59,12 @@ export const draftConfigs = {
     badgeText: "to",
     sourceBadgeText: "from",
   },
+  interdiff: {
+    kind: "interdiff" as const,
+    template: "interdiff ${selected.map(s => `${arg('-f --from')} ${s}`).join(' ')} ${arg('-t --to')} ${target}",
+    badgeText: "to",
+    sourceBadgeText: "from",
+  },
 } satisfies Record<string, CommandDraftConfig>;
 
 export type TemplateContext = Readonly<{

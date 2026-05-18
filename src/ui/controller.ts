@@ -248,6 +248,14 @@ export function createJifCommandController(args: Readonly<{
 
       store.actions.startCommandDraft(draftConfigs.squash);
     },
+    startInterdiff() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (!revision) {
+        return;
+      }
+
+      store.actions.startCommandDraft(draftConfigs.interdiff);
+    },
     startRebase() {
       const revision = getFocusedRevision(store.snapshot());
       if (!revision) {

@@ -33,6 +33,7 @@ export type CommandController = Readonly<{
   startRestore: () => void;
   startSplit: () => void;
   startSquash: () => void;
+  startInterdiff: () => void;
   startNewRevision: () => void;
   editRevision: () => void;
   enterBookmarkMode: () => void;
@@ -339,6 +340,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Squash the focused revision into another",
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.startSquash(),
+    group: "global",
+  },
+  {
+    id: "interdiff",
+    title: "Interdiff",
+    description: "Show the interdiff between the focused revision and another",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startInterdiff(),
     group: "global",
   },
   {

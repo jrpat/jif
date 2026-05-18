@@ -10,6 +10,7 @@ export type Mode =
   | "rebase"
   | "restore"
   | "squash"
+  | "interdiff"
   | "command"
   | "revset"
   | "search"
@@ -38,6 +39,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   rebase: { id: "rebase", parent: "normal", inputPassthrough: false, label: "Rebase" },
   restore: { id: "restore", parent: "normal", inputPassthrough: false, label: "Restore" },
   squash: { id: "squash", parent: "normal", inputPassthrough: false, label: "Squash" },
+  interdiff: { id: "interdiff", parent: "normal", inputPassthrough: false, label: "Interdiff" },
   command: { id: "command", inputPassthrough: true, label: "Command" },
   revset: { id: "revset", inputPassthrough: true, label: "Revset" },
   search: { id: "search", inputPassthrough: true, label: "Search" },
@@ -97,6 +99,7 @@ export const defaultKeymap: Keymap = {
     R: "restore-revision",
     s: "split",
     S: "squash",
+    i: "interdiff",
     n: "new-revision",
     e: "edit-revision",
     c: "commit",
@@ -158,6 +161,7 @@ export const defaultKeymap: Keymap = {
   },
   restore: {},
   squash: {},
+  interdiff: {},
   command: {},
   revset: {},
   search: {},
@@ -229,6 +233,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.commandDraft?.config.kind === "rebase") return "rebase";
   if (state.commandDraft?.config.kind === "restore") return "restore";
   if (state.commandDraft?.config.kind === "squash") return "squash";
+  if (state.commandDraft?.config.kind === "interdiff") return "interdiff";
   if (state.commandDraft?.config.kind === "bookmark-move") return "bookmark-move";
   if (state.focusMode === "bookmark") return "bookmark";
   if (state.focusMode === "extras") return "extras";

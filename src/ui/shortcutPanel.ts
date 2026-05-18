@@ -267,6 +267,8 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Restore";
     case "squash":
       return "Squash";
+    case "interdiff":
+      return "Interdiff";
     case "command":
       return "Command";
     case "revset":
@@ -424,6 +426,7 @@ function commandHasImmediateEffect(
     case "rebase":
     case "restore-revision":
     case "squash":
+    case "interdiff":
       return state.focusMode === "revisions" && getFocusedRevision(state) !== null;
     case "jump-to-working-copy":
       return state.revisions.some((revision) => revision.marker === "working-copy");

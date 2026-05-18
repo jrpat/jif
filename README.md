@@ -82,6 +82,7 @@ Viewing and navigating the revision log.
 | `d` | show-diff | Show diff for the focused revision or file |
 | `D` | describe | Edit description of the focused revision |
 | `e` | edit-revision | Edit the focused revision |
+| `i` | interdiff | Show the interdiff between the focused revision and another |
 | `n` | new-revision | Create a new revision from the focused revision |
 | `r` | rebase | Start a rebase from the focused revision |
 | `R` | restore-revision | Restore the focused revision from another |
@@ -126,6 +127,10 @@ Active while previewing a rebase. Inherits Normal.
 ### Restore
 
 Active while previewing a restore. Inherits Normal. Composes `jj restore -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run.
+
+### Interdiff
+
+Active while previewing an interdiff. Inherits Normal. Composes `jj interdiff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run.
 
 ### Bookmark
 
