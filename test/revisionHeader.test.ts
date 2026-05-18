@@ -233,11 +233,34 @@ test("formatRelativeAgo returns empty string for blank or malformed timestamps",
   expect(formatRelativeAgo("not a date", now)).toBe("");
 });
 
+test("formatRelativeAgo formats sub-minute deltas as seconds", () => {
+  const now = new Date(2026, 4, 15, 12, 0, 0);
+
+  expect(formatRelativeAgo("2026-05-15 12:00:00", now)).toBe("0s");
+  expect(formatRelativeAgo("2026-05-15 11:59:59", now)).toBe("1s");
+  expect(formatRelativeAgo("2026-05-15 11:59:30", now)).toBe("30s");
+});
+
+test("formatRelativeAgo switches to minutes once rounded seconds reach 60", () => {
+  const now = new Date(2026, 4, 15, 12, 0, 0);
+
+  expect(formatRelativeAgo("2026-05-15 11:59:00", now)).toBe("1m");
+  expect(formatRelativeAgo("2026-05-15 11:30:00", now)).toBe("30m");
+  expect(formatRelativeAgo("2026-05-15 11:01:00", now)).toBe("59m");
+});
+
+test("formatRelativeAgo switches to hours once rounded minutes reach 60", () => {
+  const now = new Date(2026, 4, 15, 12, 0, 0);
+
+  expect(formatRelativeAgo("2026-05-15 11:00:00", now)).toBe("1h");
+  expect(formatRelativeAgo("2026-05-15 03:00:00", now)).toBe("9h");
+  expect(formatRelativeAgo("2026-05-14 13:00:00", now)).toBe("23h");
+});
+
 test("formatRelativeAgo formats sub-week deltas as days with natural rounding", () => {
   const now = new Date(2026, 4, 15, 12, 0, 0);
 
-  expect(formatRelativeAgo("2026-05-15 11:59:59", now)).toBe("0d");
-  expect(formatRelativeAgo("2026-05-15 00:00:00", now)).toBe("1d");
+  expect(formatRelativeAgo("2026-05-14 12:00:00", now)).toBe("1d");
   expect(formatRelativeAgo("2026-05-12 12:00:00", now)).toBe("3d");
   expect(formatRelativeAgo("2026-05-09 12:00:00", now)).toBe("6d");
 });
@@ -265,10 +288,10 @@ test("formatRelativeAgo switches to years past 12 months", () => {
   expect(formatRelativeAgo("2016-05-15 12:00:00", now)).toBe("10y");
 });
 
-test("formatRelativeAgo clamps future timestamps to zero days", () => {
+test("formatRelativeAgo clamps future timestamps to zero seconds", () => {
   const now = new Date(2026, 4, 15, 12, 0, 0);
 
-  expect(formatRelativeAgo("2026-06-01 12:00:00", now)).toBe("0d");
+  expect(formatRelativeAgo("2026-06-01 12:00:00", now)).toBe("0s");
 });
 
 test("getRevisionSelectionMarker shows a light check for selected rows", () => {

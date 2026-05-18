@@ -90,7 +90,10 @@ export function buildRevisionChangeIdSegments(
   return segments;
 }
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const MS_PER_SECOND = 1000;
+const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+const MS_PER_DAY = 24 * MS_PER_HOUR;
 const DAYS_PER_MONTH = 30.4375;
 const DAYS_PER_YEAR = 365.25;
 
@@ -110,7 +113,24 @@ export function formatRelativeAgo(timestamp: string, now: Date = new Date()): st
     return "";
   }
 
-  const diffDays = Math.max(0, (now.getTime() - parsed.getTime()) / MS_PER_DAY);
+  const diffMs = Math.max(0, now.getTime() - parsed.getTime());
+
+  const seconds = Math.round(diffMs / MS_PER_SECOND);
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+
+  const minutes = Math.round(diffMs / MS_PER_MINUTE);
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+
+  const hours = Math.round(diffMs / MS_PER_HOUR);
+  if (hours < 24) {
+    return `${hours}h`;
+  }
+
+  const diffDays = diffMs / MS_PER_DAY;
   const days = Math.round(diffDays);
   if (days < 7) {
     return `${days}d`;
