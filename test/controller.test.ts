@@ -481,8 +481,8 @@ test("cycleLayout persists the updated layout after mutating store state", () =>
 
   harness.controller.cycleLayout();
 
-  expect(harness.store.state.layout).toBe("condensed");
-  expect(harness.persistedLayouts).toEqual(["condensed"]);
+  expect(harness.store.state.layout).toBe("normal");
+  expect(harness.persistedLayouts).toEqual(["normal"]);
   harness.store.dispose();
 });
 

@@ -11,14 +11,14 @@ import {
 } from "../src/ui/startup.ts";
 
 test("estimateInitialRevisionLoadLimit uses layout-specific row budgets", () => {
-  expect(estimateInitialRevisionLoadLimit({ terminalHeight: 24, layout: "super-condensed" })).toBe(21);
-  expect(estimateInitialRevisionLoadLimit({ terminalHeight: 24, layout: "condensed" })).toBe(21);
-  expect(estimateInitialRevisionLoadLimit({ terminalHeight: 24, layout: "expanded" })).toBe(11);
+  expect(estimateInitialRevisionLoadLimit({ terminalHeight: 24, layout: "tight" })).toBe(21);
+  expect(estimateInitialRevisionLoadLimit({ terminalHeight: 24, layout: "normal" })).toBe(21);
+  expect(estimateInitialRevisionLoadLimit({ terminalHeight: 24, layout: "loose" })).toBe(11);
 });
 
 test("estimateInitialRevisionLoadLimit clamps to the configured maximum", () => {
   expect(
-    estimateInitialRevisionLoadLimit({ terminalHeight: 500, layout: "super-condensed", maximum: 250 }),
+    estimateInitialRevisionLoadLimit({ terminalHeight: 500, layout: "tight", maximum: 250 }),
   ).toBe(250);
 });
 

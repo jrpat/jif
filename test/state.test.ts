@@ -1244,10 +1244,10 @@ test("cycleLayout rotates layouts without changing unrelated state", () => {
   const next = cycleLayout(state);
   const wrapped = cycleLayout(cycleLayout(next));
 
-  expect(state.layout).toBe("expanded");
-  expect(next.layout).toBe("condensed");
-  expect(cycleLayout(next).layout).toBe("super-condensed");
-  expect(wrapped.layout).toBe("expanded");
+  expect(state.layout).toBe("loose");
+  expect(next.layout).toBe("normal");
+  expect(cycleLayout(next).layout).toBe("tight");
+  expect(wrapped.layout).toBe("loose");
   expect(next.useShortFlags).toBe(state.useShortFlags);
   expect(next.focusedRevisionIndex).toBe(state.focusedRevisionIndex);
 });

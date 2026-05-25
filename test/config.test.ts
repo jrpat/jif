@@ -139,19 +139,19 @@ test("resolveAppConfig applies log.revisionIdAdditionalChars", () => {
 test("resolveAppConfig defaults layout to condensed", () => {
   const resolved = resolveAppConfig(defaultAppConfig);
 
-  expect(resolved.commands.layout).toBe("condensed");
+  expect(resolved.commands.layout).toBe("normal");
 });
 
 test("resolveAppConfig applies commands.layout", () => {
   const config: AppConfig = {
     commands: {
-      layout: "super-condensed",
+      layout: "tight",
     },
   };
 
   const resolved = resolveAppConfig(config);
 
-  expect(resolved.commands.layout).toBe("super-condensed");
+  expect(resolved.commands.layout).toBe("tight");
 });
 
 test("resolveAppConfig without palette falls back to dark xterm defaults", () => {
@@ -386,7 +386,7 @@ test("loadAppConfig layers base under user and override above user", async () =>
     const basePath = join(tempDir, "base.ts");
     await writeFile(
       basePath,
-      "export default { log: { scrollMargin: 1, revisionIdAdditionalChars: 1 }, commands: { layout: 'super-condensed' } };\n",
+      "export default { log: { scrollMargin: 1, revisionIdAdditionalChars: 1 }, commands: { layout: 'tight' } };\n",
       "utf8",
     );
 
@@ -411,8 +411,8 @@ test("loadAppConfig layers base under user and override above user", async () =>
     expect(raw.log?.revisionIdAdditionalChars).toBe(9);
     expect(resolved.log.revisionIdAdditionalChars).toBe(9);
     // base-only key still flows through
-    expect(raw.commands?.layout).toBe("super-condensed");
-    expect(resolved.commands.layout).toBe("super-condensed");
+    expect(raw.commands?.layout).toBe("tight");
+    expect(resolved.commands.layout).toBe("tight");
   } finally {
     if (previousXdg === undefined) {
       delete process.env.XDG_CONFIG_HOME;

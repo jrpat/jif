@@ -32,7 +32,7 @@ import {
 
 export const DRAFT_PLACEHOLDER = "░░░░";
 export const INLINE_CONFIRMATION_FILES_PLACEHOLDER = "…files…";
-const LAYOUT_CYCLE: readonly AppLayout[] = ["expanded", "condensed", "super-condensed"];
+const LAYOUT_CYCLE: readonly AppLayout[] = ["loose", "normal", "tight"];
 
 export const draftConfigs = {
   rebase: {
@@ -164,7 +164,7 @@ export function createInitialState(
     loading: true,
     lastRefreshedAt: Date.now(),
     useShortFlags: options?.useShortFlags ?? true,
-    layout: options?.layout ?? "expanded",
+    layout: options?.layout ?? "loose",
     revsetQuery: "",
     searchQuery: "",
     searchScope: null,

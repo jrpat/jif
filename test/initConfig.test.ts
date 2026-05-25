@@ -31,7 +31,7 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(configText).toContain("normal: {");
   expect(configText).toContain('// chromeBorderFocus: "#00cdcd",');
   expect(configText).toContain('// scrollMargin: 1,');
-  expect(configText).toContain('// layout: "condensed",');
+  expect(configText).toContain('// layout: "normal",');
   expect(configText).toContain("const rev = app.rev;");
   expect(typesText).toContain("declare global {");
   expect(typesText).toContain("namespace Jif {");

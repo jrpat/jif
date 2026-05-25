@@ -3,7 +3,7 @@ import { resolveAppConfig } from "../../src/config/index.ts";
 import type { OperationLogEntry } from "../../src/domain/types.ts";
 import { OperationLogEntryItem } from "../../src/ui/OperationLogEntryItem.tsx";
 
-const config = resolveAppConfig({ commands: { layout: "expanded" } });
+const config = resolveAppConfig({ commands: { layout: "loose" } });
 
 type CapturedSpans = Awaited<ReturnType<typeof testRender>>["captureSpans"] extends () => infer T ? T : never;
 type CapturedSpan = CapturedSpans["lines"][number]["spans"][number];

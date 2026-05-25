@@ -33,7 +33,7 @@ function createConfig(colors?: ResolvedAppConfig["colorScheme"]["semanticColors"
   workspaceTagText?: string;
 } : never): ResolvedAppConfig {
   return resolveAppConfig({
-    commands: { layout: "expanded" },
+    commands: { layout: "loose" },
     colorScheme: {
       colors: {
         ...colors,
@@ -60,7 +60,7 @@ async function renderChipBackgrounds(args: {
   revision: RevisionSummary;
   config: ResolvedAppConfig;
 }) {
-  const store = createAppStore("/tmp/repo", { layout: "expanded" });
+  const store = createAppStore("/tmp/repo", { layout: "loose" });
   store.actions.applyRepositoryData({
     repoPath: "/tmp/repo",
     revisions: [args.revision],
@@ -96,7 +96,7 @@ async function renderChipBackgrounds(args: {
   }
 }
 
-const store = createAppStore("/tmp/repo", { layout: "expanded" });
+const store = createAppStore("/tmp/repo", { layout: "loose" });
 store.actions.applyRepositoryData({
   repoPath: "/tmp/repo",
   revisions: [createRevision()],

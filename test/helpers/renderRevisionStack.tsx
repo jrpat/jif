@@ -82,7 +82,7 @@ async function renderLayoutCycleAfterMount() {
   const revisions = [
     createRevision("curr", "branch", ["│ ○  ", "├─╯  "]),
   ] as const;
-  const store = createAppStore("/tmp/repo", { layout: "condensed" });
+  const store = createAppStore("/tmp/repo", { layout: "normal" });
   store.actions.applyRepositoryData({
     repoPath: "/tmp/repo",
     revisions,
@@ -96,7 +96,7 @@ async function renderLayoutCycleAfterMount() {
         index={0}
         previousRowId={null}
         nextRowId={null}
-        config={resolveAppConfig({ commands: { layout: "condensed" } })}
+        config={resolveAppConfig({ commands: { layout: "normal" } })}
         focusedRowId="curr"
         selectedRowIds={new Set()}
         expandedRowId={null}
@@ -121,7 +121,7 @@ async function renderLongSuperCondensedDescription() {
       ["○  "],
     ),
   ] as const;
-  const store = createAppStore("/tmp/repo", { layout: "super-condensed" });
+  const store = createAppStore("/tmp/repo", { layout: "tight" });
   store.actions.applyRepositoryData({
     repoPath: "/tmp/repo",
     revisions,
@@ -135,7 +135,7 @@ async function renderLongSuperCondensedDescription() {
         index={0}
         previousRowId={null}
         nextRowId={null}
-        config={resolveAppConfig({ commands: { layout: "super-condensed" } })}
+        config={resolveAppConfig({ commands: { layout: "tight" } })}
         focusedRowId="curr"
         selectedRowIds={new Set()}
         expandedRowId={null}
@@ -158,7 +158,7 @@ async function renderLongSuperCondensedDescriptionAfterResize() {
       ["○  "],
     ),
   ] as const;
-  const store = createAppStore("/tmp/repo", { layout: "super-condensed" });
+  const store = createAppStore("/tmp/repo", { layout: "tight" });
   store.actions.applyRepositoryData({
     repoPath: "/tmp/repo",
     revisions,
@@ -173,7 +173,7 @@ async function renderLongSuperCondensedDescriptionAfterResize() {
         index={0}
         previousRowId={null}
         nextRowId={null}
-        config={resolveAppConfig({ commands: { layout: "super-condensed" } })}
+        config={resolveAppConfig({ commands: { layout: "tight" } })}
         focusedRowId="curr"
         selectedRowIds={new Set()}
         expandedRowId={null}
@@ -197,13 +197,51 @@ async function renderLongSuperCondensedDescriptionAfterResize() {
   };
 }
 
+async function renderDateChipWithLongDescription(layout: AppLayout) {
+  const revisions = [
+    createRevision(
+      "curr",
+      "this is a very long commit message that should not push the date chip off the right edge",
+      ["@  "],
+      { localTimestamp: "2020-01-01 00:00:00", marker: "working-copy" },
+    ),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+
+  const rendered = await testRender(() => (
+    <box width={40} flexDirection="column">
+      <RevisionItem
+        state={store.state}
+        revision={store.state.revisions[0]!}
+        index={0}
+        previousRowId={null}
+        nextRowId={null}
+        config={resolveAppConfig({ commands: { layout } })}
+        focusedRowId="curr"
+        selectedRowIds={new Set()}
+        expandedRowId={null}
+        commandTargetRowId={null}
+      />
+    </box>
+  ), { width: 40, height: layout === "loose" ? 4 : 3 });
+
+  await rendered.renderOnce();
+  const frame = rendered.captureCharFrame();
+  rendered.renderer.destroy();
+  return frame;
+}
+
 async function renderDivergentFocusedRevision() {
   const revisions = [
     createRevision("shared/0", "older divergent", ["│ ○  ", "│ │  "]),
     createRevision("shared/1", "focused divergent", ["│ ○  ", "├─╯  "]),
     createRevision("next", "below", ["○  ", "│  "]),
   ] as const;
-  const store = createAppStore("/tmp/repo", { layout: "condensed" });
+  const store = createAppStore("/tmp/repo", { layout: "normal" });
   store.actions.applyRepositoryData({
     repoPath: "/tmp/repo",
     revisions,
@@ -219,7 +257,7 @@ async function renderDivergentFocusedRevision() {
             index={index()}
             previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
             nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
-            config={resolveAppConfig({ commands: { layout: "condensed" } })}
+            config={resolveAppConfig({ commands: { layout: "normal" } })}
             focusedRowId="shared/1"
             selectedRowIds={new Set()}
             expandedRowId={null}
@@ -243,7 +281,7 @@ async function renderExpandedRevisionWithChips() {
       workspaces: ["review"],
     }),
   ] as const;
-  const store = createAppStore("/tmp/repo", { layout: "expanded" });
+  const store = createAppStore("/tmp/repo", { layout: "loose" });
   store.actions.applyRepositoryData({
     repoPath: "/tmp/repo",
     revisions,
@@ -257,7 +295,7 @@ async function renderExpandedRevisionWithChips() {
         index={0}
         previousRowId={null}
         nextRowId={null}
-        config={resolveAppConfig({ commands: { layout: "expanded" } })}
+        config={resolveAppConfig({ commands: { layout: "loose" } })}
         focusedRowId={null}
         selectedRowIds={new Set()}
         expandedRowId={null}
@@ -381,36 +419,42 @@ async function renderCommandDraftChips(
   return frame;
 }
 
-const condensedUnfocused = await renderRevisionStack("condensed", null);
-const condensedFocused = await renderRevisionStack("condensed", "curr");
-const superCondensed = await renderRevisionStack("super-condensed", "curr");
-const superCondensedExpanded = await renderRevisionStack("super-condensed", "curr", "curr");
-const cycledToSuperCondensed = await renderLayoutCycleAfterMount();
-const longSuperCondensed = await renderLongSuperCondensedDescription();
-const resizedLongSuperCondensed = await renderLongSuperCondensedDescriptionAfterResize();
+const normalUnfocused = await renderRevisionStack("normal", null);
+const normalFocused = await renderRevisionStack("normal", "curr");
+const tight = await renderRevisionStack("tight", "curr");
+const tightExpanded = await renderRevisionStack("tight", "curr", "curr");
+const cycledToTight = await renderLayoutCycleAfterMount();
+const longTight = await renderLongSuperCondensedDescription();
+const resizedLongTight = await renderLongSuperCondensedDescriptionAfterResize();
 const divergentFocused = await renderDivergentFocusedRevision();
-const expandedChipsInline = await renderExpandedRevisionWithChips();
-const expandedBookmarkChipRefresh = await renderBookmarkChipAfterRefresh("expanded");
-const rebaseCommandChips = await renderCommandDraftChips("expanded", "rebase");
-const rebaseCommandChipsCondensed = await renderCommandDraftChips("condensed", "rebase");
-const rebaseCommandChipsSuperCondensed = await renderCommandDraftChips("super-condensed", "rebase");
-const rebaseCommandChipsWithDescendants = await renderCommandDraftChips("expanded", "rebase", true);
-const squashCommandChips = await renderCommandDraftChips("expanded", "squash");
+const looseChipsInline = await renderExpandedRevisionWithChips();
+const looseBookmarkChipRefresh = await renderBookmarkChipAfterRefresh("loose");
+const rebaseCommandChips = await renderCommandDraftChips("loose", "rebase");
+const rebaseCommandChipsNormal = await renderCommandDraftChips("normal", "rebase");
+const rebaseCommandChipsTight = await renderCommandDraftChips("tight", "rebase");
+const rebaseCommandChipsWithDescendants = await renderCommandDraftChips("loose", "rebase", true);
+const squashCommandChips = await renderCommandDraftChips("loose", "squash");
+const dateChipLongDescriptionLoose = await renderDateChipWithLongDescription("loose");
+const dateChipLongDescriptionNormal = await renderDateChipWithLongDescription("normal");
+const dateChipLongDescriptionTight = await renderDateChipWithLongDescription("tight");
 
 console.log(JSON.stringify({
-  condensedUnfocused,
-  condensedFocused,
-  superCondensed,
-  superCondensedExpanded,
-  cycledToSuperCondensed,
-  longSuperCondensed,
-  resizedLongSuperCondensed,
+  normalUnfocused,
+  normalFocused,
+  tight,
+  tightExpanded,
+  cycledToTight,
+  longTight,
+  resizedLongTight,
   divergentFocused,
-  expandedChipsInline,
-  expandedBookmarkChipRefresh,
+  looseChipsInline,
+  looseBookmarkChipRefresh,
   rebaseCommandChips,
-  rebaseCommandChipsCondensed,
-  rebaseCommandChipsSuperCondensed,
+  rebaseCommandChipsNormal,
+  rebaseCommandChipsTight,
   rebaseCommandChipsWithDescendants,
   squashCommandChips,
+  dateChipLongDescriptionLoose,
+  dateChipLongDescriptionNormal,
+  dateChipLongDescriptionTight,
 }));

@@ -1136,7 +1136,7 @@ export function RevisionItem(props: {
       }}
     >
       <Show
-        when={layoutSpec().mode === "super-condensed"}
+        when={layoutSpec().mode === "tight"}
         fallback={
           <box width="100%" flexDirection="row" position="relative">
             <box width={inlineGraphWidth()} flexDirection="column">
@@ -1186,7 +1186,6 @@ export function RevisionItem(props: {
             <box
               flexGrow={1}
               flexDirection="column"
-              paddingRight={1}
               backgroundColor={rowBackgroundColor()}
               border={borderPolicy().borderSides}
               borderStyle="single"
@@ -1263,9 +1262,10 @@ export function RevisionItem(props: {
                       </Show>
                       <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
                       <box width={1} />
-                      <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
+                      <box flexGrow={1} flexBasis={0} minWidth={0} height={1} overflow="hidden" flexDirection="row">
                         <text
                           flexGrow={1}
+                          flexBasis={0}
                           minWidth={0}
                           fg={descriptionColor()}
                           wrapMode="none"
@@ -1435,7 +1435,7 @@ export function RevisionItem(props: {
           )
           : null}
       </Show>
-      <Show when={layoutSpec().mode !== "super-condensed"}>
+      <Show when={layoutSpec().mode !== "tight"}>
         <For each={externalGraphRows()}>
           {(graphLine) => (
             <box width="100%" flexDirection="row">
@@ -1510,11 +1510,7 @@ function DateChip(props: {
 }) {
   return (
     <Show when={props.text.length > 0}>
-      <text
-        flexShrink={0}
-        fg={props.colors.textTertiary}
-        bg={props.colors.chromeFillOne}
-      >
+      <text flexShrink={0} fg={props.colors.textTertiary}>
         {` ${props.text} `}
       </text>
     </Show>

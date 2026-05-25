@@ -129,7 +129,7 @@ export default {
   },
   commands: {
     // shortFlags: true,
-    // layout: "condensed",
+    // layout: "normal",
   },
   notifications: {
     // historyLimit: 50,
@@ -156,7 +156,7 @@ function renderConfigTypes(): string {
 
 declare global {
 namespace Jif {
-  type AppLayout = "expanded" | "condensed" | "super-condensed";
+  type AppLayout = "loose" | "normal" | "tight";
   type FocusMode = "revisions" | "files" | "op-log" | "evolog" | "inline-confirmation" | "command" | "revset" | "search" | "diff-viewer" | "notifications";
   type SearchScopeId = "revision-log" | "operation-log" | "evolog";
   type StatusLevel = "info" | "success" | "warning" | "error";

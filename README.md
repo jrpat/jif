@@ -71,7 +71,7 @@ Viewing and navigating the revision log.
 | `l` / `→` | expand | Open changed files for the focused revision |
 | `L` | edit-revset | Change which revisions are displayed |
 | `/` | search | Incremental search through the revision log |
-| `_` | cycle-layout | Rotate expanded, condensed, and super-condensed layouts |
+| `_` | cycle-layout | Rotate loose, normal, and tight layouts |
 
 #### Revision operations
 

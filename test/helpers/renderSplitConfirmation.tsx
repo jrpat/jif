@@ -6,7 +6,7 @@ import { RevisionItem } from "../../src/ui/render.tsx";
 import { createAppStore } from "../../src/state/appStore.ts";
 import type { RevisionSummary } from "../../src/domain/types.ts";
 
-const config = resolveAppConfig({ commands: { layout: "expanded" } });
+const config = resolveAppConfig({ commands: { layout: "loose" } });
 
 type CapturedSpans = Awaited<ReturnType<typeof testRender>>["captureSpans"] extends () => infer T ? T : never;
 type CapturedSpan = CapturedSpans["lines"][number]["spans"][number];
@@ -117,7 +117,7 @@ async function renderCommandPreview() {
 }
 
 async function renderRevisionItemWithConfirmation() {
-  const store = createAppStore("/tmp/repo", { layout: "expanded" });
+  const store = createAppStore("/tmp/repo", { layout: "loose" });
   store.actions.applyRepositoryData({
     repoPath: "/tmp/repo",
     revisions: [createRevision()],

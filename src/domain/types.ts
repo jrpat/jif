@@ -26,7 +26,7 @@ export type FocusMode =
   | "notifications"
   | "bookmark"
   | "extras";
-export type AppLayout = "expanded" | "condensed" | "super-condensed";
+export type AppLayout = "loose" | "normal" | "tight";
 export type CommandBarKind = "jj" | "shell";
 export type SearchScopeId = "revision-log" | "operation-log" | "evolog";
 

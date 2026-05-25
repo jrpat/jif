@@ -6,19 +6,19 @@ test("persistence service routes layout preference through global settings", asy
   const service = createPersistenceService({
     loadGlobalSetting: async (key) => {
       entries.push(`loadGlobal:${key}`);
-      return "condensed";
+      return "normal";
     },
     saveGlobalSetting: async (key, value) => {
       entries.push(`saveGlobal:${key}:${value}`);
     },
   });
 
-  expect(await service.loadLayoutPreference()).toBe("condensed");
-  await service.saveLayoutPreference("expanded");
+  expect(await service.loadLayoutPreference()).toBe("normal");
+  await service.saveLayoutPreference("loose");
 
   expect(entries).toEqual([
     "loadGlobal:layout",
-    "saveGlobal:layout:expanded",
+    "saveGlobal:layout:loose",
   ]);
 });
 

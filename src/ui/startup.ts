@@ -22,9 +22,9 @@ type LifecycleRenderer = Readonly<{
 const DEFAULT_STARTUP_RESERVED_ROWS = 3;
 
 const MIN_REVISION_ROWS_BY_LAYOUT: Readonly<Record<AppLayout, number>> = {
-  expanded: 2,
-  condensed: 1,
-  "super-condensed": 1,
+  loose: 2,
+  normal: 1,
+  tight: 1,
 };
 
 export function createPaletteDetector(args: {

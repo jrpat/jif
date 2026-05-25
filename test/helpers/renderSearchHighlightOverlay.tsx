@@ -8,7 +8,7 @@ import { OperationLogEntryItem } from "../../src/ui/OperationLogEntryItem.tsx";
 import { RevisionItem } from "../../src/ui/render.tsx";
 import { SearchHighlightLayer } from "../../src/ui/searchOverlay.tsx";
 
-const config = resolveAppConfig({ commands: { layout: "expanded" } });
+const config = resolveAppConfig({ commands: { layout: "loose" } });
 
 type CapturedSpans = Awaited<ReturnType<typeof testRender>>["captureSpans"] extends () => infer T ? T : never;
 
@@ -48,7 +48,7 @@ function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSumma
 }
 
 async function renderRevisionSearch(query: string) {
-  const store = createAppStore("/tmp/repo", { layout: "expanded" });
+  const store = createAppStore("/tmp/repo", { layout: "loose" });
   store.actions.applyRepositoryData({
     repoPath: "/tmp/repo",
     revisions: [
@@ -113,7 +113,7 @@ async function renderRevisionSearch(query: string) {
 }
 
 async function renderInactiveRevisionWithEmoji() {
-  const store = createAppStore("/tmp/repo", { layout: "expanded" });
+  const store = createAppStore("/tmp/repo", { layout: "loose" });
   store.actions.applyRepositoryData({
     repoPath: "/tmp/repo",
     revisions: [
@@ -172,7 +172,7 @@ async function renderInactiveRevisionWithEmoji() {
 }
 
 async function renderOperationLogSearch(query: string) {
-  const store = createAppStore("/tmp/repo", { layout: "expanded" });
+  const store = createAppStore("/tmp/repo", { layout: "loose" });
   const entries: readonly OperationLogEntry[] = [
     {
       id: "op",

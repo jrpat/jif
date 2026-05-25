@@ -21,17 +21,17 @@ export type RevisionLayoutSpec = Readonly<{
 }>;
 
 const BASE_LAYOUT_SPECS: Readonly<Record<RevisionLayoutMode, Omit<RevisionLayoutSpec, "mode" | "sideChips" | "commandChip">>> = {
-  expanded: {
+  loose: {
     headerRowCount: 2,
     baseGraphRowCount: 2,
     visibleGraphMode: "direct",
   },
-  condensed: {
+  normal: {
     headerRowCount: 1,
     baseGraphRowCount: 2,
     visibleGraphMode: "fold-first-two",
   },
-  "super-condensed": {
+  tight: {
     headerRowCount: 1,
     baseGraphRowCount: 2,
     visibleGraphMode: "fold-first-two",
@@ -70,7 +70,7 @@ export function buildRevisionLayoutSpec(
     sideChips,
     commandChip: options.commandChipText
       ? {
-          placement: options.mode === "expanded" ? "inline" : "overlay",
+          placement: options.mode === "loose" ? "inline" : "overlay",
           text: options.commandChipText,
         }
       : null,

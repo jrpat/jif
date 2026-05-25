@@ -269,7 +269,7 @@ export function resolveAppConfig(
     },
     commands: {
       shortFlags: config.commands?.shortFlags ?? true,
-      layout: config.commands?.layout ?? "condensed",
+      layout: config.commands?.layout ?? "normal",
     },
     notifications: {
       historyLimit: Math.max(1, Math.floor(config.notifications?.historyLimit ?? 50)),

@@ -11,7 +11,7 @@ function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSumma
   return {
     changeIdPrefixLength: 2,
     commitId: "12345678",
-    description: "feat: tighten condensed layout packing",
+    description: "feat: tighten layout packing",
     localTimestamp: "2026-03-30 07:22:39",
     bookmarks: ["main"],
     workspaces: ["review"],
@@ -27,14 +27,14 @@ function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSumma
   };
 }
 
-test("expanded layout uses direct two-row graph geometry", () => {
+test("loose layout uses direct two-row graph geometry", () => {
   const layout = buildRevisionLayoutSpec(createRevision(), {
-    mode: "expanded",
+    mode: "loose",
     commandChipText: "onto",
   });
 
   expect(getMaxRevisionBaseGraphRowCount()).toBe(2);
-  expect(layout.mode).toBe("expanded");
+  expect(layout.mode).toBe("loose");
   expect(layout.headerRowCount).toBe(2);
   expect(layout.baseGraphRowCount).toBe(2);
   expect(layout.visibleGraphMode).toBe("direct");
@@ -45,14 +45,14 @@ test("expanded layout uses direct two-row graph geometry", () => {
   ]);
 });
 
-test("condensed layout folds the first two graph rows and overlays the target chip", () => {
+test("normal layout folds the first two graph rows and overlays the target chip", () => {
   const revision = createRevision({ graphRows: ["@  ", "│"] });
   const layout = buildRevisionLayoutSpec(revision, {
-    mode: "condensed",
+    mode: "normal",
     commandChipText: "onto",
   });
 
-  expect(layout.mode).toBe("condensed");
+  expect(layout.mode).toBe("normal");
   expect(layout.headerRowCount).toBe(1);
   expect(layout.baseGraphRowCount).toBe(2);
   expect(layout.visibleGraphMode).toBe("fold-first-two");
@@ -62,14 +62,14 @@ test("condensed layout folds the first two graph rows and overlays the target ch
   });
 });
 
-test("command chips do not change condensed layout for divergent revision ids", () => {
+test("command chips do not change normal layout for divergent revision ids", () => {
   const revision = createRevision({
     revisionId: "abcdefgh/1",
     graphRows: ["@  ", "│"],
   });
 
   const layout = buildRevisionLayoutSpec(revision, {
-    mode: "condensed",
+    mode: "normal",
     commandChipText: "onto",
   });
 
@@ -79,11 +79,11 @@ test("command chips do not change condensed layout for divergent revision ids", 
   });
 });
 
-test("condensed layout preserves a second graph row when it carries branch topology", () => {
+test("normal layout preserves a second graph row when it carries branch topology", () => {
   const layout = buildRevisionLayoutSpec(
     createRevision({ graphRows: ["│ ○  ", "├─╯"] }),
     {
-      mode: "condensed",
+      mode: "normal",
       commandChipText: null,
     },
   );
@@ -92,16 +92,16 @@ test("condensed layout preserves a second graph row when it carries branch topol
   expect(layout.visibleGraphMode).toBe("keep-second-row");
 });
 
-test("super-condensed layout overlays the command chip so it isn't clipped by long descriptions", () => {
+test("tight layout overlays the command chip so it isn't clipped by long descriptions", () => {
   const layout = buildRevisionLayoutSpec(
     createRevision({ bookmarks: [], workspaces: [] }),
     {
-      mode: "super-condensed",
+      mode: "tight",
       commandChipText: "onto",
     },
   );
 
-  expect(layout.mode).toBe("super-condensed");
+  expect(layout.mode).toBe("tight");
   expect(layout.headerRowCount).toBe(1);
   expect(layout.baseGraphRowCount).toBe(2);
   expect(layout.visibleGraphMode).toBe("fold-first-two");
@@ -112,9 +112,9 @@ test("super-condensed layout overlays the command chip so it isn't clipped by lo
   });
 });
 
-test("expanded layout inlines any command chip text, including source chips", () => {
+test("loose layout inlines any command chip text, including source chips", () => {
   const layout = buildRevisionLayoutSpec(createRevision(), {
-    mode: "expanded",
+    mode: "loose",
     commandChipText: "move",
   });
 

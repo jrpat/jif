@@ -6,7 +6,7 @@ import { createPersistenceService } from "./persistence/service.ts";
 import { createAppStore } from "./state/appStore.ts";
 import { JifView } from "./ui/render.tsx";
 
-const VALID_LAYOUTS: ReadonlySet<string> = new Set(["expanded", "condensed", "super-condensed"]);
+const VALID_LAYOUTS: ReadonlySet<string> = new Set(["loose", "normal", "tight"]);
 
 export async function runJifApplication(
   repoPath: string,

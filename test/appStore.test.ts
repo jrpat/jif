@@ -57,18 +57,18 @@ test("AppStore keeps all app state in one reactive store", () => {
 });
 
 test("AppStore seeds layout from config options and cycles through all layouts", () => {
-  const store = createAppStore("/tmp/repo", { layout: "condensed" });
+  const store = createAppStore("/tmp/repo", { layout: "normal" });
 
-  expect(store.state.layout).toBe("condensed");
-
-  store.actions.cycleLayout();
-  expect(store.state.layout).toBe("super-condensed");
+  expect(store.state.layout).toBe("normal");
 
   store.actions.cycleLayout();
-  expect(store.state.layout).toBe("expanded");
+  expect(store.state.layout).toBe("tight");
 
   store.actions.cycleLayout();
-  expect(store.state.layout).toBe("condensed");
+  expect(store.state.layout).toBe("loose");
+
+  store.actions.cycleLayout();
+  expect(store.state.layout).toBe("normal");
 
   store.dispose();
 });
