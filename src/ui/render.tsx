@@ -1097,7 +1097,9 @@ export function RevisionItem(props: {
       colors: colors(),
     })
   );
-  const relativeAgo = createMemo(() => formatRelativeAgo(props.revision.localTimestamp));
+  const relativeAgo = createMemo(() =>
+    formatRelativeAgo(props.revision.localTimestamp, new Date(props.state.lastRefreshedAt))
+  );
   const superGutterPlan = createMemo(() => buildRevisionGutterPlan({
     graphRows: props.revision.graphRows,
     baseGraphRowCount: layoutSpec().baseGraphRowCount,

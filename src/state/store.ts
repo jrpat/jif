@@ -161,6 +161,7 @@ export function createInitialState(
     focusedNotificationIndex: 0,
     expandedNotificationIds: [],
     loading: true,
+    lastRefreshedAt: Date.now(),
     useShortFlags: options?.useShortFlags ?? true,
     layout: options?.layout ?? "expanded",
     revsetQuery: "",
@@ -299,6 +300,7 @@ export function applyRepositoryData(
     markedRowIds,
     selectedFilePaths,
     loading: false,
+    lastRefreshedAt: Date.now(),
   });
 }
 

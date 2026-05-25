@@ -159,6 +159,7 @@ export type AppState = Readonly<{
   focusedNotificationIndex: number;
   expandedNotificationIds: readonly string[];
   loading: boolean;
+  lastRefreshedAt: number;
   useShortFlags: boolean;
   layout: AppLayout;
   revsetQuery: string;
