@@ -98,6 +98,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   const persistedLayouts: string[] = [];
   let suspendCalls = 0;
   let executeCurrentCommandCalls = 0;
+  const editorTexts: string[] = [];
 
   const controller = createJifCommandController({
     store,
@@ -156,6 +157,9 @@ function createControllerHarness(harnessOptions: Readonly<{
       runInteractiveCalls.push({ commandText, options });
       return harnessOptions.runInteractiveResult ?? true;
     },
+    openTextInEditor: async (text) => {
+      editorTexts.push(text);
+    },
     refreshRepository: async () => true,
     expandElidedRevisions: async (index) => {
       expandElidedCalls.push(index);
@@ -178,6 +182,7 @@ function createControllerHarness(harnessOptions: Readonly<{
     runInteractiveCalls,
     expandElidedCalls,
     persistedLayouts,
+    editorTexts,
     get suspendCalls() {
       return suspendCalls;
     },
@@ -606,5 +611,45 @@ test("scrollDiffViewer is a no-op when no scrollbox is registered", () => {
   const harness = createControllerHarness({});
 
   expect(() => harness.controller.scrollDiffViewer(1, 0)).not.toThrow();
+  harness.store.dispose();
+});
+
+test("editFocusedNotification opens the focused notification's text in the editor", async () => {
+  const harness = createControllerHarness({});
+
+  harness.store.actions.pushEvent("first notification", "info");
+  harness.store.actions.pushEvent("second notification\nmultiline body", "warning");
+  harness.store.actions.openNotifications();
+
+  harness.controller.editFocusedNotification();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(harness.editorTexts).toEqual(["second notification\nmultiline body"]);
+  harness.store.dispose();
+});
+
+test("editFocusedNotification strips ANSI escape sequences before opening the editor", async () => {
+  const harness = createControllerHarness({});
+
+  harness.store.actions.pushEvent("[31mred[0m text", "error");
+  harness.store.actions.openNotifications();
+
+  harness.controller.editFocusedNotification();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(harness.editorTexts).toEqual(["red text"]);
+  harness.store.dispose();
+});
+
+test("editFocusedNotification is a no-op when there are no notifications", async () => {
+  const harness = createControllerHarness({});
+
+  harness.store.actions.openNotifications();
+  harness.controller.editFocusedNotification();
+  await Promise.resolve();
+
+  expect(harness.editorTexts).toEqual([]);
   harness.store.dispose();
 });

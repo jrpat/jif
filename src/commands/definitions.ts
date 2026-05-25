@@ -1,4 +1,4 @@
-import { getExpandedRevision, getFocusedChildRevision, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
+import { getExpandedRevision, getFocusedChildRevision, getFocusedNotification, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
 import type { AppState } from "../domain/types.ts";
 import { canSearchState } from "../search/matching.ts";
 
@@ -71,6 +71,7 @@ export type CommandController = Readonly<{
   openNotifications: () => void;
   expandNotification: () => void;
   collapseNotification: () => void;
+  editFocusedNotification: () => void;
   openSearch: () => void;
   nextSearchMatch: () => void;
   prevSearchMatch: () => void;
@@ -238,6 +239,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Collapse",
     description: "Truncate the focused notification",
     run: (controller) => controller.collapseNotification(),
+    group: "mode",
+  },
+  {
+    id: "edit-notification",
+    title: "Edit in $EDITOR",
+    description: "Open the focused notification's text in $EDITOR",
+    canExecute: (state) => getFocusedNotification(state) !== null,
+    run: (controller) => controller.editFocusedNotification(),
     group: "mode",
   },
   {

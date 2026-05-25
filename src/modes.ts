@@ -198,6 +198,7 @@ export const defaultKeymap: Keymap = {
     right: alias("expand-notification"),
     h: "collapse-notification",
     left: alias("collapse-notification"),
+    "ctrl-g": "edit-notification",
     "~": "cancel",
     "?": "shortcut-panel",
   },

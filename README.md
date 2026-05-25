@@ -217,6 +217,7 @@ Active while the notifications history panel is open. Does not inherit Normal.
 | `G` | jump-to-bottom | Jump to the last notification |
 | `l` / `→` | expand-notification | Show all lines of the focused notification |
 | `h` / `←` | collapse-notification | Truncate the focused notification |
+| `ctrl-g` | edit-notification | Open the focused notification's text in `$EDITOR` (falls back to `vi`) |
 | `~` | cancel | Close the notifications panel |
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 

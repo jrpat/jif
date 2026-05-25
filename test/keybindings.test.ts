@@ -99,6 +99,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     openNotifications: () => calls.push("openNotifications"),
     expandNotification: () => calls.push("expandNotification"),
     collapseNotification: () => calls.push("collapseNotification"),
+    editFocusedNotification: () => calls.push("editFocusedNotification"),
     openSearch: () => calls.push("openSearch"),
     nextSearchMatch: () => calls.push("nextSearchMatch"),
     prevSearchMatch: () => calls.push("prevSearchMatch"),

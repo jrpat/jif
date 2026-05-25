@@ -81,6 +81,7 @@ import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisi
 import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { createFocusClickGuard } from "./focusClickGuard.ts";
 import { suspendProcessToShell } from "./suspend.ts";
+import { openTextInEditor } from "./openTextInEditor.ts";
 import { hasVisibleSearchHighlights, hasVisibleSearchScope } from "../search/matching.ts";
 import { SearchHighlightLayer } from "./searchOverlay.tsx";
 import { getStatusToastMaxBodyHeight } from "./statusMessages.ts";
@@ -220,6 +221,17 @@ export function JifView(props: {
     runJjCommand: runtime.runJjCommand,
     runShellCommand: runtime.runShellCommand,
     runInteractiveJjCommand: runtime.runInteractiveJjCommand,
+    openTextInEditor: (text) => openTextInEditor({
+      text,
+      runInteractive: async (cwd, command) => {
+        renderer.suspend();
+        try {
+          await runInteractiveCommand(cwd, command);
+        } finally {
+          renderer.resume();
+        }
+      },
+    }),
     refreshRepository,
     expandElidedRevisions: runtime.expandElidedRevisions,
     persistLayout: (layout) => persistence.saveLayoutPreference(layout),

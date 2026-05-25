@@ -12,11 +12,13 @@ import { buildBookmarkSuggestions, type BookmarkTarget } from "../state/bookmark
 import { buildForceRetryPlan } from "../jj/forceRetry.ts";
 import { tokenizeCommandText } from "../jj/client.ts";
 import { quoteCommand } from "../jj/process.ts";
+import { stripAnsi } from "../search/matching.ts";
 import type { AppStore } from "../state/appStore.ts";
 import {
   draftConfigs,
   getDisplayedCommandText,
   getExpandedRevision,
+  getFocusedNotification,
   getFocusedOperationLogEntry,
   getFocusedRevision,
   getFocusedRevisionArg,
@@ -59,6 +61,8 @@ type RunInteractiveJjCommand = (
   options?: InteractiveJjCommandOptions,
 ) => Promise<boolean>;
 
+type OpenTextInEditor = (text: string) => Promise<void>;
+
 export function createJifCommandController(args: Readonly<{
   store: AppStore;
   client: ControllerClient;
@@ -68,6 +72,7 @@ export function createJifCommandController(args: Readonly<{
   runJjCommand: RunJjCommand;
   runShellCommand: RunShellCommand;
   runInteractiveJjCommand: RunInteractiveJjCommand;
+  openTextInEditor: OpenTextInEditor;
   refreshRepository(): Promise<boolean>;
   expandElidedRevisions(elidedIndex: number): Promise<void>;
   persistLayout(layout: AppLayout): void | Promise<unknown>;
@@ -139,6 +144,20 @@ export function createJifCommandController(args: Readonly<{
     },
     collapseNotification() {
       store.actions.collapseFocusedNotification();
+    },
+    editFocusedNotification() {
+      const notification = getFocusedNotification(store.snapshot());
+      if (!notification) {
+        return;
+      }
+
+      void (async () => {
+        try {
+          await args.openTextInEditor(stripAnsi(notification.text));
+        } catch (error) {
+          reportError(store, error);
+        }
+      })();
     },
     openFocusedRevision() {
       const state = store.snapshot();
