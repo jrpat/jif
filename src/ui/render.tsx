@@ -451,6 +451,7 @@ export function JifView(props: {
   let prevFocusedOperationIndex = store.state.focusedOperationLogIndex;
   let prevFocusedEvologIndex = store.state.focusedEvologIndex;
   let prevFocusedNotificationIndex = store.state.focusedNotificationIndex;
+  let prevFocusedFileIndex = store.state.focusedFileIndex;
 
   createRenderEffect(() => {
     if (store.state.focusMode === "op-log" || store.state.focusMode === "evolog") {
@@ -535,6 +536,34 @@ export function JifView(props: {
     prevFocusedNotificationIndex = focusedIndex;
 
     scrollToKeepChildVisible(logViewport, `notification-${focusedIndex}`, direction);
+  });
+
+  createRenderEffect(() => {
+    if (store.state.focusMode !== "files" || !logViewport) {
+      return;
+    }
+
+    const expandedId = store.state.expandedRowId;
+    if (!expandedId) {
+      return;
+    }
+
+    const revision = getExpandedRevision(store.state);
+    const fileCount = revision?.files.length ?? 0;
+    if (fileCount === 0) {
+      return;
+    }
+
+    const focusedIndex = store.state.focusedFileIndex;
+    const direction = focusedIndex >= prevFocusedFileIndex ? "down" : "up";
+    prevFocusedFileIndex = focusedIndex;
+
+    const margin = config.log.scrollMargin;
+    const marginIndex = direction === "down"
+      ? Math.min(focusedIndex + margin, fileCount - 1)
+      : Math.max(focusedIndex - margin, 0);
+
+    scrollToKeepChildVisible(logViewport, `file-row-${expandedId}-${marginIndex}`, direction);
   });
 
   createRenderEffect(() => {
@@ -1539,6 +1568,7 @@ function ChangedFileRowContent(props: {
 
   return (
     <box
+      id={`file-row-${props.rowId}-${row.index}`}
       width="100%"
       flexDirection="row"
       gap={1}
