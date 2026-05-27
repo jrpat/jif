@@ -10,6 +10,7 @@ import type { AppLayout, BookmarkSuggestion, ChangedFile, FocusMode, OperationLo
 import { getChangeIdFromRevisionId, getRevisionArg } from "../domain/revisionIds.ts";
 import { buildBookmarkSuggestions, type BookmarkTarget } from "../state/bookmarkSuggestions.ts";
 import { buildForceRetryPlan } from "../jj/forceRetry.ts";
+import { tokenizeCommandText } from "../jj/client.ts";
 import { quoteCommand } from "../jj/process.ts";
 import type { AppStore } from "../state/appStore.ts";
 import {
@@ -31,6 +32,7 @@ type ControllerClient = Readonly<{
   loadOperationLog(): Promise<readonly OperationLogEntry[]>;
   loadEvolog(revisionArg: string): Promise<readonly OperationLogEntry[]>;
   loadOperationDiff(operationId: string): Promise<string>;
+  loadInterdiff(commandArgs: readonly string[]): Promise<string>;
   resolveDescendants(revisionId: string): Promise<readonly string[]>;
   loadBookmarkTargets(): Promise<readonly BookmarkTarget[]>;
   loadAncestorChangeIds(focusedChangeId: string): Promise<readonly string[]>;
@@ -191,6 +193,24 @@ export function createJifCommandController(args: Readonly<{
         }
 
         void args.runInteractiveJjCommand(commandText);
+        return;
+      }
+
+      if (state.commandDraft?.config.kind === "interdiff") {
+        const commandText = getDisplayedCommandText(state).trim();
+        const commandArgs = tokenizeCommandText(commandText);
+        if (commandArgs.length === 0) {
+          return;
+        }
+        void (async () => {
+          try {
+            const content = await client.loadInterdiff(commandArgs);
+            store.actions.cancelCommand();
+            store.actions.openDiffViewer(content.length > 0 ? content : "(no differences)");
+          } catch (error) {
+            reportError(store, error);
+          }
+        })();
         return;
       }
 

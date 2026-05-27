@@ -71,6 +71,8 @@ function createControllerHarness(harnessOptions: Readonly<{
   evologEntries?: readonly OperationLogEntry[];
   evologCalls?: string[];
   diffViewport?: ScrollBoxRenderable;
+  interdiffOutput?: string;
+  interdiffCalls?: Array<readonly string[]>;
 }>) {
   const store = createAppStore(REPO_PATH);
   if (harnessOptions.revisions) {
@@ -115,6 +117,10 @@ function createControllerHarness(harnessOptions: Readonly<{
       },
       async loadOperationDiff() {
         return "fake diff";
+      },
+      async loadInterdiff(commandArgs: readonly string[]) {
+        harnessOptions.interdiffCalls?.push(commandArgs);
+        return harnessOptions.interdiffOutput ?? "fake interdiff";
       },
       async resolveDescendants() {
         return ["bbbbbbbb"];
@@ -229,6 +235,37 @@ test("jji preserves an explicit cwd override", () => {
       options: { cwd: "/tmp/other" },
     },
   ]);
+  harness.store.dispose();
+});
+
+test("confirm on an interdiff draft loads the diff into the in-app viewer", async () => {
+  const interdiffCalls: Array<readonly string[]> = [];
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "source revision" }),
+      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "target revision" }),
+    ],
+    interdiffOutput: "interdiff body",
+    interdiffCalls,
+  });
+
+  harness.store.actions.toggleRevisionSelection();
+  harness.store.actions.startCommandDraft(draftConfigs.interdiff);
+  const expectedCommand = getDisplayedCommandText(harness.store.snapshot()).trim();
+
+  harness.controller.confirm();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(harness.runInteractiveCommands).toEqual([]);
+  expect(harness.executeCurrentCommandCalls).toBe(0);
+  expect(interdiffCalls).toHaveLength(1);
+  expect(interdiffCalls[0]?.join(" ")).toBe(expectedCommand);
+
+  const state = harness.store.snapshot();
+  expect(state.focusMode).toBe("diff-viewer");
+  expect(state.diffViewer?.content).toBe("interdiff body");
+  expect(state.commandDraft).toBeNull();
   harness.store.dispose();
 });
 

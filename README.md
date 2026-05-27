@@ -131,7 +131,7 @@ Active while previewing a restore. Inherits Normal. Composes `jj restore -f <sou
 
 ### Interdiff
 
-Active while previewing an interdiff. Inherits Normal. Composes `jj interdiff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run.
+Active while previewing an interdiff. Inherits Normal. Composes `jj interdiff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run. The output opens in the diff viewer.
 
 ### Bookmark
 

@@ -165,6 +165,11 @@ export class JjClient {
     return result.stdout;
   }
 
+  async loadInterdiff(commandArgs: readonly string[]): Promise<string> {
+    const result = await this.runJj(["--color", "always", ...commandArgs], { color: true });
+    return result.stdout;
+  }
+
   async resolveDescendants(revisionId: string): Promise<readonly string[]> {
     const shortRevisionId = 'change_id.shortest(8) ++ if(divergent, surround("/", "", change_offset))';
     const result = await this.runJj([
