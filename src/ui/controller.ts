@@ -88,6 +88,9 @@ export function createJifCommandController(args: Readonly<{
     moveFocusToChild() {
       store.actions.moveFocusToChild();
     },
+    moveFocusToNextDivergentSibling() {
+      store.actions.moveFocusToNextDivergentSibling();
+    },
     openOperationLog() {
       store.actions.openOperationLog();
       store.actions.setOperationLogLoading(true);

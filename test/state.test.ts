@@ -34,6 +34,7 @@ import {
   setCommandBarText,
   moveFocus,
   moveFocusToChild,
+  moveFocusToNextDivergentSibling,
   moveFocusToParent,
   openDiffViewer,
   openOperationLog,
@@ -476,6 +477,55 @@ test("moveFocusToChild exits file navigation before focusing the child revision"
   expect(state.focusMode).toBe("revisions");
   expect(state.expandedRowId).toBeNull();
   expect(state.focusedRevisionIndex).toBe(0);
+  expect(state.focusedFileIndex).toBe(0);
+});
+
+test("moveFocusToNextDivergentSibling jumps to the next visible divergent sibling", () => {
+  let state = createDivergentState();
+  expect(state.focusedRevisionIndex).toBe(0);
+
+  state = moveFocusToNextDivergentSibling(state);
+
+  expect(state.focusedRevisionIndex).toBe(1);
+});
+
+test("moveFocusToNextDivergentSibling wraps from the last visible sibling to the first", () => {
+  let state = createDivergentState();
+  state = focusRevisionAt(state, 1);
+
+  state = moveFocusToNextDivergentSibling(state);
+
+  expect(state.focusedRevisionIndex).toBe(0);
+});
+
+test("moveFocusToNextDivergentSibling is a no-op when the focused revision is not divergent", () => {
+  const state = createState();
+  const after = moveFocusToNextDivergentSibling(state);
+  expect(after).toBe(state);
+});
+
+test("moveFocusToNextDivergentSibling is a no-op when no other divergent sibling is visible", () => {
+  const baseState = createDivergentState();
+  const trimmedState: AppState = {
+    ...baseState,
+    revisions: [baseState.revisions[0]!],
+    focusedRevisionIndex: 0,
+  };
+
+  const after = moveFocusToNextDivergentSibling(trimmedState);
+  expect(after).toBe(trimmedState);
+});
+
+test("moveFocusToNextDivergentSibling exits file navigation when jumping", () => {
+  let state = createDivergentState();
+  state = openFocusedRevision(state);
+  expect(state.focusMode).toBe("files");
+
+  state = moveFocusToNextDivergentSibling(state);
+
+  expect(state.focusMode).toBe("revisions");
+  expect(state.expandedRowId).toBeNull();
+  expect(state.focusedRevisionIndex).toBe(1);
   expect(state.focusedFileIndex).toBe(0);
 });
 

@@ -19,7 +19,7 @@ import type {
   StatusMessage,
   StatusLevel,
 } from "../domain/types.ts";
-import { getRevisionArg } from "../domain/revisionIds.ts";
+import { getChangeIdFromRevisionId, getRevisionArg, isDivergentRevisionId } from "../domain/revisionIds.ts";
 import {
   clampSearchIndex,
   getActiveSearchScope,
@@ -418,6 +418,22 @@ export function moveFocusToChild(state: AppState): AppState {
     inlineConfirmation: null,
     expandedRowId: null,
     focusedRevisionIndex: state.revisions.findIndex((revision) => revision.rowId === childRevision.rowId),
+    focusedFileIndex: 0,
+    selectedFilePaths: [],
+  }, ["revisions"]);
+}
+
+export function moveFocusToNextDivergentSibling(state: AppState): AppState {
+  const nextIndex = getNextDivergentSiblingIndex(state);
+  if (nextIndex === null) {
+    return state;
+  }
+
+  return replaceFocusModeStack({
+    ...state,
+    inlineConfirmation: null,
+    expandedRowId: null,
+    focusedRevisionIndex: nextIndex,
     focusedFileIndex: 0,
     selectedFilePaths: [],
   }, ["revisions"]);
@@ -1379,6 +1395,27 @@ export function getFocusedChildRevision(state: AppState): RevisionSummary | null
     const candidateRevision = state.revisions[candidateIndex] ?? null;
     if (candidateRevision?.parentRevisionIds?.includes(focusedRevision.revisionId)) {
       return candidateRevision;
+    }
+  }
+
+  return null;
+}
+
+export function getNextDivergentSiblingIndex(state: AppState): number | null {
+  const focused = getFocusedRevision(state);
+  if (!focused || !isDivergentRevisionId(focused.revisionId)) {
+    return null;
+  }
+
+  const focusedChangeId = getChangeIdFromRevisionId(focused.revisionId);
+  const total = state.revisions.length;
+  for (let step = 1; step < total; step += 1) {
+    const candidateIndex = (state.focusedRevisionIndex + step) % total;
+    const candidate = state.revisions[candidateIndex];
+    if (!candidate) continue;
+    if (!isDivergentRevisionId(candidate.revisionId)) continue;
+    if (getChangeIdFromRevisionId(candidate.revisionId) === focusedChangeId) {
+      return candidateIndex;
     }
   }
 

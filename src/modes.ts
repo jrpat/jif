@@ -83,6 +83,7 @@ export const defaultKeymap: Keymap = {
     G: "jump-to-bottom",
     J: "move-parent",
     K: "move-child",
+    "ctrl-o": "jump-to-next-divergent",
     Z: alias("suspend"),
     l: "expand",
     right: alias("expand"),

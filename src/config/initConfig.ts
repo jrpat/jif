@@ -278,6 +278,7 @@ namespace Jif {
     moveFocus: (delta: number) => void;
     moveFocusToParent: () => void;
     moveFocusToChild: () => void;
+    moveFocusToNextDivergentSibling: () => void;
     focusLogBottom: () => void;
     openFocusedRevision: () => void;
     closeFocusedRevision: () => void;

@@ -70,6 +70,7 @@ import {
   focusShellCommandBar,
   moveFocus,
   moveFocusToChild,
+  moveFocusToNextDivergentSibling,
   moveFocusToParent,
   openShortcutPanel,
   openFocusedRevision,
@@ -181,6 +182,9 @@ export function createAppStore(
       },
       moveFocusToChild() {
         mutate((currentState) => moveFocusToChild(currentState));
+      },
+      moveFocusToNextDivergentSibling() {
+        mutate((currentState) => moveFocusToNextDivergentSibling(currentState));
       },
       openFocusedRevision() {
         mutate((currentState) => openFocusedRevision(currentState));

@@ -1,4 +1,4 @@
-import { getExpandedRevision, getFocusedChildRevision, getFocusedOperationLogEntry, getFocusedParentRevision } from "../state/store.ts";
+import { getExpandedRevision, getFocusedChildRevision, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
 import type { AppState } from "../domain/types.ts";
 import { canSearchState } from "../search/matching.ts";
 
@@ -17,6 +17,7 @@ export type CommandController = Readonly<{
   moveFocus: (delta: number) => void;
   moveFocusToParent: () => void;
   moveFocusToChild: () => void;
+  moveFocusToNextDivergentSibling: () => void;
   focusLogBottom: () => void;
   openOperationLog: () => void;
   openEvolog: () => void;
@@ -186,6 +187,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Focus the first visible child revision above the current selection",
     canExecute: (state) => getFocusedChildRevision(state) !== null,
     run: (controller) => controller.moveFocusToChild(),
+  },
+  {
+    id: "jump-to-next-divergent",
+    title: "Next Divergent",
+    description: "Jump to the next visible divergent sibling of the focused revision",
+    canExecute: (state) => getNextDivergentSiblingIndex(state) !== null,
+    run: (controller) => controller.moveFocusToNextDivergentSibling(),
   },
   {
     id: "jump-to-bottom",
