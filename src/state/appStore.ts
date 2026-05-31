@@ -86,6 +86,7 @@ import {
   touchStatusMessage,
   toggleRebaseDescendants,
   toggleRevisionSelection,
+  toggleSquashAnchor,
   updateStatusMessage,
 } from "./store.ts";
 
@@ -318,6 +319,9 @@ export function createAppStore(
       },
       toggleRebaseDescendants(descendantIds: readonly string[]) {
         mutate((currentState) => toggleRebaseDescendants(currentState, descendantIds));
+      },
+      toggleSquashAnchor(anchorIds: readonly string[]) {
+        mutate((currentState) => toggleSquashAnchor(currentState, anchorIds));
       },
       focusWorkingCopy() {
         mutate((currentState) => focusWorkingCopy(currentState));

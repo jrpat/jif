@@ -73,6 +73,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   diffViewport?: ScrollBoxRenderable;
   interdiffOutput?: string;
   interdiffCalls?: Array<readonly string[]>;
+  anchorRange?: readonly string[];
 }>) {
   const store = createAppStore(REPO_PATH);
   if (harnessOptions.revisions) {
@@ -125,6 +126,9 @@ function createControllerHarness(harnessOptions: Readonly<{
       },
       async resolveDescendants() {
         return ["bbbbbbbb"];
+      },
+      async resolveRange() {
+        return harnessOptions.anchorRange ?? ["aaaaaaaa", "bbbbbbbb"];
       },
       async loadBookmarkTargets() {
         return [];

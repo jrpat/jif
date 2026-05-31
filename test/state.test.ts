@@ -46,8 +46,10 @@ import {
   setRevisionFiles,
   startCommandDraft,
   toggleFileSelection,
+  getOperationAffectedRowIds,
   toggleRebaseDescendants,
   toggleRevisionSelection,
+  toggleSquashAnchor,
   expandElidedRevision,
   openRevsetInput,
   closeRevsetInput,
@@ -1175,6 +1177,60 @@ test("multiple selections in squash produce repeated -f flags", () => {
   state = toggleRevisionSelection(state);
   state = startCommandDraft(state, draftConfigs.squash);
   expect(getDisplayedCommandText(state)).toBe("squash -f a -f b -t ░░░░");
+});
+
+test("toggleSquashAnchor extends squash --from to a range ending at @ when the working copy is non-empty", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.squash);
+  expect(getDisplayedCommandText(state)).toBe("squash -f a -t b");
+
+  state = toggleSquashAnchor(state);
+  expect(getDisplayedCommandText(state)).toBe("squash -f a::@ -t b");
+
+  state = toggleSquashAnchor(state);
+  expect(getDisplayedCommandText(state)).toBe("squash -f a -t b");
+});
+
+test("toggleSquashAnchor uses @- as the anchor when the working copy is empty", () => {
+  const base = createState();
+  const revisions = base.revisions.map((r) =>
+    r.marker === "working-copy" ? { ...r, isEmpty: true } : r,
+  );
+  let state: AppState = { ...base, revisions };
+  state = startCommandDraft(state, draftConfigs.squash);
+  state = toggleSquashAnchor(state);
+  expect(getDisplayedCommandText(state)).toBe("squash -f a::@- -t b");
+});
+
+test("toggleSquashAnchor extends every selected source when squashing multiple revisions", () => {
+  let state = createState();
+  state = toggleRevisionSelection(state);
+  state = moveFocus(state, 1);
+  state = toggleRevisionSelection(state);
+  state = startCommandDraft(state, draftConfigs.squash);
+  state = toggleSquashAnchor(state);
+  expect(getDisplayedCommandText(state)).toBe("squash -f a::@ -f b::@ -t ░░░░");
+});
+
+test("toggleSquashAnchor is a no-op outside squash mode", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
+  const before = getDisplayedCommandText(state);
+  const next = toggleSquashAnchor(state);
+  expect(getDisplayedCommandText(next)).toBe(before);
+  expect(next.commandDraft?.includeAnchor).toBeUndefined();
+});
+
+test("toggleSquashAnchor marks resolved anchor rows as affected", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.squash);
+  expect(getOperationAffectedRowIds(state)).toEqual(new Set([FIRST_ROW_ID]));
+
+  state = toggleSquashAnchor(state, ["aaaaaaaa", "bbbbbbbb"]);
+  expect(getOperationAffectedRowIds(state)).toEqual(new Set([FIRST_ROW_ID, SECOND_ROW_ID]));
+
+  state = toggleSquashAnchor(state, []);
+  expect(getOperationAffectedRowIds(state)).toEqual(new Set([FIRST_ROW_ID]));
 });
 
 test("arg helper selects long flags when useShortFlags is false", () => {

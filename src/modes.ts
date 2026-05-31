@@ -161,7 +161,9 @@ export const defaultKeymap: Keymap = {
     s: "rebase-descendants",
   },
   restore: {},
-  squash: {},
+  squash: {
+    s: "squash-from-anchor",
+  },
   interdiff: {},
   command: {},
   revset: {},

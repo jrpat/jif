@@ -125,6 +125,14 @@ Active while previewing a rebase. Inherits Normal.
 |-----|---------|-------------|
 | `s` | rebase-descendants | Toggle whether descendants are included in the rebase |
 
+### Squash
+
+Active while previewing a squash. Inherits Normal. Composes `jj squash -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `s` | squash-from-anchor | Toggle whether the source extends to a range `<source>::<anchor>`, where `<anchor>` is `@` if the working copy is non-empty, otherwise `@-` |
+
 ### Restore
 
 Active while previewing a restore. Inherits Normal. Composes `jj restore -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run.

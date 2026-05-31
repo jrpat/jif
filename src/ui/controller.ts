@@ -25,6 +25,7 @@ import {
   getInlineConfirmation,
   getInlineConfirmationActualCommand,
   getSelectedRevisionIds,
+  getSquashAnchorArg,
 } from "../state/store.ts";
 import { hasUserDescription } from "./revisionHeader.ts";
 
@@ -36,6 +37,7 @@ type ControllerClient = Readonly<{
   loadOperationDiff(operationId: string): Promise<string>;
   loadInterdiff(commandArgs: readonly string[]): Promise<string>;
   resolveDescendants(revisionId: string): Promise<readonly string[]>;
+  resolveRange(from: string, to: string): Promise<readonly string[]>;
   loadBookmarkTargets(): Promise<readonly BookmarkTarget[]>;
   loadAncestorChangeIds(focusedChangeId: string): Promise<readonly string[]>;
   loadDescendantChangeIds(focusedChangeId: string): Promise<readonly string[]>;
@@ -595,6 +597,28 @@ export function createJifCommandController(args: Readonly<{
         try {
           const descendants = await client.resolveDescendants(getSelectedRevisionIds(state)[0] ?? "");
           store.actions.toggleRebaseDescendants(descendants);
+        } catch (error) {
+          reportError(store, error);
+        }
+      })();
+    },
+    toggleSquashAnchor() {
+      const state = store.snapshot();
+      if (state.commandDraft?.config.kind !== "squash") {
+        return;
+      }
+
+      const source = getSelectedRevisionIds(state)[0];
+      if (!source) {
+        store.actions.toggleSquashAnchor([]);
+        return;
+      }
+      const anchor = getSquashAnchorArg(state);
+
+      void (async () => {
+        try {
+          const anchorIds = await client.resolveRange(source, anchor);
+          store.actions.toggleSquashAnchor(anchorIds);
         } catch (error) {
           reportError(store, error);
         }

@@ -81,6 +81,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     toggleShortFlags: () => calls.push("toggleShortFlags"),
     cycleLayout: () => calls.push("cycleLayout"),
     toggleRebaseDescendants: () => calls.push("toggleRebaseDescendants"),
+    toggleSquashAnchor: () => calls.push("toggleSquashAnchor"),
     undo: () => calls.push("undo"),
     redo: () => calls.push("redo"),
     focusWorkingCopy: () => calls.push("focusWorkingCopy"),
@@ -590,6 +591,22 @@ test("dispatchGlobalKey routes s to rebase-descendants in rebase mode", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["toggleRebaseDescendants"]);
+});
+
+test("dispatchGlobalKey routes s to squash-from-anchor in squash mode", () => {
+  const calls: string[] = [];
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.squash);
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "s",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["toggleSquashAnchor"]);
 });
 
 test("dispatchGlobalKey routes s to split in normal mode", () => {

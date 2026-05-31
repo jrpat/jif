@@ -92,6 +92,8 @@ export type CommandDraft = Readonly<{
   config: CommandDraftConfig;
   includeDescendants?: boolean;
   descendantRevisionIds?: readonly string[];
+  includeAnchor?: boolean;
+  anchorRevisionIds?: readonly string[];
 }>;
 
 export type StatusLevel = "info" | "success" | "warning" | "error";

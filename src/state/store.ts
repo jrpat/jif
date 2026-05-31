@@ -43,7 +43,7 @@ export const draftConfigs = {
   },
   squash: {
     kind: "squash" as const,
-    template: "squash ${selected.map(s => `${arg('-f --from')} ${s}`).join(' ')} ${arg('-t --into')} ${target}",
+    template: "squash ${selected.map(s => `${arg('-f --from')} ${s}${anchorSuffix}`).join(' ')} ${arg('-t --into')} ${target}",
     badgeText: "into",
     sourceBadgeText: "from",
   },
@@ -71,6 +71,7 @@ export type TemplateContext = Readonly<{
   selected: readonly (string | Tagged)[];
   target: string | Tagged;
   descendants: boolean;
+  anchorSuffix: string;
   arg: (pair: string) => string;
 }>;
 
@@ -1182,6 +1183,24 @@ export function toggleRebaseDescendants(
   };
 }
 
+export function toggleSquashAnchor(
+  state: AppState,
+  anchorIds: readonly string[] = [],
+): AppState {
+  if (state.commandDraft?.config.kind !== "squash") {
+    return state;
+  }
+
+  return {
+    ...state,
+    commandDraft: {
+      ...state.commandDraft,
+      includeAnchor: !state.commandDraft.includeAnchor,
+      anchorRevisionIds: anchorIds,
+    },
+  };
+}
+
 export function toggleRevisionSelection(state: AppState): AppState {
   const focusedRevision = getFocusedRevision(state);
   if (!focusedRevision) {
@@ -1586,18 +1605,28 @@ function buildContext(state: AppState): { template: string; context: TemplateCon
   const draft = state.commandDraft;
   const useShort = state.useShortFlags;
 
+  const anchor = draft.config.kind === "squash" && (draft.includeAnchor ?? false)
+    ? getSquashAnchorArg(state)
+    : "";
+
   return {
     template: draft.config.template,
     context: {
       selected: state.selectedRowIds.map((id) => revisionPrefixFromRowId(state, id)),
       target: revisionPrefix(state, getCommandTargetRevisionId(state) ?? "") || DRAFT_PLACEHOLDER,
       descendants: draft.config.kind === "rebase" && (draft.includeDescendants ?? false),
+      anchorSuffix: anchor ? `::${anchor}` : "",
       arg: (pair: string) => {
         const [s, l] = pair.split(" ");
         return useShort ? s! : l!;
       },
     },
   };
+}
+
+export function getSquashAnchorArg(state: AppState): "@" | "@-" {
+  const workingCopy = state.revisions.find((r) => r.marker === "working-copy");
+  return workingCopy && workingCopy.isEmpty ? "@-" : "@";
 }
 
 function buildTaggedContext(state: AppState): { template: string; context: TemplateContext } | null {
@@ -1710,6 +1739,14 @@ export function getOperationAffectedRowIds(state: AppState): ReadonlySet<string>
         .filter((revision) => state.commandDraft?.descendantRevisionIds?.includes(revision.revisionId))
         .map((revision) => revision.rowId),
     );
+  }
+
+  if (state.commandDraft.config.kind === "squash" && state.commandDraft.includeAnchor && state.commandDraft.anchorRevisionIds) {
+    const anchorIds = state.commandDraft.anchorRevisionIds;
+    const anchorRowIds = state.revisions
+      .filter((revision) => anchorIds.includes(revision.revisionId))
+      .map((revision) => revision.rowId);
+    return new Set([...state.selectedRowIds, ...anchorRowIds]);
   }
 
   return new Set(state.selectedRowIds);

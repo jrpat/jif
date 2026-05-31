@@ -171,11 +171,19 @@ export class JjClient {
   }
 
   async resolveDescendants(revisionId: string): Promise<readonly string[]> {
+    return this.resolveRevset(`${revisionId}::`);
+  }
+
+  async resolveRange(from: string, to: string): Promise<readonly string[]> {
+    return this.resolveRevset(`${from}::${to}`);
+  }
+
+  private async resolveRevset(revset: string): Promise<readonly string[]> {
     const shortRevisionId = 'change_id.shortest(8) ++ if(divergent, surround("/", "", change_offset))';
     const result = await this.runJj([
       "log",
       "--revisions",
-      `${revisionId}::`,
+      revset,
       "--no-graph",
       "--color",
       "never",

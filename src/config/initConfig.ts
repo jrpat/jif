@@ -303,6 +303,7 @@ namespace Jif {
     toggleShortFlags: () => void;
     cycleLayout: () => void;
     toggleRebaseDescendants: () => void;
+    toggleSquashAnchor: () => void;
     undo: () => void;
     redo: () => void;
     focusWorkingCopy: () => void;
