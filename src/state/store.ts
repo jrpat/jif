@@ -13,6 +13,8 @@ import type {
   InlineConfirmation,
   InlineConfirmationOptionId,
   OperationLogEntry,
+  RebaseSourceKind,
+  RebaseTargetKind,
   RepositoryData,
   RevisionSummary,
   SearchScopeId,
@@ -37,7 +39,7 @@ const LAYOUT_CYCLE: readonly AppLayout[] = ["loose", "normal", "tight"];
 export const draftConfigs = {
   rebase: {
     kind: "rebase" as const,
-    template: "rebase ${selected.map(s => `${arg(descendants ? '-s --source' : '-r --revisions')} ${s}`).join(' ')} ${arg('-d --destination')} ${target}",
+    template: "rebase ${selected.map(s => `${sourceFlag()} ${s}`).join(' ')} ${targetFlags()}${skipEmptied ? ' ' + arg('--skip-emptied --skip-emptied') : ''}${forceApply ? ' ' + arg('--ignore-immutable --ignore-immutable') : ''}",
     badgeText: "onto",
     sourceBadgeText: "move",
   },
@@ -76,9 +78,12 @@ export const draftConfigs = {
 export type TemplateContext = Readonly<{
   selected: readonly (string | Tagged)[];
   target: string | Tagged;
-  descendants: boolean;
   anchorSuffix: string;
   arg: (pair: string) => string;
+  sourceFlag: () => string;
+  targetFlags: () => string;
+  skipEmptied: boolean;
+  forceApply: boolean;
 }>;
 
 export type CommandSegmentStyle = "command" | "selected" | "target" | "placeholder" | "files";
@@ -1165,16 +1170,60 @@ export function startCommandDraft(
     markedRowIds: hasPreSelection ? state.markedRowIds : [],
     commandDraft: {
       config,
-      includeDescendants: false,
       descendantRevisionIds: options?.descendantRevisionIds,
     },
   };
 }
 
-export function toggleRebaseDescendants(
+export function setRebaseSourceKind(
   state: AppState,
-  descendantIds: readonly string[],
+  kind: RebaseSourceKind,
+  descendantIds?: readonly string[],
 ): AppState {
+  if (state.commandDraft?.config.kind !== "rebase") {
+    return state;
+  }
+
+  const currentKind = state.commandDraft.rebaseSourceKind ?? "revisions";
+  const nextKind = currentKind === kind ? "revisions" : kind;
+
+  return {
+    ...state,
+    commandDraft: {
+      ...state.commandDraft,
+      rebaseSourceKind: nextKind === "revisions" ? undefined : nextKind,
+      descendantRevisionIds: nextKind === "source"
+        ? descendantIds ?? state.commandDraft.descendantRevisionIds
+        : state.commandDraft.descendantRevisionIds,
+    },
+  };
+}
+
+export function setRebaseTargetKind(
+  state: AppState,
+  kind: RebaseTargetKind,
+): AppState {
+  if (state.commandDraft?.config.kind !== "rebase") {
+    return state;
+  }
+
+  const currentKind = state.commandDraft.rebaseTargetKind ?? "destination";
+  const nextKind = currentKind === kind ? "destination" : kind;
+  const focused = getFocusedRevision(state);
+
+  return {
+    ...state,
+    commandDraft: {
+      ...state.commandDraft,
+      rebaseTargetKind: nextKind === "destination" ? undefined : nextKind,
+      rebaseInsertAfterRevisionId: nextKind === "insert-between" && focused
+        ? focused.revisionId
+        : undefined,
+    },
+  };
+}
+
+export function toggleRebaseSkipEmptied(state: AppState): AppState {
   if (state.commandDraft?.config.kind !== "rebase") {
     return state;
   }
@@ -1183,8 +1232,7 @@ export function toggleRebaseDescendants(
     ...state,
     commandDraft: {
       ...state.commandDraft,
-      includeDescendants: !state.commandDraft.includeDescendants,
-      descendantRevisionIds: descendantIds,
+      rebaseSkipEmptied: !state.commandDraft.rebaseSkipEmptied,
     },
   };
 }
@@ -1565,12 +1613,36 @@ export function getCommandChipTextForRevision(
     return null;
   }
 
+  const draft = state.commandDraft;
+  const isRebase = draft.config.kind === "rebase";
+  const targetKind: RebaseTargetKind = draft.rebaseTargetKind ?? "destination";
+  const sourceKind: RebaseSourceKind = draft.rebaseSourceKind ?? "revisions";
+
+  if (isRebase && draft.rebaseInsertAfterRevisionId) {
+    const anchorRow = state.revisions.find(
+      (revision) => revision.revisionId === draft.rebaseInsertAfterRevisionId,
+    );
+    if (anchorRow && anchorRow.rowId === rowId) {
+      return "after";
+    }
+  }
+
   if (getCommandTargetRowId(state) === rowId) {
-    return state.commandDraft.config.badgeText;
+    if (isRebase) {
+      switch (targetKind) {
+        case "insert-before": return "before";
+        case "insert-after": return "after";
+        case "insert-between": return "before";
+      }
+    }
+    return draft.config.badgeText;
   }
 
   if (state.selectedRowIds.includes(rowId)) {
-    return state.commandDraft.config.sourceBadgeText;
+    if (isRebase && sourceKind === "branch") {
+      return "branch";
+    }
+    return draft.config.sourceBadgeText;
   }
 
   return null;
@@ -1603,15 +1675,32 @@ export function getSelectedRevisionIds(state: AppState): readonly string[] {
     .filter((revisionId): revisionId is string => revisionId !== null);
 }
 
-function buildContext(state: AppState): { template: string; context: TemplateContext } | null {
+type ContextOverrides = Readonly<{ forceApply?: boolean }>;
+
+function buildContext(
+  state: AppState,
+  overrides?: ContextOverrides,
+): { template: string; context: TemplateContext } | null {
   if (!state.commandDraft) {
     return null;
   }
 
   const draft = state.commandDraft;
   const useShort = state.useShortFlags;
+  const arg = (pair: string) => {
+    const [s, l] = pair.split(" ");
+    return useShort ? s! : l!;
+  };
 
-  const anchor = draft.config.kind === "squash" && (draft.includeAnchor ?? false)
+  const target = revisionPrefix(state, getCommandTargetRevisionId(state) ?? "") || DRAFT_PLACEHOLDER;
+  const sourceKind: RebaseSourceKind = draft.rebaseSourceKind ?? "revisions";
+  const targetKind: RebaseTargetKind = draft.rebaseTargetKind ?? "destination";
+  const anchorRaw = draft.rebaseInsertAfterRevisionId
+    ? revisionPrefix(state, draft.rebaseInsertAfterRevisionId)
+    : "";
+  const anchor = anchorRaw || DRAFT_PLACEHOLDER;
+
+  const squashAnchor = draft.config.kind === "squash" && (draft.includeAnchor ?? false)
     ? getSquashAnchorArg(state)
     : "";
 
@@ -1619,13 +1708,30 @@ function buildContext(state: AppState): { template: string; context: TemplateCon
     template: draft.config.template,
     context: {
       selected: state.selectedRowIds.map((id) => revisionPrefixFromRowId(state, id)),
-      target: revisionPrefix(state, getCommandTargetRevisionId(state) ?? "") || DRAFT_PLACEHOLDER,
-      descendants: draft.config.kind === "rebase" && (draft.includeDescendants ?? false),
-      anchorSuffix: anchor ? `::${anchor}` : "",
-      arg: (pair: string) => {
-        const [s, l] = pair.split(" ");
-        return useShort ? s! : l!;
+      target,
+      arg,
+      sourceFlag: () => {
+        switch (sourceKind) {
+          case "branch": return arg("-b --branch");
+          case "source": return arg("-s --source");
+          default: return arg("-r --revisions");
+        }
       },
+      targetFlags: () => {
+        switch (targetKind) {
+          case "insert-before":
+            return `${arg("-B --insert-before")} ${target}`;
+          case "insert-after":
+            return `${arg("-A --insert-after")} ${target}`;
+          case "insert-between":
+            return `${arg("-A --insert-after")} ${anchor} ${arg("-B --insert-before")} ${target}`;
+          default:
+            return `${arg("-d --destination")} ${target}`;
+        }
+      },
+      skipEmptied: draft.rebaseSkipEmptied ?? false,
+      forceApply: overrides?.forceApply ?? false,
+      anchorSuffix: squashAnchor ? `::${squashAnchor}` : "",
     },
   };
 }
@@ -1635,18 +1741,50 @@ export function getSquashAnchorArg(state: AppState): "@" | "@-" {
   return workingCopy && workingCopy.isEmpty ? "@-" : "@";
 }
 
-function buildTaggedContext(state: AppState): { template: string; context: TemplateContext } | null {
-  const resolved = buildContext(state);
+function buildTaggedContext(
+  state: AppState,
+  overrides?: ContextOverrides,
+): { template: string; context: TemplateContext } | null {
+  const resolved = buildContext(state, overrides);
   if (!resolved) return null;
 
   const { context } = resolved;
   const targetRaw = context.target as string;
+  const draft = state.commandDraft!;
+  const arg = context.arg;
+  const sourceKind: RebaseSourceKind = draft.rebaseSourceKind ?? "revisions";
+  const targetKind: RebaseTargetKind = draft.rebaseTargetKind ?? "destination";
+  const anchorRaw = draft.rebaseInsertAfterRevisionId
+    ? revisionPrefix(state, draft.rebaseInsertAfterRevisionId)
+    : "";
+  const taggedTarget = new Tagged(targetRaw === DRAFT_PLACEHOLDER ? "" : targetRaw, "target");
+  const taggedAnchor = new Tagged(anchorRaw, "target");
+
   return {
     template: resolved.template,
     context: {
       ...context,
       selected: (context.selected as string[]).map((s) => new Tagged(s, "selected")),
-      target: new Tagged(targetRaw === DRAFT_PLACEHOLDER ? "" : targetRaw, "target"),
+      target: taggedTarget,
+      targetFlags: () => {
+        switch (targetKind) {
+          case "insert-before":
+            return `${arg("-B --insert-before")} ${taggedTarget}`;
+          case "insert-after":
+            return `${arg("-A --insert-after")} ${taggedTarget}`;
+          case "insert-between":
+            return `${arg("-A --insert-after")} ${taggedAnchor} ${arg("-B --insert-before")} ${taggedTarget}`;
+          default:
+            return `${arg("-d --destination")} ${taggedTarget}`;
+        }
+      },
+      sourceFlag: () => {
+        switch (sourceKind) {
+          case "branch": return arg("-b --branch");
+          case "source": return arg("-s --source");
+          default: return arg("-r --revisions");
+        }
+      },
     },
   };
 }
@@ -1670,7 +1808,10 @@ function buildInlineConfirmationCommandSegments(commandText: string): readonly C
   return segments;
 }
 
-export function getDisplayedCommandText(state: AppState): string {
+export function getDisplayedCommandText(
+  state: AppState,
+  overrides?: { forceApply?: boolean },
+): string {
   if (state.commandBar.manual) {
     return state.commandBar.text;
   }
@@ -1680,7 +1821,7 @@ export function getDisplayedCommandText(state: AppState): string {
     return inlineConfirmation.previewCommandByOption[inlineConfirmation.selectedOption];
   }
 
-  const resolved = buildContext(state);
+  const resolved = buildContext(state, overrides);
   if (!resolved) {
     return "";
   }
@@ -1739,7 +1880,7 @@ export function getOperationAffectedRowIds(state: AppState): ReadonlySet<string>
     return new Set();
   }
 
-  if (state.commandDraft.config.kind === "rebase" && state.commandDraft.includeDescendants && state.commandDraft.descendantRevisionIds) {
+  if (state.commandDraft.config.kind === "rebase" && state.commandDraft.rebaseSourceKind === "source" && state.commandDraft.descendantRevisionIds) {
     return new Set(
       state.revisions
         .filter((revision) => state.commandDraft?.descendantRevisionIds?.includes(revision.revisionId))

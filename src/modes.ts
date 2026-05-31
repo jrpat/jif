@@ -162,6 +162,12 @@ export const defaultKeymap: Keymap = {
   },
   rebase: {
     s: "rebase-descendants",
+    B: "rebase-source-branch",
+    b: "rebase-target-before",
+    a: "rebase-target-after",
+    i: "rebase-target-insert-between",
+    e: "rebase-toggle-skip-emptied",
+    "alt-enter": "rebase-confirm-force",
   },
   restore: {},
   squash: {

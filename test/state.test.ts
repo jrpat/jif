@@ -47,7 +47,9 @@ import {
   startCommandDraft,
   toggleFileSelection,
   getOperationAffectedRowIds,
-  toggleRebaseDescendants,
+  setRebaseSourceKind,
+  setRebaseTargetKind,
+  toggleRebaseSkipEmptied,
   toggleRevisionSelection,
   toggleSquashAnchor,
   expandElidedRevision,
@@ -639,8 +641,100 @@ test("rebase command text updates when descendants are toggled", () => {
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
   expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
 
-  state = toggleRebaseDescendants(state, ["aaaaaaaa", "bbbbbbbb"]);
+  state = setRebaseSourceKind(state, "source", ["aaaaaaaa", "bbbbbbbb"]);
   expect(getDisplayedCommandText(state)).toBe("rebase -s a -d b");
+
+  state = setRebaseSourceKind(state, "source", ["aaaaaaaa", "bbbbbbbb"]);
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+});
+
+test("rebase command text uses -b when source kind is branch", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+
+  state = setRebaseSourceKind(state, "branch");
+  expect(getDisplayedCommandText(state)).toBe("rebase -b a -d b");
+
+  state = setRebaseSourceKind(state, "branch");
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+});
+
+test("rebase target kind toggles between -d, --insert-before, and --insert-after", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+
+  state = setRebaseTargetKind(state, "insert-before");
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -B b");
+
+  state = setRebaseTargetKind(state, "insert-before");
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+
+  state = setRebaseTargetKind(state, "insert-after");
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -A b");
+
+  state = setRebaseTargetKind(state, "insert-after");
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+});
+
+test("rebase insert-between pins the focused row as --insert-after", () => {
+  const THIRD_ROW_ID = createRowId("33333333", "cccccccc");
+  let state = createState();
+  state = {
+    ...state,
+    revisions: [
+      ...state.revisions,
+      {
+        rowId: THIRD_ROW_ID,
+        revisionId: "cccccccc",
+        parentRevisionIds: [],
+        changeIdPrefixLength: 1,
+        commitId: "33333333",
+        description: "third",
+        localTimestamp: "2026-03-30 07:22:41",
+        bookmarks: [],
+        workspaces: [],
+        graphRows: ["○  "],
+        isEmpty: false,
+        hasConflict: false,
+        marker: "plain",
+        filesLoaded: true,
+        files: [],
+      },
+    ],
+  };
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+
+  state = setRebaseTargetKind(state, "insert-between");
+  state = moveFocus(state, 1);
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -A b -B c");
+
+  state = setRebaseTargetKind(state, "insert-between");
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d c");
+});
+
+test("rebase --skip-emptied toggle appends and removes the flag", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+
+  state = toggleRebaseSkipEmptied(state);
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b --skip-emptied");
+
+  state = toggleRebaseSkipEmptied(state);
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+});
+
+test("rebase force-apply override appends --ignore-immutable without mutating draft", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+
+  expect(getDisplayedCommandText(state, { forceApply: true })).toBe(
+    "rebase -r a -d b --ignore-immutable",
+  );
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
 });
 
 test("restore composes -f / -t and advances focus to the next revision", () => {
@@ -1166,7 +1260,7 @@ test("multiple selections with descendants produce repeated -s flags", () => {
   state = moveFocus(state, 1);
   state = toggleRevisionSelection(state);
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
-  state = toggleRebaseDescendants(state, []);
+  state = setRebaseSourceKind(state, "source", []);
   expect(getDisplayedCommandText(state)).toBe("rebase -s a -s b -d ░░░░");
 });
 

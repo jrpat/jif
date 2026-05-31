@@ -302,7 +302,10 @@ namespace Jif {
     selectNextInlineConfirmationOption: () => void;
     toggleShortFlags: () => void;
     cycleLayout: () => void;
-    toggleRebaseDescendants: () => void;
+    setRebaseSourceKind: (kind: "revisions" | "source" | "branch") => void;
+    setRebaseTargetKind: (kind: "destination" | "insert-before" | "insert-after" | "insert-between") => void;
+    toggleRebaseSkipEmptied: () => void;
+    confirmRebaseWithForce: () => void;
     toggleSquashAnchor: () => void;
     undo: () => void;
     redo: () => void;

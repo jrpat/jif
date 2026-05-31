@@ -120,11 +120,17 @@ Active when a revision is expanded and a file is focused. Inherits Normal.
 
 ### Rebase
 
-Active while previewing a rebase. Inherits Normal.
+Active while previewing a rebase. Inherits Normal. The default composition is `jj rebase -r <source> -d <target>`; each key below switches one knob of that composition and can be pressed again to toggle back to the default.
 
 | Key | Command | Description |
 |-----|---------|-------------|
-| `s` | rebase-descendants | Toggle whether descendants are included in the rebase |
+| `s` | rebase-descendants | Toggle `--source` (move the focused revision and its descendants) |
+| `B` | rebase-source-branch | Toggle `--branch` (rebase the whole branch containing the focused revision) |
+| `b` | rebase-target-before | Toggle `--insert-before` on the target |
+| `a` | rebase-target-after | Toggle `--insert-after` on the target |
+| `i` | rebase-target-insert-between | Pin the focused revision as `--insert-after`; navigate to pick `--insert-before` |
+| `e` | rebase-toggle-skip-emptied | Toggle `--skip-emptied` |
+| `alt-enter` | rebase-confirm-force | Run the composed rebase with `--ignore-immutable` |
 
 ### Squash
 

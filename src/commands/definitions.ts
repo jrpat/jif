@@ -1,5 +1,5 @@
 import { getExpandedRevision, getFocusedChildRevision, getFocusedNotification, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
-import type { AppState } from "../domain/types.ts";
+import type { AppState, RebaseSourceKind, RebaseTargetKind } from "../domain/types.ts";
 import { canSearchState } from "../search/matching.ts";
 
 export type JjCommandOptions = Readonly<{
@@ -55,7 +55,10 @@ export type CommandController = Readonly<{
   selectNextInlineConfirmationOption: () => void;
   toggleShortFlags: () => void;
   cycleLayout: () => void;
-  toggleRebaseDescendants: () => void;
+  setRebaseSourceKind: (kind: RebaseSourceKind) => void;
+  setRebaseTargetKind: (kind: RebaseTargetKind) => void;
+  toggleRebaseSkipEmptied: () => void;
+  confirmRebaseWithForce: () => void;
   toggleSquashAnchor: () => void;
   undo: () => void;
   redo: () => void;
@@ -499,9 +502,51 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   },
   {
     id: "rebase-descendants",
-    title: "Toggle Descendants",
-    description: "Include descendants in the rebase preview",
-    run: (controller) => controller.toggleRebaseDescendants(),
+    title: "Toggle --source",
+    description: "Rebase the focused revision and its descendants",
+    run: (controller) => controller.setRebaseSourceKind("source"),
+    group: "mode",
+  },
+  {
+    id: "rebase-source-branch",
+    title: "Toggle --branch",
+    description: "Rebase the whole branch containing the focused revision",
+    run: (controller) => controller.setRebaseSourceKind("branch"),
+    group: "mode",
+  },
+  {
+    id: "rebase-target-before",
+    title: "Toggle --insert-before",
+    description: "Insert the rebase before the target revision",
+    run: (controller) => controller.setRebaseTargetKind("insert-before"),
+    group: "mode",
+  },
+  {
+    id: "rebase-target-after",
+    title: "Toggle --insert-after",
+    description: "Insert the rebase after the target revision",
+    run: (controller) => controller.setRebaseTargetKind("insert-after"),
+    group: "mode",
+  },
+  {
+    id: "rebase-target-insert-between",
+    title: "Insert between",
+    description: "Pin the focused revision as --insert-after; navigate to choose --insert-before",
+    run: (controller) => controller.setRebaseTargetKind("insert-between"),
+    group: "mode",
+  },
+  {
+    id: "rebase-toggle-skip-emptied",
+    title: "Toggle --skip-emptied",
+    description: "Skip revisions that become empty after the rebase",
+    run: (controller) => controller.toggleRebaseSkipEmptied(),
+    group: "mode",
+  },
+  {
+    id: "rebase-confirm-force",
+    title: "Run with --ignore-immutable",
+    description: "Execute the composed rebase, ignoring immutable revisions",
+    run: (controller) => controller.confirmRebaseWithForce(),
     group: "mode",
   },
   {

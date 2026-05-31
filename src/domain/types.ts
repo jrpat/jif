@@ -88,12 +88,18 @@ export type CommandBarBookmarkContext = Readonly<{
   suggestions: readonly BookmarkSuggestion[];
 }>;
 
+export type RebaseSourceKind = "revisions" | "source" | "branch";
+export type RebaseTargetKind = "destination" | "insert-before" | "insert-after" | "insert-between";
+
 export type CommandDraft = Readonly<{
   config: CommandDraftConfig;
-  includeDescendants?: boolean;
   descendantRevisionIds?: readonly string[];
   includeAnchor?: boolean;
   anchorRevisionIds?: readonly string[];
+  rebaseSourceKind?: RebaseSourceKind;
+  rebaseTargetKind?: RebaseTargetKind;
+  rebaseSkipEmptied?: boolean;
+  rebaseInsertAfterRevisionId?: string;
 }>;
 
 export type StatusLevel = "info" | "success" | "warning" | "error";

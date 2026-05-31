@@ -6,7 +6,7 @@ import type {
   JjCommandOptions,
   ShellCommandOptions,
 } from "../commands/definitions.ts";
-import type { AppLayout, BookmarkSuggestion, ChangedFile, FocusMode, OperationLogEntry } from "../domain/types.ts";
+import type { AppLayout, BookmarkSuggestion, ChangedFile, FocusMode, OperationLogEntry, RebaseSourceKind, RebaseTargetKind } from "../domain/types.ts";
 import { getChangeIdFromRevisionId, getRevisionArg } from "../domain/revisionIds.ts";
 import { buildBookmarkSuggestions, type BookmarkTarget } from "../state/bookmarkSuggestions.ts";
 import { buildForceRetryPlan } from "../jj/forceRetry.ts";
@@ -598,20 +598,42 @@ export function createJifCommandController(args: Readonly<{
         focusMode: store.state.focusMode,
       });
     },
-    toggleRebaseDescendants() {
+    setRebaseSourceKind(kind: RebaseSourceKind) {
       const state = store.snapshot();
       if (state.commandDraft?.config.kind !== "rebase") {
+        return;
+      }
+
+      if (kind !== "source") {
+        store.actions.setRebaseSourceKind(kind);
         return;
       }
 
       void (async () => {
         try {
           const descendants = await client.resolveDescendants(getSelectedRevisionIds(state)[0] ?? "");
-          store.actions.toggleRebaseDescendants(descendants);
+          store.actions.setRebaseSourceKind("source", descendants);
         } catch (error) {
           reportError(store, error);
         }
       })();
+    },
+    setRebaseTargetKind(kind: RebaseTargetKind) {
+      store.actions.setRebaseTargetKind(kind);
+    },
+    toggleRebaseSkipEmptied() {
+      store.actions.toggleRebaseSkipEmptied();
+    },
+    confirmRebaseWithForce() {
+      const state = store.snapshot();
+      if (state.commandDraft?.config.kind !== "rebase") {
+        return;
+      }
+      const commandText = getDisplayedCommandText(state, { forceApply: true }).trim();
+      if (commandText.length === 0) {
+        return;
+      }
+      void args.executeCurrentCommand(commandText);
     },
     toggleSquashAnchor() {
       const state = store.snapshot();

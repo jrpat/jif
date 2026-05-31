@@ -152,10 +152,29 @@ test("rebase-descendants resolves in rebase mode but not normal mode", () => {
   expect(resolveForState("s", rebaseState)).toBe("rebase-descendants");
 });
 
+test("rebase mode binds source, target, modifier, and force-apply keys", () => {
+  const rebaseState = startCommandDraft(createState(), draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+
+  expect(resolveForState("B", rebaseState)).toBe("rebase-source-branch");
+  expect(resolveForState("b", rebaseState)).toBe("rebase-target-before");
+  expect(resolveForState("a", rebaseState)).toBe("rebase-target-after");
+  expect(resolveForState("i", rebaseState)).toBe("rebase-target-insert-between");
+  expect(resolveForState("e", rebaseState)).toBe("rebase-toggle-skip-emptied");
+  expect(resolveForState("alt-enter", rebaseState)).toBe("rebase-confirm-force");
+});
+
 test("getDirectCommandsForMode returns only rebase-local bindings", () => {
   const commands = getDirectCommandsForMode("rebase", defaultKeymap, commandDefinitions);
 
-  expect(commands.map((command) => command.id)).toEqual(["rebase-descendants"]);
+  expect(commands.map((command) => command.id).sort()).toEqual([
+    "rebase-confirm-force",
+    "rebase-descendants",
+    "rebase-source-branch",
+    "rebase-target-after",
+    "rebase-target-before",
+    "rebase-target-insert-between",
+    "rebase-toggle-skip-emptied",
+  ]);
 });
 
 test("R triggers restore-revision in normal mode", () => {

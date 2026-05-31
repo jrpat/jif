@@ -420,12 +420,20 @@ export function JifView(props: {
   });
 
   useKeyboard((event) => {
-    if (event.eventType === "release" || event.meta || event.option) {
+    if (event.eventType === "release" || event.meta) {
       return;
     }
 
     const state = store.snapshot();
-    const normalizedKey = event.ctrl ? `ctrl-${event.name}` : normalizeKey(event);
+    const altPrefix = event.option ? "alt-" : "";
+    const ctrlPrefix = event.ctrl ? "ctrl-" : "";
+    let baseKey: string | null;
+    if (event.ctrl || event.option) {
+      baseKey = event.name === "return" ? "enter" : event.name;
+    } else {
+      baseKey = normalizeKey(event);
+    }
+    const normalizedKey = baseKey === null ? null : `${altPrefix}${ctrlPrefix}${baseKey}`;
     logShortcutDebug("key-event", {
       name: event.name,
       sequence: event.sequence,

@@ -8,6 +8,8 @@ import type {
   CommandDraftConfig,
   FailedCommand,
   InlineConfirmation,
+  RebaseSourceKind,
+  RebaseTargetKind,
   RepositoryData,
   RevisionSummary,
   StatusLevel,
@@ -84,7 +86,9 @@ import {
   setEvologLoading,
   setRevisionFiles,
   touchStatusMessage,
-  toggleRebaseDescendants,
+  setRebaseSourceKind,
+  setRebaseTargetKind,
+  toggleRebaseSkipEmptied,
   toggleRevisionSelection,
   toggleSquashAnchor,
   updateStatusMessage,
@@ -317,8 +321,14 @@ export function createAppStore(
       toggleShortcutPanel() {
         mutate((currentState) => toggleShortcutPanel(currentState));
       },
-      toggleRebaseDescendants(descendantIds: readonly string[]) {
-        mutate((currentState) => toggleRebaseDescendants(currentState, descendantIds));
+      setRebaseSourceKind(kind: RebaseSourceKind, descendantIds?: readonly string[]) {
+        mutate((currentState) => setRebaseSourceKind(currentState, kind, descendantIds));
+      },
+      setRebaseTargetKind(kind: RebaseTargetKind) {
+        mutate((currentState) => setRebaseTargetKind(currentState, kind));
+      },
+      toggleRebaseSkipEmptied() {
+        mutate((currentState) => toggleRebaseSkipEmptied(currentState));
       },
       toggleSquashAnchor(anchorIds: readonly string[]) {
         mutate((currentState) => toggleSquashAnchor(currentState, anchorIds));

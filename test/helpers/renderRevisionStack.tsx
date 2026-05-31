@@ -389,7 +389,7 @@ async function renderCommandDraftChips(
   );
   store.actions.moveFocus(2);
   if (kind === "rebase" && includeDescendants) {
-    store.actions.toggleRebaseDescendants(["src", "desc"]);
+    store.actions.setRebaseSourceKind("source", ["src", "desc"]);
   }
 
   const rendered = await testRender(() => (

@@ -81,7 +81,10 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     selectNextInlineConfirmationOption: () => calls.push("selectNextInlineConfirmationOption"),
     toggleShortFlags: () => calls.push("toggleShortFlags"),
     cycleLayout: () => calls.push("cycleLayout"),
-    toggleRebaseDescendants: () => calls.push("toggleRebaseDescendants"),
+    setRebaseSourceKind: (kind) => calls.push(`setRebaseSourceKind(${kind})`),
+    setRebaseTargetKind: (kind) => calls.push(`setRebaseTargetKind(${kind})`),
+    toggleRebaseSkipEmptied: () => calls.push("toggleRebaseSkipEmptied"),
+    confirmRebaseWithForce: () => calls.push("confirmRebaseWithForce"),
     toggleSquashAnchor: () => calls.push("toggleSquashAnchor"),
     undo: () => calls.push("undo"),
     redo: () => calls.push("redo"),
@@ -591,7 +594,7 @@ test("dispatchGlobalKey routes s to rebase-descendants in rebase mode", () => {
   });
 
   expect(handled).toBeTrue();
-  expect(calls).toEqual(["toggleRebaseDescendants"]);
+  expect(calls).toEqual(["setRebaseSourceKind(source)"]);
 });
 
 test("dispatchGlobalKey routes s to squash-from-anchor in squash mode", () => {
