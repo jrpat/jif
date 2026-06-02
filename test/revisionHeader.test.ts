@@ -294,9 +294,10 @@ test("formatRelativeAgo clamps future timestamps to zero seconds", () => {
   expect(formatRelativeAgo("2026-06-01 12:00:00", now)).toBe("0s");
 });
 
-test("getRevisionSelectionMarker shows a light check for selected rows", () => {
-  expect(getRevisionSelectionMarker("selected")).toBe("✓ ");
-  expect(getRevisionSelectionMarker("focused")).toBe("");
+test("getRevisionSelectionMarker fills the one-character slot after the change id without shifting layout", () => {
+  expect(getRevisionSelectionMarker("selected")).toBe("✓");
+  expect(getRevisionSelectionMarker("focused")).toBe(" ");
+  expect(getRevisionSelectionMarker("default")).toBe(" ");
 });
 
 test("getRevisionCommandChipBgColor matches selected row accent", () => {

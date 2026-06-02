@@ -15,8 +15,8 @@ export type RevisionChangeIdColors = Readonly<{
   suffix: string | undefined;
 }>;
 
-export function getRevisionSelectionMarker(rowState: RevisionRowState): "✓ " | "" {
-  return rowState === "selected" ? "✓ " : "";
+export function getRevisionSelectionMarker(rowState: RevisionRowState): "✓" | " " {
+  return rowState === "selected" ? "✓" : " ";
 }
 
 export function getRevisionChangeIdDisplayLength(

@@ -1211,6 +1211,9 @@ export function RevisionItem(props: {
                           rowState={effectiveRowState()}
                           colors={colors()}
                         />
+                        <text fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
+                          {getRevisionSelectionMarker(effectiveRowState())}
+                        </text>
                         <box flexGrow={1} />
                         <DateChip text={relativeAgo()} colors={colors()} />
                         {layoutSpec().commandChip ? (
@@ -1257,11 +1260,13 @@ export function RevisionItem(props: {
                         rowState={effectiveRowState()}
                         colors={colors()}
                       />
+                      <text fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
+                        {getRevisionSelectionMarker(effectiveRowState())}
+                      </text>
+                      <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
                       <Show when={layoutSpec().sideChips.length > 0}>
                         <box width={1} />
                       </Show>
-                      <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
-                      <box width={1} />
                       <box flexGrow={1} flexBasis={0} minWidth={0} height={1} overflow="hidden" flexDirection="row">
                         <text
                           flexGrow={1}
@@ -1341,7 +1346,6 @@ export function RevisionItem(props: {
             height={1}
             overflow="hidden"
             flexDirection="row"
-            gap={1}
             backgroundColor={rowBackgroundColor()}
           >
             <Show
@@ -1358,8 +1362,12 @@ export function RevisionItem(props: {
                 rowState={effectiveRowState()}
                 colors={colors()}
               />
+              <text fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
+                {getRevisionSelectionMarker(effectiveRowState())}
+              </text>
               <Show when={layoutSpec().sideChips.length > 0}>
                 <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
+                <box width={1} />
               </Show>
               <text
                 flexGrow={1}
@@ -1371,6 +1379,7 @@ export function RevisionItem(props: {
               >
                 {props.revision.description}
               </text>
+              <box width={1} />
               <DateChip text={relativeAgo()} colors={colors()} />
             </Show>
           </box>
@@ -1469,15 +1478,9 @@ function RevisionChangeId(props: {
       colors: props.colors,
     })
   );
-  const selectionMarker = createMemo(() => getRevisionSelectionMarker(props.rowState));
 
   return (
     <box flexDirection="row" flexShrink={0}>
-      <Show when={selectionMarker().length > 0}>
-        <text fg={changeIdColors().prefix} attributes={TextAttributes.BOLD}>
-          {selectionMarker()}
-        </text>
-      </Show>
       <For each={segments()}>
         {(segment) => (
           <text
