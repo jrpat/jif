@@ -65,6 +65,12 @@ export const draftConfigs = {
     badgeText: "to",
     sourceBadgeText: "from",
   },
+  diff: {
+    kind: "diff" as const,
+    template: "diff ${selected.map(s => `${arg('-f --from')} ${s}`).join(' ')} ${arg('-t --to')} ${target}",
+    badgeText: "to",
+    sourceBadgeText: "from",
+  },
 } satisfies Record<string, CommandDraftConfig>;
 
 export type TemplateContext = Readonly<{

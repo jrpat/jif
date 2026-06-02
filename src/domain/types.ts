@@ -64,7 +64,7 @@ export type RepositoryData = Readonly<{
   revisions: readonly RevisionSummary[];
 }>;
 
-export type CommandDraftKind = "rebase" | "squash" | "bookmark-move" | "restore" | "interdiff";
+export type CommandDraftKind = "rebase" | "squash" | "bookmark-move" | "restore" | "interdiff" | "diff";
 
 export type CommandDraftConfig = Readonly<{
   kind: CommandDraftKind;

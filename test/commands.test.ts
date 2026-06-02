@@ -176,6 +176,20 @@ test("i starts interdiff in normal mode and composes jj interdiff -f/-t", () => 
   expect(drafted.commandDraft?.config.template).toContain("-t --to");
 });
 
+test("ctrl-d starts diff in normal mode and composes jj diff -f/-t", () => {
+  const state = createState();
+  expect(resolveForState("ctrl-d", state)).toBe("diff");
+
+  const drafted = startCommandDraft(state, draftConfigs.diff);
+  expect(getActiveMode(drafted)).toBe("diff");
+  expect(drafted.commandDraft?.config.kind).toBe("diff");
+  expect(drafted.commandDraft?.config.sourceBadgeText).toBe("from");
+  expect(drafted.commandDraft?.config.badgeText).toBe("to");
+  expect(drafted.commandDraft?.config.template).toContain("diff");
+  expect(drafted.commandDraft?.config.template).toContain("-f --from");
+  expect(drafted.commandDraft?.config.template).toContain("-t --to");
+});
+
 test("inline confirmation uses a dedicated mode with local option navigation", () => {
   let state = createState();
   state = {

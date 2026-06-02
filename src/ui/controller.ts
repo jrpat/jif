@@ -217,7 +217,10 @@ export function createJifCommandController(args: Readonly<{
         return;
       }
 
-      if (state.commandDraft?.config.kind === "interdiff") {
+      if (
+        state.commandDraft?.config.kind === "interdiff" ||
+        state.commandDraft?.config.kind === "diff"
+      ) {
         const commandText = getDisplayedCommandText(state).trim();
         const commandArgs = tokenizeCommandText(commandText);
         if (commandArgs.length === 0) {
@@ -299,6 +302,14 @@ export function createJifCommandController(args: Readonly<{
       }
 
       store.actions.startCommandDraft(draftConfigs.interdiff);
+    },
+    startDiff() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (!revision) {
+        return;
+      }
+
+      store.actions.startCommandDraft(draftConfigs.diff);
     },
     startRebase() {
       const revision = getFocusedRevision(store.snapshot());

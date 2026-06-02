@@ -352,6 +352,7 @@ namespace Jif {
     | "restore"
     | "squash"
     | "interdiff"
+    | "diff"
     | "command"
     | "revset"
     | "search"

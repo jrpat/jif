@@ -81,6 +81,7 @@ Viewing and navigating the revision log.
 | `A` | absorb | Run `jj absorb` |
 | `c` | commit | Commit the working-copy revision (`@`) |
 | `d` | show-diff | Show diff for the focused revision or file |
+| `ctrl-d` | diff | Show the diff between two revisions (`jj diff --from <source> --to <focused>`) |
 | `D` | describe | Edit description of the focused revision |
 | `e` | edit-revision | Edit the focused revision |
 | `i` | interdiff | Show the interdiff between the focused revision and another |
@@ -140,6 +141,10 @@ Active while previewing a restore. Inherits Normal. Composes `jj restore -f <sou
 ### Interdiff
 
 Active while previewing an interdiff. Inherits Normal. Composes `jj interdiff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run. The output opens in the diff viewer.
+
+### Diff
+
+Active while previewing a diff between two revisions. Inherits Normal. Composes `jj diff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run. The output opens in the diff viewer.
 
 ### Bookmark
 
