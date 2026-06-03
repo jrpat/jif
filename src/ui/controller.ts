@@ -669,6 +669,9 @@ export function createJifCommandController(args: Readonly<{
     prevSearchMatch() {
       store.actions.prevSearchMatch();
     },
+    toggleSearchIdOnly() {
+      store.actions.toggleSearchIdOnly();
+    },
     refreshRepository() {
       void args.refreshRepository();
     },

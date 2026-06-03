@@ -15,9 +15,6 @@ export type Mode =
   | "command"
   | "revset"
   | "search"
-  | "search-results"
-  | "op-log-search-results"
-  | "evolog-search-results"
   | "diff-viewer"
   | "notifications"
   | "bookmark"
@@ -45,9 +42,6 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   command: { id: "command", inputPassthrough: true, label: "Command" },
   revset: { id: "revset", inputPassthrough: true, label: "Revset" },
   search: { id: "search", inputPassthrough: true, label: "Search" },
-  "search-results": { id: "search-results", parent: "normal", inputPassthrough: false, label: "Search Results" },
-  "op-log-search-results": { id: "op-log-search-results", parent: "op-log", inputPassthrough: false, label: "Search Results" },
-  "evolog-search-results": { id: "evolog-search-results", parent: "evolog", inputPassthrough: false, label: "Search Results" },
   "diff-viewer": { id: "diff-viewer", inputPassthrough: false, label: "Diff" },
   notifications: { id: "notifications", inputPassthrough: false, label: "Notifications" },
   bookmark: { id: "bookmark", parent: "normal", inputPassthrough: false, label: "Bookmark" },
@@ -74,6 +68,8 @@ export const defaultKeymap: Keymap = {
     escape: "cancel",
     "ctrl-r": "refresh-repository",
     "ctrl-z": "suspend",
+    "ctrl-n": "search-next",
+    "ctrl-p": "search-prev",
     q: "quit",
     "~": "open-notifications",
   },
@@ -179,18 +175,9 @@ export const defaultKeymap: Keymap = {
   diff: {},
   command: {},
   revset: {},
-  search: {},
-  "search-results": {
-    "ctrl-n": "search-next",
-    "ctrl-p": "search-prev",
-  },
-  "op-log-search-results": {
-    "ctrl-n": "search-next",
-    "ctrl-p": "search-prev",
-  },
-  "evolog-search-results": {
-    "ctrl-n": "search-next",
-    "ctrl-p": "search-prev",
+  search: {
+    tab: "search-toggle-id-only",
+    "ctrl-i": alias("search-toggle-id-only"),
   },
   "diff-viewer": {
     j: "scroll-down",
@@ -235,12 +222,6 @@ export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "revset") return "revset";
   if (state.focusMode === "search") return "search";
   if (state.focusMode === "inline-confirmation") return "inline-confirmation";
-  if (state.searchQuery !== "" && state.searchScope === "operation-log" && state.focusMode === "op-log") {
-    return "op-log-search-results";
-  }
-  if (state.searchQuery !== "" && state.searchScope === "evolog" && state.focusMode === "evolog") {
-    return "evolog-search-results";
-  }
   if (state.focusMode === "diff-viewer") return "diff-viewer";
   if (state.focusMode === "op-log") return "op-log";
   if (state.focusMode === "evolog") return "evolog";
@@ -254,7 +235,6 @@ export function getActiveMode(state: AppState): Mode {
   if (state.commandDraft?.config.kind === "bookmark-move") return "bookmark-move";
   if (state.focusMode === "bookmark") return "bookmark";
   if (state.focusMode === "extras") return "extras";
-  if (state.searchQuery !== "" && state.searchScope === "revision-log") return "search-results";
   return "normal";
 }
 

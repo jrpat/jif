@@ -180,6 +180,7 @@ export function createInitialState(
     searchQuery: "",
     searchScope: null,
     searchStartIndex: null,
+    searchIdOnly: false,
     diffViewer: null,
     commandBarBookmark: null,
   };
@@ -947,14 +948,40 @@ export function openSearch(state: AppState): AppState {
     return state;
   }
 
+  const hasLiveQuery = state.searchQuery !== "" && state.searchScope === searchScope;
   const nextState = {
     ...state,
     inlineConfirmation: null,
-    searchQuery: "",
+    searchQuery: hasLiveQuery ? state.searchQuery : "",
     searchScope,
     searchStartIndex: getFocusedSearchIndex(state, searchScope),
+    searchIdOnly: hasLiveQuery ? state.searchIdOnly : false,
   };
   return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "search"]);
+}
+
+export function toggleSearchIdOnly(state: AppState): AppState {
+  const searchScope = state.searchScope ?? getSearchScopeForState(state);
+  if (searchScope === null) {
+    return state;
+  }
+
+  const nextState: AppState = {
+    ...state,
+    searchIdOnly: !state.searchIdOnly,
+    searchScope,
+  };
+
+  if (state.searchQuery === "" || state.focusMode !== "search") {
+    return nextState;
+  }
+
+  const firstMatchIndex = getSearchMatchItems(nextState, state.searchQuery)[0]?.index ?? -1;
+  if (firstMatchIndex < 0) {
+    return nextState;
+  }
+
+  return setFocusedSearchIndex(nextState, searchScope, firstMatchIndex);
 }
 
 export function setSearchText(state: AppState, query: string): AppState {
@@ -1001,6 +1028,7 @@ export function closeSearch(state: AppState): AppState {
       searchQuery: "",
       searchScope: null,
       searchStartIndex: null,
+      searchIdOnly: false,
     }, getBrowseFocusModeStack(state));
   }
 
@@ -1009,6 +1037,7 @@ export function closeSearch(state: AppState): AppState {
     searchQuery: "",
     searchScope: null,
     searchStartIndex: null,
+    searchIdOnly: false,
   };
 }
 

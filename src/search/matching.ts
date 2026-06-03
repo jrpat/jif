@@ -22,6 +22,14 @@ type SearchScopeDefinition = Readonly<{
   getSearchableItems: (state: AppState) => readonly SearchableItem[];
 }>;
 
+type MatchMode = Readonly<{ idOnly: boolean }>;
+
+function matchModeForState(
+  state: Pick<AppState, "searchScope" | "searchIdOnly">,
+): MatchMode {
+  return { idOnly: state.searchScope === "revision-log" && state.searchIdOnly };
+}
+
 const ANSI_ESCAPE_PATTERN = /\x1b\[[0-?]*[ -/]*[@-~]/g;
 const SEARCH_SCOPE_DEFINITIONS: Readonly<Record<SearchScopeId, SearchScopeDefinition>> = {
   "revision-log": {
@@ -31,7 +39,7 @@ const SEARCH_SCOPE_DEFINITIONS: Readonly<Record<SearchScopeId, SearchScopeDefini
     setFocusedIndex: (state, index) => ({ ...state, focusedRevisionIndex: index }),
     getItemCount: (state) => state.revisions.length,
     getSearchableItems: (state) => state.revisions.map((revision, index) =>
-      createRevisionSearchableItem(revision, index)
+      createRevisionSearchableItem(revision, index, state.searchIdOnly)
     ),
   },
   "operation-log": {
@@ -165,29 +173,55 @@ export function getSearchMatchItems(
     return [];
   }
 
-  return getSearchableItems(state).filter((item) => textMatchesQuery(item.text, query));
+  const mode = matchModeForState(state);
+  return getSearchableItems(state).filter((item) => textMatchesQuery(item.text, query, mode));
 }
 
 export function getSearchMatchItemIds(state: AppState): ReadonlySet<string> {
   return new Set(getSearchMatchItems(state).map((item) => item.id));
 }
 
-export function textMatchesQuery(text: string, query: string): boolean {
+export function getMatchModeForState(
+  state: Pick<AppState, "searchScope" | "searchIdOnly">,
+): MatchMode {
+  return matchModeForState(state);
+}
+
+export function textMatchesQuery(
+  text: string,
+  query: string,
+  mode: MatchMode = { idOnly: false },
+): boolean {
   if (query.length === 0) {
     return false;
+  }
+
+  if (mode.idOnly) {
+    return text.toLowerCase().startsWith(query.toLowerCase());
   }
 
   return text.toLowerCase().includes(query.toLowerCase());
 }
 
-export function findTextMatchRanges(text: string, query: string): readonly TextMatchRange[] {
+export function findTextMatchRanges(
+  text: string,
+  query: string,
+  mode: MatchMode = { idOnly: false },
+): readonly TextMatchRange[] {
   if (query.length === 0) {
     return [];
   }
 
-  const ranges: TextMatchRange[] = [];
   const lowerText = text.toLowerCase();
   const lowerQuery = query.toLowerCase();
+
+  if (mode.idOnly) {
+    return lowerText.startsWith(lowerQuery)
+      ? [{ start: 0, end: query.length }]
+      : [];
+  }
+
+  const ranges: TextMatchRange[] = [];
   let offset = 0;
 
   while (offset < text.length) {
@@ -210,17 +244,20 @@ export function stripAnsi(input: string): string {
 function createRevisionSearchableItem(
   revision: RevisionSummary,
   index: number,
+  idOnly: boolean,
 ): SearchableItem {
   return {
     scope: "revision-log",
     id: `revision-${revision.rowId}`,
     index,
-    text: [
-      revision.revisionId,
-      firstLine(revision.description),
-      ...revision.bookmarks,
-      ...revision.workspaces,
-    ].join("\n"),
+    text: idOnly
+      ? revision.revisionId
+      : [
+          revision.revisionId,
+          firstLine(revision.description),
+          ...revision.bookmarks,
+          ...revision.workspaces,
+        ].join("\n"),
   };
 }
 

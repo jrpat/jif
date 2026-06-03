@@ -329,7 +329,7 @@ export function JifView(props: {
   const showsSearchPrompt = createMemo(() =>
     !showsCommandPrompt() && !showsRevsetPrompt() &&
     hasVisibleSearchScope(store.state) &&
-    (store.state.focusMode === "search" || store.state.searchQuery !== "")
+    store.state.focusMode === "search"
   );
   const showsPersistentShortcutPanel = createMemo(() =>
     !showsCommandPrompt() && !showsRevsetPrompt() && !showsSearchPrompt() &&
@@ -868,6 +868,7 @@ export function JifView(props: {
             config={config}
             focused={store.state.focusMode === "search"}
             searchQuery={store.state.searchQuery}
+            searchIdOnly={store.state.searchIdOnly}
             onHeightChange={setPromptSurfaceHeight}
           />
         </Show>

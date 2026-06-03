@@ -306,6 +306,7 @@ export function SearchPrompt(props: {
   config: ResolvedAppConfig;
   focused: boolean;
   searchQuery: string;
+  searchIdOnly: boolean;
   onHeightChange?: (height: number) => void;
 }) {
   const { store, config } = props;
@@ -323,6 +324,8 @@ export function SearchPrompt(props: {
     }
   }, { release: true });
 
+  const prefix = createMemo(() => (props.searchIdOnly ? "id " : "/ "));
+
   return (
     <PromptShell
       config={config}
@@ -332,8 +335,8 @@ export function SearchPrompt(props: {
       focused={props.focused}
       onHeightChange={props.onHeightChange}
     >
-      <box width={2} flexDirection="row" flexShrink={0}>
-        <text fg={colors.textPrimary}>/ </text>
+      <box width={Array.from(prefix()).length} flexDirection="row" flexShrink={0}>
+        <text fg={props.searchIdOnly ? colors.chromeBorderFocus : colors.textPrimary}>{prefix()}</text>
       </box>
       <input
         ref={(el: InputRenderable) => {

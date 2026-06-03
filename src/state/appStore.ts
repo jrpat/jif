@@ -56,6 +56,7 @@ import {
   finalizeSearch,
   nextSearchMatch,
   prevSearchMatch,
+  toggleSearchIdOnly,
   dismissStatusMessage,
   expandElidedRevision,
   logEvent,
@@ -369,6 +370,9 @@ export function createAppStore(
       },
       prevSearchMatch() {
         mutate((currentState) => prevSearchMatch(currentState));
+      },
+      toggleSearchIdOnly() {
+        mutate((currentState) => toggleSearchIdOnly(currentState));
       },
     },
   };

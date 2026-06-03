@@ -7,7 +7,7 @@ import {
 } from "@opentui/core";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { AppState, SearchScopeId } from "../domain/types.ts";
-import { findTextMatchRanges, getActiveSearchScope, getSearchMatchItemIds } from "../search/matching.ts";
+import { findTextMatchRanges, getActiveSearchScope, getMatchModeForState, getSearchMatchItemIds } from "../search/matching.ts";
 
 type TextRenderableLike = Renderable & Readonly<{
   plainText?: string;
@@ -91,12 +91,14 @@ export function drawSearchHighlights(args: Readonly<{
     matchedItemIds,
   });
 
+  const matchMode = getMatchModeForState(args.state);
+
   for (const group of groups) {
     if (group.y < viewport.viewport.y || group.y >= viewport.viewport.y + viewport.viewport.height) {
       continue;
     }
 
-    for (const range of findTextMatchRanges(group.text, query)) {
+    for (const range of findTextMatchRanges(group.text, query, matchMode)) {
       for (const segment of group.segments) {
         const start = Math.max(range.start, segment.start);
         const end = Math.min(range.end, segment.end);

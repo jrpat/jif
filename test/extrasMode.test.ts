@@ -81,6 +81,8 @@ describe("extras mode", () => {
       "open-notifications",
       "quit",
       "refresh-repository",
+      "search-next",
+      "search-prev",
       "suspend",
     ]);
   });

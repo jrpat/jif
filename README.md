@@ -44,6 +44,8 @@ Available in every mode (mode-specific bindings can override these).
 |-----|---------|-------------|
 | `ctrl-r` | refresh-repository | Refresh the revision log |
 | `ctrl-z` | suspend | Suspend the application and return to the shell |
+| `ctrl-n` | search-next | Jump to the next search match (no-op when no search is active) |
+| `ctrl-p` | search-prev | Jump to the previous search match (no-op when no search is active) |
 | `escape` | cancel | Cancel command composition or leave input mode |
 | `~` | open-notifications | Open the notifications history panel |
 
@@ -191,14 +193,22 @@ export default {
 
 Unlike most modes, Extras does not inherit Normal-mode bindings — the entire alphabetic keyspace is yours to bind without shadowing built-in commands.
 
-### Search Results
+### Search
 
-Active after running a search in a searchable view. Search updates incrementally as you type and highlights visible matching text with inverse video. The revision log, operation log, and evolog are searchable; `Ctrl+n` and `Ctrl+p` move between matching entries until the search is cleared. Pressing Enter keeps the focused match; pressing Escape cancels the search and restores the focus from before search started.
+Press `/` from the revision log, operation log, or evolog to start an incremental search. Matching text is highlighted with inverse video as you type, and focus snaps to the first match.
 
-| Key | Command | Description |
-|-----|---------|-------------|
-| `Ctrl+n` | search-next | Jump to the next search match |
-| `Ctrl+p` | search-prev | Jump to the previous search match |
+- **Enter** dismisses the search input but leaves the highlights live. You stay in whatever mode you were in (Normal, Rebase, Squash, Op Log, …), so you can compose commands or multi-select against the matched revision.
+- **Escape (first press)** clears the highlights and the query. **Escape (second press)** runs whatever cancel that mode would normally do — for example, cancelling an in-flight rebase.
+- **`Ctrl+n` / `Ctrl+p`** (global) advance to the next / previous match as long as highlights are live.
+- Pressing `/` again while highlights are live re-opens the input pre-filled with the last query (and preserves the ID-only toggle below).
+
+While the search input is focused:
+
+| Key | Description |
+|-----|-------------|
+| `tab` / `ctrl-i` | Toggle ID-only mode — restricts matching to the revision-id field using case-insensitive prefix semantics (mirrors how `jj` disambiguates short change IDs). The prompt prefix switches from `/` to `id`. |
+
+Note: in terminals without enhanced keyboard support, `ctrl-i` and `tab` are indistinguishable and both fire this binding.
 
 ### Operation Log
 

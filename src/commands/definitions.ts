@@ -81,6 +81,7 @@ export type CommandController = Readonly<{
   openSearch: () => void;
   nextSearchMatch: () => void;
   prevSearchMatch: () => void;
+  toggleSearchIdOnly: () => void;
   refreshRepository: () => void;
   absorb: () => void;
   abandonRevision: () => void;
@@ -603,6 +604,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     id: "search-next",
     title: "Next Match",
     description: "Jump to the next search match",
+    canExecute: (state) => state.searchQuery !== "",
     run: (controller) => controller.nextSearchMatch(),
     group: "mode",
   },
@@ -610,7 +612,15 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     id: "search-prev",
     title: "Prev Match",
     description: "Jump to the previous search match",
+    canExecute: (state) => state.searchQuery !== "",
     run: (controller) => controller.prevSearchMatch(),
+    group: "mode",
+  },
+  {
+    id: "search-toggle-id-only",
+    title: "ID-only",
+    description: "Restrict the search to revision IDs, matched by prefix",
+    run: (controller) => controller.toggleSearchIdOnly(),
     group: "mode",
   },
   {

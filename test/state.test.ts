@@ -64,6 +64,7 @@ import {
   nextSearchMatch,
   prevSearchMatch,
   getSearchMatchIndices,
+  toggleSearchIdOnly,
   getInlineConfirmation,
   openInlineConfirmation,
   selectNextInlineConfirmationOption,
@@ -1769,4 +1770,109 @@ test("openDiffViewer accepts empty content without crashing", () => {
 
   expect(state.focusMode).toBe("diff-viewer");
   expect(state.diffViewer?.content).toBe("");
+});
+
+test("createInitialState defaults searchIdOnly to false", () => {
+  const state = createInitialState("/tmp/repo");
+  expect(state.searchIdOnly).toBe(false);
+});
+
+test("toggleSearchIdOnly flips searchIdOnly", () => {
+  let state = createState();
+  state = openSearch(state);
+  expect(state.searchIdOnly).toBe(false);
+
+  state = toggleSearchIdOnly(state);
+  expect(state.searchIdOnly).toBe(true);
+
+  state = toggleSearchIdOnly(state);
+  expect(state.searchIdOnly).toBe(false);
+});
+
+test("searchIdOnly matches revision IDs by prefix only", () => {
+  let state = createState();
+  state = openSearch(state);
+  state = toggleSearchIdOnly(state);
+  // "main" is the bookmark of the first revision, but should not match in id-only mode
+  state = setSearchText(state, "main");
+  // No revision ID starts with "main" → no match → focus preserved at 0
+  expect(state.focusedRevisionIndex).toBe(0);
+  expect(getSearchMatchIndices(state)).toEqual([]);
+
+  // Now query the actual ID prefix
+  state = setSearchText(state, "bbb");
+  expect(state.focusedRevisionIndex).toBe(1);
+  expect(getSearchMatchIndices(state)).toEqual([1]);
+});
+
+test("searchIdOnly substring match against id does NOT count", () => {
+  let state = createState();
+  state = openSearch(state);
+  state = toggleSearchIdOnly(state);
+  // "aaaaaaaa" is the first revision's full id; "aaa" is a prefix → matches first.
+  state = setSearchText(state, "aaa");
+  expect(getSearchMatchIndices(state)).toEqual([0]);
+
+  // "bbb" appears as substring inside "aaaaaaaa"? No. Does it match "bbbbbbbb"? Yes (prefix).
+  state = setSearchText(state, "bbb");
+  expect(getSearchMatchIndices(state)).toEqual([1]);
+});
+
+test("openSearch over empty query resets searchIdOnly", () => {
+  let state = createState();
+  state = openSearch(state);
+  state = toggleSearchIdOnly(state);
+  state = closeSearch(state);
+
+  state = openSearch(state);
+  expect(state.searchIdOnly).toBe(false);
+});
+
+test("openSearch over a non-empty query preserves searchIdOnly", () => {
+  let state = createState();
+  state = openSearch(state);
+  state = toggleSearchIdOnly(state);
+  state = setSearchText(state, "bbb");
+  state = finalizeSearch(state);
+  expect(state.searchQuery).toBe("bbb");
+  expect(state.searchIdOnly).toBe(true);
+
+  state = openSearch(state);
+  expect(state.searchQuery).toBe("bbb");
+  expect(state.searchIdOnly).toBe(true);
+});
+
+test("finalizeSearch in rebase mode preserves commandDraft", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase);
+  expect(state.commandDraft).not.toBeNull();
+
+  state = openSearch(state);
+  state = setSearchText(state, "second");
+  state = finalizeSearch(state);
+
+  // Search query stays live, search input is dismissed, rebase draft survives.
+  expect(state.focusMode).toBe("revisions");
+  expect(state.searchQuery).toBe("second");
+  expect(state.commandDraft).not.toBeNull();
+  expect(state.commandDraft?.config.kind).toBe("rebase");
+});
+
+test("cancelOrBlur in rebase mode clears finalized search highlights before cancelling draft", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase);
+  state = openSearch(state);
+  state = setSearchText(state, "second");
+  state = finalizeSearch(state);
+  expect(state.searchQuery).toBe("second");
+  expect(state.commandDraft).not.toBeNull();
+
+  // First Esc: clears highlights but keeps rebase draft.
+  state = cancelOrBlurState(state);
+  expect(state.searchQuery).toBe("");
+  expect(state.commandDraft).not.toBeNull();
+
+  // Second Esc: cancels the rebase draft.
+  state = cancelOrBlurState(state);
+  expect(state.commandDraft).toBeNull();
 });

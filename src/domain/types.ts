@@ -174,6 +174,7 @@ export type AppState = Readonly<{
   searchQuery: string;
   searchScope: SearchScopeId | null;
   searchStartIndex: number | null;
+  searchIdOnly: boolean;
   diffViewer: DiffViewerState | null;
   commandBarBookmark: CommandBarBookmarkContext | null;
 }>;

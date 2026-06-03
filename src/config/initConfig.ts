@@ -360,9 +360,6 @@ namespace Jif {
     | "command"
     | "revset"
     | "search"
-    | "search-results"
-    | "op-log-search-results"
-    | "evolog-search-results"
     | "diff-viewer"
     | "notifications";
 
