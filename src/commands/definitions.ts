@@ -1,4 +1,4 @@
-import { getExpandedRevision, getFocusedChildRevision, getFocusedNotification, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
+import { getAdjacentWorkspaceRevisionIndex, getExpandedRevision, getFocusedChildRevision, getFocusedNotification, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
 import type { AppState, RebaseSourceKind, RebaseTargetKind } from "../domain/types.ts";
 import { canSearchState } from "../search/matching.ts";
 
@@ -18,6 +18,7 @@ export type CommandController = Readonly<{
   moveFocusToParent: () => void;
   moveFocusToChild: () => void;
   moveFocusToNextDivergentSibling: () => void;
+  moveFocusToWorkspace: (direction: 1 | -1) => void;
   focusLogBottom: () => void;
   openOperationLog: () => void;
   openEvolog: () => void;
@@ -200,6 +201,20 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Jump to the next visible divergent sibling of the focused revision",
     canExecute: (state) => getNextDivergentSiblingIndex(state) !== null,
     run: (controller) => controller.moveFocusToNextDivergentSibling(),
+  },
+  {
+    id: "move-to-next-workspace",
+    title: "Next Workspace",
+    description: "Focus the next visible revision that has a workspace",
+    canExecute: (state) => getAdjacentWorkspaceRevisionIndex(state, 1) !== null,
+    run: (controller) => controller.moveFocusToWorkspace(1),
+  },
+  {
+    id: "move-to-prev-workspace",
+    title: "Previous Workspace",
+    description: "Focus the previous visible revision that has a workspace",
+    canExecute: (state) => getAdjacentWorkspaceRevisionIndex(state, -1) !== null,
+    run: (controller) => controller.moveFocusToWorkspace(-1),
   },
   {
     id: "jump-to-bottom",

@@ -100,6 +100,9 @@ export function createJifCommandController(args: Readonly<{
     moveFocusToNextDivergentSibling() {
       store.actions.moveFocusToNextDivergentSibling();
     },
+    moveFocusToWorkspace(direction: 1 | -1) {
+      store.actions.moveFocusToWorkspace(direction);
+    },
     openOperationLog() {
       store.actions.openOperationLog();
       store.actions.setOperationLogLoading(true);

@@ -55,6 +55,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     moveFocusToParent: () => calls.push("moveFocusToParent"),
     moveFocusToChild: () => calls.push("moveFocusToChild"),
     moveFocusToNextDivergentSibling: () => calls.push("moveFocusToNextDivergentSibling"),
+    moveFocusToWorkspace: (direction: 1 | -1) => calls.push(`moveFocusToWorkspace:${direction}`),
     focusLogBottom: () => calls.push("focusLogBottom"),
     openOperationLog: () => calls.push("openOperationLog"),
     openEvolog: () => calls.push("openEvolog"),

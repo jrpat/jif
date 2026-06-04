@@ -1,7 +1,7 @@
 import type { CommandDefinition } from "../commands/definitions.ts";
 import type { AppState } from "../domain/types.ts";
 import type { Mode } from "../modes.ts";
-import { commandCanExecute, getExpandedRevision, getFocusedChildRevision, getFocusedParentRevision, getFocusedRevision } from "../state/store.ts";
+import { commandCanExecute, getAdjacentWorkspaceRevisionIndex, getExpandedRevision, getFocusedChildRevision, getFocusedParentRevision, getFocusedRevision } from "../state/store.ts";
 
 const MODIFIER_PREFIXES = new Set([
   "a",
@@ -393,6 +393,8 @@ const NAVIGATION_COMMAND_IDS = new Set([
   "move-up",
   "move-parent",
   "move-child",
+  "move-to-next-workspace",
+  "move-to-prev-workspace",
   "expand",
   "collapse",
 ]);
@@ -414,6 +416,10 @@ function commandHasImmediateEffect(
       return getFocusedParentRevision(state) !== null;
     case "move-child":
       return getFocusedChildRevision(state) !== null;
+    case "move-to-next-workspace":
+      return getAdjacentWorkspaceRevisionIndex(state, 1) !== null;
+    case "move-to-prev-workspace":
+      return getAdjacentWorkspaceRevisionIndex(state, -1) !== null;
     case "toggle-revision-selection":
       return state.focusMode === "revisions" && getFocusedRevision(state) !== null;
     case "toggle-file-selection":

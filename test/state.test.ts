@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { AppState, OperationLogEntry } from "../src/domain/types.ts";
+import type { AppState, OperationLogEntry, RevisionSummary } from "../src/domain/types.ts";
 import { createRowId } from "../src/domain/rowIds.ts";
 import {
   applyRepositoryData,
@@ -36,6 +36,7 @@ import {
   moveFocusToChild,
   moveFocusToNextDivergentSibling,
   moveFocusToParent,
+  moveFocusToWorkspace,
   openDiffViewer,
   openOperationLog,
   openEvolog,
@@ -526,6 +527,110 @@ test("moveFocusToNextDivergentSibling exits file navigation when jumping", () =>
   expect(state.focusMode).toBe("files");
 
   state = moveFocusToNextDivergentSibling(state);
+
+  expect(state.focusMode).toBe("revisions");
+  expect(state.expandedRowId).toBeNull();
+  expect(state.focusedRevisionIndex).toBe(1);
+  expect(state.focusedFileIndex).toBe(0);
+});
+
+function createWorkspaceNavigationState(): AppState {
+  const revision = (
+    index: number,
+    workspaces: readonly string[],
+    marker: RevisionSummary["marker"] = "plain",
+  ): RevisionSummary => ({
+    rowId: `ws-row-${index}`,
+    revisionId: `wsrev${index}`,
+    parentRevisionIds: [],
+    changeIdPrefixLength: 1,
+    commitId: `${index}${index}${index}${index}${index}${index}${index}${index}`,
+    description: `revision ${index}`,
+    localTimestamp: "2026-03-30 07:22:39",
+    bookmarks: [],
+    workspaces,
+    graphRows: ["○  "],
+    isEmpty: false,
+    hasConflict: false,
+    marker,
+    filesLoaded: true,
+    files: [{ status: "M", path: `src/${index}.ts` }],
+  });
+
+  return {
+    ...createInitialState("/tmp/repo"),
+    loading: false,
+    focusedRevisionIndex: 0,
+    revisions: [
+      { ...revision(0, []), marker: "working-copy", graphRows: ["@  "] },
+      revision(1, ["alpha"]),
+      revision(2, []),
+      revision(3, ["beta"]),
+      revision(4, []),
+    ],
+  };
+}
+
+test("moveFocusToWorkspace jumps forward to the next visible revision with a workspace", () => {
+  let state = createWorkspaceNavigationState();
+
+  state = moveFocusToWorkspace(state, 1);
+  expect(state.focusedRevisionIndex).toBe(1);
+
+  state = moveFocusToWorkspace(state, 1);
+  expect(state.focusedRevisionIndex).toBe(3);
+});
+
+test("moveFocusToWorkspace does not wrap past the last workspace revision", () => {
+  let state = createWorkspaceNavigationState();
+  state = focusRevisionAt(state, 3);
+
+  const after = moveFocusToWorkspace(state, 1);
+
+  expect(after).toBe(state);
+  expect(after.focusedRevisionIndex).toBe(3);
+});
+
+test("moveFocusToWorkspace jumps backward in the opposite direction without wrapping", () => {
+  let state = createWorkspaceNavigationState();
+  state = focusRevisionAt(state, 4);
+
+  state = moveFocusToWorkspace(state, -1);
+  expect(state.focusedRevisionIndex).toBe(3);
+
+  state = moveFocusToWorkspace(state, -1);
+  expect(state.focusedRevisionIndex).toBe(1);
+
+  const after = moveFocusToWorkspace(state, -1);
+  expect(after).toBe(state);
+  expect(after.focusedRevisionIndex).toBe(1);
+});
+
+test("moveFocusToWorkspace skips elided revisions even if they carry a workspace", () => {
+  const base = createWorkspaceNavigationState();
+  const state: AppState = {
+    ...base,
+    focusedRevisionIndex: 0,
+    revisions: [
+      base.revisions[0]!,
+      { ...base.revisions[1]!, marker: "elided", workspaces: ["hidden"] },
+      base.revisions[2]!,
+      base.revisions[3]!,
+      base.revisions[4]!,
+    ],
+  };
+
+  const after = moveFocusToWorkspace(state, 1);
+
+  expect(after.focusedRevisionIndex).toBe(3);
+});
+
+test("moveFocusToWorkspace exits file navigation when jumping", () => {
+  let state = createWorkspaceNavigationState();
+  state = openFocusedRevision(state);
+  expect(state.focusMode).toBe("files");
+
+  state = moveFocusToWorkspace(state, 1);
 
   expect(state.focusMode).toBe("revisions");
   expect(state.expandedRowId).toBeNull();

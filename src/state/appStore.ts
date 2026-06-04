@@ -74,6 +74,7 @@ import {
   moveFocusToChild,
   moveFocusToNextDivergentSibling,
   moveFocusToParent,
+  moveFocusToWorkspace,
   openShortcutPanel,
   openFocusedRevision,
   pushEvent,
@@ -190,6 +191,9 @@ export function createAppStore(
       },
       moveFocusToNextDivergentSibling() {
         mutate((currentState) => moveFocusToNextDivergentSibling(currentState));
+      },
+      moveFocusToWorkspace(direction: 1 | -1) {
+        mutate((currentState) => moveFocusToWorkspace(currentState, direction));
       },
       openFocusedRevision() {
         mutate((currentState) => openFocusedRevision(currentState));

@@ -86,6 +86,8 @@ export const defaultKeymap: Keymap = {
     J: "move-parent",
     K: "move-child",
     "ctrl-o": "jump-to-next-divergent",
+    w: "move-to-next-workspace",
+    W: "move-to-prev-workspace",
     Z: alias("suspend"),
     l: "expand",
     right: alias("expand"),

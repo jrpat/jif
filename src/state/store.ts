@@ -451,6 +451,43 @@ export function moveFocusToNextDivergentSibling(state: AppState): AppState {
   }, ["revisions"]);
 }
 
+export function getAdjacentWorkspaceRevisionIndex(
+  state: AppState,
+  direction: 1 | -1,
+): number | null {
+  const total = state.revisions.length;
+  for (
+    let index = state.focusedRevisionIndex + direction;
+    index >= 0 && index < total;
+    index += direction
+  ) {
+    const candidate = state.revisions[index];
+    if (!candidate) continue;
+    if (candidate.marker === "elided") continue;
+    if (candidate.workspaces.length > 0) {
+      return index;
+    }
+  }
+
+  return null;
+}
+
+export function moveFocusToWorkspace(state: AppState, direction: 1 | -1): AppState {
+  const nextIndex = getAdjacentWorkspaceRevisionIndex(state, direction);
+  if (nextIndex === null) {
+    return state;
+  }
+
+  return replaceFocusModeStack({
+    ...state,
+    inlineConfirmation: null,
+    expandedRowId: null,
+    focusedRevisionIndex: nextIndex,
+    focusedFileIndex: 0,
+    selectedFilePaths: [],
+  }, ["revisions"]);
+}
+
 export function focusRevisionAt(state: AppState, index: number): AppState {
   if (state.revisions.length === 0) {
     return state;

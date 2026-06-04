@@ -60,6 +60,8 @@ Viewing and navigating the revision log.
 | `J` | move-parent | Follow the graph to the nearest visible parent, skipping branches |
 | `K` | move-child | Follow the graph to the nearest visible child, skipping branches |
 | `ctrl-o` | jump-to-next-divergent | When the focused revision is divergent (showing the `/N` suffix), cycle to the next visible sibling sharing its change-id |
+| `w` | move-to-next-workspace | Jump to the next visible revision that has a workspace, without wrapping |
+| `W` | move-to-prev-workspace | Jump to the previous visible revision that has a workspace, without wrapping |
 | `@` | jump-to-working-copy | Jump to the working-copy revision |
 | `G` | jump-to-bottom | Jump to the last revision in the log |
 
