@@ -45,7 +45,8 @@ export function dispatchGlobalKey(options: {
   if (!globalBinding) {
     return false;
   }
-  const globalCommandId = bindingCommand(globalBinding);
+  const rawGlobalCommandId = bindingCommand(globalBinding);
+  const globalCommandId = mode !== "normal" && rawGlobalCommandId === "quit" ? "cancel" : rawGlobalCommandId;
 
   const command = commands.find((c) => c.id === globalCommandId);
   if (!command) {

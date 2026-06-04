@@ -851,7 +851,7 @@ test("dispatchGlobalKey routes q to quit in normal mode", () => {
   expect(calls).toEqual(["quit"]);
 });
 
-test("dispatchGlobalKey routes q to quit in files mode", () => {
+test("dispatchGlobalKey routes q to cancelOrBlur in files mode", () => {
   const calls: string[] = [];
   const state: AppState = {
     ...createState(),
@@ -867,7 +867,26 @@ test("dispatchGlobalKey routes q to quit in files mode", () => {
   });
 
   expect(handled).toBeTrue();
-  expect(calls).toEqual(["quit"]);
+  expect(calls).toEqual(["cancelOrBlur"]);
+});
+
+test("dispatchGlobalKey routes q to cancelOrBlur in op-log mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "op-log",
+    focusModeStack: ["revisions", "op-log"],
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "q",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["cancelOrBlur"]);
 });
 
 test("dispatchGlobalKey does not route q to quit in command mode", () => {
