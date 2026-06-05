@@ -299,6 +299,7 @@ namespace Jif {
     editRevision: () => void;
     toggleSelection: () => void;
     toggleFileSelection: () => void;
+    selectAllFiles: () => void;
     restoreFiles: () => void;
     selectPreviousInlineConfirmationOption: () => void;
     selectNextInlineConfirmationOption: () => void;

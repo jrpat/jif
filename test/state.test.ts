@@ -43,6 +43,7 @@ import {
   openEvolog,
   closeEvolog,
   openFocusedRevision,
+  selectAllFiles,
   closeShortcutPanel,
   toggleShortcutPanel,
   setRevisionFiles,
@@ -1060,6 +1061,28 @@ test("toggleFileSelection adds and removes file paths", () => {
   state = toggleFileSelection(state);
   expect(state.selectedFilePaths).toEqual(["src/a.ts"]);
   expect(state.focusedFileIndex).toBe(1);
+});
+
+test("selectAllFiles selects every file, then clears when all are selected", () => {
+  let state = createState();
+  state = openFocusedRevision(state);
+  state = setRevisionFiles(state, FIRST_ROW_ID, [
+    { status: "M", path: "src/a.ts" },
+    { status: "A", path: "src/b.ts" },
+  ]);
+
+  state = selectAllFiles(state);
+  expect(state.selectedFilePaths).toEqual(["src/a.ts", "src/b.ts"]);
+
+  // A second press clears the selection
+  state = selectAllFiles(state);
+  expect(state.selectedFilePaths).toEqual([]);
+});
+
+test("selectAllFiles is a no-op outside files mode", () => {
+  const state = createState();
+  expect(state.focusMode).not.toBe("files");
+  expect(selectAllFiles(state)).toBe(state);
 });
 
 test("closeFocusedRevision clears file selections", () => {

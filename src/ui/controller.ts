@@ -540,6 +540,9 @@ export function createJifCommandController(args: Readonly<{
     toggleFileSelection() {
       store.actions.toggleFileSelection();
     },
+    selectAllFiles() {
+      store.actions.selectAllFiles();
+    },
     restoreFiles() {
       const state = store.snapshot();
       if (state.focusMode !== "files" || !state.expandedRowId) {

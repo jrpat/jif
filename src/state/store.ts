@@ -1209,6 +1209,25 @@ export function toggleFileSelection(state: AppState): AppState {
   };
 }
 
+export function selectAllFiles(state: AppState): AppState {
+  if (state.focusMode !== "files" || state.expandedRowId === null) {
+    return state;
+  }
+
+  const revision = getExpandedRevision(state);
+  if (!revision || revision.files.length === 0) {
+    return state;
+  }
+
+  const allPaths = revision.files.map((file) => file.path);
+  const allSelected = allPaths.every((path) => state.selectedFilePaths.includes(path));
+
+  return {
+    ...state,
+    selectedFilePaths: allSelected ? [] : allPaths,
+  };
+}
+
 export function startCommandDraft(
   state: AppState,
   config: CommandDraftConfig,

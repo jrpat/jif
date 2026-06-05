@@ -290,9 +290,11 @@ test("getShortcutPanelBindings narrows file mode shortcuts to file-relevant acti
   expect(ids).toContain("split");
   expect(ids).toContain("restore");
   expect(ids).toContain("toggle-file-selection");
+  expect(ids).toContain("select-all-files");
   expect(ids).toContain("collapse");
-  expect(ids).toContain("force-last-command");
   expect(ids).toContain("shortcut-panel");
+  // files mode does not inherit Normal, so revision and global power commands are absent
+  expect(ids).not.toContain("force-last-command");
   expect(ids).not.toContain("rebase");
   expect(ids).not.toContain("squash");
   expect(ids).not.toContain("new-revision");
@@ -319,33 +321,38 @@ test("getShortcutPanelBindings includes inline configured commands from the merg
 
 test("collectDirectCanonicalBindingsForMode is mode-specific and excludes parents and globals", () => {
   const keys = collectDirectCanonicalBindingsForMode("files", defaultKeymap).map((b) => b.key);
-  // files mode binds only s, r, d, and space directly
+  // files mode is self-contained: it binds its own navigation and file actions directly
   expect(keys).toContain("s");
   expect(keys).toContain("r");
   expect(keys).toContain("d");
   expect(keys).toContain(" ");
-  // inherited from normal parent — must NOT appear here
-  expect(keys).not.toContain("j");
+  expect(keys).toContain("a");
+  expect(keys).toContain("j");
+  expect(keys).toContain("k");
+  expect(keys).toContain("h");
+  // files mode does not inherit Normal, so revision-only keys are absent entirely
   expect(keys).not.toContain("G");
+  expect(keys).not.toContain("S");
   // globals — must NOT appear here
   expect(keys).not.toContain("q");
   expect(keys).not.toContain("ctrl-z");
 });
 
-test("collectInheritedAndGlobalCanonicalBindings returns parent + globals, minus direct shadowed", () => {
+test("collectInheritedAndGlobalCanonicalBindings returns globals only when a mode has no parent", () => {
   const keys = collectInheritedAndGlobalCanonicalBindings("files", defaultKeymap).map((b) => b.key);
-  // inherited from normal
-  expect(keys).toContain("j");
-  expect(keys).toContain("G");
-  // globals
+  // files mode no longer inherits Normal, so only globals remain in the bottom set
   expect(keys).toContain("q");
   expect(keys).toContain("ctrl-z");
   expect(keys).toContain("escape");
+  // Normal-only keys must NOT leak in via inheritance
+  expect(keys).not.toContain("G");
+  expect(keys).not.toContain("S");
   // direct files-mode bindings — must NOT appear in the bottom set
   expect(keys).not.toContain("s");
   expect(keys).not.toContain("r");
   expect(keys).not.toContain("d");
   expect(keys).not.toContain(" ");
+  expect(keys).not.toContain("a");
 });
 
 test("collectCanonicalBindingsForMode excludes alias bindings (canonical: false)", () => {

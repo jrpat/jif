@@ -199,6 +199,49 @@ test("i starts interdiff in normal mode and composes jj interdiff -f/-t", () => 
   expect(drafted.commandDraft?.config.template).toContain("-t --to");
 });
 
+function createFilesState(): AppState {
+  const base = createState();
+  return {
+    ...base,
+    focusMode: "files",
+    focusModeStack: ["revisions", "files"],
+    expandedRowId: "aaaaaaaa",
+    revisions: base.revisions.map((revision, index) =>
+      index === 0
+        ? {
+          ...revision,
+          filesLoaded: true,
+          files: [
+            { path: "src/app.ts", status: "M" },
+            { path: "src/util.ts", status: "M" },
+          ],
+        }
+        : revision
+    ),
+  };
+}
+
+test("a selects all files in files mode", () => {
+  const state = createFilesState();
+  expect(getActiveMode(state)).toBe("files");
+  expect(resolveForState("a", state)).toBe("select-all-files");
+});
+
+test("files mode does not inherit Normal revision commands", () => {
+  const state = createFilesState();
+  // Revision-level operations must not be reachable from the expanded file list
+  expect(resolveForState("S", state)).toBeNull();
+  expect(resolveForState("R", state)).toBeNull();
+  expect(resolveForState("n", state)).toBeNull();
+  expect(resolveForState("c", state)).toBeNull();
+  // File-scoped actions and navigation remain available
+  expect(resolveForState("j", state)).toBe("move-down");
+  expect(resolveForState("k", state)).toBe("move-up");
+  expect(resolveForState("h", state)).toBe("collapse");
+  expect(resolveForState(" ", state)).toBe("toggle-file-selection");
+  expect(resolveForState("s", state)).toBe("split");
+});
+
 test("= swaps from/to roles while composing interdiff", () => {
   const state = createState();
   const drafted = startCommandDraft(state, draftConfigs.interdiff);

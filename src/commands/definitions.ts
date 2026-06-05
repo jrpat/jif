@@ -52,6 +52,7 @@ export type CommandController = Readonly<{
   startBookmarkUntrack: () => void;
   toggleSelection: () => void;
   toggleFileSelection: () => void;
+  selectAllFiles: () => void;
   restoreFiles: () => void;
   untrackFiles: () => void;
   selectPreviousInlineConfirmationOption: () => void;
@@ -497,6 +498,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Select File",
     description: "Add or remove the focused file from the selection",
     run: (controller) => controller.toggleFileSelection(),
+    group: "mode",
+  },
+  {
+    id: "select-all-files",
+    title: "Select All Files",
+    description: "Select every changed file, or clear the selection if all are already selected",
+    run: (controller) => controller.selectAllFiles(),
     group: "mode",
   },
   {

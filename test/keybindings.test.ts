@@ -78,6 +78,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     editRevision: () => calls.push("editRevision"),
     toggleSelection: () => calls.push("toggleSelection"),
     toggleFileSelection: () => calls.push("toggleFileSelection"),
+    selectAllFiles: () => calls.push("selectAllFiles"),
     restoreFiles: () => calls.push("restoreFiles"),
     untrackFiles: () => calls.push("untrackFiles"),
     selectPreviousInlineConfirmationOption: () => calls.push("selectPreviousInlineConfirmationOption"),

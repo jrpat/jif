@@ -62,6 +62,7 @@ import {
   logEvent,
   openInlineConfirmation,
   pushStatusMessage,
+  selectAllFiles,
   selectNextInlineConfirmationOption,
   selectPreviousInlineConfirmationOption,
   startCommandDraft,
@@ -293,6 +294,9 @@ export function createAppStore(
       },
       toggleFileSelection() {
         mutate((currentState) => toggleFileSelection(currentState));
+      },
+      selectAllFiles() {
+        mutate((currentState) => selectAllFiles(currentState));
       },
       openInlineConfirmation(confirmation: InlineConfirmation) {
         mutate((currentState) => openInlineConfirmation(currentState, confirmation));

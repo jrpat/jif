@@ -30,7 +30,7 @@ export type ModeDefinition = Readonly<{
 
 export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   normal: { id: "normal", inputPassthrough: false, label: "Revisions" },
-  files: { id: "files", parent: "normal", inputPassthrough: false, label: "Files" },
+  files: { id: "files", inputPassthrough: false, label: "Files" },
   "op-log": { id: "op-log", inputPassthrough: false, label: "Op Log" },
   evolog: { id: "evolog", inputPassthrough: false, label: "Evolog" },
   "inline-confirmation": { id: "inline-confirmation", inputPassthrough: false, label: "Confirm" },
@@ -125,11 +125,19 @@ export const defaultKeymap: Keymap = {
     ";": "enter-extras-mode",
   },
   files: {
+    j: "move-down",
+    down: alias("move-down"),
+    k: "move-up",
+    up: alias("move-up"),
+    h: "collapse",
+    left: alias("collapse"),
     s: "split",
     r: "restore",
     d: "show-file-diff",
     "ctrl-u": "untrack",
     " ": "toggle-file-selection",
+    a: "select-all-files",
+    "?": "shortcut-panel",
   },
   "op-log": {
     j: "move-down",

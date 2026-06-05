@@ -114,14 +114,20 @@ Viewing and navigating the revision log.
 
 ### Files
 
-Active when a revision is expanded and a file is focused. Inherits Normal.
+Active when a revision is expanded and a file is focused. Self-contained — it does **not** inherit Normal, so revision-level operations (rebase, squash, new, …) are unavailable here; collapse back with `h` to reach them. Only `_global` shortcuts (quit, escape, refresh, …) remain.
 
 | Key | Command | Description |
 |-----|---------|-------------|
+| `j` / `↓` | move-down | Focus the next file |
+| `k` / `↑` | move-up | Focus the previous file |
+| `h` / `←` | collapse | Collapse the file list and return to the revision |
+| `space` | toggle-file-selection | Add or remove the focused file from the selection |
+| `a` | select-all-files | Select every changed file, or clear the selection if all are already selected |
+| `d` | show-file-diff | Show the diff for the focused file |
 | `r` | restore | Restore selected files to their state before this change |
 | `ctrl-u` | untrack | Stop tracking the focused file, or all selected files (`jj file untrack <paths>`) |
 | `s` | split | Split using the current file selection |
-| `space` | toggle-file-selection | Add or remove the focused file from the selection |
+| `?` | shortcut-panel | Expand or collapse the shortcut panel |
 
 ### Rebase
 
