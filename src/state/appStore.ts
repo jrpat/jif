@@ -266,7 +266,12 @@ export function createAppStore(
       },
       startCommandDraft(
         config: CommandDraftConfig,
-        options?: { descendantRevisionIds?: readonly string[]; focusDirection?: "down" | "up" },
+        options?: {
+          descendantRevisionIds?: readonly string[];
+          focusDirection?: "down" | "up";
+          presetRevisionIds?: readonly string[];
+          absorbSourceRevisionId?: string;
+        },
       ) {
         mutate((currentState) => startCommandDraft(currentState, config, options));
       },

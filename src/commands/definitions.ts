@@ -55,6 +55,7 @@ export type CommandController = Readonly<{
   selectAllFiles: () => void;
   restoreFiles: () => void;
   untrackFiles: () => void;
+  startAbsorb: () => void;
   selectPreviousInlineConfirmationOption: () => void;
   selectNextInlineConfirmationOption: () => void;
   toggleShortFlags: () => void;
@@ -87,7 +88,6 @@ export type CommandController = Readonly<{
   prevSearchMatch: () => void;
   toggleSearchIdOnly: () => void;
   refreshRepository: () => void;
-  absorb: () => void;
   abandonRevision: () => void;
   jj: (commandText: string, options?: JjCommandOptions) => Promise<void>;
   sh: (commandText: string, options?: ShellCommandOptions) => Promise<void>;
@@ -665,8 +665,9 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   {
     id: "absorb",
     title: "Absorb",
-    description: "Run jj absorb",
-    run: (controller) => controller.absorb(),
+    description: "Absorb working-copy changes into ancestor revisions, choosing the targets",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startAbsorb(),
     group: "global",
   },
   {

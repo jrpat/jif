@@ -178,6 +178,10 @@ export class JjClient {
     return this.resolveRevset(`${from}::${to}`);
   }
 
+  async resolveAbsorbTargets(source: string): Promise<readonly string[]> {
+    return this.resolveRevset(`mutable() & ::${source}-`);
+  }
+
   private async resolveRevset(revset: string): Promise<readonly string[]> {
     const shortRevisionId = 'change_id.shortest(8) ++ if(divergent, surround("/", "", change_offset))';
     const result = await this.runJj([

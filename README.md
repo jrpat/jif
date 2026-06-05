@@ -6,7 +6,7 @@
 
 jif is meant to be lived in, kept open, reached for constantly – your home for Jujutsu in the terminal. It comes out-of-the box with thoughtful ergonomics, consistent shortcuts, creature comforts, and fit and finish you feel immediately.
 
-But it's also *yours*, designed from the start to be molded to how you work. The configuration system is TypeScript executed at runtime, with all the app state and internal commands exposed. Nothing is hidden or artificially restricted. The defaults aren't a ceiling.
+But it's also *yours*, designed from the start to be molded to how you work. The configuration system is TypeScript executed at runtime, with all the app state and internal commands exposed. Nothing is hidden or artificially restricted.
 
 ## Command Composition
 
@@ -82,7 +82,7 @@ Viewing and navigating the revision log.
 | Key | Command | Description |
 |-----|---------|-------------|
 | `a` | abandon | Abandon the focused revision |
-| `A` | absorb | Run `jj absorb` |
+| `A` | absorb | Start an absorb operation, preselecting the default target revisions |
 | `c` | commit | Commit the working-copy revision (`@`) |
 | `d` | show-diff | Show diff for the focused revision or file |
 | `ctrl-d` | diff | Show the diff between two revisions (`jj diff --from <source> --to <focused>`) |
@@ -166,6 +166,10 @@ Active while previewing an interdiff. Inherits Normal. Composes `jj interdiff -f
 ### Diff
 
 Active while previewing a diff between two revisions. Inherits Normal. Composes `jj diff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run. The output opens in the diff viewer.
+
+### Absorb
+
+Active while composing an absorb. Inherits Normal. The source is the revision focused when you pressed `A`, and its mutable ancestors (the revisions `jj absorb` would consider by default) are preselected, each tagged with an `into` chip. Use `space` to toggle candidate targets — like selecting in Normal mode, the focus advances to the next revision on each toggle — then `enter` to apply, or `escape` to cancel. Leaving the preselected set unchanged runs plain `jj absorb` (with `--from <source>` when the source is not the working copy); changing it constrains the operation with `--into <selected revisions>`.
 
 ### Bookmark
 

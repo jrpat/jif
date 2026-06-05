@@ -73,6 +73,12 @@ export const draftConfigs = {
     badgeText: "to",
     sourceBadgeText: "from",
   },
+  absorb: {
+    kind: "absorb" as const,
+    template: "absorb${absorbFromSource ? ` ${arg('-f --from')} ${absorbSource}` : ''}${absorbConstrained ? ` ${arg('-t --into')} ${absorbTargets}` : ''}",
+    badgeText: "into",
+    sourceBadgeText: "into",
+  },
 } satisfies Record<string, CommandDraftConfig>;
 
 export type TemplateContext = Readonly<{
@@ -85,6 +91,10 @@ export type TemplateContext = Readonly<{
   skipEmptied: boolean;
   forceApply: boolean;
   swapped: boolean;
+  absorbConstrained: boolean;
+  absorbTargets: string | Tagged;
+  absorbFromSource: boolean;
+  absorbSource: string | Tagged;
 }>;
 
 export type CommandSegmentStyle = "command" | "selected" | "target" | "placeholder" | "files";
@@ -1231,11 +1241,35 @@ export function selectAllFiles(state: AppState): AppState {
 export function startCommandDraft(
   state: AppState,
   config: CommandDraftConfig,
-  options?: { descendantRevisionIds?: readonly string[]; focusDirection?: "down" | "up" },
+  options?: {
+    descendantRevisionIds?: readonly string[];
+    focusDirection?: "down" | "up";
+    presetRevisionIds?: readonly string[];
+    absorbSourceRevisionId?: string;
+  },
 ): AppState {
   const revision = getFocusedRevision(state);
   if (!revision) {
     return state;
+  }
+
+  if (options?.presetRevisionIds) {
+    const presetRowIds = state.revisions
+      .filter((candidate) => options.presetRevisionIds!.includes(candidate.revisionId))
+      .map((candidate) => candidate.rowId);
+
+    return {
+      ...state,
+      commandBar: createEmptyCommandBar(),
+      inlineConfirmation: null,
+      selectedRowIds: presetRowIds,
+      markedRowIds: presetRowIds,
+      commandDraft: {
+        config,
+        absorbDefaultRowIds: presetRowIds,
+        absorbSourceRevisionId: options.absorbSourceRevisionId,
+      },
+    };
   }
 
   const hasPreSelection = state.selectedRowIds.length > 0;
@@ -1366,10 +1400,14 @@ export function toggleRevisionSelection(state: AppState): AppState {
   const isSelected = ids.includes(focusedRevision.rowId);
   const isMarked = markedIds.includes(focusedRevision.rowId);
   const selectingImplicitDraftSource = state.commandDraft !== null && isSelected && !isMarked;
+  // In absorb mode the candidates start marked, so unmarking one would normally
+  // pin the focus. Reviewers step through the preselected list, so advance the
+  // focus on every toggle regardless of direction, mirroring normal selection.
+  const isAbsorbDraft = state.commandDraft?.config.kind === "absorb";
 
   return {
     ...state,
-    focusedRevisionIndex: isMarked
+    focusedRevisionIndex: isMarked && !isAbsorbDraft
       ? state.focusedRevisionIndex
       : clampIndex(state.focusedRevisionIndex + 1, state.revisions.length),
     selectedRowIds: selectingImplicitDraftSource
@@ -1731,6 +1769,18 @@ export function getCommandChipTextForRevision(
   }
 
   const draft = state.commandDraft;
+
+  if (draft.config.kind === "absorb") {
+    if (state.selectedRowIds.includes(rowId)) {
+      return draft.config.sourceBadgeText;
+    }
+    // A default target that has been deselected still shows a muted reminder.
+    if ((draft.absorbDefaultRowIds ?? []).includes(rowId)) {
+      return "default";
+    }
+    return null;
+  }
+
   const isRebase = draft.config.kind === "rebase";
   const targetKind: RebaseTargetKind = draft.rebaseTargetKind ?? "destination";
   const sourceKind: RebaseSourceKind = draft.rebaseSourceKind ?? "revisions";
@@ -1824,11 +1874,34 @@ function buildContext(
     ? getSquashAnchorArg(state)
     : "";
 
+  const isAbsorb = draft.config.kind === "absorb";
+  const absorbDefaultSet = new Set(draft.absorbDefaultRowIds ?? []);
+  const absorbSelectedSet = new Set(state.selectedRowIds);
+  const absorbSetChanged = absorbDefaultSet.size !== absorbSelectedSet.size ||
+    state.selectedRowIds.some((id) => !absorbDefaultSet.has(id));
+  const absorbConstrained = isAbsorb && absorbSetChanged && state.selectedRowIds.length > 0;
+  const absorbTargets = state.selectedRowIds
+    .map((id) => revisionPrefixFromRowId(state, id))
+    .join("|");
+  const absorbSourceRevision = isAbsorb && draft.absorbSourceRevisionId
+    ? state.revisions.find((revision) => revision.revisionId === draft.absorbSourceRevisionId)
+    : undefined;
+  // `--from` is implied for the working copy, so only emit it for other sources.
+  const absorbFromSource = isAbsorb && absorbSourceRevision !== undefined &&
+    absorbSourceRevision.marker !== "working-copy";
+  const absorbSource = absorbSourceRevision
+    ? getRevisionArg(absorbSourceRevision.revisionId, absorbSourceRevision.changeIdPrefixLength)
+    : "";
+
   return {
     template: draft.config.template,
     context: {
       selected: state.selectedRowIds.map((id) => revisionPrefixFromRowId(state, id)),
       target,
+      absorbConstrained,
+      absorbTargets,
+      absorbFromSource,
+      absorbSource,
       arg,
       sourceFlag: () => {
         switch (sourceKind) {
@@ -1887,6 +1960,10 @@ function buildTaggedContext(
       ...context,
       selected: (context.selected as string[]).map((s) => new Tagged(s, "selected")),
       target: taggedTarget,
+      absorbTargets: (context.selected as string[])
+        .map((s) => new Tagged(s, "selected").toString())
+        .join("|"),
+      absorbSource: new Tagged(context.absorbSource as string, "target"),
       targetFlags: () => {
         switch (targetKind) {
           case "insert-before":

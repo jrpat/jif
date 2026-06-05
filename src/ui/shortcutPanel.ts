@@ -271,6 +271,8 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Interdiff";
     case "diff":
       return "Diff";
+    case "absorb":
+      return "Absorb";
     case "command":
       return "Command";
     case "revset":

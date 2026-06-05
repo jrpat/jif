@@ -12,6 +12,7 @@ export type Mode =
   | "squash"
   | "interdiff"
   | "diff"
+  | "absorb"
   | "command"
   | "revset"
   | "search"
@@ -39,6 +40,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   squash: { id: "squash", parent: "normal", inputPassthrough: false, label: "Squash" },
   interdiff: { id: "interdiff", parent: "normal", inputPassthrough: false, label: "Interdiff" },
   diff: { id: "diff", parent: "normal", inputPassthrough: false, label: "Diff" },
+  absorb: { id: "absorb", parent: "normal", inputPassthrough: false, label: "Absorb" },
   command: { id: "command", inputPassthrough: true, label: "Command" },
   revset: { id: "revset", inputPassthrough: true, label: "Revset" },
   search: { id: "search", inputPassthrough: true, label: "Search" },
@@ -190,6 +192,7 @@ export const defaultKeymap: Keymap = {
     "=": "interdiff-swap",
   },
   diff: {},
+  absorb: {},
   command: {},
   revset: {},
   search: {
@@ -249,6 +252,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.commandDraft?.config.kind === "squash") return "squash";
   if (state.commandDraft?.config.kind === "interdiff") return "interdiff";
   if (state.commandDraft?.config.kind === "diff") return "diff";
+  if (state.commandDraft?.config.kind === "absorb") return "absorb";
   if (state.commandDraft?.config.kind === "bookmark-move") return "bookmark-move";
   if (state.focusMode === "bookmark") return "bookmark";
   if (state.focusMode === "extras") return "extras";

@@ -344,6 +344,19 @@ test("absorb resolves on shift-a in normal mode", () => {
   expect(resolveForState("A", state)).toBe("absorb");
 });
 
+test("absorb draft activates absorb mode and inherits normal navigation", () => {
+  const drafted = startCommandDraft(createState(), draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb"],
+  });
+
+  expect(getActiveMode(drafted)).toBe("absorb");
+  expect(drafted.commandDraft?.config.kind).toBe("absorb");
+  // Absorb has no mode-specific keys; it inherits Normal-mode bindings.
+  expect(resolveForState("j", drafted)).toBe("move-down");
+  expect(resolveForState(" ", drafted)).toBe("toggle-revision-selection");
+  expect(resolveForState("enter", drafted)).toBe("confirm");
+});
+
 test("short flags and layout cycling use - and _ respectively", () => {
   const state = createState();
   expect(resolveForState("-", state)).toBe("toggle-flags");

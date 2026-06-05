@@ -115,7 +115,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     prevSearchMatch: () => calls.push("prevSearchMatch"),
     toggleSearchIdOnly: () => calls.push("toggleSearchIdOnly"),
     refreshRepository: () => calls.push("refreshRepository"),
-    absorb: () => calls.push("absorb"),
+    startAbsorb: () => calls.push("startAbsorb"),
     abandonRevision: () => calls.push("abandonRevision"),
     enterBookmarkMode: () => calls.push("enterBookmarkMode"),
     enterExtrasMode: () => calls.push("enterExtrasMode"),
@@ -653,7 +653,7 @@ test("dispatchGlobalKey routes n and e to immediate revision actions", () => {
   expect(editCalls).toEqual(["editRevision"]);
 });
 
-test("dispatchGlobalKey routes shift-a to absorb", () => {
+test("dispatchGlobalKey routes shift-a to start absorb", () => {
   const calls: string[] = [];
   const state = createState();
 
@@ -665,7 +665,7 @@ test("dispatchGlobalKey routes shift-a to absorb", () => {
   });
 
   expect(handled).toBeTrue();
-  expect(calls).toEqual(["absorb"]);
+  expect(calls).toEqual(["startAbsorb"]);
 });
 
 test("dispatchGlobalKey routes s to rebase-descendants in rebase mode", () => {

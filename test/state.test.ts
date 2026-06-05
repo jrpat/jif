@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { AppState, OperationLogEntry, RevisionSummary } from "../src/domain/types.ts";
 import { createRowId } from "../src/domain/rowIds.ts";
+import { getActiveMode } from "../src/modes.ts";
 import {
   applyRepositoryData,
   cancelOrBlurState,
@@ -23,6 +24,7 @@ import {
   getFocusedRevisionArg,
   getFocusedInsertArg,
   focusWorkingCopy,
+  getCommandChipTextForRevision,
   getDisplayedCommandSegments,
   getDisplayedCommandText,
   getMarkedRowIds,
@@ -142,6 +144,49 @@ function createState(): AppState {
         filesLoaded: true,
         files: [{ status: "M", path: "src/b.ts" }],
       },
+    ],
+  };
+}
+
+const ABSORB_WC_ROW_ID = createRowId("a0000000", "aaaaaaaa");
+const ABSORB_ANC1_ROW_ID = createRowId("b0000000", "bbbbbbbb");
+const ABSORB_ANC2_ROW_ID = createRowId("c0000000", "cccccccc");
+const ABSORB_SRC_ROW_ID = createRowId("d0000000", "dddddddd");
+
+// Working copy plus three independent revisions, used to drive absorb where the
+// source is the focused revision and the candidates are passed in explicitly.
+function createAbsorbState(): AppState {
+  const base = (
+    rowId: string,
+    revisionId: string,
+    commitId: string,
+    marker: RevisionSummary["marker"],
+  ): RevisionSummary => ({
+    rowId,
+    revisionId,
+    parentRevisionIds: [],
+    changeIdPrefixLength: 1,
+    commitId,
+    description: revisionId,
+    localTimestamp: "2026-03-30 07:22:39",
+    bookmarks: [],
+    workspaces: [],
+    graphRows: ["○  "],
+    isEmpty: false,
+    hasConflict: false,
+    marker,
+    filesLoaded: true,
+    files: [],
+  });
+
+  return {
+    ...createInitialState("/tmp/repo"),
+    loading: false,
+    revisions: [
+      base(ABSORB_WC_ROW_ID, "aaaaaaaa", "a0000000", "working-copy"),
+      base(ABSORB_ANC1_ROW_ID, "bbbbbbbb", "b0000000", "plain"),
+      base(ABSORB_ANC2_ROW_ID, "cccccccc", "c0000000", "plain"),
+      base(ABSORB_SRC_ROW_ID, "dddddddd", "d0000000", "plain"),
     ],
   };
 }
@@ -853,6 +898,140 @@ test("restore composes -f / -t and advances focus to the next revision", () => {
 
   expect(state.focusedRevisionIndex).toBe(1);
   expect(getDisplayedCommandText(state)).toBe("restore -f a -t b");
+});
+
+test("absorb preselects the source's ancestor candidates and enters absorb mode", () => {
+  let state = createAbsorbState();
+  state = startCommandDraft(state, draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb", "cccccccc"],
+    absorbSourceRevisionId: "aaaaaaaa",
+  });
+
+  expect(getActiveMode(state)).toBe("absorb");
+  expect(state.selectedRowIds).toEqual([ABSORB_ANC1_ROW_ID, ABSORB_ANC2_ROW_ID]);
+  // Candidates are marked so a single space removes them rather than promoting.
+  expect(state.markedRowIds).toEqual([ABSORB_ANC1_ROW_ID, ABSORB_ANC2_ROW_ID]);
+  // Focus is not advanced when entering absorb.
+  expect(state.focusedRevisionIndex).toBe(0);
+});
+
+test("absorb chips each candidate but not the source revision", () => {
+  let state = createAbsorbState();
+  state = startCommandDraft(state, draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb", "cccccccc"],
+    absorbSourceRevisionId: "aaaaaaaa",
+  });
+
+  expect(getCommandChipTextForRevision(state, ABSORB_ANC1_ROW_ID)).toBe("into");
+  expect(getCommandChipTextForRevision(state, ABSORB_ANC2_ROW_ID)).toBe("into");
+  expect(getCommandChipTextForRevision(state, ABSORB_WC_ROW_ID)).toBeNull();
+});
+
+test("absorb runs plain absorb from the working copy while the set is unchanged", () => {
+  let state = createAbsorbState();
+  state = startCommandDraft(state, draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb", "cccccccc"],
+    absorbSourceRevisionId: "aaaaaaaa",
+  });
+
+  expect(getDisplayedCommandText(state)).toBe("absorb");
+});
+
+test("absorb constrains to selected targets once the set changes", () => {
+  let state = createAbsorbState();
+  state = startCommandDraft(state, draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb", "cccccccc"],
+    absorbSourceRevisionId: "aaaaaaaa",
+  });
+
+  // Deselect the second candidate (cccccccc), leaving only the first.
+  state = focusRevisionAt(state, 2);
+  state = toggleRevisionSelection(state);
+
+  expect(state.selectedRowIds).toEqual([ABSORB_ANC1_ROW_ID]);
+  // The still-selected candidate keeps its "into" chip; the deselected default
+  // keeps a muted "default" reminder instead of disappearing.
+  expect(getCommandChipTextForRevision(state, ABSORB_ANC1_ROW_ID)).toBe("into");
+  expect(getCommandChipTextForRevision(state, ABSORB_ANC2_ROW_ID)).toBe("default");
+  expect(getDisplayedCommandText(state)).toBe("absorb -t b");
+});
+
+test("absorb drops the chip entirely for a non-default revision", () => {
+  let state = createAbsorbState();
+  state = startCommandDraft(state, draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb"],
+    absorbSourceRevisionId: "aaaaaaaa",
+  });
+
+  // cccccccc was never a default candidate, so it shows no chip at all.
+  expect(getCommandChipTextForRevision(state, ABSORB_ANC2_ROW_ID)).toBeNull();
+});
+
+test("absorb returns to plain absorb when the original set is restored", () => {
+  let state = createAbsorbState();
+  state = startCommandDraft(state, draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb", "cccccccc"],
+    absorbSourceRevisionId: "aaaaaaaa",
+  });
+
+  state = focusRevisionAt(state, 2);
+  state = toggleRevisionSelection(state);
+  expect(getDisplayedCommandText(state)).toBe("absorb -t b");
+
+  // Re-select it: the set matches the default again regardless of order.
+  state = focusRevisionAt(state, 2);
+  state = toggleRevisionSelection(state);
+  expect(getDisplayedCommandText(state)).toBe("absorb");
+});
+
+test("absorb falls back to plain absorb when every target is deselected", () => {
+  let state = createAbsorbState();
+  state = startCommandDraft(state, draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb"],
+    absorbSourceRevisionId: "aaaaaaaa",
+  });
+
+  state = focusRevisionAt(state, 1);
+  state = toggleRevisionSelection(state);
+
+  expect(state.selectedRowIds).toEqual([]);
+  expect(getDisplayedCommandText(state)).toBe("absorb");
+});
+
+test("absorb emits --from when the source is not the working copy", () => {
+  let state = createAbsorbState();
+  state = startCommandDraft(state, draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb", "cccccccc"],
+    absorbSourceRevisionId: "dddddddd",
+  });
+
+  // Unchanged set: explicit --from, no --into.
+  expect(getDisplayedCommandText(state)).toBe("absorb -f d");
+
+  // Constrain the set: --from stays, --into is added.
+  state = focusRevisionAt(state, 2);
+  state = toggleRevisionSelection(state);
+  expect(getDisplayedCommandText(state)).toBe("absorb -f d -t b");
+});
+
+test("absorb advances focus after toggling a target in either direction", () => {
+  let state = createAbsorbState();
+  state = startCommandDraft(state, draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb", "cccccccc"],
+    absorbSourceRevisionId: "aaaaaaaa",
+  });
+
+  // Excluding a preselected default advances focus, like selecting in normal mode.
+  state = focusRevisionAt(state, 1);
+  state = toggleRevisionSelection(state);
+  expect(state.selectedRowIds).toEqual([ABSORB_ANC2_ROW_ID]);
+  expect(state.focusedRevisionIndex).toBe(2);
+
+  // Re-including the deselected default also advances focus.
+  state = focusRevisionAt(state, 1);
+  state = toggleRevisionSelection(state);
+  expect(state.selectedRowIds).toEqual([ABSORB_ANC2_ROW_ID, ABSORB_ANC1_ROW_ID]);
+  expect(state.focusedRevisionIndex).toBe(2);
 });
 
 test("pushEvent appends visible status messages instead of replacing them", () => {

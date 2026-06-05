@@ -202,3 +202,24 @@
 {"kind":"jj","args":["describe","-m","experiment: optimize graph measurement via length"]}
 {"kind":"jj","args":["--at-op","@-","describe","-m","experiment: optimize graph measurement via reduce"]}
 {"kind":"jj","args":["edit","main"]}
+{"kind":"jj","args":["new","root()"]}
+{"kind":"writeFile","path":"src/sections.ts","content":"export function sectionOne() {\n  const value = \"one\";\n  return value;\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(sections): add section one"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/sections.ts","content":"\nexport function sectionTwo() {\n  const value = \"two\";\n  return value;\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(sections): add section two"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/sections.ts","content":"\nexport function sectionThree() {\n  const value = \"three\";\n  return value;\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(sections): add section three"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/sections.ts","content":"\nexport function sectionFour() {\n  const value = \"four\";\n  return value;\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(sections): add section four"]}
+{"kind":"jj","args":["new"]}
+{"kind":"appendFile","path":"src/sections.ts","content":"\nexport function sectionFive() {\n  const value = \"five\";\n  return value;\n}\n"}
+{"kind":"jj","args":["describe","-m","feat(sections): add section five"]}
+{"kind":"jj","args":["bookmark","create","sample/absorb"]}
+{"kind":"jj","args":["new"]}
+{"kind":"writeFile","path":"src/sections.ts","content":"export function sectionOne() {\n  const value = \"one!\";\n  return value;\n}\n\nexport function sectionTwo() {\n  const value = \"two!\";\n  return value;\n}\n\nexport function sectionThree() {\n  const value = \"three!\";\n  return value;\n}\n\nexport function sectionFour() {\n  const value = \"four!\";\n  return value;\n}\n\nexport function sectionFive() {\n  const value = \"five!\";\n  return value;\n}\n"}
+{"kind":"jj","args":["describe","-m","wip(absorb): tweak every section"]}
+{"kind":"jj","args":["bookmark","set","sample/absorb"]}
+{"kind":"jj","args":["edit","main"]}

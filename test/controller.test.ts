@@ -74,6 +74,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   interdiffOutput?: string;
   interdiffCalls?: Array<readonly string[]>;
   anchorRange?: readonly string[];
+  absorbTargets?: readonly string[];
 }>) {
   const store = createAppStore(REPO_PATH);
   if (harnessOptions.revisions) {
@@ -83,6 +84,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   const runJjCommands: string[] = [];
   const runShellCommands: string[] = [];
   const runInteractiveCommands: string[] = [];
+  const resolveAbsorbSources: string[] = [];
   const runJjCalls: Array<{
     commandText: string;
     options?: { focusWorkingCopyAfterRefresh?: boolean; cwd?: string };
@@ -129,6 +131,10 @@ function createControllerHarness(harnessOptions: Readonly<{
       },
       async resolveRange() {
         return harnessOptions.anchorRange ?? ["aaaaaaaa", "bbbbbbbb"];
+      },
+      async resolveAbsorbTargets(source: string) {
+        resolveAbsorbSources.push(source);
+        return harnessOptions.absorbTargets ?? [];
       },
       async loadBookmarkTargets() {
         return [];
@@ -187,6 +193,7 @@ function createControllerHarness(harnessOptions: Readonly<{
     expandElidedCalls,
     persistedLayouts,
     editorTexts,
+    resolveAbsorbSources,
     get suspendCalls() {
       return suspendCalls;
     },
@@ -583,6 +590,97 @@ test("untrackFiles does nothing outside files mode", () => {
   harness.controller.untrackFiles();
 
   expect(harness.runJjCommands).toEqual([]);
+  harness.store.dispose();
+});
+
+test("startAbsorb preselects resolved targets and enters absorb mode", async () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "wc",
+        revisionId: "aaaaaaaa",
+        description: "working copy",
+        marker: "working-copy",
+      }),
+      createRevision({
+        rowId: "anc",
+        revisionId: "bbbbbbbb",
+        description: "ancestor",
+      }),
+    ],
+    absorbTargets: ["bbbbbbbb"],
+  });
+
+  harness.controller.startAbsorb();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(harness.resolveAbsorbSources).toEqual(["aaaaaaaa"]);
+  expect(harness.store.state.commandDraft?.config.kind).toBe("absorb");
+  expect(harness.store.state.commandDraft?.absorbSourceRevisionId).toBe("aaaaaaaa");
+  expect(harness.store.state.selectedRowIds).toEqual(["anc"]);
+  // Source is the working copy, so no explicit --from is emitted.
+  expect(getDisplayedCommandText(harness.store.state)).toBe("absorb");
+  harness.store.dispose();
+});
+
+test("startAbsorb sources the focused revision, not the working copy", async () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "wc",
+        revisionId: "aaaaaaaa",
+        description: "working copy",
+        marker: "working-copy",
+      }),
+      createRevision({
+        rowId: "src",
+        revisionId: "bbbbbbbb",
+        description: "focused source",
+      }),
+      createRevision({
+        rowId: "anc",
+        revisionId: "cccccccc",
+        description: "ancestor",
+      }),
+    ],
+    absorbTargets: ["cccccccc"],
+  });
+
+  // Focus the non-working-copy revision before starting absorb.
+  harness.store.actions.focusRevisionAt(1);
+  harness.controller.startAbsorb();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(harness.resolveAbsorbSources).toEqual(["bbbbbbbb"]);
+  expect(harness.store.state.commandDraft?.absorbSourceRevisionId).toBe("bbbbbbbb");
+  expect(harness.store.state.selectedRowIds).toEqual(["anc"]);
+  // Non-working-copy source emits an explicit --from; unchanged set adds no --into.
+  expect(getDisplayedCommandText(harness.store.state)).toBe("absorb -f b");
+  harness.store.dispose();
+});
+
+test("startAbsorb leaves no preselection when there are no mutable ancestors", async () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "wc",
+        revisionId: "aaaaaaaa",
+        description: "working copy",
+        marker: "working-copy",
+      }),
+    ],
+    absorbTargets: [],
+  });
+
+  harness.controller.startAbsorb();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(harness.store.state.commandDraft?.config.kind).toBe("absorb");
+  expect(harness.store.state.selectedRowIds).toEqual([]);
+  expect(getDisplayedCommandText(harness.store.state)).toBe("absorb");
   harness.store.dispose();
 });
 

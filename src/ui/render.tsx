@@ -1112,11 +1112,24 @@ export function RevisionItem(props: {
     props.state.selectedRowIds.includes(props.revision.rowId) &&
     !isCommandTarget()
   );
+  const isAbsorbDefaultDeselected = createMemo(() => {
+    const draft = props.state.commandDraft;
+    return draft?.config.kind === "absorb" &&
+      (draft.absorbDefaultRowIds ?? []).includes(props.revision.rowId) &&
+      !props.state.selectedRowIds.includes(props.revision.rowId);
+  });
   const commandChipBackgroundColor = createMemo(() =>
-    getRevisionCommandChipBgColor({
-      rowState: isCommandSource() ? "selected" : effectiveRowState(),
-      colors: colors(),
-    })
+    isAbsorbDefaultDeselected()
+      ? colors().chromeFillThree
+      : getRevisionCommandChipBgColor({
+        rowState: isCommandSource() ? "selected" : effectiveRowState(),
+        colors: colors(),
+      })
+  );
+  // The dim "default" chip needs foreground-derived text to stay legible on the
+  // faint track-colored fill; other chips keep the high-contrast background tone.
+  const commandChipForegroundColor = createMemo(() =>
+    isAbsorbDefaultDeselected() ? colors().textTertiary : colors().chromeFillOne
   );
   const relativeAgo = createMemo(() =>
     formatRelativeAgo(props.revision.localTimestamp, new Date(props.state.lastRefreshedAt))
@@ -1229,6 +1242,7 @@ export function RevisionItem(props: {
                           <CommandChip
                             text={layoutSpec().commandChip!.text}
                             backgroundColor={commandChipBackgroundColor()}
+                            foregroundColor={commandChipForegroundColor()}
                             colors={colors()}
                           />
                         ) : null}
@@ -1296,7 +1310,7 @@ export function RevisionItem(props: {
                         right={0}
                         top={0}
                         zIndex={1}
-                        fg={colors().chromeFillOne}
+                        fg={commandChipForegroundColor()}
                         bg={commandChipBackgroundColor()}
                       >
                         {` ${layoutSpec().commandChip!.text} `}
@@ -1398,7 +1412,7 @@ export function RevisionItem(props: {
               right={0}
               top={0}
               zIndex={50}
-              fg={colors().chromeFillOne}
+              fg={commandChipForegroundColor()}
               bg={commandChipBackgroundColor()}
             >
               {` ${layoutSpec().commandChip!.text} `}
@@ -1507,10 +1521,11 @@ function RevisionChangeId(props: {
 function CommandChip(props: {
   text: string;
   backgroundColor: string | undefined;
+  foregroundColor: string | undefined;
   colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
 }) {
   return (
-    <text fg={props.colors.chromeFillOne} bg={props.backgroundColor}>
+    <text fg={props.foregroundColor ?? props.colors.chromeFillOne} bg={props.backgroundColor}>
       {` ${props.text} `}
     </text>
   );

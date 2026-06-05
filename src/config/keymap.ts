@@ -114,6 +114,7 @@ function cloneKeymap(source: Keymap): MutableKeymap {
     squash: { ...source.squash },
     interdiff: { ...source.interdiff },
     diff: { ...source.diff },
+    absorb: { ...source.absorb },
     command: { ...source.command },
     revset: { ...source.revset },
     search: { ...source.search },

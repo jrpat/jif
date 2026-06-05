@@ -38,6 +38,7 @@ type ControllerClient = Readonly<{
   loadInterdiff(commandArgs: readonly string[]): Promise<string>;
   resolveDescendants(revisionId: string): Promise<readonly string[]>;
   resolveRange(from: string, to: string): Promise<readonly string[]>;
+  resolveAbsorbTargets(source: string): Promise<readonly string[]>;
   loadBookmarkTargets(): Promise<readonly BookmarkTarget[]>;
   loadAncestorChangeIds(focusedChangeId: string): Promise<readonly string[]>;
   loadDescendantChangeIds(focusedChangeId: string): Promise<readonly string[]>;
@@ -707,8 +708,23 @@ export function createJifCommandController(args: Readonly<{
     refreshRepository() {
       void args.refreshRepository();
     },
-    absorb() {
-      void args.runJjCommand("absorb");
+    startAbsorb() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (!revision) {
+        return;
+      }
+
+      void (async () => {
+        try {
+          const targets = await client.resolveAbsorbTargets(revision.revisionId);
+          store.actions.startCommandDraft(draftConfigs.absorb, {
+            presetRevisionIds: targets,
+            absorbSourceRevisionId: revision.revisionId,
+          });
+        } catch (error) {
+          reportError(store, error);
+        }
+      })();
     },
     abandonRevision() {
       const revisionArg = getFocusedRevisionArg(store.snapshot());
