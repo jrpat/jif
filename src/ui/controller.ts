@@ -612,6 +612,9 @@ export function createJifCommandController(args: Readonly<{
     focusLogBottom() {
       store.actions.focusLogBottom();
     },
+    focusCurrentOperation() {
+      store.actions.focusOperationLogEntryAt(0);
+    },
     openRevsetInput() {
       store.actions.openRevsetInput();
     },

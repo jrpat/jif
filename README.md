@@ -224,6 +224,7 @@ Active while the operation log panel is open. Does not inherit Normal.
 | `j` / `↓` | move-down | Focus the next operation |
 | `k` / `↑` | move-up | Focus the previous operation |
 | `G` | jump-to-bottom | Jump to the last operation in the log |
+| `@` | jump-to-current-operation | Jump to the current operation (top of the log) |
 | `r` | restore-operation | Restore the focused operation |
 | `R` | revert-operation | Revert the focused operation |
 | `d` | show-operation-diff | Show repository changes for the focused operation |

@@ -20,6 +20,7 @@ export type CommandController = Readonly<{
   moveFocusToNextDivergentSibling: () => void;
   moveFocusToWorkspace: (direction: 1 | -1) => void;
   focusLogBottom: () => void;
+  focusCurrentOperation: () => void;
   openOperationLog: () => void;
   openEvolog: () => void;
   openFocusedRevision: () => void;
@@ -224,6 +225,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Jump to Bottom",
     description: "Jump to the last revision in the log",
     run: (controller) => controller.focusLogBottom(),
+  },
+  {
+    id: "jump-to-current-operation",
+    title: "Jump to @",
+    description: "Jump to the current operation",
+    run: (controller) => controller.focusCurrentOperation(),
+    group: "mode",
   },
   {
     id: "open-operation-log",

@@ -137,6 +137,7 @@ export const defaultKeymap: Keymap = {
     k: "move-up",
     up: alias("move-up"),
     G: "jump-to-bottom",
+    "@": "jump-to-current-operation",
     r: "restore-operation",
     R: "revert-operation",
     d: "show-operation-diff",
