@@ -52,6 +52,7 @@ export type CommandController = Readonly<{
   toggleSelection: () => void;
   toggleFileSelection: () => void;
   restoreFiles: () => void;
+  untrackFiles: () => void;
   selectPreviousInlineConfirmationOption: () => void;
   selectNextInlineConfirmationOption: () => void;
   toggleShortFlags: () => void;
@@ -370,6 +371,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Restore",
     description: "Restore selected files to their state before this change",
     run: (controller) => controller.restoreFiles(),
+    group: "mode",
+  },
+  {
+    id: "untrack",
+    title: "Untrack",
+    description: "Stop tracking the focused file, or all selected files",
+    run: (controller) => controller.untrackFiles(),
     group: "mode",
   },
   {

@@ -78,6 +78,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     toggleSelection: () => calls.push("toggleSelection"),
     toggleFileSelection: () => calls.push("toggleFileSelection"),
     restoreFiles: () => calls.push("restoreFiles"),
+    untrackFiles: () => calls.push("untrackFiles"),
     selectPreviousInlineConfirmationOption: () => calls.push("selectPreviousInlineConfirmationOption"),
     selectNextInlineConfirmationOption: () => calls.push("selectNextInlineConfirmationOption"),
     toggleShortFlags: () => calls.push("toggleShortFlags"),
@@ -712,6 +713,34 @@ test("dispatchGlobalKey prefers current mode bindings over global bindings on th
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["startSplit"]);
+});
+
+test("dispatchGlobalKey routes ctrl-u to untrack in files mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "files",
+    expandedRowId: "aaaaaaaa",
+    revisions: createState().revisions.map((revision, index) =>
+      index === 0
+        ? {
+          ...revision,
+          filesLoaded: true,
+          files: [{ path: "src/app.ts", status: "M" }],
+        }
+        : revision
+    ),
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "ctrl-u",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["untrackFiles"]);
 });
 
 test("dispatchGlobalKey handles escape even in input modes", () => {

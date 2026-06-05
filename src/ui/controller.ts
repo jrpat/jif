@@ -564,6 +564,29 @@ export function createJifCommandController(args: Readonly<{
       const absoluteFilePaths = filePaths.map((filePath) => join(state.repoPath, filePath));
       void args.runJjCommand(quoteCommand(["restore", "-c", revisionArg, ...absoluteFilePaths]));
     },
+    untrackFiles() {
+      const state = store.snapshot();
+      if (state.focusMode !== "files" || !state.expandedRowId) {
+        return;
+      }
+
+      const revision = getExpandedRevision(state);
+      if (!revision) {
+        return;
+      }
+
+      const focusedPath = revision.files[state.focusedFileIndex]?.path;
+      const filePaths = state.selectedFilePaths.length > 0
+        ? state.selectedFilePaths
+        : focusedPath ? [focusedPath] : [];
+
+      if (filePaths.length === 0) {
+        return;
+      }
+
+      const absoluteFilePaths = filePaths.map((filePath) => join(state.repoPath, filePath));
+      void args.runJjCommand(quoteCommand(["file", "untrack", ...absoluteFilePaths]));
+    },
     selectPreviousInlineConfirmationOption() {
       store.actions.selectPreviousInlineConfirmationOption();
     },

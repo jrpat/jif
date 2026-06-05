@@ -128,6 +128,7 @@ export const defaultKeymap: Keymap = {
     s: "split",
     r: "restore",
     d: "show-file-diff",
+    "ctrl-u": "untrack",
     " ": "toggle-file-selection",
   },
   "op-log": {

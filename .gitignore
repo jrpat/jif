@@ -4,6 +4,7 @@ node_modules/
 .tmp/
 .home/
 .serena/
+.plan
 .plan/
 .planning/
 dist/

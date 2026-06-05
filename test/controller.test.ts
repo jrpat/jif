@@ -508,6 +508,84 @@ test("showFileDiff uses an absolute file path for focused files", async () => {
   harness.store.dispose();
 });
 
+test("untrackFiles untracks the focused file when nothing is selected", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "loaded on demand",
+        filesLoaded: true,
+        files: [
+          { path: "src/app.ts", status: "M" },
+          { path: "src/ui/render.tsx", status: "M" },
+        ],
+      }),
+    ],
+  });
+
+  harness.store.actions.openFocusedRevision();
+
+  harness.controller.untrackFiles();
+
+  expect(harness.runJjCommands).toEqual([
+    quoteCommand(["file", "untrack", join(REPO_PATH, "src/app.ts")]),
+  ]);
+  harness.store.dispose();
+});
+
+test("untrackFiles untracks all selected files when files are selected", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "loaded on demand",
+        filesLoaded: true,
+        files: [
+          { path: "src/app.ts", status: "M" },
+          { path: "src/ui/render.tsx", status: "M" },
+        ],
+      }),
+    ],
+  });
+
+  harness.store.actions.openFocusedRevision();
+  harness.store.actions.toggleFileSelection();
+  harness.store.actions.toggleFileSelection();
+
+  harness.controller.untrackFiles();
+
+  expect(harness.runJjCommands).toEqual([
+    quoteCommand([
+      "file",
+      "untrack",
+      join(REPO_PATH, "src/app.ts"),
+      join(REPO_PATH, "src/ui/render.tsx"),
+    ]),
+  ]);
+  harness.store.dispose();
+});
+
+test("untrackFiles does nothing outside files mode", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "not expanded",
+        filesLoaded: true,
+        files: [{ path: "src/app.ts", status: "M" }],
+      }),
+    ],
+  });
+
+  harness.controller.untrackFiles();
+
+  expect(harness.runJjCommands).toEqual([]);
+  harness.store.dispose();
+});
+
 test("cycleLayout persists the updated layout after mutating store state", () => {
   const harness = createControllerHarness({ revisions: [] });
 
