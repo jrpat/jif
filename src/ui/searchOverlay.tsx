@@ -1,6 +1,7 @@
 import {
   RGBA,
   isRenderable,
+  type MouseEvent,
   type OptimizedBuffer,
   type Renderable,
   type ScrollBoxRenderable,
@@ -51,6 +52,14 @@ export function SearchHighlightLayer(props: Readonly<{
       height="100%"
       shouldFill={false}
       zIndex={5}
+      onMouseScroll={(event: MouseEvent) => {
+        // This layer is a full-screen sibling of the log scrollbox, so it sits
+        // on top of it in the hit grid and would otherwise swallow wheel events
+        // (the event bubbles to the root box, never reaching the scrollbox).
+        // Forward scrolls to the viewport so the wheel keeps working while
+        // search highlights are visible.
+        props.getViewport()?.processMouseEvent(event);
+      }}
       renderAfter={function (this: Renderable, buffer: OptimizedBuffer) {
         drawSearchHighlights({
           buffer,
