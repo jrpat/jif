@@ -148,7 +148,8 @@ async function renderRevsetPromptHistoryRemoval() {
   try {
     await flushRender(rendered);
 
-    rendered.mockInput.pressArrow("up");
+    // The history list pre-focuses its bottom entry (index 0 = "aaa()"), so two
+    // upward steps land on "ccc()" (index 2).
     rendered.mockInput.pressArrow("up");
     rendered.mockInput.pressArrow("up");
     await flushRender(rendered);

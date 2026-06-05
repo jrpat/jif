@@ -310,7 +310,21 @@ test("applyRevsetQuery persists successful revset changes", async () => {
   expect(harness.store.state.revsetQuery).toBe("mine()");
   expect(harness.store.state.focusMode).toBe("revisions");
   expect(harness.refreshCalls).toEqual(["mine()"]);
-  expect(harness.recordedRevsetHistory).toEqual(["mine()"]);
+  // The revset switched away from ("old()") becomes the most recent history
+  // entry, so the previous revset is one keystroke away.
+  expect(harness.recordedRevsetHistory).toEqual(["old()"]);
+  expect(harness.savedActiveRevsets).toEqual(["mine()"]);
+  harness.store.dispose();
+});
+
+test("applyRevsetQuery does not record history when there is no previous revset", async () => {
+  const harness = createRuntimeHarness({});
+
+  harness.store.actions.openRevsetInput();
+
+  await harness.runtime.applyRevsetQuery("mine()");
+
+  expect(harness.recordedRevsetHistory).toEqual([]);
   expect(harness.savedActiveRevsets).toEqual(["mine()"]);
   harness.store.dispose();
 });

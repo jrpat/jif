@@ -376,12 +376,29 @@ export function RevsetPrompt(props: {
   const [text, setText] = createSignal(props.revsetQuery);
   const [completionItems, setCompletionItems] = createSignal<CompletionItem[]>([]);
   const [historyEntries, setHistoryEntries] = createSignal<string[]>([]);
+  const [historyMode, setHistoryMode] = createSignal(false);
   const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null);
   let input: InputRenderable | undefined;
 
+  // History mode (toggled with ctrl+l) lists previously applied revsets instead
+  // of revset-function completions. An empty input also falls back to history so
+  // there is always something useful to show.
+  const showsHistory = createMemo(() => historyMode() || text().trim().length === 0);
+
+  // The entry equal to the active revset is dropped: switching to the revset you
+  // are already on is a no-op. The revset you switched away from is recorded as
+  // the most recent entry on apply, so it surfaces at the bottom of this list.
+  const visibleHistory = createMemo(() => {
+    const current = props.revsetQuery.trim();
+    return historyEntries().filter((entry) => entry !== current);
+  });
+
   const suggestions = createMemo<AutocompleteListItem[]>(() => {
-    if (text().trim().length === 0) {
-      return historyEntries().map((entry) => ({
+    if (showsHistory()) {
+      // The revset prompt opens pre-filled with the active revset, so filtering
+      // the history by that text would usually hide everything. Show the full
+      // list and let the user browse it; selecting an entry replaces the input.
+      return visibleHistory().map((entry) => ({
         id: `history:${entry}`,
         tag: "hs",
         text: entry,
@@ -412,6 +429,16 @@ export function RevsetPrompt(props: {
     })();
   });
 
+  // Whenever the history list is the one on screen, pre-focus its bottom entry
+  // (index 0, the most recently used revset). With bottom-to-top flow that is
+  // the entry nearest the input, so Enter immediately switches to it. Only fills
+  // an empty selection, so it never fights the user's own navigation.
+  createEffect(() => {
+    if (showsHistory() && suggestions().length > 0) {
+      setSelectedIndex((current) => current ?? 0);
+    }
+  });
+
   const displayedText = createMemo(() => {
     const index = selectedIndex();
     if (index === null) {
@@ -432,6 +459,21 @@ export function RevsetPrompt(props: {
 
   useKeyboard((event) => {
     if (event.eventType === "release" || event.meta || event.option) {
+      return;
+    }
+
+    // ctrl+l toggles history: the revset prompt opens on ctrl+l, so double-tapping
+    // l without releasing ctrl switches to the history list. Entering history mode
+    // with nothing to show is a silent no-op.
+    if (event.ctrl && event.name === "l") {
+      event.preventDefault();
+      if (!historyMode() && visibleHistory().length === 0) {
+        return;
+      }
+      batch(() => {
+        setHistoryMode((on) => !on);
+        setSelectedIndex(null);
+      });
       return;
     }
 
@@ -483,6 +525,7 @@ export function RevsetPrompt(props: {
       selectedIndex={selectedIndex()}
       flow={flow}
       focused
+      borderStyle={historyMode() ? "double" : "single"}
       onHeightChange={props.onHeightChange}
     >
       <Show when={text().length === 0}>
@@ -518,6 +561,7 @@ function PromptShell(props: {
   selectedIndex: number | null;
   flow: AutocompleteFlow;
   focused: boolean;
+  borderStyle?: "single" | "double";
   onHeightChange?: (height: number) => void;
   children: any;
 }) {
@@ -551,7 +595,7 @@ function PromptShell(props: {
         flexDirection="row"
         paddingX={1}
         border
-        borderStyle="single"
+        borderStyle={props.borderStyle ?? "single"}
         borderColor={props.focused ? colors.chromeBorderFocus : colors.chromeBorderIdle}
         backgroundColor={props.focused ? colors.chromeFillTwo : colors.chromeFillOne}
       >

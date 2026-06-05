@@ -145,7 +145,11 @@ export function createJifRuntime(args: Readonly<{
       if (success) {
         const workspaceRoot = args.getWorkspaceRoot();
         if (workspaceRoot) {
-          await persistence.recordRevsetHistory(workspaceRoot, query);
+          // Record the revset we switched *away from* as the most recent entry
+          // so the previous revset is one keystroke away for quick toggling.
+          if (previousQuery.trim().length > 0 && previousQuery !== query) {
+            await persistence.recordRevsetHistory(workspaceRoot, previousQuery);
+          }
           await persistence.saveActiveRevset(workspaceRoot, query);
         }
         return;

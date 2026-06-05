@@ -300,6 +300,7 @@ Active in the command bar (`:`), revset prompt (`L`), and search prompt (`/`). K
 | `ctrl-j` / `ctrl-n` / `↓` | Move to the next history entry or suggestion |
 | `ctrl-k` / `ctrl-p` / `↑` | Move to the previous history entry or suggestion |
 | `ctrl-x` | Delete the highlighted suggestion from saved history (no-op for suggestions from non-history sources like revset completions) |
+| `ctrl-l` | (revset prompt `L`) Toggle the suggestion list between revset-function completions and previously applied revsets (double-tap `l` while holding `ctrl`, since the prompt itself opens on `ctrl-l`); history mode is shown with a double border, and is a no-op when there is no history. Selecting a history entry replaces the whole input. The revset you switch away from is saved as the most recent entry and pre-focused (the active revset is hidden), so re-applying toggles between two revsets |
 | `ctrl-'` | (`:` and `>` command bars) Insert the focused item's id at the cursor: the revision's shortest unique change-id prefix in Normal, the operation id in Op Log, the entry id in Evolog |
 | `enter` | Submit the current input (run the command, apply the revset, finalize the search) |
 | `tab` / `shift-tab` | Move to the next / previous suggestion |
