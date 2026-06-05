@@ -308,6 +308,7 @@ namespace Jif {
     toggleRebaseSkipEmptied: () => void;
     confirmRebaseWithForce: () => void;
     toggleSquashAnchor: () => void;
+    toggleInterdiffSwap: () => void;
     undo: () => void;
     redo: () => void;
     focusWorkingCopy: () => void;

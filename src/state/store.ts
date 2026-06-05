@@ -63,7 +63,7 @@ export const draftConfigs = {
   },
   interdiff: {
     kind: "interdiff" as const,
-    template: "interdiff ${selected.map(s => `${arg('-f --from')} ${s}`).join(' ')} ${arg('-t --to')} ${target}",
+    template: "interdiff ${selected.map(s => `${arg(swapped ? '-t --to' : '-f --from')} ${s}`).join(' ')} ${arg(swapped ? '-f --from' : '-t --to')} ${target}",
     badgeText: "to",
     sourceBadgeText: "from",
   },
@@ -84,6 +84,7 @@ export type TemplateContext = Readonly<{
   targetFlags: () => string;
   skipEmptied: boolean;
   forceApply: boolean;
+  swapped: boolean;
 }>;
 
 export type CommandSegmentStyle = "command" | "selected" | "target" | "placeholder" | "files";
@@ -1303,6 +1304,20 @@ export function toggleRebaseSkipEmptied(state: AppState): AppState {
   };
 }
 
+export function toggleInterdiffSwap(state: AppState): AppState {
+  if (state.commandDraft?.config.kind !== "interdiff") {
+    return state;
+  }
+
+  return {
+    ...state,
+    commandDraft: {
+      ...state.commandDraft,
+      interdiffSwapped: !state.commandDraft.interdiffSwapped,
+    },
+  };
+}
+
 export function toggleSquashAnchor(
   state: AppState,
   anchorIds: readonly string[] = [],
@@ -1700,6 +1715,9 @@ export function getCommandChipTextForRevision(
   const isRebase = draft.config.kind === "rebase";
   const targetKind: RebaseTargetKind = draft.rebaseTargetKind ?? "destination";
   const sourceKind: RebaseSourceKind = draft.rebaseSourceKind ?? "revisions";
+  const swapped = draft.config.kind === "interdiff" && (draft.interdiffSwapped ?? false);
+  const targetBadge = swapped ? draft.config.sourceBadgeText : draft.config.badgeText;
+  const sourceBadge = swapped ? draft.config.badgeText : draft.config.sourceBadgeText;
 
   if (isRebase && draft.rebaseInsertAfterRevisionId) {
     const anchorRow = state.revisions.find(
@@ -1718,14 +1736,14 @@ export function getCommandChipTextForRevision(
         case "insert-between": return "before";
       }
     }
-    return draft.config.badgeText;
+    return targetBadge;
   }
 
   if (state.selectedRowIds.includes(rowId)) {
     if (isRebase && sourceKind === "branch") {
       return "branch";
     }
-    return draft.config.sourceBadgeText;
+    return sourceBadge;
   }
 
   return null;
@@ -1814,6 +1832,7 @@ function buildContext(
       },
       skipEmptied: draft.rebaseSkipEmptied ?? false,
       forceApply: overrides?.forceApply ?? false,
+      swapped: draft.interdiffSwapped ?? false,
       anchorSuffix: squashAnchor ? `::${squashAnchor}` : "",
     },
   };

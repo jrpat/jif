@@ -90,6 +90,7 @@ import {
   touchStatusMessage,
   setRebaseSourceKind,
   setRebaseTargetKind,
+  toggleInterdiffSwap,
   toggleRebaseSkipEmptied,
   toggleRevisionSelection,
   toggleSquashAnchor,
@@ -337,6 +338,9 @@ export function createAppStore(
       },
       toggleSquashAnchor(anchorIds: readonly string[]) {
         mutate((currentState) => toggleSquashAnchor(currentState, anchorIds));
+      },
+      toggleInterdiffSwap() {
+        mutate((currentState) => toggleInterdiffSwap(currentState));
       },
       focusWorkingCopy() {
         mutate((currentState) => focusWorkingCopy(currentState));

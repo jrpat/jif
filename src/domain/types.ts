@@ -100,6 +100,7 @@ export type CommandDraft = Readonly<{
   rebaseTargetKind?: RebaseTargetKind;
   rebaseSkipEmptied?: boolean;
   rebaseInsertAfterRevisionId?: string;
+  interdiffSwapped?: boolean;
 }>;
 
 export type StatusLevel = "info" | "success" | "warning" | "error";

@@ -153,6 +153,10 @@ Active while previewing a restore. Inherits Normal. Composes `jj restore -f <sou
 
 Active while previewing an interdiff. Inherits Normal. Composes `jj interdiff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run. The output opens in the diff viewer.
 
+| Key | Command | Description |
+|-----|---------|-------------|
+| `=` | interdiff-swap | Swap which side is `--from` and which is `--to`: the selected revision becomes `--to` and the focused revision becomes `--from`. Press again to swap back |
+
 ### Diff
 
 Active while previewing a diff between two revisions. Inherits Normal. Composes `jj diff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run. The output opens in the diff viewer.

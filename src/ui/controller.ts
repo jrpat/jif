@@ -650,6 +650,9 @@ export function createJifCommandController(args: Readonly<{
     toggleRebaseSkipEmptied() {
       store.actions.toggleRebaseSkipEmptied();
     },
+    toggleInterdiffSwap() {
+      store.actions.toggleInterdiffSwap();
+    },
     confirmRebaseWithForce() {
       const state = store.snapshot();
       if (state.commandDraft?.config.kind !== "rebase") {

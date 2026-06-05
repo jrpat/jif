@@ -4,8 +4,12 @@ import type { AppState } from "../src/domain/types.ts";
 import {
   createInitialState,
   draftConfigs,
+  getCommandChipTextForRevision,
+  getCommandTargetRowId,
+  getDisplayedCommandText,
   openInlineConfirmation,
   startCommandDraft,
+  toggleInterdiffSwap,
 } from "../src/state/store.ts";
 import {
   resolveCommand,
@@ -193,6 +197,39 @@ test("i starts interdiff in normal mode and composes jj interdiff -f/-t", () => 
   expect(drafted.commandDraft?.config.template).toContain("interdiff");
   expect(drafted.commandDraft?.config.template).toContain("-f --from");
   expect(drafted.commandDraft?.config.template).toContain("-t --to");
+});
+
+test("= swaps from/to roles while composing interdiff", () => {
+  const state = createState();
+  const drafted = startCommandDraft(state, draftConfigs.interdiff);
+
+  expect(resolveForState("=", drafted)).toBe("interdiff-swap");
+
+  const fromRowId = drafted.selectedRowIds[0]!;
+  const toRowId = getCommandTargetRowId(drafted)!;
+  expect(getCommandChipTextForRevision(drafted, fromRowId)).toBe("from");
+  expect(getCommandChipTextForRevision(drafted, toRowId)).toBe("to");
+
+  const before = getDisplayedCommandText(drafted);
+  expect(before.startsWith("interdiff -f")).toBe(true);
+
+  const swapped = toggleInterdiffSwap(drafted);
+  expect(swapped.commandDraft?.interdiffSwapped).toBe(true);
+  expect(getCommandChipTextForRevision(swapped, fromRowId)).toBe("to");
+  expect(getCommandChipTextForRevision(swapped, toRowId)).toBe("from");
+
+  const after = getDisplayedCommandText(swapped);
+  expect(after.startsWith("interdiff -t")).toBe(true);
+
+  const swappedBack = toggleInterdiffSwap(swapped);
+  expect(swappedBack.commandDraft?.interdiffSwapped).toBe(false);
+  expect(getDisplayedCommandText(swappedBack)).toBe(before);
+});
+
+test("toggleInterdiffSwap is a no-op outside interdiff drafts", () => {
+  const state = createState();
+  const drafted = startCommandDraft(state, draftConfigs.squash);
+  expect(toggleInterdiffSwap(drafted)).toBe(drafted);
 });
 
 test("ctrl-d starts diff in normal mode and composes jj diff -f/-t", () => {

@@ -62,6 +62,7 @@ export type CommandController = Readonly<{
   toggleRebaseSkipEmptied: () => void;
   confirmRebaseWithForce: () => void;
   toggleSquashAnchor: () => void;
+  toggleInterdiffSwap: () => void;
   undo: () => void;
   redo: () => void;
   focusWorkingCopy: () => void;
@@ -578,6 +579,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Squash To Anchor",
     description: "Extend the squash source to a range ending at @ (or @- if @ is empty)",
     run: (controller) => controller.toggleSquashAnchor(),
+    group: "mode",
+  },
+  {
+    id: "interdiff-swap",
+    title: "Swap from/to",
+    description: "Swap whether the focused and selected revisions are the --from or --to of the interdiff",
+    run: (controller) => controller.toggleInterdiffSwap(),
     group: "mode",
   },
   {

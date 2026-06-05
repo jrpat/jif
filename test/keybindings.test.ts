@@ -88,6 +88,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     toggleRebaseSkipEmptied: () => calls.push("toggleRebaseSkipEmptied"),
     confirmRebaseWithForce: () => calls.push("confirmRebaseWithForce"),
     toggleSquashAnchor: () => calls.push("toggleSquashAnchor"),
+    toggleInterdiffSwap: () => calls.push("toggleInterdiffSwap"),
     undo: () => calls.push("undo"),
     redo: () => calls.push("redo"),
     focusWorkingCopy: () => calls.push("focusWorkingCopy"),
@@ -671,6 +672,22 @@ test("dispatchGlobalKey routes s to squash-from-anchor in squash mode", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["toggleSquashAnchor"]);
+});
+
+test("dispatchGlobalKey routes = to interdiff-swap in interdiff mode", () => {
+  const calls: string[] = [];
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.interdiff);
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "=",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["toggleInterdiffSwap"]);
 });
 
 test("dispatchGlobalKey routes s to split in normal mode", () => {
