@@ -223,6 +223,7 @@ Active while the operation log panel is open. Does not inherit Normal.
 | `r` | restore-operation | Restore the focused operation |
 | `R` | revert-operation | Revert the focused operation |
 | `d` | show-operation-diff | Show repository changes for the focused operation |
+| `:` | command-bar | Run a jj subcommand |
 | `/` | search | Incremental search through the operation log |
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 
@@ -235,6 +236,7 @@ Active while the evolog panel is open. Opened from Normal with `E` for the focus
 | `j` / `↓` | move-down | Focus the next evolog entry |
 | `k` / `↑` | move-up | Focus the previous evolog entry |
 | `G` | jump-to-bottom | Jump to the last evolog entry |
+| `:` | command-bar | Run a jj subcommand |
 | `/` | search | Incremental search through the evolog |
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 
@@ -287,7 +289,7 @@ Active in the command bar (`:`), revset prompt (`L`), and search prompt (`/`). K
 | `ctrl-j` / `ctrl-n` / `↓` | Move to the next history entry or suggestion |
 | `ctrl-k` / `ctrl-p` / `↑` | Move to the previous history entry or suggestion |
 | `ctrl-x` | Delete the highlighted suggestion from saved history (no-op for suggestions from non-history sources like revset completions) |
-| `ctrl-'` | (`:` and `>` command bars) Insert the focused revision's shortest unique change-id prefix at the cursor |
+| `ctrl-'` | (`:` and `>` command bars) Insert the focused item's id at the cursor: the revision's shortest unique change-id prefix in Normal, the operation id in Op Log, the entry id in Evolog |
 | `enter` | Submit the current input (run the command, apply the revset, finalize the search) |
 | `tab` / `shift-tab` | Move to the next / previous suggestion |
 

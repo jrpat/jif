@@ -21,6 +21,7 @@ import {
   focusOperationLogEntryAt,
   focusRevisionAt,
   getFocusedRevisionArg,
+  getFocusedInsertArg,
   focusWorkingCopy,
   getDisplayedCommandSegments,
   getDisplayedCommandText,
@@ -1199,6 +1200,55 @@ test("getFocusedRevisionArg uses the concrete revision id for divergent revision
   const state = { ...createDivergentState(), focusedRevisionIndex: 1 };
 
   expect(getFocusedRevisionArg(state)).toBe("abcdefgh/1");
+});
+
+test("getFocusedInsertArg falls back to the focused revision in normal command mode", () => {
+  const state: AppState = {
+    ...createState(),
+    focusMode: "command",
+    focusModeStack: ["revisions", "command"],
+  };
+
+  expect(getFocusedInsertArg(state)).toBe("a");
+});
+
+test("getFocusedInsertArg returns the focused operation id when opened from op-log", () => {
+  const state: AppState = {
+    ...createState(),
+    focusMode: "command",
+    focusModeStack: ["revisions", "op-log", "command"],
+    operationLogEntries: [
+      { id: "65d964491fc0", lines: ["65d964491fc0"] },
+      { id: "abcdef123456", lines: ["abcdef123456"] },
+    ],
+    focusedOperationLogIndex: 1,
+  };
+
+  expect(getFocusedInsertArg(state)).toBe("abcdef123456");
+});
+
+test("getFocusedInsertArg returns the focused entry id when opened from evolog", () => {
+  const state: AppState = {
+    ...createState(),
+    focusMode: "command",
+    focusModeStack: ["revisions", "evolog", "command"],
+    evologEntries: [{ id: "0123456789ab", lines: ["0123456789ab"] }],
+    focusedEvologIndex: 0,
+  };
+
+  expect(getFocusedInsertArg(state)).toBe("0123456789ab");
+});
+
+test("getFocusedInsertArg ignores synthetic evolog placeholder ids", () => {
+  const state: AppState = {
+    ...createState(),
+    focusMode: "command",
+    focusModeStack: ["revisions", "evolog", "command"],
+    evologEntries: [{ id: "evolog-0", lines: ["working copy"] }],
+    focusedEvologIndex: 0,
+  };
+
+  expect(getFocusedInsertArg(state)).toBeNull();
 });
 
 test("openFocusedRevision and refresh keep the exact divergent sibling identity", () => {

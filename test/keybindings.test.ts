@@ -446,6 +446,63 @@ test("dispatchGlobalKey routes op-log actions to operation commands", () => {
   expect(calls).toEqual(["restoreOperation", "revertOperation", "showOperationDiff"]);
 });
 
+test("dispatchGlobalKey routes : to the command bar in op-log mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "op-log",
+    focusModeStack: ["revisions", "op-log"],
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: ":",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["focusCommandBar"]);
+});
+
+test("dispatchGlobalKey routes ctrl-; to the command bar in op-log mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "op-log",
+    focusModeStack: ["revisions", "op-log"],
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "ctrl-;",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["focusCommandBar"]);
+});
+
+test("dispatchGlobalKey routes : to the command bar in evolog mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "evolog",
+    focusModeStack: ["revisions", "evolog"],
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: ":",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["focusCommandBar"]);
+});
+
 test("dispatchGlobalKey routes / to openSearch in op-log mode", () => {
   const calls: string[] = [];
   const state: AppState = {

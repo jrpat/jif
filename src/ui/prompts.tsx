@@ -5,7 +5,7 @@ import { matchHistoryEntries } from "../history/store.ts";
 import type { JjClient } from "../jj/client.ts";
 import { buildCompletionItems, extractLastToken, matchCompletions, type CompletionItem } from "../revset/completions.ts";
 import type { AppStore } from "../state/appStore.ts";
-import { getFocusedRevisionArg, type CommandSegment } from "../state/store.ts";
+import { getFocusedInsertArg, type CommandSegment } from "../state/store.ts";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { BookmarkSuggestion } from "../domain/types.ts";
 import { AutocompleteList, type AutocompleteListItem } from "./AutocompleteList.tsx";
@@ -173,7 +173,7 @@ export function CommandPrompt(props: {
     }
 
     if (event.ctrl && event.name === "'" && input) {
-      const arg = getFocusedRevisionArg(store.state);
+      const arg = getFocusedInsertArg(store.state);
       if (arg) {
         event.preventDefault();
         input.insertText(arg);

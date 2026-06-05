@@ -1570,6 +1570,23 @@ export function getFocusedRevisionArg(state: AppState): string | null {
   return getRevisionArg(revision.revisionId, revision.changeIdPrefixLength);
 }
 
+// The value `ctrl-'` inserts into the command bar. It mirrors whatever list the
+// command bar was opened from: the focused operation id in op-log, the focused
+// entry id in evolog, otherwise the focused revision's change-id prefix.
+export function getFocusedInsertArg(state: AppState): string | null {
+  switch (getBrowseFocusMode(state)) {
+    case "op-log":
+      return getFocusedOperationLogEntry(state)?.id ?? null;
+    case "evolog": {
+      const id = state.evologEntries[state.focusedEvologIndex]?.id ?? null;
+      // Skip the synthetic placeholder ids emitted when no operation id parsed.
+      return id !== null && !id.startsWith("evolog-") ? id : null;
+    }
+    default:
+      return getFocusedRevisionArg(state);
+  }
+}
+
 export function getExpandedRevision(state: AppState): RevisionSummary | null {
   if (!state.expandedRowId) {
     return null;
