@@ -700,6 +700,22 @@ test("dispatchGlobalKey routes s to squash-from-anchor in squash mode", () => {
   expect(calls).toEqual(["toggleSquashAnchor"]);
 });
 
+test("dispatchGlobalKey routes S to squash-from-anchor in squash mode (alias for s)", () => {
+  const calls: string[] = [];
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.squash);
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "S",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["toggleSquashAnchor"]);
+});
+
 test("dispatchGlobalKey routes = to interdiff-swap in interdiff mode", () => {
   const calls: string[] = [];
   let state = createState();

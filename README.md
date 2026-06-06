@@ -149,7 +149,7 @@ Active while previewing a squash. Inherits Normal. Composes `jj squash -f <sourc
 
 | Key | Command | Description |
 |-----|---------|-------------|
-| `s` | squash-from-anchor | Toggle whether the source extends to a range `<source>::<anchor>`, where `<anchor>` is `@` if the working copy is non-empty, otherwise `@-` |
+| `s` | squash-from-anchor | Toggle whether the source extends to a range `<source>::<anchor>`, where `<anchor>` is `@` if the working copy is non-empty, otherwise `@-`. `S` is an alias, so you can repeat the capital `S` that entered squash mode without releasing `shift` |
 
 ### Restore
 

@@ -184,6 +184,7 @@ export const defaultKeymap: Keymap = {
   restore: {},
   squash: {
     s: "squash-from-anchor",
+    S: alias("squash-from-anchor"),
   },
   interdiff: {
     "=": "interdiff-swap",
