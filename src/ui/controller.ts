@@ -433,7 +433,11 @@ export function createJifCommandController(args: Readonly<{
       }
 
       const revisionArg = getRevisionArg(revision.revisionId, revision.changeIdPrefixLength);
-      const selectedFilePaths = state.focusMode === "files" && state.expandedRowId === revision.rowId
+      // The selection belongs to the expanded revision, not to whichever focus
+      // mode happens to be active. Overlays (notifications, op-log, …) can drop
+      // focus out of files mode while leaving the revision expanded and its
+      // files selected, so gate on the expanded row rather than focusMode.
+      const selectedFilePaths = state.expandedRowId === revision.rowId
         ? state.selectedFilePaths
         : [];
 

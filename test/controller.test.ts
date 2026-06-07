@@ -365,6 +365,45 @@ test("startSplit opens inline confirmation when specific files are selected", ()
   harness.store.dispose();
 });
 
+test("startSplit opens inline confirmation when files stay selected after focus leaves files mode", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "working copy",
+        marker: "working-copy",
+        filesLoaded: true,
+        files: [
+          { path: "src/app.ts", status: "M" },
+          { path: "src/ui/render.tsx", status: "M" },
+        ],
+      }),
+    ],
+  });
+
+  harness.store.actions.openFocusedRevision();
+  harness.store.actions.toggleFileSelection();
+
+  // Toggling an overlay and dismissing it (here, the notifications view) leaves
+  // the revision expanded and the files selected but drops focus back out of
+  // files mode. Splitting should still confirm the selected-files command.
+  harness.store.actions.openNotifications();
+  harness.store.actions.closeNotifications();
+
+  expect(harness.store.state.focusMode).not.toBe("files");
+  expect(harness.store.state.expandedRowId).toBe("aaaaaaaa");
+  expect(harness.store.state.selectedFilePaths).toEqual(["src/app.ts"]);
+
+  harness.controller.startSplit();
+
+  expect(harness.store.state.focusMode).toBe("inline-confirmation");
+  expect(harness.store.state.inlineConfirmation?.kind).toBe("split-files");
+  expect(harness.runInteractiveCommands).toEqual([]);
+  expect(harness.runJjCommands).toEqual([]);
+  harness.store.dispose();
+});
+
 test("confirm runs the split command selected by inline confirmation through the interactive runner", () => {
   const harness = createControllerHarness({
     revisions: [
