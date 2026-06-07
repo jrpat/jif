@@ -290,7 +290,7 @@ test("resolveConfiguredKeymap deep-merges user bindings into the default keymap"
   expect(resolved.keymap._global.escape).toBe("cancel");
   expect(resolved.keymap.normal.j).toBe("move-down");
   expect(resolved.keymap.normal.g).toBe("user:normal:g");
-  expect(resolved.keymap.files.s).toBe("split");
+  expect(resolved.keymap.files["alt-s"]).toBe("split");
   expect(resolved.keymap.files.x).toBe("restore");
 });
 

@@ -26,6 +26,7 @@ import {
   getInlineConfirmationActualCommand,
   getSelectedRevisionIds,
   getSquashAnchorArg,
+  getSquashOntoEditArg,
 } from "../state/store.ts";
 import { hasUserDescription } from "./revisionHeader.ts";
 
@@ -47,7 +48,7 @@ type ControllerClient = Readonly<{
 type ExecuteCurrentCommand = (
   commandOverride?: string,
   options?: { recordHistory?: boolean },
-) => Promise<void>;
+) => Promise<boolean>;
 
 type RunJjCommand = (
   commandText: string,
@@ -242,14 +243,31 @@ export function createJifCommandController(args: Readonly<{
         return;
       }
 
-      if (state.commandDraft?.config.kind === "squash" && squashNeedsInteractiveShell(state)) {
+      if (state.commandDraft?.config.kind === "squash") {
+        // A squash-onto whose source includes the working copy needs a follow-up
+        // `jj edit <target>` so we land on the target rather than the empty commit
+        // jj creates when it abandons the working copy.
+        const editArg = getSquashOntoEditArg(state);
+        const interactive = squashNeedsInteractiveShell(state);
         const commandText = getDisplayedCommandText(state).trim();
-        if (commandText.length > 0) {
-          void args.runInteractiveJjCommand(commandText);
+        if (interactive && commandText.length === 0) {
+          return;
         }
-      } else {
-        void args.executeCurrentCommand();
+
+        void (async () => {
+          const succeeded = interactive
+            ? await args.runInteractiveJjCommand(commandText)
+            : await args.executeCurrentCommand();
+          if (succeeded && editArg) {
+            await args.runJjCommand(`edit ${editArg}`, {
+              focusWorkingCopyAfterRefresh: true,
+            });
+          }
+        })();
+        return;
       }
+
+      void args.executeCurrentCommand();
     },
     focusCommandBar() {
       store.actions.focusCommandBar();
@@ -696,6 +714,15 @@ export function createJifCommandController(args: Readonly<{
           reportError(store, error);
         }
       })();
+    },
+    startSquashOnto() {
+      const state = store.snapshot();
+      if (!getFocusedRevision(state)) {
+        return;
+      }
+      // Selecting the branch above the focused revision is fully synchronous, so
+      // there is no anchor range to resolve here.
+      store.actions.startSquashOnto();
     },
     openSearch() {
       store.actions.openSearch();

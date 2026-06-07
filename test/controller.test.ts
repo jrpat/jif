@@ -152,6 +152,7 @@ function createControllerHarness(harnessOptions: Readonly<{
     },
     executeCurrentCommand: async () => {
       executeCurrentCommandCalls += 1;
+      return harnessOptions.runJjResult ?? true;
     },
     runJjCommand: async (commandText, options) => {
       runJjCommands.push(commandText);
@@ -332,6 +333,99 @@ test("confirm uses the interactive squash flow when both source and target have 
 
   expect(harness.runInteractiveCommands).toEqual([expectedCommand]);
   expect(harness.executeCurrentCommandCalls).toBe(0);
+  harness.store.dispose();
+});
+
+test("startSquashOnto keeps the focused revision as the target and selects the branch above it", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      // Linear chain, newest at top: a (working copy) → b → c (the target).
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "working copy", marker: "working-copy", parentRevisionIds: ["bbbbbbbb"] }),
+      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "middle", parentRevisionIds: ["cccccccc"] }),
+      createRevision({ rowId: "cccccccc", revisionId: "cccccccc", description: "base" }),
+    ],
+  });
+
+  harness.store.actions.moveFocus(2);
+  harness.controller.startSquashOnto();
+
+  // Focus stays on c (the target); the branch above it (b and its descendant a)
+  // is selected as the source — no async range resolution involved.
+  expect(harness.store.state.focusedRevisionIndex).toBe(2);
+  expect(harness.store.state.selectedRowIds).toEqual(["aaaaaaaa", "bbbbbbbb"]);
+  expect(getDisplayedCommandText(harness.store.snapshot())).toBe("squash -f a -f b -t c");
+  harness.store.dispose();
+});
+
+test("confirm follows a squash-onto with `jj edit` when the working copy is squashed away", async () => {
+  const harness = createControllerHarness({
+    revisions: [
+      // Linear chain: a (working copy) → b → c (target). The target has no user
+      // description so the squash stays non-interactive (runs via executeCurrentCommand).
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "top", marker: "working-copy", parentRevisionIds: ["bbbbbbbb"] }),
+      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "middle", parentRevisionIds: ["cccccccc"] }),
+      createRevision({ rowId: "cccccccc", revisionId: "cccccccc", description: "(no description)" }),
+    ],
+  });
+
+  harness.store.actions.moveFocus(2);
+  harness.controller.startSquashOnto();
+  harness.controller.confirm();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  // The squash runs, then we land on the target (c) so jj drops the empty commit
+  // it created when the working copy (a) was abandoned.
+  expect(harness.executeCurrentCommandCalls).toBe(1);
+  expect(harness.runInteractiveCommands).toEqual([]);
+  expect(harness.runJjCalls).toEqual([
+    { commandText: "edit c", options: { focusWorkingCopyAfterRefresh: true } },
+  ]);
+  harness.store.dispose();
+});
+
+test("confirm follows an interactive squash-onto with `jj edit` once the squash succeeds", async () => {
+  const harness = createControllerHarness({
+    revisions: [
+      // Both the working-copy source (a) and the target (c) carry user descriptions,
+      // so jj prompts to combine them and the squash runs through the interactive shell.
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "top work", marker: "working-copy", parentRevisionIds: ["bbbbbbbb"] }),
+      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "middle", parentRevisionIds: ["cccccccc"] }),
+      createRevision({ rowId: "cccccccc", revisionId: "cccccccc", description: "target work" }),
+    ],
+  });
+
+  harness.store.actions.moveFocus(2);
+  harness.controller.startSquashOnto();
+  const expectedCommand = getDisplayedCommandText(harness.store.snapshot()).trim();
+  harness.controller.confirm();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(harness.executeCurrentCommandCalls).toBe(0);
+  expect(harness.runInteractiveCommands).toEqual([expectedCommand]);
+  expect(harness.runJjCalls).toEqual([
+    { commandText: "edit c", options: { focusWorkingCopyAfterRefresh: true } },
+  ]);
+  harness.store.dispose();
+});
+
+test("confirm does not edit after a squash-onto that leaves the working copy in place", async () => {
+  const harness = createControllerHarness({
+    revisions: [
+      // Here the working copy IS the target (c); the source above it (a, b) does
+      // not include the working copy, so jj creates no empty commit to clean up.
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "top", parentRevisionIds: ["bbbbbbbb"] }),
+      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "middle", parentRevisionIds: ["cccccccc"] }),
+      createRevision({ rowId: "cccccccc", revisionId: "cccccccc", description: "(no description)", marker: "working-copy" }),
+    ],
+  });
+
+  harness.store.actions.moveFocus(2);
+  harness.controller.startSquashOnto();
+  harness.controller.confirm();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(harness.executeCurrentCommandCalls).toBe(1);
+  expect(harness.runJjCommands).toEqual([]);
   harness.store.dispose();
 });
 

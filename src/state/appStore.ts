@@ -66,6 +66,7 @@ import {
   selectNextInlineConfirmationOption,
   selectPreviousInlineConfirmationOption,
   startCommandDraft,
+  startSquashOnto,
   toggleFileSelection,
   toggleShortFlags,
   toggleShortcutPanel,
@@ -274,6 +275,9 @@ export function createAppStore(
         },
       ) {
         mutate((currentState) => startCommandDraft(currentState, config, options));
+      },
+      startSquashOnto() {
+        mutate((currentState) => startSquashOnto(currentState));
       },
       enterBookmarkLeader() {
         mutate((currentState) => enterBookmarkLeader(currentState));

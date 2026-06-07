@@ -92,8 +92,9 @@ Viewing and navigating the revision log.
 | `n` | new-revision | Create a new revision from the focused revision |
 | `r` | rebase | Start a rebase from the focused revision |
 | `R` | restore-revision | Restore the focused revision from another |
-| `s` | split | Split the focused revision, or use the current file selection |
-| `S` | squash | Squash the focused revision into another |
+| `s` | squash | Squash the focused revision into another |
+| `S` | squash-onto | Keep the focused revision as the target and select the branch above it (the revision directly above and its descendants) as the source |
+| `alt-s` | split | Split the focused revision, or use the current file selection |
 | `u` | undo | Undo the last operation |
 | `U` | redo | Redo the last undone operation |
 | `space` | toggle-revision-selection | Add or remove the focused revision from the selection |
@@ -126,7 +127,7 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 | `d` | show-file-diff | Show the diff for the focused file |
 | `r` | restore | Restore selected files to their state before this change |
 | `ctrl-u` | untrack | Stop tracking the focused file, or all selected files (`jj file untrack <paths>`) |
-| `s` | split | Split using the current file selection |
+| `alt-s` | split | Split using the current file selection |
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 
 ### Rebase
@@ -147,9 +148,14 @@ Active while previewing a rebase. Inherits Normal. The default composition is `j
 
 Active while previewing a squash. Inherits Normal. Composes `jj squash -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run.
 
+Two keys from Normal mode enter squash mode:
+
+- `s` (squash) selects the focused revision as the source and moves focus down to its parent, which becomes the target — squash the focused revision into the one below it.
+- `S` (squash-onto) keeps the focused revision as the target and selects the whole branch above it as the source: the revision directly above plus every descendant of it shown in the log. When revisions are already selected, the lowest selected revision anchors the branch instead. Each source revision is a real selection, so they all show as selected — squash the revisions above into the focused one. If the working copy was part of the squashed branch, jif then edits the target so you land on it instead of the empty revision jj would otherwise leave on top.
+
 | Key | Command | Description |
 |-----|---------|-------------|
-| `s` | squash-from-anchor | Toggle whether the source extends to a range `<source>::<anchor>`, where `<anchor>` is `@` if the working copy is non-empty, otherwise `@-`. `S` is an alias, so you can repeat the capital `S` that entered squash mode without releasing `shift` |
+| `s` | squash-from-anchor | Toggle whether the source extends to a range `<source>::<anchor>`, where `<anchor>` is `@` if the working copy is non-empty, otherwise `@-`. `S` is an alias here, so you can keep toggling with either case |
 
 ### Restore
 

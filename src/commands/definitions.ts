@@ -36,6 +36,7 @@ export type CommandController = Readonly<{
   startRestore: () => void;
   startSplit: () => void;
   startSquash: () => void;
+  startSquashOnto: () => void;
   startInterdiff: () => void;
   startDiff: () => void;
   startNewRevision: () => void;
@@ -396,6 +397,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Squash the focused revision into another",
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.startSquash(),
+    group: "global",
+  },
+  {
+    id: "squash-onto",
+    title: "Squash Onto",
+    description: "Keep the focused revision as the target and select the branch above it (or the lowest selected revision and its descendants) as the source",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startSquashOnto(),
     group: "global",
   },
   {

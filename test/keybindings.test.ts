@@ -72,6 +72,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     startRestore: () => calls.push("startRestore"),
     startSplit: () => calls.push("startSplit"),
     startSquash: () => calls.push("startSquash"),
+    startSquashOnto: () => calls.push("startSquashOnto"),
     startInterdiff: () => calls.push("startInterdiff"),
     startDiff: () => calls.push("startDiff"),
     startNewRevision: () => calls.push("startNewRevision"),
@@ -732,12 +733,42 @@ test("dispatchGlobalKey routes = to interdiff-swap in interdiff mode", () => {
   expect(calls).toEqual(["toggleInterdiffSwap"]);
 });
 
-test("dispatchGlobalKey routes s to split in normal mode", () => {
+test("dispatchGlobalKey routes s to squash in normal mode", () => {
   const calls: string[] = [];
   const state = createState();
 
   const handled = dispatchGlobalKey({
     normalizedKey: "s",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["startSquash"]);
+});
+
+test("dispatchGlobalKey routes S to squash-onto in normal mode", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "S",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["startSquashOnto"]);
+});
+
+test("dispatchGlobalKey routes alt-s to split in normal mode", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "alt-s",
     state,
     commands: commandDefinitions,
     controller: createController(calls),

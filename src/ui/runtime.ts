@@ -37,7 +37,7 @@ export function createJifRuntime(args: Readonly<{
     async executeCurrentCommand(
       commandOverride?: string,
       options?: { recordHistory?: boolean },
-    ): Promise<void> {
+    ): Promise<boolean> {
       const state = store.snapshot();
       const commandText = (commandOverride ?? getDisplayedCommandText(state)).trim();
       const workspaceRoot = args.getWorkspaceRoot();
@@ -49,7 +49,7 @@ export function createJifRuntime(args: Readonly<{
         : undefined;
       const interactive = executor === "jj" && isAlwaysInteractiveJjCommand(commandText);
 
-      await commandRunner.run({
+      return await commandRunner.run({
         commandText,
         executor,
         interactive,

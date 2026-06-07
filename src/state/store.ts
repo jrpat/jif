@@ -1295,6 +1295,105 @@ export function startCommandDraft(
   };
 }
 
+// The "squash onto" entry keeps the focused revision as the `-t` target rather
+// than selecting it as a source, and selects the whole branch above it as the
+// source. The source anchor is the lowest (bottom-most) selected revision when
+// there is a selection, otherwise the revision directly above the focus; the
+// source then extends to that anchor plus every descendant of it shown above
+// (the branch heading toward the working copy). Every source revision is a real
+// selection, so the rows render as selected rather than relying on a `::@` range
+// — which is empty whenever the branch above is not an ancestor of `@`.
+export function startSquashOnto(state: AppState): AppState {
+  const focused = getFocusedRevision(state);
+  if (!focused) {
+    return state;
+  }
+
+  const sourceRowIds = resolveSquashOntoSourceRowIds(state);
+  if (sourceRowIds.length === 0) {
+    return state;
+  }
+
+  return {
+    ...state,
+    commandBar: createEmptyCommandBar(),
+    inlineConfirmation: null,
+    selectedRowIds: sourceRowIds,
+    markedRowIds: [],
+    commandDraft: {
+      config: draftConfigs.squash,
+      squashOnto: true,
+    },
+  };
+}
+
+function resolveSquashOntoAnchorIndex(state: AppState): number {
+  if (state.selectedRowIds.length > 0) {
+    let anchorIndex = -1;
+    for (const rowId of state.selectedRowIds) {
+      const index = state.revisions.findIndex((revision) => revision.rowId === rowId);
+      if (index > anchorIndex) {
+        anchorIndex = index;
+      }
+    }
+    return anchorIndex;
+  }
+
+  const aboveIndex = state.focusedRevisionIndex - 1;
+  return aboveIndex >= 0 && aboveIndex < state.revisions.length ? aboveIndex : -1;
+}
+
+function resolveSquashOntoSourceRowIds(state: AppState): readonly string[] {
+  const anchorIndex = resolveSquashOntoAnchorIndex(state);
+  const anchor = state.revisions[anchorIndex];
+  if (!anchor) {
+    return [];
+  }
+
+  // Collect the anchor plus every revision above it that descends from it, so
+  // the source covers the contiguous branch heading up out of the anchor.
+  const sourceRevisionIds = new Set<string>([anchor.revisionId]);
+  const rowIds: string[] = [anchor.rowId];
+  for (let index = anchorIndex - 1; index >= 0; index--) {
+    const revision = state.revisions[index];
+    if (revision?.parentRevisionIds?.some((parentId) => sourceRevisionIds.has(parentId))) {
+      sourceRevisionIds.add(revision.revisionId);
+      rowIds.push(revision.rowId);
+    }
+  }
+
+  // Order top-to-bottom (ascending row index) for a stable, readable command.
+  return rowIds.reverse();
+}
+
+// A squash-onto folds the branch above the focused revision into it. When the
+// working-copy revision is part of that source, jj abandons it and lands the
+// working copy on a fresh empty commit above the target. Returning the target's
+// change-id arg here tells the caller to follow up with `jj edit <target>`, which
+// moves onto the target and lets jj drop that empty commit — so we never leave an
+// extra revision on top of the focused one. Returns null when no follow-up is
+// needed (regular squash, or the working copy was not squashed away).
+export function getSquashOntoEditArg(state: AppState): string | null {
+  const draft = state.commandDraft;
+  if (!draft || draft.config.kind !== "squash" || !draft.squashOnto) {
+    return null;
+  }
+
+  const workingCopy = state.revisions.find(
+    (revision) => revision.marker === "working-copy",
+  );
+  if (!workingCopy || !state.selectedRowIds.includes(workingCopy.rowId)) {
+    return null;
+  }
+
+  const target = getFocusedRevision(state);
+  if (!target) {
+    return null;
+  }
+
+  return getRevisionArg(target.revisionId, target.changeIdPrefixLength);
+}
+
 export function setRebaseSourceKind(
   state: AppState,
   kind: RebaseSourceKind,

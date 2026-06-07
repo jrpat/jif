@@ -150,7 +150,7 @@ test("resolveCommand returns null in command mode for browse keys", () => {
 });
 
 test("rebase-descendants resolves in rebase mode but not normal mode", () => {
-  expect(resolveForState("s", createState())).toBe("split");
+  expect(resolveForState("s", createState())).toBe("squash");
 
   const rebaseState = startCommandDraft(createState(), draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
   expect(resolveForState("s", rebaseState)).toBe("rebase-descendants");
@@ -239,7 +239,8 @@ test("files mode does not inherit Normal revision commands", () => {
   expect(resolveForState("k", state)).toBe("move-up");
   expect(resolveForState("h", state)).toBe("collapse");
   expect(resolveForState(" ", state)).toBe("toggle-file-selection");
-  expect(resolveForState("s", state)).toBe("split");
+  expect(resolveForState("s", state)).toBeNull();
+  expect(resolveForState("alt-s", state)).toBe("split");
 });
 
 test("= swaps from/to roles while composing interdiff", () => {
@@ -433,8 +434,8 @@ test("mode inheritance lets files mode use normal keys", () => {
   expect(resolveForState("?", state)).toBe("shortcut-panel");
 
   // Mode-local in files
-  expect(defaultKeymap.files.s).toBe("split");
-  expect(resolveForState("s", state)).toBe("split");
+  expect(defaultKeymap.files["alt-s"]).toBe("split");
+  expect(resolveForState("alt-s", state)).toBe("split");
   expect(resolveForState("r", state)).toBe("restore");
   expect(resolveForState(" ", state)).toBe("toggle-file-selection");
 });
