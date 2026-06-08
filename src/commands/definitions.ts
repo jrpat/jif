@@ -1,4 +1,4 @@
-import { getAdjacentWorkspaceRevisionIndex, getExpandedRevision, getFocusedChildRevision, getFocusedNotification, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
+import { getAdjacentBookmarkRevisionIndex, getAdjacentWorkspaceRevisionIndex, getExpandedRevision, getFocusedChildRevision, getFocusedNotification, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
 import type { AppState, RebaseSourceKind, RebaseTargetKind } from "../domain/types.ts";
 import { canSearchState } from "../search/matching.ts";
 
@@ -19,6 +19,7 @@ export type CommandController = Readonly<{
   moveFocusToChild: () => void;
   moveFocusToNextDivergentSibling: () => void;
   moveFocusToWorkspace: (direction: 1 | -1) => void;
+  moveFocusToBookmark: (direction: 1 | -1) => void;
   focusLogBottom: () => void;
   focusCurrentOperation: () => void;
   openOperationLog: () => void;
@@ -221,6 +222,20 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Focus the previous visible revision that has a workspace",
     canExecute: (state) => getAdjacentWorkspaceRevisionIndex(state, -1) !== null,
     run: (controller) => controller.moveFocusToWorkspace(-1),
+  },
+  {
+    id: "move-to-next-bookmark",
+    title: "Next Bookmark",
+    description: "Focus the next visible revision that has a bookmark",
+    canExecute: (state) => getAdjacentBookmarkRevisionIndex(state, 1) !== null,
+    run: (controller) => controller.moveFocusToBookmark(1),
+  },
+  {
+    id: "move-to-prev-bookmark",
+    title: "Previous Bookmark",
+    description: "Focus the previous visible revision that has a bookmark",
+    canExecute: (state) => getAdjacentBookmarkRevisionIndex(state, -1) !== null,
+    run: (controller) => controller.moveFocusToBookmark(-1),
   },
   {
     id: "jump-to-bottom",

@@ -56,6 +56,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     moveFocusToChild: () => calls.push("moveFocusToChild"),
     moveFocusToNextDivergentSibling: () => calls.push("moveFocusToNextDivergentSibling"),
     moveFocusToWorkspace: (direction: 1 | -1) => calls.push(`moveFocusToWorkspace:${direction}`),
+    moveFocusToBookmark: (direction: 1 | -1) => calls.push(`moveFocusToBookmark:${direction}`),
     focusLogBottom: () => calls.push("focusLogBottom"),
     focusCurrentOperation: () => calls.push("focusCurrentOperation"),
     openOperationLog: () => calls.push("openOperationLog"),
@@ -608,6 +609,94 @@ test("dispatchGlobalKey routes G to the bottom of the log", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["focusLogBottom"]);
+});
+
+test("dispatchGlobalKey routes ] to the next bookmark", () => {
+  const calls: string[] = [];
+  const base = createState();
+  const state: AppState = {
+    ...base,
+    focusedRevisionIndex: 0,
+    revisions: base.revisions.map((revision, index) =>
+      index === 1 ? { ...revision, bookmarks: ["feature"] } : revision
+    ),
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "]",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["moveFocusToBookmark:1"]);
+});
+
+test("dispatchGlobalKey routes [ to the previous bookmark", () => {
+  const calls: string[] = [];
+  const base = createState();
+  const state: AppState = {
+    ...base,
+    focusedRevisionIndex: 1,
+    revisions: base.revisions.map((revision, index) =>
+      index === 0 ? { ...revision, bookmarks: ["feature"] } : revision
+    ),
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "[",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["moveFocusToBookmark:-1"]);
+});
+
+test("dispatchGlobalKey routes } to the next workspace", () => {
+  const calls: string[] = [];
+  const base = createState();
+  const state: AppState = {
+    ...base,
+    focusedRevisionIndex: 0,
+    revisions: base.revisions.map((revision, index) =>
+      index === 1 ? { ...revision, workspaces: ["default"] } : revision
+    ),
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "}",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["moveFocusToWorkspace:1"]);
+});
+
+test("dispatchGlobalKey routes { to the previous workspace", () => {
+  const calls: string[] = [];
+  const base = createState();
+  const state: AppState = {
+    ...base,
+    focusedRevisionIndex: 1,
+    revisions: base.revisions.map((revision, index) =>
+      index === 0 ? { ...revision, workspaces: ["default"] } : revision
+    ),
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "{",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["moveFocusToWorkspace:-1"]);
 });
 
 test("dispatchGlobalKey ignores ? in revset mode", () => {

@@ -75,6 +75,7 @@ import {
   focusShellCommandBar,
   moveFocus,
   moveFocusToChild,
+  moveFocusToBookmark,
   moveFocusToNextDivergentSibling,
   moveFocusToParent,
   moveFocusToWorkspace,
@@ -198,6 +199,9 @@ export function createAppStore(
       },
       moveFocusToWorkspace(direction: 1 | -1) {
         mutate((currentState) => moveFocusToWorkspace(currentState, direction));
+      },
+      moveFocusToBookmark(direction: 1 | -1) {
+        mutate((currentState) => moveFocusToBookmark(currentState, direction));
       },
       openFocusedRevision() {
         mutate((currentState) => openFocusedRevision(currentState));

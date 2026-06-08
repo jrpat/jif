@@ -36,6 +36,7 @@ import {
   pushEvent,
   setCommandBarText,
   moveFocus,
+  moveFocusToBookmark,
   moveFocusToChild,
   moveFocusToNextDivergentSibling,
   moveFocusToParent,
@@ -681,6 +682,110 @@ test("moveFocusToWorkspace exits file navigation when jumping", () => {
   expect(state.focusMode).toBe("files");
 
   state = moveFocusToWorkspace(state, 1);
+
+  expect(state.focusMode).toBe("revisions");
+  expect(state.expandedRowId).toBeNull();
+  expect(state.focusedRevisionIndex).toBe(1);
+  expect(state.focusedFileIndex).toBe(0);
+});
+
+function createBookmarkNavigationState(): AppState {
+  const revision = (
+    index: number,
+    bookmarks: readonly string[],
+    marker: RevisionSummary["marker"] = "plain",
+  ): RevisionSummary => ({
+    rowId: `bm-row-${index}`,
+    revisionId: `bmrev${index}`,
+    parentRevisionIds: [],
+    changeIdPrefixLength: 1,
+    commitId: `${index}${index}${index}${index}${index}${index}${index}${index}`,
+    description: `revision ${index}`,
+    localTimestamp: "2026-03-30 07:22:39",
+    bookmarks,
+    workspaces: [],
+    graphRows: ["○  "],
+    isEmpty: false,
+    hasConflict: false,
+    marker,
+    filesLoaded: true,
+    files: [{ status: "M", path: `src/${index}.ts` }],
+  });
+
+  return {
+    ...createInitialState("/tmp/repo"),
+    loading: false,
+    focusedRevisionIndex: 0,
+    revisions: [
+      { ...revision(0, []), marker: "working-copy", graphRows: ["@  "] },
+      revision(1, ["alpha"]),
+      revision(2, []),
+      revision(3, ["beta"]),
+      revision(4, []),
+    ],
+  };
+}
+
+test("moveFocusToBookmark jumps forward to the next visible revision with a bookmark", () => {
+  let state = createBookmarkNavigationState();
+
+  state = moveFocusToBookmark(state, 1);
+  expect(state.focusedRevisionIndex).toBe(1);
+
+  state = moveFocusToBookmark(state, 1);
+  expect(state.focusedRevisionIndex).toBe(3);
+});
+
+test("moveFocusToBookmark does not wrap past the last bookmark revision", () => {
+  let state = createBookmarkNavigationState();
+  state = focusRevisionAt(state, 3);
+
+  const after = moveFocusToBookmark(state, 1);
+
+  expect(after).toBe(state);
+  expect(after.focusedRevisionIndex).toBe(3);
+});
+
+test("moveFocusToBookmark jumps backward in the opposite direction without wrapping", () => {
+  let state = createBookmarkNavigationState();
+  state = focusRevisionAt(state, 4);
+
+  state = moveFocusToBookmark(state, -1);
+  expect(state.focusedRevisionIndex).toBe(3);
+
+  state = moveFocusToBookmark(state, -1);
+  expect(state.focusedRevisionIndex).toBe(1);
+
+  const after = moveFocusToBookmark(state, -1);
+  expect(after).toBe(state);
+  expect(after.focusedRevisionIndex).toBe(1);
+});
+
+test("moveFocusToBookmark skips elided revisions even if they carry a bookmark", () => {
+  const base = createBookmarkNavigationState();
+  const state: AppState = {
+    ...base,
+    focusedRevisionIndex: 0,
+    revisions: [
+      base.revisions[0]!,
+      { ...base.revisions[1]!, marker: "elided", bookmarks: ["hidden"] },
+      base.revisions[2]!,
+      base.revisions[3]!,
+      base.revisions[4]!,
+    ],
+  };
+
+  const after = moveFocusToBookmark(state, 1);
+
+  expect(after.focusedRevisionIndex).toBe(3);
+});
+
+test("moveFocusToBookmark exits file navigation when jumping", () => {
+  let state = createBookmarkNavigationState();
+  state = openFocusedRevision(state);
+  expect(state.focusMode).toBe("files");
+
+  state = moveFocusToBookmark(state, 1);
 
   expect(state.focusMode).toBe("revisions");
   expect(state.expandedRowId).toBeNull();

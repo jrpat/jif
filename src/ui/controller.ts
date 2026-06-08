@@ -105,6 +105,9 @@ export function createJifCommandController(args: Readonly<{
     moveFocusToWorkspace(direction: 1 | -1) {
       store.actions.moveFocusToWorkspace(direction);
     },
+    moveFocusToBookmark(direction: 1 | -1) {
+      store.actions.moveFocusToBookmark(direction);
+    },
     openOperationLog() {
       store.actions.openOperationLog();
       store.actions.setOperationLogLoading(true);

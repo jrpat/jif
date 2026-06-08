@@ -463,9 +463,10 @@ export function moveFocusToNextDivergentSibling(state: AppState): AppState {
   }, ["revisions"]);
 }
 
-export function getAdjacentWorkspaceRevisionIndex(
+function getAdjacentRevisionIndex(
   state: AppState,
   direction: 1 | -1,
+  matches: (revision: RevisionSummary) => boolean,
 ): number | null {
   const total = state.revisions.length;
   for (
@@ -476,7 +477,7 @@ export function getAdjacentWorkspaceRevisionIndex(
     const candidate = state.revisions[index];
     if (!candidate) continue;
     if (candidate.marker === "elided") continue;
-    if (candidate.workspaces.length > 0) {
+    if (matches(candidate)) {
       return index;
     }
   }
@@ -484,8 +485,21 @@ export function getAdjacentWorkspaceRevisionIndex(
   return null;
 }
 
-export function moveFocusToWorkspace(state: AppState, direction: 1 | -1): AppState {
-  const nextIndex = getAdjacentWorkspaceRevisionIndex(state, direction);
+export function getAdjacentWorkspaceRevisionIndex(
+  state: AppState,
+  direction: 1 | -1,
+): number | null {
+  return getAdjacentRevisionIndex(state, direction, (revision) => revision.workspaces.length > 0);
+}
+
+export function getAdjacentBookmarkRevisionIndex(
+  state: AppState,
+  direction: 1 | -1,
+): number | null {
+  return getAdjacentRevisionIndex(state, direction, (revision) => revision.bookmarks.length > 0);
+}
+
+function moveFocusToIndex(state: AppState, nextIndex: number | null): AppState {
   if (nextIndex === null) {
     return state;
   }
@@ -498,6 +512,14 @@ export function moveFocusToWorkspace(state: AppState, direction: 1 | -1): AppSta
     focusedFileIndex: 0,
     selectedFilePaths: [],
   }, ["revisions"]);
+}
+
+export function moveFocusToWorkspace(state: AppState, direction: 1 | -1): AppState {
+  return moveFocusToIndex(state, getAdjacentWorkspaceRevisionIndex(state, direction));
+}
+
+export function moveFocusToBookmark(state: AppState, direction: 1 | -1): AppState {
+  return moveFocusToIndex(state, getAdjacentBookmarkRevisionIndex(state, direction));
 }
 
 export function focusRevisionAt(state: AppState, index: number): AppState {
