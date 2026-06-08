@@ -18,6 +18,7 @@ export type Mode =
   | "search"
   | "diff-viewer"
   | "notifications"
+  | "help"
   | "bookmark"
   | "bookmark-move"
   | "extras";
@@ -46,6 +47,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   search: { id: "search", inputPassthrough: true, label: "Search" },
   "diff-viewer": { id: "diff-viewer", inputPassthrough: false, label: "Diff" },
   notifications: { id: "notifications", inputPassthrough: false, label: "Notifications" },
+  help: { id: "help", inputPassthrough: false, label: "Help" },
   bookmark: { id: "bookmark", parent: "normal", inputPassthrough: false, label: "Bookmark" },
   "bookmark-move": { id: "bookmark-move", parent: "normal", inputPassthrough: false, label: "Bookmark Move" },
   extras: { id: "extras", inputPassthrough: false, label: "Extras" },
@@ -226,6 +228,12 @@ export const defaultKeymap: Keymap = {
     "~": "cancel",
     "?": "shortcut-panel",
   },
+  help: {
+    j: "scroll-help-down",
+    k: "scroll-help-up",
+    J: "scroll-help-down-large",
+    K: "scroll-help-up-large",
+  },
   bookmark: {
     c: "bookmark-create",
     m: "bookmark-move-from",
@@ -240,7 +248,26 @@ export const defaultKeymap: Keymap = {
   extras: {},
 };
 
+// A visible help toast captures input as its own "help" mode over whatever
+// browse surface it floats above. It yields to the explicit input/overlay
+// modes a user can layer on top of it (e.g. opening notifications with `~`),
+// so those keep control while the toast simply stays on screen behind them.
+const HELP_YIELD_FOCUS_MODES: ReadonlySet<AppState["focusMode"]> = new Set([
+  "command",
+  "revset",
+  "search",
+  "inline-confirmation",
+  "diff-viewer",
+  "notifications",
+]);
+
+export function isHelpToastFocused(state: AppState): boolean {
+  if (HELP_YIELD_FOCUS_MODES.has(state.focusMode)) return false;
+  return state.statusMessages.some((message) => message.variant === "help");
+}
+
 export function getActiveMode(state: AppState): Mode {
+  if (isHelpToastFocused(state)) return "help";
   if (state.focusMode === "command") return "command";
   if (state.focusMode === "revset") return "revset";
   if (state.focusMode === "search") return "search";

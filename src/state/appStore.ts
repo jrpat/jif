@@ -13,6 +13,7 @@ import type {
   RepositoryData,
   RevisionSummary,
   StatusLevel,
+  StatusMessageVariant,
 } from "../domain/types.ts";
 import {
   applyRepositoryData,
@@ -152,8 +153,8 @@ export function createAppStore(
       pushStatusMessage(id: string, text: string, level: StatusLevel) {
         mutate((currentState) => pushStatusMessage(currentState, id, text, level));
       },
-      updateStatusMessage(id: string, text: string, level: StatusLevel) {
-        mutate((currentState) => updateStatusMessage(currentState, id, text, level));
+      updateStatusMessage(id: string, text: string, level: StatusLevel, variant?: StatusMessageVariant) {
+        mutate((currentState) => updateStatusMessage(currentState, id, text, level, variant));
       },
       touchStatusMessage(id: string) {
         mutate((currentState) => touchStatusMessage(currentState, id));

@@ -7,6 +7,7 @@ import type { ShortcutGrid, ShortcutPanelLayout, ShortcutSummarySegment } from "
 import { ScrollableAnsiBody } from "./scrollableAnsiBody.tsx";
 import { observeScrollboxInteraction } from "./scroll.ts";
 import {
+  getHelpToastBorderColor,
   getStatusColor,
   getStatusMessageDismissDelay,
   getStatusToastBodyHeight,
@@ -244,6 +245,8 @@ export function MessageOverlay(props: {
   config: ResolvedAppConfig;
   bottomInset: number;
   maxToastBodyHeight: number;
+  maxHelpToastBodyHeight?: number;
+  registerHelpViewport?: (el: ScrollBoxRenderable | undefined) => void;
   onInteract: (id: string) => void;
   onDismiss: (id?: string) => void;
 }) {
@@ -270,6 +273,8 @@ export function MessageOverlay(props: {
                   message={message}
                   config={props.config}
                   maxBodyHeight={props.maxToastBodyHeight}
+                  maxHelpBodyHeight={props.maxHelpToastBodyHeight ?? props.maxToastBodyHeight}
+                  registerHelpViewport={props.registerHelpViewport}
                   onInteract={() => props.onInteract(message.id)}
                   onDismiss={() => props.onDismiss(message.id)}
                 />
@@ -307,16 +312,26 @@ function StatusToast(props: {
   message: StatusMessage;
   config: ResolvedAppConfig;
   maxBodyHeight: number;
+  maxHelpBodyHeight: number;
+  registerHelpViewport?: (el: ScrollBoxRenderable | undefined) => void;
   onInteract: () => void;
   onDismiss: () => void;
 }) {
   const colors = props.config.colorScheme.semanticColors;
+  const isHelp = () => props.message.variant === "help";
   const bodyHeight = createMemo(() =>
-    getStatusToastBodyHeight(props.message.text, props.maxBodyHeight)
+    getStatusToastBodyHeight(
+      props.message.text,
+      isHelp() ? props.maxHelpBodyHeight : props.maxBodyHeight,
+    )
   );
+  const borderColor = () =>
+    isHelp() ? getHelpToastBorderColor(props.config) : getStatusColor(props.message.level, colors);
 
   createEffect(() => {
-    if (props.message.level !== "success") return;
+    // Help toasts persist until the user dismisses them; everything else is
+    // only auto-dismissed once it has reached its terminal "success" state.
+    if (props.message.level !== "success" || isHelp()) return;
     const timer = setTimeout(
       props.onDismiss,
       getStatusMessageDismissDelay(props.message.lastInteractedAt),
@@ -335,13 +350,26 @@ function StatusToast(props: {
     onCleanup(dispose);
   });
 
+  // Expose the help toast's scrollbox so the controller can drive it from the
+  // keyboard (help mode's j/k/J/K). Re-runs when the toast becomes a help
+  // toast; the scrollbox is already mounted by then.
+  createEffect(() => {
+    if (!isHelp() || !bodyRef) {
+      return;
+    }
+
+    const viewport = bodyRef;
+    props.registerHelpViewport?.(viewport);
+    onCleanup(() => props.registerHelpViewport?.(undefined));
+  });
+
   return (
     <box
       width="100%"
       backgroundColor={colors.chromeFillOne}
       border
       borderStyle="single"
-      borderColor={getStatusColor(props.message.level, colors)}
+      borderColor={borderColor()}
       paddingX={1}
     >
       <ScrollableAnsiBody

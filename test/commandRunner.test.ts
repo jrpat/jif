@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createCommandRunner, createTrackedCommand } from "../src/commands/runner.ts";
+import { isHelpJjCommand } from "../src/commands/interactive-subcommands.ts";
 
 function createActionLog() {
   const entries: string[] = [];
@@ -19,8 +20,10 @@ function createActionLog() {
       pushStatusMessage(id: string, text: string, level: string) {
         entries.push(`pushStatusMessage:${id}:${level}:${text}`);
       },
-      updateStatusMessage(id: string, text: string, level: string) {
-        entries.push(`updateStatusMessage:${id}:${level}:${text}`);
+      updateStatusMessage(id: string, text: string, level: string, variant?: string) {
+        entries.push(
+          `updateStatusMessage:${id}:${level}:${text}${variant ? `:${variant}` : ""}`,
+        );
       },
       logEvent(text: string, level: string) {
         entries.push(`logEvent:${level}:${text}`);
@@ -57,6 +60,68 @@ test("createTrackedCommand trims and tokenizes command text", () => {
   });
 
   expect(createTrackedCommand("   ", true)).toBeNull();
+});
+
+test("isHelpJjCommand recognizes the help subcommand and trailing help flags", () => {
+  expect(isHelpJjCommand("help")).toBeTrue();
+  expect(isHelpJjCommand("help rebase")).toBeTrue();
+  expect(isHelpJjCommand("rebase --help")).toBeTrue();
+  expect(isHelpJjCommand("rebase -d main -h")).toBeTrue();
+  expect(isHelpJjCommand("--help")).toBeTrue();
+
+  expect(isHelpJjCommand("rebase -d main")).toBeFalse();
+  expect(isHelpJjCommand("describe -m 'helps the user'")).toBeFalse();
+  expect(isHelpJjCommand("status")).toBeFalse();
+  expect(isHelpJjCommand("   ")).toBeFalse();
+});
+
+test("command runner marks help output as a persistent help toast on success", async () => {
+  const { entries, actions } = createActionLog();
+
+  const runner = createCommandRunner({
+    actions,
+    executeCommandArgs: async () => "Usage: jj rebase [OPTIONS]",
+    refreshRepository: async () => true,
+    createToastId: () => "toast-1",
+  });
+
+  await runner.run({
+    commandText: "rebase --help",
+    canExecute: true,
+    successFeedback: "status-toast",
+    failureFeedback: "status-toast",
+  });
+
+  expect(entries).toContain(
+    "updateStatusMessage:toast-1:success:Usage: jj rebase [OPTIONS]:help",
+  );
+});
+
+test("command runner does not mark shell help output as a help toast", async () => {
+  const { entries, actions } = createActionLog();
+
+  const runner = createCommandRunner({
+    actions,
+    executeCommandArgs: async () => {
+      throw new Error("jj path should not run");
+    },
+    executeShellCommand: async () => "shell usage text",
+    refreshRepository: async () => true,
+    createToastId: () => "toast-1",
+  });
+
+  await runner.run({
+    commandText: "ls --help",
+    executor: "shell",
+    canExecute: true,
+    successFeedback: "status-toast",
+    failureFeedback: "status-toast",
+  });
+
+  expect(entries).toContain("updateStatusMessage:toast-1:success:shell usage text");
+  expect(entries).not.toContain(
+    "updateStatusMessage:toast-1:success:shell usage text:help",
+  );
 });
 
 test("command runner records history and updates a status toast on success", async () => {

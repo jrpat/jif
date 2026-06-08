@@ -61,7 +61,10 @@ import {
   buildShortcutSummary,
   buildShortcutSummarySegments,
   computeShortcutPanelHeight,
+  DISMISS_HELP_SUMMARY_RESERVED_WIDTH,
   getShortcutPanelBindings,
+  prependDismissHelpSummary,
+  prependDismissHelpSummarySegment,
   shortcutLayoutRowCount,
   shortcutModeLabel,
   type ShortcutPanelBindingInput,
@@ -84,7 +87,7 @@ import { suspendProcessToShell } from "./suspend.ts";
 import { openTextInEditor } from "./openTextInEditor.ts";
 import { hasVisibleSearchHighlights, hasVisibleSearchScope } from "../search/matching.ts";
 import { SearchHighlightLayer } from "./searchOverlay.tsx";
-import { getStatusToastMaxBodyHeight } from "./statusMessages.ts";
+import { getStatusHelpToastMaxBodyHeight, getStatusToastMaxBodyHeight } from "./statusMessages.ts";
 import {
   bindViewRendererEvents,
   createPaletteDetector,
@@ -164,6 +167,7 @@ export function JifView(props: {
   onCleanup(() => focusClickGuard.dispose());
   let logViewport: ScrollBoxRenderable | undefined;
   let diffViewport: ScrollBoxRenderable | undefined;
+  let helpViewport: ScrollBoxRenderable | undefined;
   const detectAndApplyPalette = createPaletteDetector({
     renderer,
     rawConfig,
@@ -236,6 +240,7 @@ export function JifView(props: {
     expandElidedRevisions: runtime.expandElidedRevisions,
     persistLayout: (layout) => persistence.saveLayoutPreference(layout),
     getDiffViewport: () => diffViewport,
+    getHelpViewport: () => helpViewport,
     logShortcutPanelToggle: ({ before, after, focusMode }) => {
       logShortcutDebug("toggle-shortcut-panel", {
         before,
@@ -301,12 +306,25 @@ export function JifView(props: {
   );
   const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutBindings()));
   const shortcutContentWidth = createMemo(() => Math.max(1, terminalSize().width - 4));
-  const shortcutSummarySegments = createMemo(() =>
-    buildShortcutSummarySegments(shortcutEntries(), shortcutContentWidth())
+  // A visible help toast leads the summary with a "␛ dismiss" hint; reserve its
+  // width so the trailing shortcuts still fit instead of overflowing the bar.
+  const hasHelpToast = createMemo(() =>
+    store.state.statusMessages.some((message) => message.variant === "help")
   );
-  const shortcutSummary = createMemo(() =>
-    buildShortcutSummary(shortcutEntries(), shortcutContentWidth())
+  const summaryContentWidth = createMemo(() =>
+    Math.max(
+      1,
+      shortcutContentWidth() - (hasHelpToast() ? DISMISS_HELP_SUMMARY_RESERVED_WIDTH : 0),
+    )
   );
+  const shortcutSummarySegments = createMemo(() => {
+    const segments = buildShortcutSummarySegments(shortcutEntries(), summaryContentWidth());
+    return hasHelpToast() ? prependDismissHelpSummarySegment(segments) : segments;
+  });
+  const shortcutSummary = createMemo(() => {
+    const summary = buildShortcutSummary(shortcutEntries(), summaryContentWidth());
+    return hasHelpToast() ? prependDismissHelpSummary(summary) : summary;
+  });
   const shortcutGrid = createMemo(() =>
     buildShortcutGrid(shortcutEntries(), shortcutContentWidth())
   );
@@ -411,6 +429,12 @@ export function JifView(props: {
     promptSurfaceHeight: promptSurfaceHeight(),
     shortcutPanelRenderedHeight: expandedShortcutPanelRenderedHeight(),
   }));
+  const statusHelpToastMaxBodyHeight = createMemo(() =>
+    getStatusHelpToastMaxBodyHeight(
+      terminalSize().height,
+      bottomChromeLayout().bottomSurfaceHeight,
+    )
+  );
 
   createEffect(() => {
     logShortcutDebug("shortcut-panel-state", {
@@ -897,6 +921,8 @@ export function JifView(props: {
           config={config}
           bottomInset={bottomChromeLayout().bottomSurfaceHeight}
           maxToastBodyHeight={statusToastMaxBodyHeight()}
+          maxHelpToastBodyHeight={statusHelpToastMaxBodyHeight()}
+          registerHelpViewport={(el) => { helpViewport = el; }}
           onInteract={(id) => store.actions.touchStatusMessage(id)}
           onDismiss={(id) => store.actions.dismissStatusMessage(id)}
         />

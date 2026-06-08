@@ -46,6 +46,8 @@ const SHORTCUT_SUMMARY_SEGMENTS: readonly Readonly<{
 }>[] = [
   { commandIds: ["command-bar"], label: "command" },
   { commandIds: ["shortcut-panel"], label: "help" },
+  { commandIds: ["scroll-help-down", "scroll-help-up"], label: "scroll" },
+  { commandIds: ["scroll-help-down-large", "scroll-help-up-large"], label: "scroll 8" },
   { commandIds: ["move-down", "move-up"], label: "move" },
   { commandIds: ["edit-revision"], label: "edit" },
   { commandIds: ["new-revision"], label: "new" },
@@ -123,6 +125,32 @@ export function buildShortcutSummary(
   return buildShortcutSummarySegments(entries, availableWidth)
     .map((segment) => `${segment.keyLabel} ${segment.label}`)
     .join(SUMMARY_GAP);
+}
+
+// Hint shown at the front of the summary while a help toast is on screen, so
+// the user knows Escape dismisses it before composing anything else.
+export const DISMISS_HELP_SUMMARY_SEGMENT: ShortcutSummarySegment = {
+  keyLabel: "␛",
+  label: "dismiss",
+};
+
+// Width the dismiss hint claims at the front of the summary, including the gap
+// that separates it from the segment that follows.
+export const DISMISS_HELP_SUMMARY_RESERVED_WIDTH =
+  DISMISS_HELP_SUMMARY_SEGMENT.keyLabel.length +
+  1 +
+  DISMISS_HELP_SUMMARY_SEGMENT.label.length +
+  SUMMARY_GAP.length;
+
+export function prependDismissHelpSummarySegment(
+  segments: readonly ShortcutSummarySegment[],
+): readonly ShortcutSummarySegment[] {
+  return [DISMISS_HELP_SUMMARY_SEGMENT, ...segments];
+}
+
+export function prependDismissHelpSummary(summary: string): string {
+  const dismiss = `${DISMISS_HELP_SUMMARY_SEGMENT.keyLabel} ${DISMISS_HELP_SUMMARY_SEGMENT.label}`;
+  return summary.length > 0 ? `${dismiss}${SUMMARY_GAP}${summary}` : dismiss;
 }
 
 export function buildShortcutSummarySegments(
@@ -283,6 +311,8 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Diff";
     case "notifications":
       return "Notifications";
+    case "help":
+      return "Help";
     case "bookmark":
       return "Bookmark";
     case "bookmark-move":

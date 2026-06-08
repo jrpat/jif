@@ -16,6 +16,8 @@ You get the ergonomics of a TUI porcelain without the CLI being hidden from you,
 
 Press `-` while composing to flip between short and long flag names. Press `:` at any time to drop into the command bar and type a `jj` subcommand directly — if a command is already being composed, `:` preserves it and lets you edit it as text before running.
 
+Most successful commands surface a short toast that fades on its own after a few seconds. Help output is different: running `help`, or any command ending in `-h` or `--help`, opens a blue-bordered toast that grows to fit the help text (up to the height available on screen) and stays until you dismiss it. The toast is its own [Help mode](#help): `j`/`k` scroll a line and `J`/`K` scroll eight lines, so long help pages are readable in place. While it is up, the status bar leads with a `␛ dismiss` hint; pressing `Esc` clears it, and so does running any other command (the next toast supersedes it).
+
 ## Prerequisites
 
 `jif` shells out to the real `jj` binary, so `jj` must be installed and available on `PATH`.
@@ -292,6 +294,18 @@ Active while the full-screen diff viewer is open. Does not inherit Normal.
 | `K` | scroll-up-large | Scroll up ten lines |
 | `H` | scroll-left-large | Scroll left ten columns |
 | `L` | scroll-right-large | Scroll right ten columns |
+
+### Help
+
+Active while a help toast is on screen (after `help`, `-h`, or `--help`). Does not inherit Normal — it is a self-contained reading mode; only `_global` shortcuts (`escape` to dismiss, `q`, `ctrl-r`, …) remain alongside the scroll keys. If you open another panel over it (for example notifications with `~`), that panel takes the keyboard while the toast stays on screen behind it.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `j` | scroll-help-down | Scroll the help panel down one line |
+| `k` | scroll-help-up | Scroll the help panel up one line |
+| `J` | scroll-help-down-large | Scroll the help panel down eight lines |
+| `K` | scroll-help-up-large | Scroll the help panel up eight lines |
+| `escape` | cancel | Dismiss the help panel |
 
 ### Inline Confirmation
 

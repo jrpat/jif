@@ -1,5 +1,6 @@
-import type { FailedCommand, StatusLevel } from "../domain/types.ts";
+import type { FailedCommand, StatusLevel, StatusMessageVariant } from "../domain/types.ts";
 import { tokenizeCommandText } from "../jj/client.ts";
+import { isHelpJjCommand } from "./interactive-subcommands.ts";
 import { SPINNER_INTERVAL_MS, formatSpinnerText } from "../ui/spinner.ts";
 
 export type CommandFeedbackMode = "status-toast" | "event" | "none";
@@ -10,7 +11,7 @@ export type CommandRunnerActions = Readonly<{
   cancelCommand(): void;
   pushEvent(text: string, level: StatusLevel): void;
   pushStatusMessage(id: string, text: string, level: StatusLevel): void;
-  updateStatusMessage(id: string, text: string, level: StatusLevel): void;
+  updateStatusMessage(id: string, text: string, level: StatusLevel, variant?: StatusMessageVariant): void;
   logEvent(text: string, level: StatusLevel): void;
   setLoading(loading: boolean): void;
   setLastFailedCommand(command: FailedCommand): void;
@@ -132,7 +133,9 @@ export function createCommandRunner(args: Readonly<{
         if (options.cancelOnSuccess) {
           args.actions.cancelCommand();
         }
-        publishSuccess(args.actions, toastId, resultMessage, options.successFeedback);
+        const successVariant: StatusMessageVariant | undefined =
+          executor === "jj" && isHelpJjCommand(command.commandText) ? "help" : undefined;
+        publishSuccess(args.actions, toastId, resultMessage, options.successFeedback, successVariant);
         await args.refreshRepository();
         if (options.focusWorkingCopyAfterRefresh) {
           args.actions.focusWorkingCopy();
@@ -246,10 +249,11 @@ function publishSuccess(
   toastId: string | null,
   message: string,
   feedback: CommandFeedbackMode,
+  variant?: StatusMessageVariant,
 ) {
   if (feedback === "status-toast") {
     if (toastId !== null) {
-      actions.updateStatusMessage(toastId, message, "success");
+      actions.updateStatusMessage(toastId, message, "success", variant);
     }
     actions.logEvent(message, "success");
     return;

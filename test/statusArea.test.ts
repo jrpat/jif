@@ -2,7 +2,9 @@ import { expect, test } from "bun:test";
 import { resolveAppConfig } from "../src/config/index.ts";
 import { formatSpinnerText } from "../src/ui/spinner.ts";
 import {
+  getHelpToastBorderColor,
   getStatusColor,
+  getStatusHelpToastMaxBodyHeight,
   getStatusToastBodyHeight,
   getStatusToastMaxBodyHeight,
 } from "../src/ui/statusMessages.ts";
@@ -33,6 +35,20 @@ test("getStatusToastBodyHeight also clamps to the number of output lines", () =>
   expect(getStatusToastBodyHeight("one\ntwo\nthree", 12)).toBe(3);
   expect(getStatusToastBodyHeight("1\n2\n3\n4\n5", 3)).toBe(3);
   expect(getStatusToastBodyHeight("1\n2\n3", 1)).toBe(1);
+});
+
+test("getStatusHelpToastMaxBodyHeight fills the height above the bottom chrome minus the border", () => {
+  expect(getStatusHelpToastMaxBodyHeight(40, 0)).toBe(38);
+  expect(getStatusHelpToastMaxBodyHeight(40, 6)).toBe(32);
+  expect(getStatusHelpToastMaxBodyHeight(3, 0)).toBe(1);
+  expect(getStatusHelpToastMaxBodyHeight(4, 10)).toBe(1);
+});
+
+test("getHelpToastBorderColor resolves ANSI palette color 4 (blue)", () => {
+  const config = resolveAppConfig({});
+  const ansiBlue = config.terminalPalette[4];
+  expect(typeof ansiBlue).toBe("string");
+  expect(getHelpToastBorderColor(config)).toBe(ansiBlue ?? undefined);
 });
 
 test("message overlays clamp long toasts to the configured body height", async () => {
@@ -114,4 +130,62 @@ test("scrolling a success toast resets its dismiss timer", async () => {
 
   expect(result.bodyFound).toBeTrue();
   expect(result.dismissCalls).toEqual(["toast-1"]);
+});
+
+test("help toasts persist past the dismiss timer and fill the available height", async () => {
+  const proc = Bun.spawn({
+    cmd: ["bun", "run", "test/helpers/renderHelpStatusMessageOverlay.tsx"],
+    cwd: process.cwd(),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+
+  expect(exitCode).toBe(0);
+  expect(stderr).toBe("");
+
+  const result = JSON.parse(stdout) as {
+    renderedLineCount: number;
+    frame: string;
+    dismissCalls: string[];
+  };
+
+  // No auto-dismiss, and the body expands to the help cap (12 lines) plus the
+  // toast's two border rows rather than the small 3-line default cap.
+  expect(result.dismissCalls).toEqual([]);
+  expect(result.renderedLineCount).toBe(14);
+  expect(result.frame).toContain("help line 1");
+});
+
+test("a help toast registers a scrollable viewport that scrollBy drives", async () => {
+  const proc = Bun.spawn({
+    cmd: ["bun", "run", "test/helpers/renderHelpToastScroll.tsx"],
+    cwd: process.cwd(),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+
+  expect(exitCode).toBe(0);
+  expect(stderr).toBe("");
+
+  const result = JSON.parse(stdout) as {
+    registered: boolean;
+    scrollTopBefore: number;
+    scrollTopAfter: number;
+  };
+
+  expect(result.registered).toBeTrue();
+  expect(result.scrollTopBefore).toBe(0);
+  expect(result.scrollTopAfter).toBe(8);
 });

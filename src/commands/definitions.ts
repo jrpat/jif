@@ -81,6 +81,7 @@ export type CommandController = Readonly<{
   revertOperation: () => void;
   showOperationDiff: () => void;
   scrollDiffViewer: (rowDelta: number, colDelta: number) => void;
+  scrollHelpToast: (rowDelta: number) => void;
   openNotifications: () => void;
   expandNotification: () => void;
   collapseNotification: () => void;
@@ -117,6 +118,10 @@ function focusedFileExists(state: AppState): boolean {
   if (focusedIsElided(state)) return false;
   const expanded = getExpandedRevision(state);
   return expanded !== null && expanded.files[state.focusedFileIndex] !== undefined;
+}
+
+function helpToastVisible(state: AppState): boolean {
+  return state.statusMessages.some((message) => message.variant === "help");
 }
 
 export const commandDefinitions: readonly CommandDefinition[] = [
@@ -187,6 +192,34 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Scroll the diff viewer right by 10 characters",
     canExecute: (state) => state.diffViewer !== null,
     run: (controller) => controller.scrollDiffViewer(0, 10),
+  },
+  {
+    id: "scroll-help-down",
+    title: "Scroll Down",
+    description: "Scroll the help panel down one line",
+    canExecute: helpToastVisible,
+    run: (controller) => controller.scrollHelpToast(1),
+  },
+  {
+    id: "scroll-help-up",
+    title: "Scroll Up",
+    description: "Scroll the help panel up one line",
+    canExecute: helpToastVisible,
+    run: (controller) => controller.scrollHelpToast(-1),
+  },
+  {
+    id: "scroll-help-down-large",
+    title: "Scroll Down Large",
+    description: "Scroll the help panel down eight lines",
+    canExecute: helpToastVisible,
+    run: (controller) => controller.scrollHelpToast(8),
+  },
+  {
+    id: "scroll-help-up-large",
+    title: "Scroll Up Large",
+    description: "Scroll the help panel up eight lines",
+    canExecute: helpToastVisible,
+    run: (controller) => controller.scrollHelpToast(-8),
   },
   {
     id: "move-parent",

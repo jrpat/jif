@@ -80,6 +80,7 @@ export function createJifCommandController(args: Readonly<{
   expandElidedRevisions(elidedIndex: number): Promise<void>;
   persistLayout(layout: AppLayout): void | Promise<unknown>;
   getDiffViewport(): ScrollBoxRenderable | undefined;
+  getHelpViewport(): ScrollBoxRenderable | undefined;
   logShortcutPanelToggle(details: Readonly<{
     before: boolean;
     after: boolean;
@@ -541,6 +542,9 @@ export function createJifCommandController(args: Readonly<{
     },
     scrollDiffViewer(rowDelta: number, colDelta: number) {
       args.getDiffViewport()?.scrollBy({ x: colDelta, y: rowDelta });
+    },
+    scrollHelpToast(rowDelta: number) {
+      args.getHelpViewport()?.scrollBy({ x: 0, y: rowDelta });
     },
     toggleSelection() {
       store.actions.toggleRevisionSelection();

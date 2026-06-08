@@ -1207,6 +1207,61 @@ test("updateStatusMessage changes text and level of an existing toast", () => {
   expect(state.statusMessages[0]?.level).toBe("success");
 });
 
+test("updateStatusMessage can promote a toast to the help variant", () => {
+  let state = createState();
+  state = pushStatusMessage(state, "toast-1", "running help", "info");
+  state = updateStatusMessage(state, "toast-1", "Usage: jj", "success", "help");
+
+  expect(state.statusMessages[0]?.variant).toBe("help");
+});
+
+test("showing a new status toast dismisses a visible help toast", () => {
+  let state = createState();
+  state = pushStatusMessage(state, "help-toast", "running help", "info");
+  state = updateStatusMessage(state, "help-toast", "Usage: jj", "success", "help");
+
+  state = pushStatusMessage(state, "toast-2", "running command", "info");
+
+  expect(state.statusMessages.map((message) => message.id)).toEqual(["toast-2"]);
+  expect(state.statusMessages.some((message) => message.variant === "help")).toBeFalse();
+});
+
+test("pushing an event dismisses a visible help toast", () => {
+  let state = createState();
+  state = pushStatusMessage(state, "help-toast", "running help", "info");
+  state = updateStatusMessage(state, "help-toast", "Usage: jj", "success", "help");
+
+  state = pushEvent(state, "command failed", "error");
+
+  expect(state.statusMessages.map((message) => message.text)).toEqual(["command failed"]);
+});
+
+test("getActiveMode resolves to help while a help toast is visible", () => {
+  let state = createState();
+  state = pushStatusMessage(state, "toast-1", "running help", "info");
+  expect(getActiveMode(state)).not.toBe("help");
+
+  state = updateStatusMessage(state, "toast-1", "Usage: jj", "success", "help");
+  expect(getActiveMode(state)).toBe("help");
+});
+
+test("getActiveMode yields the help toast to an overlay layered on top of it", () => {
+  let state = createState();
+  state = pushStatusMessage(state, "toast-1", "running help", "info");
+  state = updateStatusMessage(state, "toast-1", "Usage: jj", "success", "help");
+
+  const layered: AppState = { ...state, focusMode: "notifications" };
+  expect(getActiveMode(layered)).toBe("notifications");
+});
+
+test("a new toast leaves non-help toasts in place", () => {
+  let state = createState();
+  state = pushStatusMessage(state, "toast-1", "first", "error");
+  state = pushStatusMessage(state, "toast-2", "second", "info");
+
+  expect(state.statusMessages.map((message) => message.id)).toEqual(["toast-1", "toast-2"]);
+});
+
 test("touchStatusMessage updates the interaction timestamp without changing text", () => {
   let state = createState();
   state = pushStatusMessage(state, "toast-1", "done", "success");

@@ -16,9 +16,13 @@ import {
   buildShortcutSummary,
   buildShortcutSummarySegments,
   computeShortcutPanelHeight,
+  DISMISS_HELP_SUMMARY_RESERVED_WIDTH,
+  DISMISS_HELP_SUMMARY_SEGMENT,
   formatShortcutKeyLabel,
   getShortcutPanelBindings,
   normalizeShortcutSortKey,
+  prependDismissHelpSummary,
+  prependDismissHelpSummarySegment,
   shortcutModeLabel,
   type ShortcutPanelBinding,
   type ShortcutPanelBindingInput,
@@ -173,6 +177,50 @@ test("buildShortcutSummary ignores move-parent in the collapsed status bar", () 
   const expected = ": command   ? help   j/k move   e edit";
 
   expect(buildShortcutSummary(entries, expected.length)).toBe(expected);
+});
+
+test("prependDismissHelpSummarySegment leads the summary with a dismiss hint", () => {
+  const entries = buildShortcutEntries([
+    makeBinding("command-bar", "Command Bar", ":"),
+    makeBinding("shortcut-panel", "Shortcuts", "?"),
+  ]);
+
+  expect(prependDismissHelpSummarySegment(buildShortcutSummarySegments(entries))).toEqual([
+    { keyLabel: "␛", label: "dismiss" },
+    { keyLabel: ":", label: "command" },
+    { keyLabel: "?", label: "help" },
+  ]);
+});
+
+test("prependDismissHelpSummary leads the collapsed string with the dismiss hint", () => {
+  expect(prependDismissHelpSummary(": command   ? help")).toBe(
+    "␛ dismiss   : command   ? help",
+  );
+  expect(prependDismissHelpSummary("")).toBe("␛ dismiss");
+});
+
+test("DISMISS_HELP_SUMMARY_RESERVED_WIDTH covers the hint plus its trailing gap", () => {
+  const segmentWidth =
+    DISMISS_HELP_SUMMARY_SEGMENT.keyLabel.length +
+    1 +
+    DISMISS_HELP_SUMMARY_SEGMENT.label.length;
+  // "␛ dismiss" (9) plus the three-space gap to the next segment.
+  expect(segmentWidth).toBe(9);
+  expect(DISMISS_HELP_SUMMARY_RESERVED_WIDTH).toBe(12);
+});
+
+test("buildShortcutSummarySegments surfaces help-panel scroll hints", () => {
+  const entries = buildShortcutEntries([
+    makeBinding("scroll-help-down", "Scroll Down", "j"),
+    makeBinding("scroll-help-up", "Scroll Up", "k"),
+    makeBinding("scroll-help-down-large", "Scroll Down Large", "J"),
+    makeBinding("scroll-help-up-large", "Scroll Up Large", "K"),
+  ]);
+
+  expect(buildShortcutSummarySegments(entries)).toEqual([
+    { keyLabel: "j/k", label: "scroll" },
+    { keyLabel: "J/K", label: "scroll 8" },
+  ]);
 });
 
 test("buildShortcutSummarySegments keeps key labels separate for bold rendering", () => {

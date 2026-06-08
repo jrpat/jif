@@ -108,6 +108,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     showOperationDiff: () => calls.push("showOperationDiff"),
     scrollDiffViewer: (rowDelta, colDelta) =>
       calls.push(`scrollDiffViewer(${rowDelta},${colDelta})`),
+    scrollHelpToast: (rowDelta) => calls.push(`scrollHelpToast(${rowDelta})`),
     openNotifications: () => calls.push("openNotifications"),
     expandNotification: () => calls.push("expandNotification"),
     collapseNotification: () => calls.push("collapseNotification"),
@@ -1305,5 +1306,91 @@ test("scroll-* commands are gated by canExecute when no diff viewer is open", ()
   });
 
   expect(handled).toBeTrue();
+  expect(calls).toEqual(["moveFocus"]);
+});
+
+function helpToastState(overrides: Partial<AppState> = {}): AppState {
+  return {
+    ...createState(),
+    statusMessages: [
+      {
+        id: "help-toast",
+        text: "Usage: jj rebase [OPTIONS]\nmore\nlines",
+        level: "success",
+        variant: "help",
+        createdAt: 0,
+        lastInteractedAt: 0,
+      },
+    ],
+    ...overrides,
+  };
+}
+
+test("dispatchGlobalKey routes j/k to single-line help scroll while a help toast is visible", () => {
+  const calls: string[] = [];
+  const state = helpToastState();
+
+  dispatchGlobalKey({ normalizedKey: "j", state, commands: commandDefinitions, controller: createController(calls) });
+  dispatchGlobalKey({ normalizedKey: "k", state, commands: commandDefinitions, controller: createController(calls) });
+
+  expect(calls).toEqual(["scrollHelpToast(1)", "scrollHelpToast(-1)"]);
+});
+
+test("dispatchGlobalKey routes uppercase J/K to eight-line help scroll", () => {
+  const calls: string[] = [];
+  const state = helpToastState();
+
+  dispatchGlobalKey({ normalizedKey: "J", state, commands: commandDefinitions, controller: createController(calls) });
+  dispatchGlobalKey({ normalizedKey: "K", state, commands: commandDefinitions, controller: createController(calls) });
+
+  expect(calls).toEqual(["scrollHelpToast(8)", "scrollHelpToast(-8)"]);
+});
+
+test("help mode does not inherit normal: revision shortcuts are inert under a help toast", () => {
+  const calls: string[] = [];
+  const state = helpToastState();
+
+  // `r` (rebase) and `:` (command bar) belong to normal mode, which help does
+  // not inherit, so neither is handled.
+  const rebaseHandled = dispatchGlobalKey({
+    normalizedKey: "r",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+  const commandBarHandled = dispatchGlobalKey({
+    normalizedKey: ":",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(rebaseHandled).toBeFalse();
+  expect(commandBarHandled).toBeFalse();
+  expect(calls).toEqual([]);
+});
+
+test("escape still dismisses from help mode via the global cancel binding", () => {
+  const calls: string[] = [];
+  const state = helpToastState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "escape",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["cancelOrBlur"]);
+});
+
+test("a help toast yields input to an overlay layered on top of it", () => {
+  const calls: string[] = [];
+  // Opening notifications over a help toast keeps notifications in control.
+  const state = helpToastState({ focusMode: "notifications" });
+
+  dispatchGlobalKey({ normalizedKey: "j", state, commands: commandDefinitions, controller: createController(calls) });
+
   expect(calls).toEqual(["moveFocus"]);
 });

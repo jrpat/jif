@@ -71,6 +71,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   evologEntries?: readonly OperationLogEntry[];
   evologCalls?: string[];
   diffViewport?: ScrollBoxRenderable;
+  helpViewport?: ScrollBoxRenderable;
   interdiffOutput?: string;
   interdiffCalls?: Array<readonly string[]>;
   anchorRange?: readonly string[];
@@ -178,6 +179,7 @@ function createControllerHarness(harnessOptions: Readonly<{
       persistedLayouts.push(layout);
     },
     getDiffViewport: () => harnessOptions.diffViewport,
+    getHelpViewport: () => harnessOptions.helpViewport,
     logShortcutPanelToggle: () => {},
   });
 
@@ -931,6 +933,32 @@ test("scrollDiffViewer is a no-op when no scrollbox is registered", () => {
   const harness = createControllerHarness({});
 
   expect(() => harness.controller.scrollDiffViewer(1, 0)).not.toThrow();
+  harness.store.dispose();
+});
+
+test("scrollHelpToast forwards vertical deltas to the registered help scrollbox", () => {
+  const calls: Array<{ x: number; y: number }> = [];
+  const fakeScrollbox = {
+    scrollBy: (delta: { x: number; y: number }) => {
+      calls.push(delta);
+    },
+  } as unknown as ScrollBoxRenderable;
+  const harness = createControllerHarness({ helpViewport: fakeScrollbox });
+
+  harness.controller.scrollHelpToast(1);
+  harness.controller.scrollHelpToast(-8);
+
+  expect(calls).toEqual([
+    { x: 0, y: 1 },
+    { x: 0, y: -8 },
+  ]);
+  harness.store.dispose();
+});
+
+test("scrollHelpToast is a no-op when no help scrollbox is registered", () => {
+  const harness = createControllerHarness({});
+
+  expect(() => harness.controller.scrollHelpToast(1)).not.toThrow();
   harness.store.dispose();
 });
 

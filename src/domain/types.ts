@@ -107,10 +107,16 @@ export type CommandDraft = Readonly<{
 
 export type StatusLevel = "info" | "success" | "warning" | "error";
 
+// A toast variant carries presentation semantics beyond its level. "help"
+// toasts hold `jj help`/`--help` output: they persist until dismissed, use a
+// blue border, and expand to fit their text up to the available height.
+export type StatusMessageVariant = "help";
+
 export type StatusMessage = Readonly<{
   id: string;
   text: string;
   level: StatusLevel;
+  variant?: StatusMessageVariant;
   createdAt: number;
   lastInteractedAt: number;
 }>;

@@ -120,6 +120,7 @@ function cloneKeymap(source: Keymap): MutableKeymap {
     search: { ...source.search },
     "diff-viewer": { ...source["diff-viewer"] },
     notifications: { ...source.notifications },
+    help: { ...source.help },
     bookmark: { ...source.bookmark },
     "bookmark-move": { ...source["bookmark-move"] },
     extras: { ...source.extras },

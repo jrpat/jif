@@ -20,6 +20,7 @@ import type {
   SearchScopeId,
   StatusMessage,
   StatusLevel,
+  StatusMessageVariant,
 } from "../domain/types.ts";
 import { getChangeIdFromRevisionId, getRevisionArg, isDivergentRevisionId } from "../domain/revisionIds.ts";
 import {
@@ -1522,6 +1523,14 @@ export function setLoading(state: AppState, loading: boolean): AppState {
   };
 }
 
+// Showing a new toast retires any visible help toast: help output is a modal
+// aside, so the next piece of feedback supersedes it rather than stacking on top.
+function dismissHelpToasts(
+  messages: readonly StatusMessage[],
+): readonly StatusMessage[] {
+  return messages.filter((message) => message.variant !== "help");
+}
+
 export function pushEvent(
   state: AppState,
   text: string,
@@ -1545,7 +1554,7 @@ export function pushEvent(
 
   return {
     ...state,
-    statusMessages: [...state.statusMessages, statusMessage],
+    statusMessages: [...dismissHelpToasts(state.statusMessages), statusMessage],
     eventLog: appendBoundedEvent(state.eventLog, event, state.notificationHistoryLimit),
   };
 }
@@ -1564,7 +1573,7 @@ export function pushStatusMessage(
     createdAt: now,
     lastInteractedAt: now,
   };
-  return { ...state, statusMessages: [...state.statusMessages, message] };
+  return { ...state, statusMessages: [...dismissHelpToasts(state.statusMessages), message] };
 }
 
 export function updateStatusMessage(
@@ -1572,12 +1581,13 @@ export function updateStatusMessage(
   id: string,
   text: string,
   level: StatusLevel,
+  variant?: StatusMessageVariant,
 ): AppState {
   const now = Date.now();
   return {
     ...state,
     statusMessages: state.statusMessages.map((m) =>
-      m.id === id ? { ...m, text, level, lastInteractedAt: now } : m,
+      m.id === id ? { ...m, text, level, variant, lastInteractedAt: now } : m,
     ),
   };
 }
