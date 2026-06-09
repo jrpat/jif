@@ -26,7 +26,6 @@ import {
   getInlineConfirmationActualCommand,
   getSelectedRevisionIds,
   getSquashAnchorArg,
-  getSquashOntoEditArg,
 } from "../state/store.ts";
 import { hasUserDescription } from "./revisionHeader.ts";
 
@@ -48,7 +47,7 @@ type ControllerClient = Readonly<{
 type ExecuteCurrentCommand = (
   commandOverride?: string,
   options?: { recordHistory?: boolean },
-) => Promise<boolean>;
+) => Promise<void>;
 
 type RunJjCommand = (
   commandText: string,
@@ -246,31 +245,14 @@ export function createJifCommandController(args: Readonly<{
         return;
       }
 
-      if (state.commandDraft?.config.kind === "squash") {
-        // A squash-onto whose source includes the working copy needs a follow-up
-        // `jj edit <target>` so we land on the target rather than the empty commit
-        // jj creates when it abandons the working copy.
-        const editArg = getSquashOntoEditArg(state);
-        const interactive = squashNeedsInteractiveShell(state);
+      if (state.commandDraft?.config.kind === "squash" && squashNeedsInteractiveShell(state)) {
         const commandText = getDisplayedCommandText(state).trim();
-        if (interactive && commandText.length === 0) {
-          return;
+        if (commandText.length > 0) {
+          void args.runInteractiveJjCommand(commandText);
         }
-
-        void (async () => {
-          const succeeded = interactive
-            ? await args.runInteractiveJjCommand(commandText)
-            : await args.executeCurrentCommand();
-          if (succeeded && editArg) {
-            await args.runJjCommand(`edit ${editArg}`, {
-              focusWorkingCopyAfterRefresh: true,
-            });
-          }
-        })();
-        return;
+      } else {
+        void args.executeCurrentCommand();
       }
-
-      void args.executeCurrentCommand();
     },
     focusCommandBar() {
       store.actions.focusCommandBar();

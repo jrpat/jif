@@ -153,7 +153,7 @@ Active while previewing a squash. Inherits Normal. Composes `jj squash -f <sourc
 Two keys from Normal mode enter squash mode:
 
 - `s` (squash) selects the focused revision as the source and moves focus down to its parent, which becomes the target — squash the focused revision into the one below it.
-- `S` (squash-onto) keeps the focused revision as the target and selects the whole branch above it as the source: the revision directly above plus every descendant of it shown in the log. When revisions are already selected, the lowest selected revision anchors the branch instead. Each source revision is a real selection, so they all show as selected — squash the revisions above into the focused one. If the working copy was part of the squashed branch, jif then edits the target so you land on it instead of the empty revision jj would otherwise leave on top.
+- `S` (squash-onto) keeps the focused revision as the target and selects the whole branch above it as the source: the revision directly above plus every descendant of it shown in the log. When revisions are already selected, the lowest selected revision anchors the branch instead. Each source revision is a real selection, so they all show as selected — squash the revisions above into the focused one.
 
 | Key | Command | Description |
 |-----|---------|-------------|

@@ -52,7 +52,6 @@ import {
   setRevisionFiles,
   startCommandDraft,
   startSquashOnto,
-  getSquashOntoEditArg,
   toggleFileSelection,
   getOperationAffectedRowIds,
   setRebaseSourceKind,
@@ -1856,48 +1855,6 @@ test("startSquashOnto is a no-op when nothing sits above the focused revision", 
 
   expect(next.commandDraft).toBeNull();
   expect(next.selectedRowIds).toEqual([]);
-});
-
-test("getSquashOntoEditArg targets the focused revision when the working copy is squashed away", () => {
-  let state = createSquashOntoChainState();
-  state = moveFocus(state, 2);
-  state = startSquashOnto(state);
-
-  // @ (a) is part of the selected source, so jj will abandon it and create an
-  // empty commit on top of the target; the follow-up edits the target (b).
-  expect(state.selectedRowIds).toContain(FIRST_ROW_ID);
-  expect(getSquashOntoEditArg(state)).toBe("b");
-});
-
-test("getSquashOntoEditArg returns null when the working copy is not squashed away", () => {
-  // Move the working-copy marker onto the target (b) so @ stays out of the source.
-  let state = createSquashOntoChainState();
-  state = {
-    ...state,
-    revisions: state.revisions.map((revision) => ({
-      ...revision,
-      marker: revision.rowId === SECOND_ROW_ID
-        ? ("working-copy" as const)
-        : revision.rowId === FIRST_ROW_ID
-        ? ("plain" as const)
-        : revision.marker,
-    })),
-  };
-  state = moveFocus(state, 2);
-  state = startSquashOnto(state);
-
-  // @ (b) is the target, never part of the source, so jj leaves no empty commit.
-  expect(getSquashOntoEditArg(state)).toBeNull();
-});
-
-test("getSquashOntoEditArg returns null for a regular squash draft", () => {
-  let state = createState();
-  state = startCommandDraft(state, draftConfigs.squash);
-  expect(getSquashOntoEditArg(state)).toBeNull();
-});
-
-test("getSquashOntoEditArg returns null without a command draft", () => {
-  expect(getSquashOntoEditArg(createState())).toBeNull();
 });
 
 test("arg helper selects long flags when useShortFlags is false", () => {

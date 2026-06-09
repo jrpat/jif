@@ -93,7 +93,6 @@ export type RebaseTargetKind = "destination" | "insert-before" | "insert-after" 
 
 export type CommandDraft = Readonly<{
   config: CommandDraftConfig;
-  squashOnto?: boolean;
   descendantRevisionIds?: readonly string[];
   includeAnchor?: boolean;
   anchorRevisionIds?: readonly string[];

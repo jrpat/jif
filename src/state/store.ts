@@ -1344,7 +1344,6 @@ export function startSquashOnto(state: AppState): AppState {
     markedRowIds: [],
     commandDraft: {
       config: draftConfigs.squash,
-      squashOnto: true,
     },
   };
 }
@@ -1386,34 +1385,6 @@ function resolveSquashOntoSourceRowIds(state: AppState): readonly string[] {
 
   // Order top-to-bottom (ascending row index) for a stable, readable command.
   return rowIds.reverse();
-}
-
-// A squash-onto folds the branch above the focused revision into it. When the
-// working-copy revision is part of that source, jj abandons it and lands the
-// working copy on a fresh empty commit above the target. Returning the target's
-// change-id arg here tells the caller to follow up with `jj edit <target>`, which
-// moves onto the target and lets jj drop that empty commit — so we never leave an
-// extra revision on top of the focused one. Returns null when no follow-up is
-// needed (regular squash, or the working copy was not squashed away).
-export function getSquashOntoEditArg(state: AppState): string | null {
-  const draft = state.commandDraft;
-  if (!draft || draft.config.kind !== "squash" || !draft.squashOnto) {
-    return null;
-  }
-
-  const workingCopy = state.revisions.find(
-    (revision) => revision.marker === "working-copy",
-  );
-  if (!workingCopy || !state.selectedRowIds.includes(workingCopy.rowId)) {
-    return null;
-  }
-
-  const target = getFocusedRevision(state);
-  if (!target) {
-    return null;
-  }
-
-  return getRevisionArg(target.revisionId, target.changeIdPrefixLength);
 }
 
 export function setRebaseSourceKind(
