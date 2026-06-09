@@ -353,6 +353,19 @@ export class JjClient {
     }
   }
 
+  // Capture the compact `-h` help for a (possibly nested) subcommand path, used
+  // to drive structured command-bar completion. `-h` exits 0 and never touches
+  // the repo, so we just return stdout, swallowing any failure into "" so the
+  // completion layer can fall back to history.
+  async runHelp(path: readonly string[]): Promise<string> {
+    try {
+      const result = await this.runJj([...path, "-h"]);
+      return result.stdout;
+    } catch {
+      return "";
+    }
+  }
+
   private async runJj(args: readonly string[], options?: { color?: boolean; cwd?: string }) {
     return await runCommand(options?.cwd ?? this.repoPath, ["jj", ...args], options);
   }

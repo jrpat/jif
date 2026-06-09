@@ -3,7 +3,10 @@ import { For, Show, batch, createEffect, createMemo, createSignal, onMount } fro
 import { useKeyboard } from "@opentui/solid";
 import { matchHistoryEntries } from "../history/store.ts";
 import type { JjClient } from "../jj/client.ts";
+import type { JjHelpCache } from "../jj/helpCache.ts";
 import { buildCompletionItems, extractLastToken, matchCompletions, type CompletionItem } from "../revset/completions.ts";
+import { resolveComposeContext, type ComposeContext } from "../commands/compose-context.ts";
+import { buildComposeItems, computeComposeAccept } from "../commands/compose-completions.ts";
 import type { AppStore } from "../state/appStore.ts";
 import { getFocusedInsertArg, type CommandSegment } from "../state/store.ts";
 import type { ResolvedAppConfig } from "../config/schema.ts";
@@ -23,6 +26,11 @@ export type BookmarkPromptContext = Readonly<{
 export function CommandPrompt(props: {
   store: AppStore;
   config: ResolvedAppConfig;
+  // Structured completion is an opt-in enhancement of the jj bar. When these are
+  // omitted (or composeEnabled is false) the prompt behaves as a history bar.
+  client?: JjClient;
+  helpCache?: JjHelpCache;
+  composeEnabled?: boolean;
   workspaceRoot: string | null;
   loadHistory: (workspaceRoot: string) => Promise<string[]>;
   removeHistory?: (workspaceRoot: string, entry: string) => Promise<string[]>;
@@ -43,7 +51,48 @@ export function CommandPrompt(props: {
   );
   const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null);
   const [pendingInitialSync, setPendingInitialSync] = createSignal(true);
+  // The jj bar opens in command history when there is any, and in structured
+  // "compose" completion otherwise. The two views toggle via ctrl+h, or via a
+  // bare ':' typed into an empty input (see onInput). historyMode true === the
+  // history view; compose is the jj-only structured completion.
+  const [composeData, setComposeData] = createSignal<{
+    revsetItems: readonly CompletionItem[];
+    bookmarks: readonly string[];
+  }>({ revsetItems: [], bookmarks: [] });
+  const [historyMode, setHistoryMode] = createSignal(false);
+  const [helpVersion, setHelpVersion] = createSignal(0);
+  const composeActive = () => props.composeEnabled && !props.bookmarkContext && !historyMode();
   let input: InputRenderable | undefined;
+  // The initial view is chosen once, after history first loads.
+  let initialViewChosen = false;
+
+  // Flip between history and compose. Switching INTO history is a no-op when
+  // there is no history to show, so the jj bar never lands on an empty list.
+  const toggleHistoryMode = () => {
+    if (!historyMode() && historyEntries().length === 0) {
+      return;
+    }
+    batch(() => {
+      setHistoryMode((on) => !on);
+      setSelectedIndex(null);
+    });
+  };
+
+  onMount(() => {
+    const client = props.client;
+    if (!props.composeEnabled || !client) {
+      return;
+    }
+    props.helpCache?.prefetchTopLevel();
+    void (async () => {
+      const [bookmarks, tags, aliases] = await Promise.all([
+        client.loadBookmarks(),
+        client.loadTags(),
+        client.loadAliases(),
+      ]);
+      setComposeData({ revsetItems: buildCompletionItems(bookmarks, tags, aliases), bookmarks });
+    })();
+  });
 
   createEffect(() => {
     const workspaceRoot = props.workspaceRoot;
@@ -54,7 +103,20 @@ export function CommandPrompt(props: {
       return;
     }
 
-    void props.loadHistory(workspaceRoot).then(setHistoryEntries);
+    void props.loadHistory(workspaceRoot).then((entries) => {
+      setHistoryEntries(entries);
+      // On the jj bar, default to the history view when there is history, else
+      // to compose. Chosen only once so it never overrides a manual toggle.
+      // Clear any selection the compose auto-focus may have set during the brief
+      // pre-history-load window, so the history view opens unfocused.
+      if (props.composeEnabled && !initialViewChosen) {
+        initialViewChosen = true;
+        batch(() => {
+          setHistoryMode(entries.length > 0);
+          setSelectedIndex(null);
+        });
+      }
+    });
   });
 
   createEffect(() => {
@@ -85,6 +147,76 @@ export function CommandPrompt(props: {
     return matches.length > 0 ? matches : ctx.suggestions;
   });
 
+  // What to complete at the cursor. Recomputes when help models arrive
+  // (helpVersion) because path-walking consults the cache, which is non-reactive.
+  const composeContext = createMemo<ComposeContext | null>(() => {
+    if (!composeActive()) {
+      return null;
+    }
+    helpVersion();
+    return resolveComposeContext(draftText(), cursorOffset(), (path) => props.helpCache?.peek(path));
+  });
+
+  // Ensure the model for the resolved path — and each prefix the resolver needs
+  // to descend through — is loaded. Each arrival bumps helpVersion, letting the
+  // resolver descend one level further until it converges.
+  createEffect(() => {
+    const ctx = composeContext();
+    const cache = props.helpCache;
+    if (!ctx || !cache) {
+      return;
+    }
+    for (let i = 0; i <= ctx.path.length; i++) {
+      const prefix = ctx.path.slice(0, i);
+      if (cache.peek(prefix) === undefined) {
+        void cache.load(prefix).then(() => setHelpVersion((version) => version + 1));
+      }
+    }
+  });
+
+  const composeItems = createMemo<AutocompleteListItem[]>(() => {
+    helpVersion();
+    const ctx = composeContext();
+    if (!ctx) {
+      return [];
+    }
+    const data = composeData();
+    return buildComposeItems({
+      context: ctx,
+      help: props.helpCache?.peek(ctx.path),
+      revsetItems: data.revsetItems,
+      bookmarks: data.bookmarks,
+    });
+  });
+
+  // The first (bottom-most, index 0) suggestion is the default Tab target. It is
+  // underlined rather than focused: focus is reserved for a suggestion the user
+  // explicitly navigated to (which Enter then accepts instead of running the
+  // command). No selection => underline the default; a selection => no hint.
+  const tabHintIndex = createMemo<number | null>(() =>
+    composeActive() && selectedIndex() === null && composeItems().length > 0 ? 0 : null,
+  );
+
+  // Insert the suggestion at `index` at the cursor and reveal the next-context
+  // list. Shared by Tab and by Enter-on-a-focused-suggestion.
+  const acceptComposeSuggestion = (index: number): boolean => {
+    const ctx = composeContext();
+    const item = composeItems()[index];
+    if (!ctx || !item || !input) {
+      return false;
+    }
+    const accept = computeComposeAccept({ text: draftText(), context: ctx, item });
+    input.setText(accept.text);
+    input.cursorOffset = accept.cursorOffset;
+    batch(() => {
+      setDraftText(accept.text);
+      setSelectedIndex(null);
+      setCursorOffset(accept.cursorOffset);
+      store.actions.setCommandBarText(accept.text);
+    });
+    return true;
+  };
+
   const autocompleteItems = createMemo<AutocompleteListItem[]>(() => {
     if (props.bookmarkContext) {
       return filteredBookmarks().map((s) => ({
@@ -93,6 +225,9 @@ export function CommandPrompt(props: {
         text: s.name,
       }));
     }
+    if (composeActive()) {
+      return composeItems();
+    }
     return filteredHistory().map((entry) => ({
       id: entry,
       text: entry,
@@ -100,6 +235,12 @@ export function CommandPrompt(props: {
   });
 
   const displayedText = createMemo(() => {
+    // Compose mode does not live-preview the highlighted row into the input;
+    // Tab commits it instead. This keeps multi-token commands readable.
+    if (composeActive()) {
+      return draftText();
+    }
+
     const index = selectedIndex();
     if (index === null) {
       return draftText();
@@ -118,6 +259,11 @@ export function CommandPrompt(props: {
   const displayedCursorOffset = createMemo<number | null>(() => {
     if (pendingInitialSync()) {
       return props.bookmarkContext?.initialCursorOffset ?? draftText().length;
+    }
+    // Compose mode positions the cursor explicitly on Tab-accept (and on input),
+    // so leave the synced cursor alone otherwise.
+    if (composeActive()) {
+      return null;
     }
     const index = selectedIndex();
     if (index !== null && props.bookmarkContext) {
@@ -143,7 +289,27 @@ export function CommandPrompt(props: {
       return;
     }
 
-    const itemCount = props.bookmarkContext ? filteredBookmarks().length : filteredHistory().length;
+    // ctrl+h toggles between command history and structured completion on the
+    // jj bar, regardless of what is already typed.
+    if (props.composeEnabled && !props.bookmarkContext && event.ctrl && event.name === "h") {
+      event.preventDefault();
+      toggleHistoryMode();
+      return;
+    }
+
+    // Tab accepts the underlined default (or the focused suggestion, if the user
+    // navigated to one) and reveals the next-context list. Navigation stays on
+    // arrows/ctrl-nav and shift+Tab, which fall through to getAutocompleteAction.
+    if (composeActive() && event.name === "tab" && !event.shift) {
+      if (composeItems().length === 0) {
+        return;
+      }
+      event.preventDefault();
+      acceptComposeSuggestion(selectedIndex() ?? 0);
+      return;
+    }
+
+    const itemCount = autocompleteItems().length;
     const action = getAutocompleteAction(event, flow);
     if (action !== null && itemCount > 0) {
       event.preventDefault();
@@ -153,7 +319,7 @@ export function CommandPrompt(props: {
       return;
     }
 
-    if (event.ctrl && event.name === "x" && !props.bookmarkContext) {
+    if (event.ctrl && event.name === "x" && !props.bookmarkContext && !composeActive()) {
       const index = selectedIndex();
       if (index === null) return;
       const entry = filteredHistory()[index];
@@ -191,6 +357,12 @@ export function CommandPrompt(props: {
 
     if (event.name === "return") {
       event.preventDefault();
+      // A focused compose suggestion exists only because the user navigated to
+      // it, so Enter accepts it (same as Tab) rather than running the command.
+      if (composeActive() && selectedIndex() !== null) {
+        acceptComposeSuggestion(selectedIndex()!);
+        return;
+      }
       const finalText = displayedText();
       batch(() => {
         setDraftText(finalText);
@@ -208,8 +380,10 @@ export function CommandPrompt(props: {
       config={config}
       items={autocompleteItems()}
       selectedIndex={selectedIndex()}
+      underlineIndex={tabHintIndex()}
       flow={flow}
       focused
+      borderStyle={historyMode() ? "double" : "single"}
       onHeightChange={props.onHeightChange}
     >
       <box width={Array.from(props.prefix).length} flexDirection="row" flexShrink={0}>
@@ -233,6 +407,19 @@ export function CommandPrompt(props: {
         cursorColor={colors.chromeBorderFocus}
         cursorStyle={{ style: "line" }}
         onInput={(value) => {
+          // A bare ':' (the first-and-only character) is a mode-toggle command,
+          // not content: swallow it and flip history <-> compose.
+          if (props.composeEnabled && !props.bookmarkContext && value === ":") {
+            input?.setText("");
+            toggleHistoryMode();
+            batch(() => {
+              setDraftText("");
+              setSelectedIndex(null);
+              setCursorOffset(0);
+              store.actions.setCommandBarText("");
+            });
+            return;
+          }
           batch(() => {
             setDraftText(value);
             setSelectedIndex(null);
@@ -559,6 +746,7 @@ function PromptShell(props: {
   config: ResolvedAppConfig;
   items: readonly AutocompleteListItem[];
   selectedIndex: number | null;
+  underlineIndex?: number | null;
   flow: AutocompleteFlow;
   focused: boolean;
   borderStyle?: "single" | "double";
@@ -585,6 +773,7 @@ function PromptShell(props: {
         <AutocompleteList
           items={props.items}
           selectedIndex={props.selectedIndex}
+          underlineIndex={props.underlineIndex}
           flow={props.flow}
           config={props.config}
         />

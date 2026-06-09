@@ -23,6 +23,7 @@ import {
 } from "../state/store.ts";
 import { logShortcutDebug } from "../debug.ts";
 import { DEFAULT_REPOSITORY_LOAD_LIMIT, type JjClient } from "../jj/client.ts";
+import { JjHelpCache } from "../jj/helpCache.ts";
 import { runInteractiveCommand } from "../jj/process.ts";
 import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/types.ts";
 import { createJifCommandController, loadRevisionFiles } from "./controller.ts";
@@ -106,6 +107,7 @@ export function JifView(props: {
   rawConfig: AppConfig;
 }) {
   const { store, client, rawConfig } = props;
+  const helpCache = new JjHelpCache(client);
   const [config, setConfig] = createStore<ResolvedAppConfig>(props.config);
   const [ready, setReady] = createSignal(false);
   const [workspaceRoot, setWorkspaceRoot] = createSignal<string | null>(null);
@@ -848,6 +850,9 @@ export function JifView(props: {
           <CommandPrompt
             store={store}
             config={config}
+            client={client}
+            helpCache={helpCache}
+            composeEnabled={store.state.commandBar.kind === "jj"}
             workspaceRoot={workspaceRoot()}
             loadHistory={(root) => store.state.commandBar.kind === "shell"
               ? persistence.loadShellHistory(root)

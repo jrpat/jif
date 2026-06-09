@@ -1,4 +1,4 @@
-import type { ScrollBoxRenderable } from "@opentui/core";
+import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core";
 import { For, createMemo, createRenderEffect } from "solid-js";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { AutocompleteFlow } from "./autocomplete.ts";
@@ -8,11 +8,17 @@ export type AutocompleteListItem = Readonly<{
   tag?: string;
   text: string;
   detail?: string;
+  // Render the main text in bold. Used by command-bar flag completions to make
+  // the long flag stand out from its (dim) short alias and description.
+  bold?: boolean;
 }>;
 
 export function AutocompleteList(props: {
   items: readonly AutocompleteListItem[];
   selectedIndex: number | null;
+  // Logical index to underline as the "Tab inserts this" hint (distinct from
+  // selection, which highlights). Used by the command bar's complete-at-point.
+  underlineIndex?: number | null;
   flow: AutocompleteFlow;
   config: ResolvedAppConfig;
   maxVisibleItems?: number;
@@ -93,18 +99,30 @@ export function AutocompleteList(props: {
                   backgroundColor={backgroundColor()}
                 >
                   {item.tag ? (
-                    <text fg={colors.textTertiary} bg={backgroundColor()}>
+                    <text fg={colors.textTertiary} bg={backgroundColor()} flexShrink={0} wrapMode="none">
                       {item.tag}{" "}
                     </text>
                   ) : null}
                   <text
                     fg={isSelected() ? colors.chromeBorderFocus : colors.textPrimary}
                     bg={backgroundColor()}
+                    flexShrink={0}
+                    wrapMode="none"
+                    attributes={
+                      ((item.bold ? TextAttributes.BOLD : 0) |
+                        (logicalIndex === props.underlineIndex ? TextAttributes.UNDERLINE : 0)) ||
+                      undefined
+                    }
                   >
                     {item.text}
                   </text>
                   {item.detail ? (
-                    <text fg={colors.textTertiary} bg={backgroundColor()}>
+                    <text
+                      fg={colors.textTertiary}
+                      bg={backgroundColor()}
+                      flexShrink={1}
+                      wrapMode="none"
+                    >
                       {" "}{item.detail}
                     </text>
                   ) : null}

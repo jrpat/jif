@@ -117,16 +117,19 @@ export async function runInteractiveCommand(
   }
 }
 
-export function quoteCommand(command: readonly string[]): string {
-  return command
-    .map((part) => {
-      if (/^[A-Za-z0-9_./:-]+$/.test(part)) {
-        return part;
-      }
+// A bare argument needs quoting if it contains anything outside this safe set
+// (e.g. whitespace, glob/shell metacharacters). Shared with command-bar
+// completion so accepted values quote identically to how we render commands.
+export function needsQuoting(arg: string): boolean {
+  return !/^[A-Za-z0-9_./:-]+$/.test(arg);
+}
 
-      return JSON.stringify(part);
-    })
-    .join(" ");
+export function quoteArg(arg: string): string {
+  return needsQuoting(arg) ? JSON.stringify(arg) : arg;
+}
+
+export function quoteCommand(command: readonly string[]): string {
+  return command.map(quoteArg).join(" ");
 }
 
 function resolveShellPath(): string {

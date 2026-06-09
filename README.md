@@ -16,6 +16,10 @@ You get the ergonomics of a TUI porcelain without the CLI being hidden from you,
 
 Press `-` while composing to flip between short and long flag names. Press `:` at any time to drop into the command bar and type a `jj` subcommand directly — if a command is already being composed, `:` preserves it and lets you edit it as text before running.
 
+The `:` command bar has two views: your **command history**, and structured **complete-at-point**. It opens in history when you have any (otherwise it opens in complete-at-point), and you switch between them at any time with `ctrl-h`. With an empty input you can also just press `:` again — a `:` typed as the first-and-only character is treated as the toggle command rather than text, so `:` `:` drops you straight into complete-at-point.
+
+Complete-at-point autocompletes "what is needed" wherever the cursor is: first the `jj` subcommands (and sub-subcommands for groups like `bookmark` or `git`), then a command's flags — each shown as its bold long flag, dim short alias, and `jj`'s own description — and then values when the flag or argument before the cursor expects one (revisions including `@`/`@-`, enum choices like `--color always`, and bookmark names for `jj bookmark` subcommands). The first (bottom-most) suggestion is **underlined** to show what `Tab` will insert; `Tab` accepts it and advances to the next thing to complete, and the arrows / `ctrl-n`,`ctrl-p` / `ctrl-j`,`ctrl-k` move through the list. `Enter` runs the command — but if you have moved to a suggestion, `Enter` accepts that suggestion instead (the same as `Tab`). The flag and value metadata comes straight from `jj`'s own help, so it matches your installed `jj`. The `>` shell command bar is unchanged (history only).
+
 Most successful commands surface a short toast that fades on its own after a few seconds. Help output is different: running `help`, or any command ending in `-h` or `--help`, opens a blue-bordered toast that grows to fit the help text (up to the height available on screen) and stays until you dismiss it. The toast is its own [Help mode](#help): `j`/`k` scroll a line and `J`/`K` scroll eight lines, so long help pages are readable in place. While it is up, the status bar leads with a `␛ dismiss` hint; pressing `Esc` clears it, and so does running any other command (the next toast supersedes it).
 
 ## Prerequisites
@@ -325,11 +329,12 @@ Active in the command bar (`:`), revset prompt (`L`), and search prompt (`/`). K
 |-----|-------------|
 | `ctrl-j` / `ctrl-n` / `↓` | Move to the next history entry or suggestion |
 | `ctrl-k` / `ctrl-p` / `↑` | Move to the previous history entry or suggestion |
-| `ctrl-x` | Delete the highlighted suggestion from saved history (no-op for suggestions from non-history sources like revset completions) |
-| `ctrl-l` | (revset prompt `L`) Toggle the suggestion list between revset-function completions and previously applied revsets (double-tap `l` while holding `ctrl`, since the prompt itself opens on `ctrl-l`); history mode is shown with a double border, and is a no-op when there is no history. Selecting a history entry replaces the whole input. The revset you switch away from is saved as the most recent entry and pre-focused (the active revset is hidden), so re-applying toggles between two revsets |
+| `tab` | In the `:` jj command bar's complete-at-point, accept the underlined default suggestion — or, if you have moved to one, the focused suggestion — inserting it and advancing to the next thing to complete; `shift-tab` still moves to the previous suggestion. In history-style lists (the `>` shell bar, or the `:` bar's history view) `tab` / `shift-tab` move through the list |
+| `ctrl-h` | (`:` jj command bar) Toggle between command history and complete-at-point, regardless of what is typed. The bar opens in history when there is any, otherwise in complete-at-point; switching into history is a no-op when there is none. With an empty input, typing `:` (the first-and-only character) does the same toggle — the `:` is consumed as a command, not inserted as text. History view is shown with a double border |
+| `ctrl-x` | Delete the highlighted suggestion from saved history (no-op for suggestions from non-history sources like subcommand, flag, or revset completions) |
+| `ctrl-l` | (revset prompt `L`) Toggle the suggestion list between revset-function completions and previously applied revsets (double-tap `l` while holding `ctrl`, since that prompt opens on `ctrl-l`). History mode is shown with a double border, and is a no-op when there is no history. Selecting a history entry replaces the whole input; the revset you switch away from is saved as the most recent entry and pre-focused (the active revset is hidden), so re-applying toggles between two revsets |
 | `ctrl-'` | (`:` and `>` command bars) Insert the focused item's id at the cursor: the revision's shortest unique change-id prefix in Normal, the operation id in Op Log, the entry id in Evolog |
-| `enter` | Submit the current input (run the command, apply the revset, finalize the search) |
-| `tab` / `shift-tab` | Move to the next / previous suggestion |
+| `enter` | Submit the current input (run the command, apply the revset, finalize the search). In the `:` jj command bar's complete-at-point, if you have moved to a suggestion, `Enter` accepts it instead (the same as `Tab`) |
 
 ## Mouse
 
