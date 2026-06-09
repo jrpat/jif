@@ -240,7 +240,7 @@ test("files mode does not inherit Normal revision commands", () => {
   expect(resolveForState("h", state)).toBe("collapse");
   expect(resolveForState(" ", state)).toBe("toggle-file-selection");
   expect(resolveForState("s", state)).toBeNull();
-  expect(resolveForState("alt-s", state)).toBe("split");
+  expect(resolveForState("ctrl-s", state)).toBe("split");
 });
 
 test("= swaps from/to roles while composing interdiff", () => {
@@ -434,8 +434,8 @@ test("mode inheritance lets files mode use normal keys", () => {
   expect(resolveForState("?", state)).toBe("shortcut-panel");
 
   // Mode-local in files
-  expect(defaultKeymap.files["alt-s"]).toBe("split");
-  expect(resolveForState("alt-s", state)).toBe("split");
+  expect(defaultKeymap.files["ctrl-s"]).toBe("split");
+  expect(resolveForState("ctrl-s", state)).toBe("split");
   expect(resolveForState("r", state)).toBe("restore");
   expect(resolveForState(" ", state)).toBe("toggle-file-selection");
 });

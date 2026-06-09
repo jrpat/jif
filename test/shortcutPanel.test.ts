@@ -273,7 +273,7 @@ test("getShortcutPanelBindings narrows rebase draft shortcuts to draft-relevant 
   expect(ids).toContain("force-last-command");
   expect(ids).toContain("rebase-descendants");
   expect(ids).toContain("shortcut-panel");
-  // split is a mode-group action reachable via the inherited `alt-s`, like in the
+  // split is a mode-group action reachable via the inherited `ctrl-s`, like in the
   // other normal-derived draft modes (restore/diff/absorb)
   expect(ids).toContain("split");
   expect(ids).not.toContain("quit");
@@ -324,7 +324,7 @@ test("getShortcutPanelBindings includes inline configured commands from the merg
 test("collectDirectCanonicalBindingsForMode is mode-specific and excludes parents and globals", () => {
   const keys = collectDirectCanonicalBindingsForMode("files", defaultKeymap).map((b) => b.key);
   // files mode is self-contained: it binds its own navigation and file actions directly
-  expect(keys).toContain("alt-s");
+  expect(keys).toContain("ctrl-s");
   expect(keys).toContain("r");
   expect(keys).toContain("d");
   expect(keys).toContain(" ");
@@ -350,7 +350,7 @@ test("collectInheritedAndGlobalCanonicalBindings returns globals only when a mod
   expect(keys).not.toContain("G");
   expect(keys).not.toContain("S");
   // direct files-mode bindings — must NOT appear in the bottom set
-  expect(keys).not.toContain("alt-s");
+  expect(keys).not.toContain("ctrl-s");
   expect(keys).not.toContain("r");
   expect(keys).not.toContain("d");
   expect(keys).not.toContain(" ");

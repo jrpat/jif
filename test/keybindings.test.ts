@@ -852,12 +852,12 @@ test("dispatchGlobalKey routes S to squash-onto in normal mode", () => {
   expect(calls).toEqual(["startSquashOnto"]);
 });
 
-test("dispatchGlobalKey routes alt-s to split in normal mode", () => {
+test("dispatchGlobalKey routes ctrl-s to split in normal mode", () => {
   const calls: string[] = [];
   const state = createState();
 
   const handled = dispatchGlobalKey({
-    normalizedKey: "alt-s",
+    normalizedKey: "ctrl-s",
     state,
     commands: commandDefinitions,
     controller: createController(calls),

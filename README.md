@@ -96,7 +96,7 @@ Viewing and navigating the revision log.
 | `R` | restore-revision | Restore the focused revision from another |
 | `s` | squash | Squash the focused revision into another |
 | `S` | squash-onto | Keep the focused revision as the target and select the branch above it (the revision directly above and its descendants) as the source |
-| `alt-s` | split | Split the focused revision, or use the current file selection |
+| `ctrl-s` | split | Split the focused revision, or use the current file selection |
 | `u` | undo | Undo the last operation |
 | `U` | redo | Redo the last undone operation |
 | `space` | toggle-revision-selection | Add or remove the focused revision from the selection |
@@ -129,7 +129,7 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 | `d` | show-file-diff | Show the diff for the focused file |
 | `r` | restore | Restore selected files to their state before this change |
 | `ctrl-u` | untrack | Stop tracking the focused file, or all selected files (`jj file untrack <paths>`) |
-| `alt-s` | split | Split using the current file selection |
+| `ctrl-s` | split | Split using the current file selection |
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 
 ### Rebase
