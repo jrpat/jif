@@ -302,16 +302,19 @@ export function formatShortcutKeyLabel(keyLabel: string): string {
 }
 
 function compareShortcutEntries(a: ShortcutEntry, b: ShortcutEntry): number {
-  const keyComparison = a.sortKey.localeCompare(b.sortKey);
+  // Group by base key letter case-insensitively so that `s`, `S`, and `^s` cluster together.
+  const keyComparison = a.sortKey.toLowerCase().localeCompare(b.sortKey.toLowerCase());
   if (keyComparison !== 0) {
     return keyComparison;
   }
 
+  // Within a letter group, unmodified keys come before modified ones (`s`/`S` before `^s`).
   const modifierComparison = modifierWeight(a) - modifierWeight(b);
   if (modifierComparison !== 0) {
     return modifierComparison;
   }
 
+  // Among same-modifier variants, lowercase precedes uppercase (`s` before `S`).
   const labelComparison = a.keyLabel.localeCompare(b.keyLabel);
   if (labelComparison !== 0) {
     return labelComparison;

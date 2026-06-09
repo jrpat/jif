@@ -101,6 +101,16 @@ test("buildShortcutEntries sorts plain keys before modified keys with the same b
   expect(entries.map((entry) => entry.keyLabel)).toEqual(["f", "⌃f", "q"]);
 });
 
+test("buildShortcutEntries orders modified keys after the capitalized base key", () => {
+  const entries = buildShortcutEntries([
+    makeBinding("split", "Split", "ctrl-s"),
+    makeBinding("squash-onto", "Squash Onto", "S"),
+    makeBinding("squash", "Squash", "s"),
+  ]);
+
+  expect(entries.map((entry) => entry.keyLabel)).toEqual(["s", "S", "⌃s"]);
+});
+
 test("buildShortcutEntries emits one entry per binding", () => {
   const entries = buildShortcutEntries([
     makeBinding("move-down", "Move Down", "j"),
