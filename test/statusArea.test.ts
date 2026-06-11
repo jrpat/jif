@@ -37,9 +37,14 @@ test("getStatusToastBodyHeight also clamps to the number of output lines", () =>
   expect(getStatusToastBodyHeight("1\n2\n3", 1)).toBe(1);
 });
 
-test("getStatusHelpToastMaxBodyHeight fills the height above the bottom chrome minus the border", () => {
-  expect(getStatusHelpToastMaxBodyHeight(40, 0)).toBe(38);
-  expect(getStatusHelpToastMaxBodyHeight(40, 6)).toBe(32);
+test("getStatusHelpToastMaxBodyHeight caps the toast at half the terminal height", () => {
+  // Half of 40 rows is 20; minus the two border rows leaves an 18-line body,
+  // well below the space actually available above the bottom chrome.
+  expect(getStatusHelpToastMaxBodyHeight(40, 0)).toBe(18);
+  expect(getStatusHelpToastMaxBodyHeight(40, 6)).toBe(18);
+  // The bottom-chrome bound still wins when it is the tighter of the two.
+  expect(getStatusHelpToastMaxBodyHeight(40, 28)).toBe(10);
+  // Both bounds floor at a single line on tiny terminals.
   expect(getStatusHelpToastMaxBodyHeight(3, 0)).toBe(1);
   expect(getStatusHelpToastMaxBodyHeight(4, 10)).toBe(1);
 });
@@ -187,5 +192,6 @@ test("a help toast registers a scrollable viewport that scrollBy drives", async 
 
   expect(result.registered).toBeTrue();
   expect(result.scrollTopBefore).toBe(0);
-  expect(result.scrollTopAfter).toBe(8);
+  expect(result.scrollTopAfter).toBe(1);
 });
+

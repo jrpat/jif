@@ -62,10 +62,7 @@ import {
   buildShortcutSummary,
   buildShortcutSummarySegments,
   computeShortcutPanelHeight,
-  DISMISS_HELP_SUMMARY_RESERVED_WIDTH,
   getShortcutPanelBindings,
-  prependDismissHelpSummary,
-  prependDismissHelpSummarySegment,
   shortcutLayoutRowCount,
   shortcutModeLabel,
   type ShortcutPanelBindingInput,
@@ -308,25 +305,12 @@ export function JifView(props: {
   );
   const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutBindings()));
   const shortcutContentWidth = createMemo(() => Math.max(1, terminalSize().width - 4));
-  // A visible help toast leads the summary with a "␛ dismiss" hint; reserve its
-  // width so the trailing shortcuts still fit instead of overflowing the bar.
-  const hasHelpToast = createMemo(() =>
-    store.state.statusMessages.some((message) => message.variant === "help")
+  const shortcutSummarySegments = createMemo(() =>
+    buildShortcutSummarySegments(shortcutEntries(), shortcutContentWidth())
   );
-  const summaryContentWidth = createMemo(() =>
-    Math.max(
-      1,
-      shortcutContentWidth() - (hasHelpToast() ? DISMISS_HELP_SUMMARY_RESERVED_WIDTH : 0),
-    )
+  const shortcutSummary = createMemo(() =>
+    buildShortcutSummary(shortcutEntries(), shortcutContentWidth())
   );
-  const shortcutSummarySegments = createMemo(() => {
-    const segments = buildShortcutSummarySegments(shortcutEntries(), summaryContentWidth());
-    return hasHelpToast() ? prependDismissHelpSummarySegment(segments) : segments;
-  });
-  const shortcutSummary = createMemo(() => {
-    const summary = buildShortcutSummary(shortcutEntries(), summaryContentWidth());
-    return hasHelpToast() ? prependDismissHelpSummary(summary) : summary;
-  });
   const shortcutGrid = createMemo(() =>
     buildShortcutGrid(shortcutEntries(), shortcutContentWidth())
   );

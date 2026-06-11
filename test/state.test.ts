@@ -1236,19 +1236,14 @@ test("pushing an event dismisses a visible help toast", () => {
   expect(state.statusMessages.map((message) => message.text)).toEqual(["command failed"]);
 });
 
-test("getActiveMode resolves to help while a help toast is visible", () => {
-  let state = createState();
-  state = pushStatusMessage(state, "toast-1", "running help", "info");
-  expect(getActiveMode(state)).not.toBe("help");
-
-  state = updateStatusMessage(state, "toast-1", "Usage: jj", "success", "help");
-  expect(getActiveMode(state)).toBe("help");
-});
-
-test("getActiveMode yields the help toast to an overlay layered on top of it", () => {
+test("getActiveMode stays in the underlying browse mode while a help toast is visible", () => {
   let state = createState();
   state = pushStatusMessage(state, "toast-1", "running help", "info");
   state = updateStatusMessage(state, "toast-1", "Usage: jj", "success", "help");
+
+  // A help toast is no longer its own mode; the underlying surface keeps the
+  // keyboard, so j/k navigate the log instead of scrolling the toast.
+  expect(getActiveMode(state)).toBe("normal");
 
   const layered: AppState = { ...state, focusMode: "notifications" };
   expect(getActiveMode(layered)).toBe("notifications");

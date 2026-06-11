@@ -946,11 +946,11 @@ test("scrollHelpToast forwards vertical deltas to the registered help scrollbox"
   const harness = createControllerHarness({ helpViewport: fakeScrollbox });
 
   harness.controller.scrollHelpToast(1);
-  harness.controller.scrollHelpToast(-8);
+  harness.controller.scrollHelpToast(-1);
 
   expect(calls).toEqual([
     { x: 0, y: 1 },
-    { x: 0, y: -8 },
+    { x: 0, y: -1 },
   ]);
   harness.store.dispose();
 });

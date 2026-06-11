@@ -351,8 +351,8 @@ function StatusToast(props: {
   });
 
   // Expose the help toast's scrollbox so the controller can drive it from the
-  // keyboard (help mode's j/k/J/K). Re-runs when the toast becomes a help
-  // toast; the scrollbox is already mounted by then.
+  // keyboard (ctrl-j/ctrl-k). Re-runs when the toast becomes a help toast; the
+  // scrollbox is already mounted by then.
   createEffect(() => {
     if (!isHelp() || !bodyRef) {
       return;

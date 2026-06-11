@@ -45,8 +45,8 @@ await rendered.renderOnce();
 const registered = helpViewport !== undefined;
 const scrollTopBefore = helpViewport?.scrollTop ?? -1;
 
-// Drive the viewport the way the help-mode scroll commands do.
-helpViewport?.scrollBy({ x: 0, y: 8 });
+// Drive the viewport the way the ctrl-j/ctrl-k scroll commands do.
+helpViewport?.scrollBy({ x: 0, y: 1 });
 await rendered.renderOnce();
 const scrollTopAfter = helpViewport?.scrollTop ?? -1;
 

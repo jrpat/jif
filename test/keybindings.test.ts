@@ -1326,32 +1326,24 @@ function helpToastState(overrides: Partial<AppState> = {}): AppState {
   };
 }
 
-test("dispatchGlobalKey routes j/k to single-line help scroll while a help toast is visible", () => {
+test("dispatchGlobalKey routes j/k to log navigation while a help toast is visible", () => {
   const calls: string[] = [];
   const state = helpToastState();
 
+  // A help toast no longer captures the keyboard: j/k navigate the revision
+  // log exactly as they do without a toast on screen.
   dispatchGlobalKey({ normalizedKey: "j", state, commands: commandDefinitions, controller: createController(calls) });
   dispatchGlobalKey({ normalizedKey: "k", state, commands: commandDefinitions, controller: createController(calls) });
 
-  expect(calls).toEqual(["scrollHelpToast(1)", "scrollHelpToast(-1)"]);
+  expect(calls).toEqual(["moveFocus", "moveFocus"]);
 });
 
-test("dispatchGlobalKey routes uppercase J/K to eight-line help scroll", () => {
+test("revision shortcuts stay active while a help toast is visible", () => {
   const calls: string[] = [];
   const state = helpToastState();
 
-  dispatchGlobalKey({ normalizedKey: "J", state, commands: commandDefinitions, controller: createController(calls) });
-  dispatchGlobalKey({ normalizedKey: "K", state, commands: commandDefinitions, controller: createController(calls) });
-
-  expect(calls).toEqual(["scrollHelpToast(8)", "scrollHelpToast(-8)"]);
-});
-
-test("help mode does not inherit normal: revision shortcuts are inert under a help toast", () => {
-  const calls: string[] = [];
-  const state = helpToastState();
-
-  // `r` (rebase) and `:` (command bar) belong to normal mode, which help does
-  // not inherit, so neither is handled.
+  // `r` (rebase) and `:` (command bar) keep working: the help toast is not its
+  // own mode, so normal-mode bindings remain in force.
   const rebaseHandled = dispatchGlobalKey({
     normalizedKey: "r",
     state,
@@ -1365,12 +1357,12 @@ test("help mode does not inherit normal: revision shortcuts are inert under a he
     controller: createController(calls),
   });
 
-  expect(rebaseHandled).toBeFalse();
-  expect(commandBarHandled).toBeFalse();
-  expect(calls).toEqual([]);
+  expect(rebaseHandled).toBeTrue();
+  expect(commandBarHandled).toBeTrue();
+  expect(calls).toEqual(["startRebase", "focusCommandBar"]);
 });
 
-test("escape still dismisses from help mode via the global cancel binding", () => {
+test("escape dismisses a visible help toast via the global cancel binding", () => {
   const calls: string[] = [];
   const state = helpToastState();
 
@@ -1385,12 +1377,46 @@ test("escape still dismisses from help mode via the global cancel binding", () =
   expect(calls).toEqual(["cancelOrBlur"]);
 });
 
-test("a help toast yields input to an overlay layered on top of it", () => {
+test("ctrl-j/ctrl-k scroll the visible help toast one line while j/k still navigate", () => {
   const calls: string[] = [];
-  // Opening notifications over a help toast keeps notifications in control.
-  const state = helpToastState({ focusMode: "notifications" });
+  const state = helpToastState();
 
-  dispatchGlobalKey({ normalizedKey: "j", state, commands: commandDefinitions, controller: createController(calls) });
+  const downHandled = dispatchGlobalKey({
+    normalizedKey: "ctrl-j",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+  const upHandled = dispatchGlobalKey({
+    normalizedKey: "ctrl-k",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
 
-  expect(calls).toEqual(["moveFocus"]);
+  expect(downHandled).toBeTrue();
+  expect(upHandled).toBeTrue();
+  expect(calls).toEqual(["scrollHelpToast(1)", "scrollHelpToast(-1)"]);
+});
+
+test("ctrl-j/ctrl-k are inert when no help toast is visible", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const downHandled = dispatchGlobalKey({
+    normalizedKey: "ctrl-j",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+  const upHandled = dispatchGlobalKey({
+    normalizedKey: "ctrl-k",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(downHandled).toBeFalse();
+  expect(upHandled).toBeFalse();
+  expect(calls).toEqual([]);
 });

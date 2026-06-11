@@ -81,6 +81,8 @@ describe("extras mode", () => {
       "open-notifications",
       "quit",
       "refresh-repository",
+      "scroll-help-down",
+      "scroll-help-up",
       "search-next",
       "search-prev",
       "suspend",

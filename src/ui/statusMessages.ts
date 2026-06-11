@@ -31,14 +31,18 @@ export function getStatusToastBodyHeight(
   return Math.min(outputLineCount, maxBodyHeight);
 }
 
-// Help toasts grow to fit their text, bounded only by the vertical space the
-// overlay actually has: the terminal height above the bottom chrome, less the
-// toast's own top and bottom border rows.
+// Help toasts grow to fit their text, but never more than half the terminal
+// height (borders included) and never past the bottom chrome. Each bound is
+// expressed in body lines: the terminal/half heights drop the toast's two
+// border rows.
 export function getStatusHelpToastMaxBodyHeight(
   terminalHeight: number,
   bottomInset: number,
 ): number {
-  return Math.max(1, Math.floor(terminalHeight) - Math.floor(bottomInset) - 2);
+  const height = Math.floor(terminalHeight);
+  const availableBodyHeight = height - Math.floor(bottomInset) - 2;
+  const halfBodyHeight = Math.floor(height / 2) - 2;
+  return Math.max(1, Math.min(availableBodyHeight, halfBodyHeight));
 }
 
 export function getHelpToastBorderColor(config: ResolvedAppConfig): string | undefined {

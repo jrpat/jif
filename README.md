@@ -20,7 +20,7 @@ The `:` command bar has two views: your **command history**, and structured **co
 
 Complete-at-point autocompletes "what is needed" wherever the cursor is: first the `jj` subcommands (and sub-subcommands for groups like `bookmark` or `git`), then a command's flags — each shown as its bold long flag, dim short alias, and `jj`'s own description — and then values when the flag or argument before the cursor expects one (revisions including `@`/`@-`, enum choices like `--color always`, and bookmark names for `jj bookmark` subcommands). The first (bottom-most) suggestion is **underlined** to show what `Tab` will insert; `Tab` accepts it and advances to the next thing to complete, and the arrows / `ctrl-n`,`ctrl-p` / `ctrl-j`,`ctrl-k` move through the list. `Enter` runs the command — but if you have moved to a suggestion, `Enter` accepts that suggestion instead (the same as `Tab`). The flag and value metadata comes straight from `jj`'s own help, so it matches your installed `jj`. The `>` shell command bar is unchanged (history only).
 
-Most successful commands surface a short toast that fades on its own after a few seconds. Help output is different: running `help`, or any command ending in `-h` or `--help`, opens a blue-bordered toast that grows to fit the help text (up to the height available on screen) and stays until you dismiss it. The toast is its own [Help mode](#help): `j`/`k` scroll a line and `J`/`K` scroll eight lines, so long help pages are readable in place. While it is up, the status bar leads with a `␛ dismiss` hint; pressing `Esc` clears it, and so does running any other command (the next toast supersedes it).
+Most successful commands surface a short toast that fades on its own after a few seconds. Help output is different: running `help`, or any command ending in `-h` or `--help`, opens a blue-bordered toast that grows to fit the help text (up to half the terminal height) and stays until you dismiss it. It is not a mode of its own — the log keeps the keyboard, so `j`/`k` still navigate revisions while the help text is up, and `ctrl-j`/`ctrl-k` scroll the help toast itself by a line. Pressing `Esc` clears it, and so does running any other command (the next toast supersedes it).
 
 ## Prerequisites
 
@@ -52,6 +52,8 @@ Available in every mode (mode-specific bindings can override these).
 | `ctrl-z` | suspend | Suspend the application and return to the shell |
 | `ctrl-n` | search-next | Jump to the next search match (no-op when no search is active) |
 | `ctrl-p` | search-prev | Jump to the previous search match (no-op when no search is active) |
+| `ctrl-j` | scroll-help-down | Scroll the visible help toast down one line (no-op when no help toast is shown) |
+| `ctrl-k` | scroll-help-up | Scroll the visible help toast up one line (no-op when no help toast is shown) |
 | `escape` | cancel | Cancel command composition or leave input mode |
 | `~` | open-notifications | Open the notifications history panel |
 
@@ -298,18 +300,6 @@ Active while the full-screen diff viewer is open. Does not inherit Normal.
 | `K` | scroll-up-large | Scroll up ten lines |
 | `H` | scroll-left-large | Scroll left ten columns |
 | `L` | scroll-right-large | Scroll right ten columns |
-
-### Help
-
-Active while a help toast is on screen (after `help`, `-h`, or `--help`). Does not inherit Normal — it is a self-contained reading mode; only `_global` shortcuts (`escape` to dismiss, `q`, `ctrl-r`, …) remain alongside the scroll keys. If you open another panel over it (for example notifications with `~`), that panel takes the keyboard while the toast stays on screen behind it.
-
-| Key | Command | Description |
-|-----|---------|-------------|
-| `j` | scroll-help-down | Scroll the help panel down one line |
-| `k` | scroll-help-up | Scroll the help panel up one line |
-| `J` | scroll-help-down-large | Scroll the help panel down eight lines |
-| `K` | scroll-help-up-large | Scroll the help panel up eight lines |
-| `escape` | cancel | Dismiss the help panel |
 
 ### Inline Confirmation
 
