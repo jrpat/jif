@@ -138,7 +138,9 @@ async function renderComposeFlags() {
   const rendered = await mountPrompt({ history: [] });
   try {
     await settle(rendered);
-    const opensInCompose = frameText(rendered).includes("Show revision history");
+    const openFrame = frameText(rendered);
+    const opensInCompose = openFrame.includes("Show revision history");
+    const composeOpensWithDoubleBorder = openFrame.includes("═");
 
     await rendered.mockInput.typeText("log ");
     await settle(rendered);
@@ -154,6 +156,7 @@ async function renderComposeFlags() {
 
     return {
       opensInComposeWhenNoHistory: opensInCompose,
+      composeOpensWithDoubleBorder,
       flagListHasRevision: flagFrame.includes("--revision"),
       defaultTargetUnderlined: isUnderlined(revisionAttrs),
       nothingFocusedByDefault:
@@ -224,11 +227,15 @@ async function renderHistoryDefaultAndColonToggle() {
 
     return {
       opensInHistory: openFrame.includes("log -r @"),
-      opensWithDoubleBorder: openFrame.includes("═"),
+      // Border convention: the history view uses the default single border;
+      // the double border is reserved for compose (complete-at-point).
+      historyUsesSingleBorder: !openFrame.includes("═"),
+      composeUsesDoubleBorder: afterFirstColon.includes("═"),
       colonTogglesToCompose:
         afterFirstColon.includes("Show revision history") && !afterFirstColon.includes("-r @"),
       colonNotInserted: !afterFirstColonLine.includes(":"),
       colonTogglesBackToHistory: afterSecondColon.includes("log -r @"),
+      historyAgainUsesSingleBorder: !afterSecondColon.includes("═"),
     };
   } finally {
     rendered.renderer.destroy();

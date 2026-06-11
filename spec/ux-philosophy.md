@@ -167,6 +167,36 @@ fires the notification toggle. The modifier acts as a guard against drift.
 - Do not paper over a layout problem with confirmation prompts — that fights
   "Do the Thing, Rely on Undo". Fix the layout instead.
 
+## Reserve the Double Border for Complete-at-Point
+
+A text-input prompt's border style is a visual signal of *what kind of list* it
+is offering, readable at a glance before the user parses any row. The double
+border is reserved for complete-at-point: structured completion of what belongs
+at the cursor — jj subcommands, flags, and flag values in the command bar, and
+revset tokens in the revset prompt. Every other state, including the history
+view that recalls whole past entries, uses the default single border.
+
+The two views answer different questions. Complete-at-point answers "what can go
+*here*?"; history answers "what did I run before?". Tying the heavier border to
+complete-at-point lets a resident user distinguish the two instantly, in any
+prompt and regardless of which view happened to open first.
+
+This replaces an earlier inversion where the *history* view carried the double
+border. That mis-signaled recall as the special mode and gave it visual
+prominence even when it was merely the default view on open — exactly backwards
+from where the emphasis belongs.
+
+### Implications
+
+- Use the double border only for complete-at-point / structured completion; use
+  the single border for history recall and other default states.
+- Apply the rule in every prompt that offers both views (the jj command bar and
+  the revset prompt today), not only the surface where the feature was first
+  introduced.
+- The border tracks the active view, not how the prompt was opened: a prompt
+  that opens straight into history shows a single border; one that opens into
+  complete-at-point shows a double border.
+
 ## Protect Left-Side Density
 
 In revision rows, the left edge carries the densest and most decision-relevant

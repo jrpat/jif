@@ -383,7 +383,10 @@ export function CommandPrompt(props: {
       underlineIndex={tabHintIndex()}
       flow={flow}
       focused
-      borderStyle={historyMode() ? "double" : "single"}
+      // Double border is the app-wide signal for complete-at-point (structured
+      // completion); the history view uses the default single border. See
+      // spec/ux-philosophy.md ("Reserve the Double Border for Complete-at-Point").
+      borderStyle={composeActive() ? "double" : "single"}
       onHeightChange={props.onHeightChange}
     >
       <box width={Array.from(props.prefix).length} flexDirection="row" flexShrink={0}>
@@ -712,7 +715,10 @@ export function RevsetPrompt(props: {
       selectedIndex={selectedIndex()}
       flow={flow}
       focused
-      borderStyle={historyMode() ? "double" : "single"}
+      // Double border marks complete-at-point (revset-token completion); the
+      // history fallback uses the default single border. See spec/ux-philosophy.md
+      // ("Reserve the Double Border for Complete-at-Point").
+      borderStyle={showsHistory() ? "single" : "double"}
       onHeightChange={props.onHeightChange}
     >
       <Show when={text().length === 0}>

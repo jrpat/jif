@@ -18,8 +18,10 @@ test("compose command bar: defaults by history, toggles with ':'/ctrl+h, complet
 
   const result = JSON.parse(stdout) as Record<string, boolean>;
 
-  // With no history the bar opens straight into structured completion.
+  // With no history the bar opens straight into structured completion, marked
+  // by the double border reserved for complete-at-point.
   expect(result.opensInComposeWhenNoHistory).toBe(true);
+  expect(result.composeOpensWithDoubleBorder).toBe(true);
   // Typing `log ` lists that command's flags. The default Tab target (bottom
   // row) is underlined, not focused, and nothing is inserted until Tab.
   expect(result.flagListHasRevision).toBe(true);
@@ -33,13 +35,16 @@ test("compose command bar: defaults by history, toggles with ':'/ctrl+h, complet
   expect(result.enterSubmitsWhenUnfocused).toBe(true);
   expect(result.enterAcceptsFocusedNotSubmits).toBe(true);
 
-  // With history the bar opens in history (double border), and a bare ':' (the
-  // first-and-only character) toggles to compose and back without inserting ':'.
+  // With history the bar opens in history, and a bare ':' (the first-and-only
+  // character) toggles to compose and back without inserting ':'. The history
+  // view keeps the default single border; only compose gets the double border.
   expect(result.opensInHistory).toBe(true);
-  expect(result.opensWithDoubleBorder).toBe(true);
+  expect(result.historyUsesSingleBorder).toBe(true);
+  expect(result.composeUsesDoubleBorder).toBe(true);
   expect(result.colonTogglesToCompose).toBe(true);
   expect(result.colonNotInserted).toBe(true);
   expect(result.colonTogglesBackToHistory).toBe(true);
+  expect(result.historyAgainUsesSingleBorder).toBe(true);
 
   // The history view opens unfocused (Enter runs the blank/typed input, not the
   // most recent history entry), even when help loads before history.

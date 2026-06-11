@@ -25,7 +25,8 @@ function suggestionLines(rendered: Awaited<ReturnType<typeof testRender>>): stri
   return rendered.captureCharFrame().split("\n").filter((line) => !BORDER_CHARS.test(line)).join("\n");
 }
 
-// History mode is signalled by a double border (║ verticals) instead of single.
+// Complete-at-point (revset-token completion) is signalled by a double border
+// (║ verticals); the history fallback uses the default single border.
 function hasDoubleBorder(rendered: Awaited<ReturnType<typeof testRender>>): boolean {
   return rendered.captureCharFrame().includes("║");
 }
@@ -100,7 +101,7 @@ async function renderToggles() {
 
 async function renderNoopWhenEmpty() {
   // No history entries to show, so ctrl+l must do nothing (stay on completions,
-  // single border).
+  // double border).
   const rendered = await renderPrompt("main", []);
 
   try {
