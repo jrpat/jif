@@ -18,6 +18,25 @@ const TOP: JjHelp = {
   positionals: [],
 };
 
+// Commands chosen so the typed alias coincidentally fuzzy-matches a *different*
+// command's name (e.g. `b` matches "bisect", `ci` matches "config"). The alias
+// must still win so the alias is treated as the command it names, not as a
+// stray substring. `quux` carries an alias that is not a subsequence of its
+// name, proving aliases are matched at all (not just re-ranked).
+const TOP_ALIASES: JjHelp = {
+  kind: "group",
+  hasSubcommands: true,
+  subcommands: [
+    { name: "bisect", aliases: [], description: "Find a bad revision" },
+    { name: "bookmark", aliases: ["b"], description: "Manage bookmarks" },
+    { name: "commit", aliases: ["ci"], description: "Update and create a change" },
+    { name: "config", aliases: [], description: "Manage config" },
+    { name: "quux", aliases: ["zz"], description: "Unrelated command" },
+  ],
+  flags: [],
+  positionals: [],
+};
+
 const LOG: JjHelp = {
   kind: "leaf",
   hasSubcommands: false,
@@ -56,6 +75,39 @@ describe("buildComposeItems", () => {
     });
     const bookmark = items.find((i) => i.id === "sub:bookmark");
     expect(bookmark).toMatchObject({ text: "bookmark", detail: "Manage bookmarks" });
+  });
+
+  test("a command alias is recognized and ranked first (b -> bookmark, not bisect)", () => {
+    const items = buildComposeItems({
+      context: ctx({ kind: "subcommand", partial: "b" }),
+      help: TOP_ALIASES,
+      revsetItems: [],
+      bookmarks: [],
+    });
+    // Index 0 is the default Tab target (best match). Typing bookmark's alias
+    // must complete to bookmark, even though "b" also fuzzy-matches "bisect".
+    expect(items[0]).toMatchObject({ id: "sub:bookmark" });
+    expect(items.some((i) => i.id === "sub:bisect")).toBe(true);
+  });
+
+  test("a command alias outranks an incidental name match (ci -> commit, not config)", () => {
+    const items = buildComposeItems({
+      context: ctx({ kind: "subcommand", partial: "ci" }),
+      help: TOP_ALIASES,
+      revsetItems: [],
+      bookmarks: [],
+    });
+    expect(items[0]).toMatchObject({ id: "sub:commit" });
+  });
+
+  test("a command is matchable by an alias that is not a subsequence of its name", () => {
+    const items = buildComposeItems({
+      context: ctx({ kind: "subcommand", partial: "zz" }),
+      help: TOP_ALIASES,
+      revsetItems: [],
+      bookmarks: [],
+    });
+    expect(items.map((i) => i.id)).toContain("sub:quux");
   });
 
   test("flag rows render bold long flag, dim short tag, dim description", () => {

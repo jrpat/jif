@@ -15,15 +15,32 @@ const REVSET_LITERALS = ["@", "@-"] as const;
 // Bottom-to-top flow: the AutocompleteList reverses for display, so a best-first
 // logical order surfaces the best match nearest the input. This mirrors
 // matchCompletions in src/revset/completions.ts.
-function fuzzyFilter<T>(partial: string, items: readonly T[], key: (item: T) => string): T[] {
+// `key` may return several candidate strings (e.g. a subcommand's name and its
+// aliases). An item matches if any candidate does, and it is scored by its best
+// candidate, so an exact alias hit (`b` for `bookmark`) outranks an incidental
+// fuzzy name hit (`b` in `bisect`).
+function fuzzyFilter<T>(
+  partial: string,
+  items: readonly T[],
+  key: (item: T) => string | readonly string[],
+): T[] {
   if (!partial) {
     return items.slice();
   }
   const scored: { item: T; value: number }[] = [];
   for (const item of items) {
     const candidate = key(item);
-    if (hasMatch(partial, candidate)) {
-      scored.push({ item, value: score(partial, candidate) });
+    const candidates = typeof candidate === "string" ? [candidate] : candidate;
+    let matched = false;
+    let best = Number.NEGATIVE_INFINITY;
+    for (const value of candidates) {
+      if (hasMatch(partial, value)) {
+        matched = true;
+        best = Math.max(best, score(partial, value));
+      }
+    }
+    if (matched) {
+      scored.push({ item, value: best });
     }
   }
   scored.sort((a, b) => a.value - b.value);
@@ -99,7 +116,10 @@ export function buildComposeItems(args: {
   // Subcommands appear for an explicit subcommand context and for groups that
   // also accept flags.
   if (context.kind === "subcommand" || help.kind === "group") {
-    const subcommands = fuzzyFilter(context.partial, help.subcommands, (sub) => sub.name);
+    const subcommands = fuzzyFilter(context.partial, help.subcommands, (sub) => [
+      sub.name,
+      ...sub.aliases,
+    ]);
     for (const sub of subcommands) {
       items.push({ id: `sub:${sub.name}`, text: sub.name, detail: sub.description || undefined });
     }
