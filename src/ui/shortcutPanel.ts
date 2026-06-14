@@ -1,7 +1,7 @@
 import type { CommandDefinition } from "../commands/definitions.ts";
 import type { AppState } from "../domain/types.ts";
 import type { Mode } from "../modes.ts";
-import { commandCanExecute, getAdjacentBookmarkRevisionIndex, getAdjacentWorkspaceRevisionIndex, getExpandedRevision, getFocusedChildRevision, getFocusedParentRevision, getFocusedRevision } from "../state/store.ts";
+import { commandCanExecute, getExpandedRevision, getFocusedChildRevision, getFocusedParentRevision, getFocusedRevision } from "../state/store.ts";
 
 const MODIFIER_PREFIXES = new Set([
   "a",
@@ -419,14 +419,8 @@ function commandHasImmediateEffect(
       return getFocusedParentRevision(state) !== null;
     case "move-child":
       return getFocusedChildRevision(state) !== null;
-    case "move-to-next-workspace":
-      return getAdjacentWorkspaceRevisionIndex(state, 1) !== null;
-    case "move-to-prev-workspace":
-      return getAdjacentWorkspaceRevisionIndex(state, -1) !== null;
-    case "move-to-next-bookmark":
-      return getAdjacentBookmarkRevisionIndex(state, 1) !== null;
-    case "move-to-prev-bookmark":
-      return getAdjacentBookmarkRevisionIndex(state, -1) !== null;
+    // Bookmark and workspace navigation is always listed so users can see both
+    // directions are available; pressing a direction with no target no-ops.
     case "toggle-revision-selection":
       return state.focusMode === "revisions" && getFocusedRevision(state) !== null;
     case "toggle-file-selection":

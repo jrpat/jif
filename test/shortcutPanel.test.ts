@@ -269,6 +269,20 @@ test("getShortcutPanelBindings includes immediate revision actions in revision m
   expect(ids).toContain("edit-revision");
 });
 
+test("getShortcutPanelBindings always lists bookmark and workspace navigation regardless of target", () => {
+  // The default state has no bookmarks or workspaces on any revision, so there is
+  // no target in either direction. These four navigation commands should still be
+  // listed; pressing a direction with no target simply no-ops.
+  const state = createState();
+  const bindings = getShortcutPanelBindings(state, bindingsForMode(state));
+  const ids = bindings.map(({ command }) => command.id);
+
+  expect(ids).toContain("move-to-next-bookmark");
+  expect(ids).toContain("move-to-prev-bookmark");
+  expect(ids).toContain("move-to-next-workspace");
+  expect(ids).toContain("move-to-prev-workspace");
+});
+
 test("getShortcutPanelBindings narrows rebase draft shortcuts to draft-relevant actions", () => {
   let state = createState();
   state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] });
