@@ -190,7 +190,12 @@ function ShortcutGridBody(props: {
                   minWidth={0}
                   flexDirection="row"
                 >
-                  <box width={props.grid.keyWidth} flexShrink={0}>
+                  <box
+                    width={props.grid.keyWidth}
+                    flexShrink={0}
+                    flexDirection="row"
+                    justifyContent="flex-end"
+                  >
                     <text
                       fg={props.colors.chromeBorderFocus}
                       attributes={TextAttributes.BOLD}
