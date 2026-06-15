@@ -1,14 +1,18 @@
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { parseCommand, type InitConfigOptions, type RunOptions } from "./cliOptions.ts";
+import { formatUsageText, parseCommand, type InitConfigOptions, type RunOptions } from "./cliOptions.ts";
 import { initProjectConfig, initUserConfig } from "./config/initConfig.ts";
 import { loadAppConfig } from "./config/loadConfig.ts";
 import { logShortcutDebug } from "./debug.ts";
 import { materializeSampleRepoCachedViaCli } from "./dev/sampleRepoLauncher.ts";
-import { runJifApplication } from "./app.ts";
 
 export async function main(argv: readonly string[]) {
   const command = parseCommand(argv);
+
+  if (command.kind === "help") {
+    console.log(formatUsageText());
+    return;
+  }
 
   if (command.kind === "init-config") {
     await runInitConfig(command.options);
@@ -69,6 +73,7 @@ async function runApp(argv: readonly string[], options: RunOptions): Promise<voi
     sample: fixturePath ?? null,
   });
 
+  const { runJifApplication } = await import("./app.ts");
   await runJifApplication(repoPath, config, rawConfig);
 }
 

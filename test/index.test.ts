@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { parseCommand } from "../src/cliOptions.ts";
+import { formatUsageText, parseCommand } from "../src/cliOptions.ts";
+import { main } from "../src/index.ts";
 
 test("default command is run with no flags", () => {
   expect(parseCommand([])).toEqual({
@@ -13,6 +14,37 @@ test("default command is run with no flags", () => {
       configOverrideLayers: [],
     },
   });
+});
+
+test("help flags dispatch to the help command", () => {
+  expect(parseCommand(["-h"])).toEqual({ kind: "help" });
+  expect(parseCommand(["--help"])).toEqual({ kind: "help" });
+});
+
+test("usage text documents options and subcommands", () => {
+  const usage = formatUsageText();
+
+  expect(usage).toContain("Usage: jif");
+  expect(usage).toContain("-h, --help");
+  expect(usage).not.toContain("--sample");
+  expect(usage).toContain("Subcommands:");
+  expect(usage).toContain("init-config");
+});
+
+test("main prints usage for --help", async () => {
+  const originalLog = console.log;
+  const output: string[] = [];
+  console.log = (...args: unknown[]) => {
+    output.push(args.join(" "));
+  };
+
+  try {
+    await main(["--help"]);
+  } finally {
+    console.log = originalLog;
+  }
+
+  expect(output.join("\n")).toContain("Subcommands:");
 });
 
 test("run command parses startup flags", () => {

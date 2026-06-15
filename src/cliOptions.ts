@@ -15,15 +15,41 @@ export type InitConfigOptions = Readonly<{
 }>;
 
 export type Command =
+  | { readonly kind: "help" }
   | { readonly kind: "run"; readonly options: RunOptions }
   | { readonly kind: "init-config"; readonly options: InitConfigOptions };
 
 export function parseCommand(argv: readonly string[]): Command {
+  if (argv.some(isHelpFlag)) {
+    return { kind: "help" };
+  }
+
   if (argv[0] === "init-config") {
     return { kind: "init-config", options: parseInitConfigOptions(argv.slice(1)) };
   }
 
   return { kind: "run", options: parseRunOptions(argv) };
+}
+
+export function formatUsageText(): string {
+  return [
+    "Usage: jif [OPTIONS] [SUBCOMMAND]",
+    "",
+    "Options:",
+    "  -h, --help                  Print this help message",
+    "      --repo PATH             Launch against PATH instead of the current directory",
+    "      --long-flags            Compose jj commands with long flags by default",
+    "      --config FILE           Replace the discovered user config with FILE",
+    "      --config-base FILE      Add a config layer below the user config; repeatable",
+    "      --config-override FILE  Add a config layer above the user config; repeatable",
+    "",
+    "Subcommands:",
+    "  init-config                 Create starter user or project config files",
+  ].join("\n");
+}
+
+function isHelpFlag(arg: string): boolean {
+  return arg === "-h" || arg === "--help";
 }
 
 function parseInitConfigOptions(args: readonly string[]): InitConfigOptions {

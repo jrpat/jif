@@ -38,6 +38,15 @@ jif
 
 This launches the TUI against the current working directory.
 
+Print command-line usage with:
+
+```bash
+jif -h
+jif --help
+```
+
+The help output lists startup options and subcommands, including `init-config`.
+
 ## Keybindings
 
 Default keybindings, grouped by mode. Each mode is annotated below with whether it inherits Normal-mode bindings on top of its own. Global bindings are available in every mode and may be overridden by a mode-specific binding for the same key.
