@@ -206,3 +206,39 @@ test("bindViewRendererEvents updates size, refreshes palette on theme change, an
   expect(renderer.clearPaletteCacheCalls).toBe(1);
   expect(paletteDetections).toBe(1);
 });
+
+test("bindViewRendererEvents re-detects palette when the terminal regains focus", async () => {
+  class FakeRenderer extends EventEmitter {
+    width = 120;
+    height = 40;
+    clearPaletteCacheCalls = 0;
+
+    clearPaletteCache() {
+      this.clearPaletteCacheCalls += 1;
+    }
+  }
+
+  const renderer = new FakeRenderer();
+  let paletteDetections = 0;
+
+  const dispose = bindViewRendererEvents({
+    renderer,
+    detectAndApplyPalette: async () => {
+      paletteDetections += 1;
+    },
+    setTerminalSize: () => {},
+  });
+
+  renderer.emit(CliRenderEvents.FOCUS);
+  await Promise.resolve();
+
+  expect(renderer.clearPaletteCacheCalls).toBe(1);
+  expect(paletteDetections).toBe(1);
+
+  dispose();
+  renderer.emit(CliRenderEvents.FOCUS);
+  await Promise.resolve();
+
+  expect(renderer.clearPaletteCacheCalls).toBe(1);
+  expect(paletteDetections).toBe(1);
+});

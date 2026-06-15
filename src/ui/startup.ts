@@ -47,7 +47,12 @@ export function bindViewRendererEvents(args: {
   detectAndApplyPalette: () => Promise<void>;
   setTerminalSize(size: Readonly<{ width: number; height: number }>): void;
 }): () => void {
-  const handleThemeMode = () => {
+  // The terminal palette is queried once and cached, so the only way to pick up
+  // a light/dark switch is to clear the cache and re-detect. Terminals report a
+  // scheme change via THEME_MODE only when they support color-scheme update
+  // notifications, and many deliver the change lazily on focus-in, so we also
+  // re-detect whenever the terminal regains focus.
+  const refreshPalette = () => {
     args.renderer.clearPaletteCache();
     void args.detectAndApplyPalette();
   };
@@ -59,11 +64,13 @@ export function bindViewRendererEvents(args: {
   };
 
   handleResize();
-  args.renderer.on(CliRenderEvents.THEME_MODE, handleThemeMode);
+  args.renderer.on(CliRenderEvents.THEME_MODE, refreshPalette);
+  args.renderer.on(CliRenderEvents.FOCUS, refreshPalette);
   args.renderer.on(CliRenderEvents.RESIZE, handleResize);
 
   return () => {
-    args.renderer.off(CliRenderEvents.THEME_MODE, handleThemeMode);
+    args.renderer.off(CliRenderEvents.THEME_MODE, refreshPalette);
+    args.renderer.off(CliRenderEvents.FOCUS, refreshPalette);
     args.renderer.off(CliRenderEvents.RESIZE, handleResize);
   };
 }
