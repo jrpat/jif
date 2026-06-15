@@ -95,7 +95,7 @@ import {
 } from "./startup.ts";
 import { executeShellCommand as executeShellTextCommand } from "../jj/process.ts";
 
-const EXTRAS_EMPTY_MESSAGE = "No extras defined. Bind keys under `keymap.extras` in your config.";
+const EXTRA_EMPTY_MESSAGE = "No extra bindings defined. Bind keys under `keymap.extra` in your config.";
 
 export function JifView(props: {
   store: AppStore;
@@ -355,7 +355,7 @@ export function JifView(props: {
   );
   const showsTransientShortcutPanel = createMemo(() =>
     !showsPersistentShortcutPanel() && (
-      store.state.focusMode === "extras" ||
+      store.state.focusMode === "extra" ||
       (modeShortcutBindings().length > 0 &&
         (showsCommandPreview() || store.state.focusMode === "bookmark"))
     )
@@ -827,7 +827,7 @@ export function JifView(props: {
             actionLabel={showsPersistentShortcutPanel() ? "? close" : null}
             config={config}
             loadingIndicatorText={loadingIndicatorText()}
-            emptyMessage={activeMode() === "extras" ? EXTRAS_EMPTY_MESSAGE : undefined}
+            emptyMessage={activeMode() === "extra" ? EXTRA_EMPTY_MESSAGE : undefined}
           />
         </Show>
         <Show when={showsCommandPrompt()}>

@@ -25,7 +25,7 @@ Both files load the same `Jif.Config` shape; project-level deep-merges over user
 1. **Locate the file.** Resolve the right path based on user-vs-project. Check whether it exists. If it does not, either run `jif init-config[ -p]` (preferred — it also writes `jif.d.ts`) or write a minimal `config.ts` with the `Jif.Config` shape.
 2. **Read the file.** Always read it before editing so you preserve unrelated keys, comments, and existing user customizations.
 3. **Consult the right reference.** Each major config area has its own reference file under `references/`:
-   - [Keybindings](references/keybindings.md) — `keymap` field: rebinding existing commands, inline commands, aliases, scopes, the Extras mode, and the full list of command ids.
+   - [Keybindings](references/keybindings.md) — `keymap` field: rebinding existing commands, inline commands, aliases, scopes, the Extra mode, and the full list of command ids.
    - [Color scheme](references/colors.md) — `colorScheme.colors`: the semantic color slots and how to override them with hex values or palette references.
    - [Log](references/log.md) — `log` field: scroll margin, revision id width.
    - [Commands](references/commands.md) — `commands` field: short vs. long flags, command-bar layout.

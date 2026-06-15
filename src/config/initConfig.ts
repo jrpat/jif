@@ -365,7 +365,8 @@ namespace Jif {
     | "revset"
     | "search"
     | "diff-viewer"
-    | "notifications";
+    | "notifications"
+    | "extra";
 
   type UserKeyMap = Partial<Record<KeymapScope, Readonly<Record<string, UserKeyBinding>>>>;
 

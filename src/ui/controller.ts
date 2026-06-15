@@ -345,8 +345,8 @@ export function createJifCommandController(args: Readonly<{
     enterBookmarkMode() {
       store.actions.enterBookmarkLeader();
     },
-    enterExtrasMode() {
-      store.actions.enterExtrasMode();
+    enterExtraMode() {
+      store.actions.enterExtraMode();
     },
     startBookmarkCreate() {
       const state = store.snapshot();

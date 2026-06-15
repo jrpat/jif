@@ -25,7 +25,7 @@ export type FocusMode =
   | "diff-viewer"
   | "notifications"
   | "bookmark"
-  | "extras";
+  | "extra";
 export type AppLayout = "loose" | "normal" | "tight";
 export type CommandBarKind = "jj" | "shell";
 export type SearchScopeId = "revision-log" | "operation-log" | "evolog";

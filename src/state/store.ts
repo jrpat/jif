@@ -665,19 +665,19 @@ export function exitBookmarkLeader(state: AppState): AppState {
   return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
 }
 
-export function enterExtrasMode(state: AppState): AppState {
-  if (state.focusMode === "extras") {
+export function enterExtraMode(state: AppState): AppState {
+  if (state.focusMode === "extra") {
     return state;
   }
 
   return replaceFocusModeStack({
     ...state,
     inlineConfirmation: null,
-  }, [...getBrowseFocusModeStack(state), "extras"]);
+  }, [...getBrowseFocusModeStack(state), "extra"]);
 }
 
-export function exitExtrasMode(state: AppState): AppState {
-  if (state.focusMode !== "extras") {
+export function exitExtraMode(state: AppState): AppState {
+  if (state.focusMode !== "extra") {
     return state;
   }
 
@@ -1158,9 +1158,9 @@ export function cancelOrBlurState(state: AppState): AppState {
     return exitBookmarkLeader(withoutDraft);
   }
 
-  if (state.focusMode === "extras") {
+  if (state.focusMode === "extra") {
     const withoutDraft = state.commandDraft !== null ? cancelCommandDraft(state) : state;
-    return exitExtrasMode(withoutDraft);
+    return exitExtraMode(withoutDraft);
   }
 
   if (state.shortcutPanelExpanded) {

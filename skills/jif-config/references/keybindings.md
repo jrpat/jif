@@ -95,15 +95,15 @@ The top-level keys under `keymap` are scopes. Each scope is a mode in the UI. Pi
 | `notifications` | Notifications panel is open. Does not inherit Normal. |
 | `bookmark` | After pressing `b` in Normal. |
 | `bookmark-move` | After starting a bookmark-move flow. |
-| `extras` | A clean-slate scope (entered with `;`). See below. |
+| `extra` | A clean-slate scope (entered with `;`). See below. |
 
-### Extras mode
+### Extra mode
 
-Pressing `;` in Normal enters Extras — a scope dedicated entirely to user bindings. Unlike most scopes, Extras does **not** inherit Normal, so the whole alphabet is available without shadowing built-ins. Use this for "your stuff" — project scripts, custom workflows.
+Pressing `;` in Normal enters Extra — a scope dedicated entirely to user bindings. Unlike most scopes, Extra does **not** inherit Normal, so the whole alphabet is available without shadowing built-ins. Use this for "your stuff" — project scripts, custom workflows.
 
 ```ts
 keymap: {
-  extras: {
+  extra: {
     d: {
       title: "Deploy",
       description: "Run the deploy script",
@@ -169,7 +169,7 @@ These are the built-in ids you can bind keys to. (Scopes in parentheses are the 
 - `inline-confirmation-prev-option`, `inline-confirmation-next-option`, `confirm`.
 
 ### Other
-- `enter-extras-mode`, `refresh-repository`, `cancel`, `quit`, `suspend`.
+- `enter-extra-mode`, `refresh-repository`, `cancel`, `quit`, `suspend`.
 
 ## Common recipes
 
@@ -203,11 +203,11 @@ keymap: {
 }
 ```
 
-**Bind a project-specific deploy under Extras:**
+**Bind a project-specific deploy under Extra:**
 
 ```ts
 keymap: {
-  extras: {
+  extra: {
     d: {
       title: "Deploy",
       description: "Run the deploy script in this repo",

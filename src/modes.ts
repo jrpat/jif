@@ -20,7 +20,7 @@ export type Mode =
   | "notifications"
   | "bookmark"
   | "bookmark-move"
-  | "extras";
+  | "extra";
 
 export type ModeDefinition = Readonly<{
   id: Mode;
@@ -48,7 +48,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   notifications: { id: "notifications", inputPassthrough: false, label: "Notifications" },
   bookmark: { id: "bookmark", parent: "normal", inputPassthrough: false, label: "Bookmark" },
   "bookmark-move": { id: "bookmark-move", parent: "normal", inputPassthrough: false, label: "Bookmark Move" },
-  extras: { id: "extras", inputPassthrough: false, label: "Extras" },
+  extra: { id: "extra", inputPassthrough: false, label: "Extra" },
 };
 
 export type KeymapBinding =
@@ -129,7 +129,7 @@ export const defaultKeymap: Keymap = {
     O: "open-operation-log",
     E: "open-evolog",
     b: "enter-bookmark-mode",
-    ";": "enter-extras-mode",
+    ";": "enter-extra-mode",
   },
   files: {
     j: "move-down",
@@ -239,7 +239,7 @@ export const defaultKeymap: Keymap = {
     u: "bookmark-untrack",
   },
   "bookmark-move": {},
-  extras: {},
+  extra: {},
 };
 
 export function getActiveMode(state: AppState): Mode {
@@ -260,7 +260,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.commandDraft?.config.kind === "absorb") return "absorb";
   if (state.commandDraft?.config.kind === "bookmark-move") return "bookmark-move";
   if (state.focusMode === "bookmark") return "bookmark";
-  if (state.focusMode === "extras") return "extras";
+  if (state.focusMode === "extra") return "extra";
   return "normal";
 }
 

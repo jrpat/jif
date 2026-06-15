@@ -4,8 +4,8 @@ import { createRowId } from "../src/domain/rowIds.ts";
 import {
   cancelOrBlurState,
   createInitialState,
-  enterExtrasMode,
-  exitExtrasMode,
+  enterExtraMode,
+  exitExtraMode,
 } from "../src/state/store.ts";
 import {
   collectCanonicalBindingsForMode,
@@ -44,37 +44,37 @@ function createState(): AppState {
   };
 }
 
-describe("extras mode", () => {
-  test("enterExtrasMode switches getActiveMode to 'extras'", () => {
-    const state = enterExtrasMode(createState());
-    expect(state.focusMode).toBe("extras");
-    expect(getActiveMode(state)).toBe("extras");
+describe("extra mode", () => {
+  test("enterExtraMode switches getActiveMode to 'extra'", () => {
+    const state = enterExtraMode(createState());
+    expect(state.focusMode).toBe("extra");
+    expect(getActiveMode(state)).toBe("extra");
   });
 
-  test("exitExtrasMode returns to revisions focus mode", () => {
-    const entered = enterExtrasMode(createState());
-    const exited = exitExtrasMode(entered);
+  test("exitExtraMode returns to revisions focus mode", () => {
+    const entered = enterExtraMode(createState());
+    const exited = exitExtraMode(entered);
     expect(exited.focusMode).toBe("revisions");
     expect(getActiveMode(exited)).toBe("normal");
   });
 
-  test("cancelOrBlurState exits extras mode", () => {
-    const entered = enterExtrasMode(createState());
+  test("cancelOrBlurState exits extra mode", () => {
+    const entered = enterExtraMode(createState());
     const cancelled = cancelOrBlurState(entered);
     expect(cancelled.focusMode).toBe("revisions");
   });
 
-  test("default keymap binds `;` in normal mode to enter-extras-mode", () => {
-    expect(resolveCommand("normal", ";", defaultKeymap)).toBe("enter-extras-mode");
+  test("default keymap binds `;` in normal mode to enter-extra-mode", () => {
+    expect(resolveCommand("normal", ";", defaultKeymap)).toBe("enter-extra-mode");
   });
 
-  test("extras mode has no direct bindings by default", () => {
-    const bindings = collectDirectCanonicalBindingsForMode("extras", defaultKeymap);
+  test("extra mode has no direct bindings by default", () => {
+    const bindings = collectDirectCanonicalBindingsForMode("extra", defaultKeymap);
     expect(bindings).toHaveLength(0);
   });
 
-  test("extras mode is a clean slate: only global bindings are inherited", () => {
-    const bindings = collectCanonicalBindingsForMode("extras", defaultKeymap);
+  test("extra mode is a clean slate: only global bindings are inherited", () => {
+    const bindings = collectCanonicalBindingsForMode("extra", defaultKeymap);
     const commandIds = bindings.map((binding) => binding.commandId).sort();
     expect(commandIds).toEqual([
       "cancel",
@@ -89,9 +89,9 @@ describe("extras mode", () => {
     ]);
   });
 
-  test("user-defined bindings under keymap.extras resolve in extras mode", () => {
+  test("user-defined bindings under keymap.extra resolve in extra mode", () => {
     const { keymap, commands } = resolveConfiguredKeymap({
-      extras: {
+      extra: {
         d: {
           title: "Deploy",
           description: "Run the deploy script",
@@ -100,7 +100,7 @@ describe("extras mode", () => {
       },
     });
 
-    const commandId = resolveCommand("extras", "d", keymap);
+    const commandId = resolveCommand("extra", "d", keymap);
     expect(commandId).not.toBeNull();
     expect(commands.some((c) => c.id === commandId)).toBe(true);
   });

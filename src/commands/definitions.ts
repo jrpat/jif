@@ -43,7 +43,7 @@ export type CommandController = Readonly<{
   startNewRevision: () => void;
   editRevision: () => void;
   enterBookmarkMode: () => void;
-  enterExtrasMode: () => void;
+  enterExtraMode: () => void;
   startBookmarkCreate: () => void;
   startBookmarkMoveFrom: () => void;
   startBookmarkMoveTo: () => void;
@@ -729,10 +729,10 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     group: "global",
   },
   {
-    id: "enter-extras-mode",
-    title: "Extras",
-    description: "Enter extras mode for user-defined commands",
-    run: (controller) => controller.enterExtrasMode(),
+    id: "enter-extra-mode",
+    title: "Extra",
+    description: "Enter extra mode for user-defined commands",
+    run: (controller) => controller.enterExtraMode(),
     group: "global",
   },
   {

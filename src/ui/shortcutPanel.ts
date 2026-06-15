@@ -287,8 +287,8 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Bookmark";
     case "bookmark-move":
       return "Bookmark Move";
-    case "extras":
-      return "Extras";
+    case "extra":
+      return "Extra";
   }
 }
 
