@@ -264,7 +264,7 @@ export function createJifCommandController(args: Readonly<{
     forceLastCommand() {
       const failedCommand = store.snapshot().lastFailedCommand;
       if (!failedCommand) {
-        store.actions.pushEvent("No retryable failed command.", "error");
+        store.actions.pushEvent("No retryable command.", "error");
         return;
       }
 
@@ -273,7 +273,7 @@ export function createJifCommandController(args: Readonly<{
         stderr: failedCommand.stderr || failedCommand.errorText,
       });
       if (!retryPlan) {
-        store.actions.pushEvent("Last failed command cannot be forced.", "error");
+        store.actions.pushEvent("Last retryable command cannot be forced.", "error");
         return;
       }
 

@@ -1,5 +1,6 @@
 import type { FailedCommand, StatusLevel, StatusMessageVariant } from "../domain/types.ts";
 import { tokenizeCommandText } from "../jj/client.ts";
+import { buildForceRetryPlan } from "../jj/forceRetry.ts";
 import { isHelpJjCommand } from "./interactive-subcommands.ts";
 import { SPINNER_INTERVAL_MS, formatSpinnerText } from "../ui/spinner.ts";
 
@@ -129,7 +130,7 @@ export function createCommandRunner(args: Readonly<{
           ? await executeInteractive(args, executor, command, options.cwd)
           : await executeCommand(args, executor, command, options.cwd);
         stopToastSpinner();
-        args.actions.clearLastFailedCommand();
+        recordRetryableSuccessOrClear(args.actions, command, resultMessage, toastId ?? undefined);
         if (options.cancelOnSuccess) {
           args.actions.cancelCommand();
         }
@@ -242,6 +243,25 @@ function recordFailedCommand(
     statusMessageId,
   });
   return message;
+}
+
+function recordRetryableSuccessOrClear(
+  actions: CommandRunnerActions,
+  command: FailedCommand,
+  message: string,
+  statusMessageId?: string,
+) {
+  if (buildForceRetryPlan({ commandArgs: command.commandArgs, stderr: message }) === null) {
+    actions.clearLastFailedCommand();
+    return;
+  }
+
+  actions.setLastFailedCommand({
+    ...command,
+    errorText: message,
+    stderr: message,
+    statusMessageId,
+  });
 }
 
 function publishSuccess(

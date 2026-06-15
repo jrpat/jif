@@ -528,6 +528,31 @@ test("forceLastCommand retries supported failed commands through the shared runn
   harness.store.dispose();
 });
 
+test("forceLastCommand retries file track snapshot warnings with include-ignored", async () => {
+  const harness = createControllerHarness({ revisions: [] });
+
+  harness.store.actions.setLastFailedCommand({
+    commandText: "file track ignored.log",
+    commandArgs: ["file", "track", "ignored.log"],
+    interactive: false,
+    errorText: "Warning: Refused to snapshot some files",
+    stderr: "Warning: Refused to snapshot some files",
+    statusMessageId: "warning-toast",
+  });
+  harness.store.actions.pushStatusMessage(
+    "warning-toast",
+    "Warning: Refused to snapshot some files",
+    "success",
+  );
+
+  harness.controller.forceLastCommand();
+  await Promise.resolve();
+
+  expect(harness.runJjCommands).toEqual(["file track --include-ignored ignored.log"]);
+  expect(harness.store.state.statusMessages).toEqual([]);
+  harness.store.dispose();
+});
+
 test("forceLastCommand leaves the original toast visible when the forced retry fails", async () => {
   const harness = createControllerHarness({
     revisions: [],

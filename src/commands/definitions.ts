@@ -348,7 +348,7 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   {
     id: "force-last-command",
     title: "Retry + Force",
-    description: "Retry the latest failed command with a force flag when supported",
+    description: "Retry the latest retryable command with a force flag when supported",
     run: (controller) => controller.forceLastCommand(),
     group: "global",
   },

@@ -128,7 +128,7 @@ Viewing and navigating the revision log.
 | `E` | open-evolog | Open the evolution log for the focused revision |
 | `q` | quit | Exit the application |
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
-| `!` | force-last-command | Retry the last failed command with the override flag `jj` is asking for:<br>• `--ignore-immutable` — when the command refused because the target is immutable<br>• `--allow-backwards` — when a bookmark move was rejected as backwards/sideways |
+| `!` | force-last-command | Retry the latest retryable command with the override flag `jj` is asking for:<br>• `--ignore-immutable` — when the command refused because the target is immutable<br>• `--allow-backwards` — when a bookmark move was rejected as backwards/sideways<br>• `--include-ignored` — when `jj file track` warned that it refused to snapshot some files |
 | `-` | toggle-flags | Toggle the command bar between short and long flag names while composing a command |
 | `;` | enter-extras-mode | Enter Extras mode, a clean-slate scope for keys you define yourself (see [Extras](#extras)) |
 

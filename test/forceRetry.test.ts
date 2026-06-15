@@ -40,6 +40,31 @@ test("buildForceRetryPlan appends ignore-immutable for immutable failures", () =
   ]);
 });
 
+test("buildForceRetryPlan inserts include-ignored for file track snapshot warnings", () => {
+  const plan = buildForceRetryPlan({
+    commandArgs: ["file", "track", "ignored.log"],
+    stderr: "Warning: Refused to snapshot some files\nHint: Use `jj file track --include-ignored ignored.log`.",
+  });
+
+  expect(plan?.ruleId).toBe("file-track-include-ignored");
+  expect(plan?.commandArgs).toEqual([
+    "file",
+    "track",
+    "--include-ignored",
+    "ignored.log",
+  ]);
+  expect(quoteCommand(plan?.commandArgs ?? [])).toBe("file track --include-ignored ignored.log");
+});
+
+test("buildForceRetryPlan only applies include-ignored to file track", () => {
+  expect(
+    buildForceRetryPlan({
+      commandArgs: ["status"],
+      stderr: "Warning: Refused to snapshot some files",
+    }),
+  ).toBeNull();
+});
+
 test("buildForceRetryPlan does not duplicate an existing force flag", () => {
   const plan = buildForceRetryPlan({
     commandArgs: ["bookmark", "set", "main", "-r", "main-", "--allow-backwards"],

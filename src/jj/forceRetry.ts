@@ -25,6 +25,12 @@ const FORCE_RETRY_RULES: readonly ForceRetryRule[] = [
     matches: ({ stderr }) => /ignore-immutable|immutable/i.test(stderr),
     rewrite: (commandArgs) => appendUniqueFlag(commandArgs, "--ignore-immutable"),
   },
+  {
+    id: "file-track-include-ignored",
+    matches: ({ commandArgs, stderr }) =>
+      isFileTrackCommand(commandArgs) && /refused to snapshot some files/i.test(stderr),
+    rewrite: (commandArgs) => insertUniqueFlagAfterPrefix(commandArgs, "--include-ignored", 2),
+  },
 ];
 
 export function buildForceRetryPlan(
@@ -50,4 +56,24 @@ function appendUniqueFlag(commandArgs: readonly string[], flag: string): readonl
   }
 
   return [...commandArgs, flag];
+}
+
+function insertUniqueFlagAfterPrefix(
+  commandArgs: readonly string[],
+  flag: string,
+  prefixLength: number,
+): readonly string[] {
+  if (commandArgs.includes(flag)) {
+    return commandArgs;
+  }
+
+  return [
+    ...commandArgs.slice(0, prefixLength),
+    flag,
+    ...commandArgs.slice(prefixLength),
+  ];
+}
+
+function isFileTrackCommand(commandArgs: readonly string[]): boolean {
+  return commandArgs[0] === "file" && commandArgs[1] === "track";
 }

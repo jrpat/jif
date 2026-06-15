@@ -167,6 +167,32 @@ test("command runner records history and updates a status toast on success", asy
   ]);
 });
 
+test("command runner keeps successful file track snapshot warnings retryable", async () => {
+  const { entries, actions } = createActionLog();
+
+  const runner = createCommandRunner({
+    actions,
+    executeCommandArgs: async () => "Warning: Refused to snapshot some files",
+    refreshRepository: async () => {
+      entries.push("refreshRepository");
+      return true;
+    },
+    createToastId: () => "toast-1",
+  });
+
+  await runner.run({
+    commandText: "file track ignored.log",
+    canExecute: true,
+    successFeedback: "status-toast",
+    failureFeedback: "status-toast",
+  });
+
+  expect(entries).toContain(
+    "setLastFailedCommand:false:file track ignored.log:Warning: Refused to snapshot some files:toast-1",
+  );
+  expect(entries).not.toContain("clearLastFailedCommand");
+});
+
 test("command runner animates the status toast while a command is running", async () => {
   const { entries, actions } = createActionLog();
   let tickSpinner = () => {};
