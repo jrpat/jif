@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { resolveConfiguredKeymap } from "../src/config/index.ts";
 import { commandDefinitions, type CommandController } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
+import { getRevisionArg } from "../src/domain/revisionIds.ts";
 import { createInitialState, draftConfigs, startCommandDraft } from "../src/state/store.ts";
 import { defaultKeymap } from "../src/modes.ts";
 import { dispatchGlobalKey } from "../src/ui/keybindings.ts";
@@ -260,7 +261,7 @@ test("dispatchGlobalKey passes the full app state values to inline configured ha
   });
 });
 
-test("dispatchGlobalKey exposes the focused revision on app.rev for inline handlers", () => {
+test("dispatchGlobalKey exposes the focused revision object on app.focusedRevision", () => {
   const calls: string[] = [];
   const state = createState();
   let focusedRevisionId: string | null = null;
@@ -269,10 +270,10 @@ test("dispatchGlobalKey exposes the focused revision on app.rev for inline handl
     normal: {
       g: {
         title: "Read Focused Revision",
-        description: "Capture the focused revision via app.rev",
+        description: "Capture the focused revision via app.focusedRevision",
         run: (_controller, app) => {
           calls.push("custom");
-          focusedRevisionId = app.rev?.revisionId ?? null;
+          focusedRevisionId = app.focusedRevision?.revisionId ?? null;
         },
       },
     },
@@ -292,6 +293,170 @@ test("dispatchGlobalKey exposes the focused revision on app.rev for inline handl
     throw new Error("expected focused revision id to be set");
   }
   expect(focusedRevisionId as string).toBe("aaaaaaaa");
+});
+
+test("app.rev is the focused revision's jj argument; app.focusedRevision is the object", () => {
+  const calls: string[] = [];
+  const state = createState();
+  const captured: {
+    rev?: string;
+    interpolated?: string;
+    fullRevisionId?: string;
+    prefixLength?: number;
+  } = {};
+
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        title: "Read app.rev",
+        description: "Capture app.rev and app.focusedRevision",
+        run: (_controller, app) => {
+          captured.rev = app.rev;
+          captured.interpolated = `show -r ${app.rev}`;
+          captured.fullRevisionId = app.focusedRevision?.revisionId;
+          captured.prefixLength = app.focusedRevision?.changeIdPrefixLength;
+        },
+      },
+    },
+  });
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "g",
+    state,
+    commands: resolved.commands,
+    controller: createController(calls),
+    keymap: resolved.keymap,
+  });
+
+  expect(handled).toBeTrue();
+  // createState's focused revision is "aaaaaaaa" with changeIdPrefixLength 1.
+  expect(captured.rev).toBe(getRevisionArg("aaaaaaaa", 1));
+  expect(captured.rev).toBe("a");
+  expect(captured.interpolated).toBe("show -r a");
+  // The full object remains available under focusedRevision.
+  expect(captured.fullRevisionId).toBe("aaaaaaaa");
+  expect(captured.prefixLength).toBe(1);
+});
+
+test("app.rev keeps the full id for divergent revisions", () => {
+  const calls: string[] = [];
+  const base = createState();
+  const state: AppState = {
+    ...base,
+    revisions: [
+      { ...base.revisions[0]!, revisionId: "abc1234/2", changeIdPrefixLength: 3 },
+      base.revisions[1]!,
+    ],
+  };
+  const captured: { rev?: string } = {};
+
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        title: "Read divergent app.rev",
+        description: "Capture a divergent app.rev",
+        run: (_controller, app) => {
+          captured.rev = app.rev;
+        },
+      },
+    },
+  });
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "g",
+    state,
+    commands: resolved.commands,
+    controller: createController(calls),
+    keymap: resolved.keymap,
+  });
+
+  expect(handled).toBeTrue();
+  expect(captured.rev).toBe(getRevisionArg("abc1234/2", 3));
+  expect(captured.rev).toBe("abc1234/2");
+});
+
+test("app.file is the focused file's path; app.focusedFile is the object", () => {
+  const calls: string[] = [];
+  const base = createState();
+  const state: AppState = {
+    ...base,
+    expandedRowId: "aaaaaaaa",
+    focusedFileIndex: 0,
+    revisions: [
+      {
+        ...base.revisions[0]!,
+        filesLoaded: true,
+        files: [{ path: "src/foo.ts", status: "M" }],
+      },
+      base.revisions[1]!,
+    ],
+  };
+  const captured: { file?: string; path?: string; status?: string } = {};
+
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        title: "Read app.file",
+        description: "Capture app.file and app.focusedFile",
+        run: (_controller, app) => {
+          captured.file = app.file;
+          captured.path = app.focusedFile?.path;
+          captured.status = app.focusedFile?.status;
+        },
+      },
+    },
+  });
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "g",
+    state,
+    commands: resolved.commands,
+    controller: createController(calls),
+    keymap: resolved.keymap,
+  });
+
+  expect(handled).toBeTrue();
+  expect(captured.file).toBe("src/foo.ts");
+  expect(captured.path).toBe("src/foo.ts");
+  expect(captured.status).toBe("M");
+});
+
+test("app.rev is empty and app.focusedRevision is null when there are no revisions", () => {
+  const calls: string[] = [];
+  const base = createState();
+  const state: AppState = { ...base, revisions: [], focusedRevisionIndex: 0 };
+  const captured: { rev?: string; focusedRevisionIsNull?: boolean } = {};
+  let guarded = false;
+
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        title: "Read empty app.rev",
+        description: "Confirm app.rev is empty when nothing is focused",
+        run: (_controller, app) => {
+          captured.rev = app.rev;
+          captured.focusedRevisionIsNull = app.focusedRevision === null;
+          if (!app.rev) {
+            guarded = true;
+            return;
+          }
+        },
+      },
+    },
+  });
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "g",
+    state,
+    commands: resolved.commands,
+    controller: createController(calls),
+    keymap: resolved.keymap,
+  });
+
+  expect(handled).toBeTrue();
+  expect(captured.rev).toBe("");
+  expect(captured.focusedRevisionIsNull).toBeTrue();
+  expect(guarded).toBeTrue();
 });
 
 test("dispatchGlobalKey reports rejected inline handlers through the controller", async () => {

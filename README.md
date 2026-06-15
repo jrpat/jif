@@ -436,20 +436,19 @@ export default {
 				title: "Show Focused Revision",
 				description: "Open jj show for the focused revision",
 				run: (cmd, app) => {
-					const revision = app.rev;
-					if (!revision) return;
+					if (!app.rev) return;
 
-					return cmd.jji(`show -r ${revision.revisionId}`);
+					// app.rev is the focused revision's jj argument
+					return cmd.jji(`show -r ${app.rev}`);
 				},
 			},
 			"ctrl-e": {
 				title: "Edit Focused Revision",
 				description: "Run jj edit on the focused revision",
 				run: (cmd, app) => {
-					const revision = app.rev;
-					if (!revision) return;
+					if (!app.rev) return;
 
-					return cmd.jj(`edit ${revision.revisionId}`);
+					return cmd.jj(`edit ${app.rev}`);
 				},
 			},
 		},
@@ -604,10 +603,14 @@ For `jj` and `sh`, `options` may include `cwd` and `focusWorkingCopyAfterRefresh
 
 The `app` argument is a read-only snapshot of jif state, plus the ergonomic `rev` and `file` shortcuts.
 
+`rev` and `file` are plain strings, ready to drop straight into a command — `cmd.jj(`edit ${app.rev}`)` works directly. `rev` is the focused revision's `jj` argument (the minimal unique change-id prefix, or the full id for a divergent revision) and `file` is the focused file's path; both are `""` when nothing is focused, so `if (!app.rev)` guards cleanly. When you need the structured object, use `focusedRevision` / `focusedFile` (e.g. `app.focusedRevision?.commitId`).
+
 | Property | Type | Description |
 |----------|------|-------------|
-| `rev` | `RevisionSummary \| null` | Currently focused revision, or `null` |
-| `file` | `ChangedFile \| null` | Currently focused changed file, or `null` |
+| `rev` | `string` | Focused revision's `jj` argument, or `""` if nothing is focused |
+| `file` | `string` | Focused file's path, or `""` if nothing is focused |
+| `focusedRevision` | `RevisionSummary \| null` | Focused revision object, or `null` |
+| `focusedFile` | `ChangedFile \| null` | Focused changed file object, or `null` |
 | `commandBar` | `CommandBarState` | Current command bar state |
 | `commandBarBookmark` | `CommandBarBookmarkContext \| null` | Bookmark autocomplete context for command prompts |
 | `commandDraft` | `CommandDraft \| null` | Active command draft |

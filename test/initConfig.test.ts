@@ -32,11 +32,15 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(configText).toContain('// chromeBorderFocus: "#00cdcd",');
   expect(configText).toContain('// scrollMargin: 1,');
   expect(configText).toContain('// layout: "normal",');
-  expect(configText).toContain("const rev = app.rev;");
+  expect(configText).toContain("if (!app.rev) return;");
+  expect(configText).toContain("return cmd.jji(`show -r ${app.rev}`);");
   expect(typesText).toContain("declare global {");
   expect(typesText).toContain("namespace Jif {");
   expect(typesText).toContain("type Config = Readonly<{");
-  expect(typesText).toContain("rev: RevisionSummary | null");
+  expect(typesText).toContain("rev: string");
+  expect(typesText).toContain("file: string");
+  expect(typesText).toContain("focusedRevision: RevisionSummary | null");
+  expect(typesText).toContain("focusedFile: ChangedFile | null");
 });
 
 test("initUserConfig does not overwrite an existing config.ts", async () => {

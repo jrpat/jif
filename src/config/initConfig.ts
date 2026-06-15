@@ -140,9 +140,9 @@ export default {
       //   title: "Show focused revision",
       //   description: "Open jj show for the focused revision",
       //   run: (cmd, app) => {
-      //     const rev = app.rev;
-      //     if (!rev) return;
-      //     return cmd.jji(\`show -r \${rev.revisionId}\`);
+      //     if (!app.rev) return;
+      //     // app.rev is the focused revision's jj argument (app.focusedRevision is the object).
+      //     return cmd.jji(\`show -r \${app.rev}\`);
       //   },
       // },
     },
@@ -260,7 +260,14 @@ namespace Jif {
     searchQuery: string;
     searchScope: SearchScopeId | null;
     searchStartIndex: number | null;
-    rev: RevisionSummary | null;
+    /** Focused revision's jj argument, or "" when nothing is focused. e.g. \`edit \${app.rev}\`. */
+    rev: string;
+    /** Focused file's path, or "" when nothing is focused. e.g. \`diff \${app.file}\`. */
+    file: string;
+    /** Focused revision object, or null. */
+    focusedRevision: RevisionSummary | null;
+    /** Focused changed file object, or null. */
+    focusedFile: ChangedFile | null;
   }>;
 
   type JjCommandOptions = Readonly<{

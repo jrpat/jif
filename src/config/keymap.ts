@@ -1,5 +1,6 @@
 import { commandDefinitions, type CommandDefinition, type UserCommandController } from "../commands/definitions.ts";
 import type { AppState as BaseAppState, ChangedFile, RevisionSummary } from "../domain/types.ts";
+import { getRevisionArg } from "../domain/revisionIds.ts";
 import { defaultKeymap, type Keymap, type KeymapBinding, type Mode } from "../modes.ts";
 import { getExpandedRevision } from "../state/store.ts";
 
@@ -25,8 +26,14 @@ export type UserKeyBinding = string | UserAliasBinding | UserKeybindingCommand;
 export type UserKeyMap = Partial<Record<KeymapScope, Readonly<Record<string, UserKeyBinding>>>>;
 
 export type UserAppState = BaseAppState & Readonly<{
-  rev: RevisionSummary | null;
-  file: ChangedFile | null;
+  // Ergonomic string shortcuts, ready to drop straight into a command:
+  // `rev` is the focused revision's jj argument, `file` is the focused file's path.
+  // Both are "" when nothing is focused, so `${app.rev}` is always a clean string and
+  // `if (!app.rev)` still guards. Use `focusedRevision`/`focusedFile` for the objects.
+  rev: string;
+  file: string;
+  focusedRevision: RevisionSummary | null;
+  focusedFile: ChangedFile | null;
 }>;
 
 export type ResolvedConfiguredKeymap = Readonly<{
@@ -39,11 +46,18 @@ const USER_COMMAND_ID_PREFIX = "user:";
 export function createUserAppState(state: BaseAppState): UserAppState {
   return new Proxy(state as UserAppState, {
     get(target, property, receiver) {
-      if (property === "rev") {
+      if (property === "focusedRevision") {
         return target.revisions[target.focusedRevisionIndex] ?? null;
       }
-      if (property === "file") {
+      if (property === "rev") {
+        const rev = target.revisions[target.focusedRevisionIndex];
+        return rev ? getRevisionArg(rev.revisionId, rev.changeIdPrefixLength) : "";
+      }
+      if (property === "focusedFile") {
         return getExpandedRevision(target)?.files[target.focusedFileIndex] ?? null;
+      }
+      if (property === "file") {
+        return getExpandedRevision(target)?.files[target.focusedFileIndex]?.path ?? "";
       }
 
       return Reflect.get(target, property, receiver);
