@@ -97,6 +97,53 @@ export function createJifCommandController(args: Readonly<{
 }>): CommandController {
   const { store, client } = args;
 
+  // `jj split` and `jj split --parallel` share the same flow: split the whole
+  // revision when nothing is selected, otherwise confirm whether to carve out
+  // only the selected files. The parallel variant just threads `-p` into every
+  // composed command and preview.
+  function beginSplit(parallel: boolean) {
+    const state = store.snapshot();
+    const revision = getFocusedRevision(state);
+    if (!revision) {
+      return;
+    }
+
+    const revisionArg = getRevisionArg(revision.revisionId, revision.changeIdPrefixLength);
+    const baseArgs = parallel ? ["split", "-p"] : ["split"];
+    const previewPrefix = parallel ? "split -p" : "split";
+    // The selection belongs to the expanded revision, not to whichever focus
+    // mode happens to be active. Overlays (notifications, op-log, …) can drop
+    // focus out of files mode while leaving the revision expanded and its
+    // files selected, so gate on the expanded row rather than focusMode.
+    const selectedFilePaths = state.expandedRowId === revision.rowId
+      ? state.selectedFilePaths
+      : [];
+
+    if (selectedFilePaths.length === 0) {
+      void args.runInteractiveJjCommand(quoteCommand([...baseArgs, "-r", revisionArg]));
+      return;
+    }
+
+    const absoluteFilePaths = selectedFilePaths.map((filePath) => join(state.repoPath, filePath));
+    store.actions.openInlineConfirmation({
+      kind: "split-files",
+      rowId: revision.rowId,
+      message: parallel ? "Split only selected files into a sibling?" : "Split only selected files?",
+      options: ["yes", "interactive", "no"],
+      selectedOption: "yes",
+      actualCommandByOption: {
+        yes: quoteCommand([...baseArgs, "-r", revisionArg, ...absoluteFilePaths]),
+        interactive: quoteCommand([...baseArgs, "-i", "-r", revisionArg, ...absoluteFilePaths]),
+        no: quoteCommand([...baseArgs, "-r", revisionArg]),
+      },
+      previewCommandByOption: {
+        yes: `${previewPrefix} -r ${revisionArg} …files…`,
+        interactive: `${previewPrefix} -i -r ${revisionArg} …files…`,
+        no: `${previewPrefix} -r ${revisionArg}`,
+      },
+    });
+  }
+
   return {
     moveFocus(delta: number) {
       store.actions.moveFocus(delta);
@@ -375,6 +422,30 @@ export function createJifCommandController(args: Readonly<{
 
       store.actions.startCommandDraft(draftConfigs.restore);
     },
+    startDuplicate() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (!revision) {
+        return;
+      }
+
+      store.actions.startCommandDraft(draftConfigs.duplicate);
+    },
+    startRevert() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (!revision) {
+        return;
+      }
+
+      store.actions.startCommandDraft(draftConfigs.revert);
+    },
+    diffEditRevision() {
+      const revisionArg = getFocusedRevisionArg(store.snapshot());
+      if (!revisionArg) {
+        return;
+      }
+
+      void args.runInteractiveJjCommand(`diffedit -r ${revisionArg}`);
+    },
     enterBookmarkMode() {
       store.actions.enterBookmarkLeader();
     },
@@ -474,44 +545,10 @@ export function createJifCommandController(args: Readonly<{
       });
     },
     startSplit() {
-      const state = store.snapshot();
-      const revision = getFocusedRevision(state);
-      if (!revision) {
-        return;
-      }
-
-      const revisionArg = getRevisionArg(revision.revisionId, revision.changeIdPrefixLength);
-      // The selection belongs to the expanded revision, not to whichever focus
-      // mode happens to be active. Overlays (notifications, op-log, …) can drop
-      // focus out of files mode while leaving the revision expanded and its
-      // files selected, so gate on the expanded row rather than focusMode.
-      const selectedFilePaths = state.expandedRowId === revision.rowId
-        ? state.selectedFilePaths
-        : [];
-
-      if (selectedFilePaths.length === 0) {
-        void args.runInteractiveJjCommand(quoteCommand(["split", "-r", revisionArg]));
-        return;
-      }
-
-      const absoluteFilePaths = selectedFilePaths.map((filePath) => join(state.repoPath, filePath));
-      store.actions.openInlineConfirmation({
-        kind: "split-files",
-        rowId: revision.rowId,
-        message: "Split only selected files?",
-        options: ["yes", "interactive", "no"],
-        selectedOption: "yes",
-        actualCommandByOption: {
-          yes: quoteCommand(["split", "-r", revisionArg, ...absoluteFilePaths]),
-          interactive: quoteCommand(["split", "-i", "-r", revisionArg, ...absoluteFilePaths]),
-          no: quoteCommand(["split", "-r", revisionArg]),
-        },
-        previewCommandByOption: {
-          yes: `split -r ${revisionArg} …files…`,
-          interactive: `split -i -r ${revisionArg} …files…`,
-          no: `split -r ${revisionArg}`,
-        },
-      });
+      beginSplit(false);
+    },
+    startSplitParallel() {
+      beginSplit(true);
     },
     startNewRevision() {
       const revisionArg = getFocusedRevisionArg(store.snapshot());
@@ -714,17 +751,6 @@ export function createJifCommandController(args: Readonly<{
     },
     toggleInterdiffSwap() {
       store.actions.toggleInterdiffSwap();
-    },
-    confirmRebaseWithForce() {
-      const state = store.snapshot();
-      if (state.commandDraft?.config.kind !== "rebase") {
-        return;
-      }
-      const commandText = getDisplayedCommandText(state, { forceApply: true }).trim();
-      if (commandText.length === 0) {
-        return;
-      }
-      void args.executeCurrentCommand(commandText);
     },
     toggleSquashAnchor() {
       const state = store.snapshot();

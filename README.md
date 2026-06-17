@@ -67,7 +67,7 @@ Viewing and navigating the revision log.
 | `k` / `↑` | move-up | Move through revisions or files |
 | `J` | move-parent | Follow the graph to the nearest visible parent, skipping branches |
 | `K` | move-child | Follow the graph to the nearest visible child, skipping branches |
-| `ctrl-o` | jump-to-next-divergent | When the focused revision is divergent (showing the `/N` suffix), cycle to the next visible sibling sharing its change-id |
+| `alt-j` | jump-to-next-divergent | When the focused revision is divergent (showing the `/N` suffix), cycle to the next visible sibling sharing its change-id |
 | `]` | move-to-next-bookmark | Jump down to the next visible revision that has a bookmark, without wrapping |
 | `[` | move-to-prev-bookmark | Jump up to the previous visible revision that has a bookmark, without wrapping |
 | `}` | move-to-next-workspace | Jump down to the next visible revision that has a workspace, without wrapping |
@@ -99,14 +99,18 @@ When the active revset is only `files(...)`, the collapsed status bar shows a `f
 | `ctrl-d` | diff | Show the diff between two revisions (`jj diff --from <source> --to <focused>`) |
 | `D` | describe | Edit description of the focused revision |
 | `e` | edit-revision | Edit the focused revision |
+| `E` | diff-edit-revision | Touch up the focused revision's changes in your configured diff editor (`jj diffedit -r <focused>`) |
 | `i` | interdiff | Show the interdiff between the focused revision and another |
 | `M` | set-parents | Change the focused revision's parents, toggling revisions to add or remove them as parents (megamerge) |
 | `n` | new-revision | Create a new revision from the focused revision |
 | `r` | rebase | Start a rebase from the focused revision |
 | `R` | restore-revision | Restore the focused revision from another |
+| `y` | duplicate | Copy the focused revision to another location (same target picker as rebase) |
+| `alt-r` | revert | Create a new revision that undoes the focused revision (same target picker as rebase) |
 | `s` | squash | Squash the focused revision into another |
 | `S` | squash-onto | Keep the focused revision as the target and select the branch above it (the revision directly above and its descendants) as the source |
 | `ctrl-s` | split | Split the focused revision, or use the current file selection |
+| `alt-s` | split-parallel | Split the focused revision into sibling commits sharing its parent (`jj split --parallel`) |
 | `u` | undo | Undo the last operation |
 | `U` | redo | Redo the last undone operation |
 | `space` | toggle-revision-selection | Add or remove the focused revision from the selection |
@@ -117,8 +121,8 @@ When the active revset is only `files(...)`, the collapsed status bar shows a `f
 |-----|---------|-------------|
 | `:` | command-bar | Run a jj subcommand |
 | `>` | shell-command-bar | Run a shell command |
-| `o` / `O` | open-operation-log | Open the repository operation log |
-| `E` | open-evolog | Open the evolution log for the focused revision |
+| `ctrl-o` | open-operation-log | Open the repository operation log |
+| `ctrl-e` | open-evolog | Open the evolution log for the focused revision |
 | `q` | quit | Exit the application |
 | `!` | force-last-command | Retry the latest retryable command with the override flag `jj` is asking for:<br>• `--ignore-immutable` — when the command refused because the target is immutable<br>• `--allow-backwards` — when a bookmark move was rejected as backwards/sideways<br>• `--include-ignored` — when `jj file track` warned that it refused to snapshot some files |
 | `-` | toggle-flags | Toggle the command bar between short and long flag names while composing a command |
@@ -140,6 +144,7 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 | `ctrl-u` | untrack | Stop tracking the focused file, or all selected files (`jj file untrack <paths>`) |
 | `ctrl-s` | split | Split using the current file selection |
 | `ctrl-f` | restrict-revset-to-focused-file | Show revisions that changed the focused file |
+| `alt-s` | split-parallel | Split using the current file selection into sibling commits (`jj split --parallel`) |
 
 ### Rebase
 
@@ -153,7 +158,26 @@ Active while previewing a rebase. Inherits Normal. The default composition is `j
 | `a` | rebase-target-after | Toggle `--insert-after` on the target |
 | `i` | rebase-target-insert-between | Pin the focused revision as `--insert-after`; navigate to pick `--insert-before` |
 | `e` | rebase-toggle-skip-emptied | Toggle `--skip-emptied` |
-| `alt-enter` | rebase-confirm-force | Run the composed rebase with `--ignore-immutable` |
+
+### Duplicate
+
+Pressing `y` from Normal mode enters Duplicate mode against the focused revision. Inherits Normal. Composes `jj duplicate <source> -d <target>`; the source is tagged with a `copy` chip and the destination with an `onto` chip. Navigate to choose the target (or select more sources with `space`), then `enter` to run. Duplicate copies the revisions to the new location without touching the originals, so it has no `--source`/`--branch` knobs — only the destination picker below.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `b` | rebase-target-before | Toggle `--insert-before` on the target |
+| `a` | rebase-target-after | Toggle `--insert-after` on the target |
+| `i` | rebase-target-insert-between | Pin the focused revision as `--insert-after`; navigate to pick `--insert-before` |
+
+### Revert
+
+Pressing `alt-r` from Normal mode enters Revert mode against the focused revision. Inherits Normal. Composes `jj revert -r <source> -d <target>`, which creates a *new* revision undoing the source's changes at the chosen location — distinct from `revert-operation`, which targets the op log. The source is tagged with a `revert` chip and the destination with an `onto` chip; navigate to choose the target, then `enter` to run. Shares the same destination picker as Rebase and Duplicate.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `b` | rebase-target-before | Toggle `--insert-before` on the target |
+| `a` | rebase-target-after | Toggle `--insert-after` on the target |
+| `i` | rebase-target-insert-between | Pin the focused revision as `--insert-after`; navigate to pick `--insert-before` |
 
 ### Squash
 
@@ -244,7 +268,7 @@ Active while the operation log panel is open. Does not inherit Normal.
 
 ### Evolog
 
-Active while the evolog panel is open. Opened from Normal with `E` for the focused revision. Does not inherit Normal.
+Active while the evolog panel is open. Opened from Normal with `ctrl-e` for the focused revision. Does not inherit Normal.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -452,7 +476,7 @@ export default {
 					return cmd.jji(`show -r ${app.rev}`);
 				},
 			},
-			"ctrl-e": {
+			"alt-e": {
 				title: "Edit Focused Revision",
 				description: "Run jj edit on the focused revision",
 				run: (cmd, app) => {
@@ -531,7 +555,6 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `collapseNotification()` | Collapse the focused notification |
 | `commit()` | Commit the working-copy revision |
 | `confirm()` | Confirm the active command draft, prompt, or inline confirmation |
-| `confirmRebaseWithForce()` | Run the composed rebase with the force override |
 | `cycleLayout()` | Cycle the revision layout |
 | `describe()` | Edit the focused revision description |
 | `editFocusedNotification()` | Open the focused notification text in `$EDITOR` |

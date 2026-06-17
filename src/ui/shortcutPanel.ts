@@ -269,6 +269,10 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Confirm";
     case "rebase":
       return "Rebase";
+    case "duplicate":
+      return "Duplicate";
+    case "revert":
+      return "Revert";
     case "restore":
       return "Restore";
     case "squash":
@@ -438,11 +442,15 @@ function commandHasImmediateEffect(
     case "restore":
       return state.focusMode === "files" && currentFocusedFileExists(state);
     case "split":
+    case "split-parallel":
       return (state.focusMode === "revisions" || state.focusMode === "files") && getFocusedRevision(state) !== null;
     case "inline-confirmation-prev-option":
     case "inline-confirmation-next-option":
       return state.focusMode === "inline-confirmation" && state.inlineConfirmation !== null;
     case "rebase":
+    case "duplicate":
+    case "revert":
+    case "diff-edit-revision":
     case "restore-revision":
     case "squash":
     case "interdiff":

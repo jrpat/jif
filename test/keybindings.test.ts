@@ -71,8 +71,12 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     focusCommandBar: () => calls.push("focusCommandBar"),
     focusShellCommandBar: () => calls.push("focusShellCommandBar"),
     startRebase: () => calls.push("startRebase"),
+    startDuplicate: () => calls.push("startDuplicate"),
+    startRevert: () => calls.push("startRevert"),
     startRestore: () => calls.push("startRestore"),
     startSplit: () => calls.push("startSplit"),
+    startSplitParallel: () => calls.push("startSplitParallel"),
+    diffEditRevision: () => calls.push("diffEditRevision"),
     startSquash: () => calls.push("startSquash"),
     startSquashOnto: () => calls.push("startSquashOnto"),
     startInterdiff: () => calls.push("startInterdiff"),
@@ -91,7 +95,6 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     setRebaseSourceKind: (kind) => calls.push(`setRebaseSourceKind(${kind})`),
     setRebaseTargetKind: (kind) => calls.push(`setRebaseTargetKind(${kind})`),
     toggleRebaseSkipEmptied: () => calls.push("toggleRebaseSkipEmptied"),
-    confirmRebaseWithForce: () => calls.push("confirmRebaseWithForce"),
     toggleSquashAnchor: () => calls.push("toggleSquashAnchor"),
     toggleInterdiffSwap: () => calls.push("toggleInterdiffSwap"),
     undo: () => calls.push("undo"),
@@ -655,12 +658,12 @@ test("dispatchGlobalKey routes uppercase Z to suspend in normal mode", () => {
   expect(calls).toEqual(["suspend"]);
 });
 
-test("dispatchGlobalKey routes O to the operation log", () => {
+test("dispatchGlobalKey routes ctrl-o to the operation log", () => {
   const calls: string[] = [];
   const state = createState();
 
   const handled = dispatchGlobalKey({
-    normalizedKey: "O",
+    normalizedKey: "ctrl-o",
     state,
     commands: commandDefinitions,
     controller: createController(calls),
@@ -670,7 +673,22 @@ test("dispatchGlobalKey routes O to the operation log", () => {
   expect(calls).toEqual(["openOperationLog"]);
 });
 
-test("dispatchGlobalKey routes E to open-evolog", () => {
+test("dispatchGlobalKey routes ctrl-e to open-evolog", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "ctrl-e",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["openEvolog"]);
+});
+
+test("dispatchGlobalKey routes E to diff-edit-revision", () => {
   const calls: string[] = [];
   const state = createState();
 
@@ -682,7 +700,73 @@ test("dispatchGlobalKey routes E to open-evolog", () => {
   });
 
   expect(handled).toBeTrue();
-  expect(calls).toEqual(["openEvolog"]);
+  expect(calls).toEqual(["diffEditRevision"]);
+});
+
+test("dispatchGlobalKey routes alt-j to jump-to-next-divergent", () => {
+  const calls: string[] = [];
+  const base = createState();
+  // Make the focused revision divergent with a visible sibling so the command
+  // passes its canExecute guard.
+  const state: AppState = {
+    ...base,
+    focusedRevisionIndex: 0,
+    revisions: [
+      { ...base.revisions[0]!, revisionId: "abc1234/1", changeIdPrefixLength: 4 },
+      { ...base.revisions[1]!, revisionId: "abc1234/2", changeIdPrefixLength: 4 },
+    ],
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "alt-j",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["moveFocusToNextDivergentSibling"]);
+});
+
+test("dispatchGlobalKey routes y to duplicate and alt-r to revert", () => {
+  const dupCalls: string[] = [];
+  const state = createState();
+
+  expect(
+    dispatchGlobalKey({
+      normalizedKey: "y",
+      state,
+      commands: commandDefinitions,
+      controller: createController(dupCalls),
+    }),
+  ).toBeTrue();
+  expect(dupCalls).toEqual(["startDuplicate"]);
+
+  const revertCalls: string[] = [];
+  expect(
+    dispatchGlobalKey({
+      normalizedKey: "alt-r",
+      state,
+      commands: commandDefinitions,
+      controller: createController(revertCalls),
+    }),
+  ).toBeTrue();
+  expect(revertCalls).toEqual(["startRevert"]);
+});
+
+test("dispatchGlobalKey routes alt-s to split-parallel", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "alt-s",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["startSplitParallel"]);
 });
 
 test("dispatchGlobalKey routes op-log actions to operation commands", () => {

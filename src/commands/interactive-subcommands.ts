@@ -4,6 +4,8 @@ export const ALWAYS_INTERACTIVE_JJ_SUBCOMMANDS: readonly string[] = [
   "diff",
   "show",
   "interdiff",
+  "diffedit",
+  "split",
 ];
 
 export function isAlwaysInteractiveJjCommand(commandText: string): boolean {

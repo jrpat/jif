@@ -8,6 +8,8 @@ export type Mode =
   | "evolog"
   | "inline-confirmation"
   | "rebase"
+  | "duplicate"
+  | "revert"
   | "restore"
   | "squash"
   | "interdiff"
@@ -38,6 +40,8 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   evolog: { id: "evolog", inputPassthrough: false, label: "Evolog" },
   "inline-confirmation": { id: "inline-confirmation", inputPassthrough: false, label: "Confirm" },
   rebase: { id: "rebase", parent: "normal", inputPassthrough: false, label: "Rebase" },
+  duplicate: { id: "duplicate", parent: "normal", inputPassthrough: false, label: "Duplicate" },
+  revert: { id: "revert", parent: "normal", inputPassthrough: false, label: "Revert" },
   restore: { id: "restore", parent: "normal", inputPassthrough: false, label: "Restore" },
   squash: { id: "squash", parent: "normal", inputPassthrough: false, label: "Squash" },
   interdiff: { id: "interdiff", parent: "normal", inputPassthrough: false, label: "Interdiff" },
@@ -90,7 +94,7 @@ export const defaultKeymap: Keymap = {
     G: "jump-to-bottom",
     J: "move-parent",
     K: "move-child",
-    "ctrl-o": "jump-to-next-divergent",
+    "alt-j": "jump-to-next-divergent",
     "]": "move-to-next-bookmark",
     "[": "move-to-prev-bookmark",
     "}": "move-to-next-workspace",
@@ -109,13 +113,17 @@ export const defaultKeymap: Keymap = {
     enter: "confirm",
     r: "rebase",
     R: "restore-revision",
+    y: "duplicate",
+    "alt-r": "revert",
     s: "squash",
     S: "squash-onto",
     "ctrl-s": "split",
+    "alt-s": "split-parallel",
     i: "interdiff",
     "ctrl-d": "diff",
     n: "new-revision",
     e: "edit-revision",
+    E: "diff-edit-revision",
     c: "commit",
     D: "describe",
     d: "show-revision-diff",
@@ -131,9 +139,8 @@ export const defaultKeymap: Keymap = {
     "/": "search",
     A: "absorb",
     a: "abandon",
-    o: alias("open-operation-log"),
-    O: "open-operation-log",
-    E: "open-evolog",
+    "ctrl-o": "open-operation-log",
+    "ctrl-e": "open-evolog",
     b: "enter-bookmark-mode",
     M: "set-parents",
     ";": "enter-extra-mode",
@@ -146,6 +153,7 @@ export const defaultKeymap: Keymap = {
     h: "collapse",
     left: alias("collapse"),
     "ctrl-s": "split",
+    "alt-s": "split-parallel",
     r: "restore",
     d: "show-file-diff",
     "ctrl-u": "untrack",
@@ -194,7 +202,16 @@ export const defaultKeymap: Keymap = {
     a: "rebase-target-after",
     i: "rebase-target-insert-between",
     e: "rebase-toggle-skip-emptied",
-    "alt-enter": "rebase-confirm-force",
+  },
+  duplicate: {
+    b: "rebase-target-before",
+    a: "rebase-target-after",
+    i: "rebase-target-insert-between",
+  },
+  revert: {
+    b: "rebase-target-before",
+    a: "rebase-target-after",
+    i: "rebase-target-insert-between",
   },
   restore: {},
   squash: {
@@ -266,6 +283,8 @@ export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "notifications") return "notifications";
   if (state.focusMode === "files") return "files";
   if (state.commandDraft?.config.kind === "rebase") return "rebase";
+  if (state.commandDraft?.config.kind === "duplicate") return "duplicate";
+  if (state.commandDraft?.config.kind === "revert") return "revert";
   if (state.commandDraft?.config.kind === "restore") return "restore";
   if (state.commandDraft?.config.kind === "squash") return "squash";
   if (state.commandDraft?.config.kind === "interdiff") return "interdiff";

@@ -569,6 +569,76 @@ test("confirm runs the split command selected by inline confirmation through the
   harness.store.dispose();
 });
 
+test("diffEditRevision hands off to the interactive runner with jj diffedit -r", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "working copy",
+        marker: "working-copy",
+      }),
+    ],
+  });
+
+  harness.controller.diffEditRevision();
+
+  expect(harness.runJjCommands).toEqual([]);
+  expect(harness.runInteractiveCommands).toEqual(["diffedit -r a"]);
+  harness.store.dispose();
+});
+
+test("startSplitParallel splits the whole revision with --parallel when nothing is selected", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "working copy",
+        marker: "working-copy",
+      }),
+    ],
+  });
+
+  harness.controller.startSplitParallel();
+
+  expect(harness.runInteractiveCommands).toEqual(["split -p -r a"]);
+  harness.store.dispose();
+});
+
+test("startSplitParallel confirms a selected-files split that threads -p through every option", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "working copy",
+        marker: "working-copy",
+        filesLoaded: true,
+        files: [
+          { path: "src/app.ts", status: "M" },
+          { path: "src/ui/render.tsx", status: "M" },
+        ],
+      }),
+    ],
+  });
+
+  harness.store.actions.openFocusedRevision();
+  harness.store.actions.toggleFileSelection();
+
+  harness.controller.startSplitParallel();
+
+  expect(harness.store.state.focusMode).toBe("inline-confirmation");
+  const confirmation = harness.store.state.inlineConfirmation;
+  expect(confirmation?.kind).toBe("split-files");
+  expect(confirmation?.previewCommandByOption.yes).toBe("split -p -r a …files…");
+  expect(confirmation?.previewCommandByOption.interactive).toBe("split -p -i -r a …files…");
+  expect(confirmation?.actualCommandByOption.yes).toContain("split -p -r a");
+  expect(confirmation?.actualCommandByOption.yes).toContain(join(REPO_PATH, "src/app.ts"));
+  expect(harness.runInteractiveCommands).toEqual([]);
+  harness.store.dispose();
+});
+
 test("forceLastCommand retries supported failed commands through the shared runner path", async () => {
   const harness = createControllerHarness({ revisions: [] });
 

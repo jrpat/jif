@@ -72,7 +72,7 @@ import {
   type ShortcutSummarySegment,
 } from "./shortcutPanel.ts";
 import { resolveBottomChromeLayout } from "./bottomChrome.ts";
-import { normalizeKey } from "./keyboard.ts";
+import { resolveKeyToken } from "./keyboard.ts";
 import { dispatchGlobalKey, type CommandDispatchDetails } from "./keybindings.ts";
 import {
   collectCanonicalBindingsForMode,
@@ -466,20 +466,12 @@ export function JifView(props: {
   };
 
   useKeyboard((event) => {
-    if (event.eventType === "release" || event.meta) {
+    if (event.eventType === "release") {
       return;
     }
 
     const state = store.snapshot();
-    const altPrefix = event.option ? "alt-" : "";
-    const ctrlPrefix = event.ctrl ? "ctrl-" : "";
-    let baseKey: string | null;
-    if (event.ctrl || event.option) {
-      baseKey = event.name === "return" ? "enter" : event.name;
-    } else {
-      baseKey = normalizeKey(event);
-    }
-    const normalizedKey = baseKey === null ? null : `${altPrefix}${ctrlPrefix}${baseKey}`;
+    const normalizedKey = resolveKeyToken(event);
     logShortcutDebug("key-event", {
       name: event.name,
       sequence: event.sequence,

@@ -44,6 +44,20 @@ export const draftConfigs = {
     badgeText: "onto",
     sourceBadgeText: "move",
   },
+  duplicate: {
+    kind: "duplicate" as const,
+    // jj duplicate takes the source revisions positionally (its only long form);
+    // the destination reuses the shared rebase target flags (-d/-A/-B).
+    template: "duplicate ${selected.join(' ')} ${targetFlags()}${forceApply ? ' ' + arg('--ignore-immutable --ignore-immutable') : ''}",
+    badgeText: "onto",
+    sourceBadgeText: "copy",
+  },
+  revert: {
+    kind: "revert" as const,
+    template: "revert ${selected.map(s => `${arg('-r --revision')} ${s}`).join(' ')} ${targetFlags()}${forceApply ? ' ' + arg('--ignore-immutable --ignore-immutable') : ''}",
+    badgeText: "onto",
+    sourceBadgeText: "revert",
+  },
   squash: {
     kind: "squash" as const,
     template: "squash ${selected.map(s => `${arg('-f --from')} ${s}${anchorSuffix}`).join(' ')} ${arg('-t --into')} ${target}",
@@ -87,6 +101,14 @@ export const draftConfigs = {
     sourceBadgeText: "parent",
   },
 } satisfies Record<string, CommandDraftConfig>;
+
+// Rebase, duplicate, and revert all compose a destination with the same
+// onto / insert-before / insert-after / insert-between target picker, so they
+// share the rebase target-kind machinery (the `b`/`a`/`i` keys and the
+// `--ignore-immutable` force-apply path).
+export function draftUsesTargetModes(kind: string): boolean {
+  return kind === "rebase" || kind === "duplicate" || kind === "revert";
+}
 
 export type TemplateContext = Readonly<{
   selected: readonly (string | Tagged)[];
@@ -1531,7 +1553,7 @@ export function setRebaseTargetKind(
   state: AppState,
   kind: RebaseTargetKind,
 ): AppState {
-  if (state.commandDraft?.config.kind !== "rebase") {
+  if (!state.commandDraft || !draftUsesTargetModes(state.commandDraft.config.kind)) {
     return state;
   }
 
@@ -2016,14 +2038,14 @@ export function getCommandChipTextForRevision(
     return null;
   }
 
-  const isRebase = draft.config.kind === "rebase";
+  const usesTargetModes = draftUsesTargetModes(draft.config.kind);
   const targetKind: RebaseTargetKind = draft.rebaseTargetKind ?? "destination";
   const sourceKind: RebaseSourceKind = draft.rebaseSourceKind ?? "revisions";
   const swapped = draft.config.kind === "interdiff" && (draft.interdiffSwapped ?? false);
   const targetBadge = swapped ? draft.config.sourceBadgeText : draft.config.badgeText;
   const sourceBadge = swapped ? draft.config.badgeText : draft.config.sourceBadgeText;
 
-  if (isRebase && draft.rebaseInsertAfterRevisionId) {
+  if (usesTargetModes && draft.rebaseInsertAfterRevisionId) {
     const anchorRow = state.revisions.find(
       (revision) => revision.revisionId === draft.rebaseInsertAfterRevisionId,
     );
@@ -2033,7 +2055,7 @@ export function getCommandChipTextForRevision(
   }
 
   if (getCommandTargetRowId(state) === rowId) {
-    if (isRebase) {
+    if (usesTargetModes) {
       switch (targetKind) {
         case "insert-before": return "before";
         case "insert-after": return "after";
@@ -2044,7 +2066,7 @@ export function getCommandChipTextForRevision(
   }
 
   if (state.selectedRowIds.includes(rowId)) {
-    if (isRebase && sourceKind === "branch") {
+    if (usesTargetModes && sourceKind === "branch") {
       return "branch";
     }
     return sourceBadge;

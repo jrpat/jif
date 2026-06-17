@@ -34,8 +34,12 @@ export type CommandController = Readonly<{
   focusShellCommandBar: () => void;
   forceLastCommand: () => void;
   startRebase: () => void;
+  startDuplicate: () => void;
+  startRevert: () => void;
   startRestore: () => void;
   startSplit: () => void;
+  startSplitParallel: () => void;
+  diffEditRevision: () => void;
   startSquash: () => void;
   startSquashOnto: () => void;
   startInterdiff: () => void;
@@ -67,7 +71,6 @@ export type CommandController = Readonly<{
   setRebaseSourceKind: (kind: RebaseSourceKind) => void;
   setRebaseTargetKind: (kind: RebaseTargetKind) => void;
   toggleRebaseSkipEmptied: () => void;
-  confirmRebaseWithForce: () => void;
   toggleSquashAnchor: () => void;
   toggleInterdiffSwap: () => void;
   undo: () => void;
@@ -409,11 +412,35 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     group: "global",
   },
   {
+    id: "duplicate",
+    title: "Duplicate",
+    description: "Copy the focused revision to another location, choosing the target",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startDuplicate(),
+    group: "global",
+  },
+  {
+    id: "revert",
+    title: "Revert",
+    description: "Create a new revision that undoes the focused revision, choosing where to place it",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startRevert(),
+    group: "global",
+  },
+  {
     id: "split",
     title: "Split",
     description: "Split the focused revision, or choose how to use the current file selection",
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.startSplit(),
+    group: "mode",
+  },
+  {
+    id: "split-parallel",
+    title: "Split Parallel",
+    description: "Split the focused revision into sibling commits that share its parent",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startSplitParallel(),
     group: "mode",
   },
   {
@@ -476,6 +503,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Edit the focused revision",
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.editRevision(),
+    group: "global",
+  },
+  {
+    id: "diff-edit-revision",
+    title: "Diff Edit",
+    description: "Touch up the focused revision's changes in your diff editor",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.diffEditRevision(),
     group: "global",
   },
   {
@@ -629,13 +664,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Toggle --skip-emptied",
     description: "Skip revisions that become empty after the rebase",
     run: (controller) => controller.toggleRebaseSkipEmptied(),
-    group: "mode",
-  },
-  {
-    id: "rebase-confirm-force",
-    title: "Run with --ignore-immutable",
-    description: "Execute the composed rebase, ignoring immutable revisions",
-    run: (controller) => controller.confirmRebaseWithForce(),
     group: "mode",
   },
   {

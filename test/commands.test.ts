@@ -8,6 +8,7 @@ import {
   getCommandTargetRowId,
   getDisplayedCommandText,
   openInlineConfirmation,
+  setRebaseTargetKind,
   startCommandDraft,
   toggleInterdiffSwap,
 } from "../src/state/store.ts";
@@ -123,8 +124,35 @@ test("open-evolog canExecute is false when no focused revision or marker is elid
   expect(command?.canExecute?.(emptyState)).toBeFalse();
 });
 
-test("E resolves to open-evolog in normal mode", () => {
-  expect(resolveForState("E", createState())).toBe("open-evolog");
+test("ctrl-e resolves to open-evolog and ctrl-o to the operation log in normal mode", () => {
+  expect(resolveForState("ctrl-e", createState())).toBe("open-evolog");
+  expect(resolveForState("ctrl-o", createState())).toBe("open-operation-log");
+});
+
+test("E resolves to diff-edit-revision in normal mode", () => {
+  expect(resolveForState("E", createState())).toBe("diff-edit-revision");
+});
+
+test("alt-j resolves to jump-to-next-divergent only on a divergent revision", () => {
+  const plainState = createState();
+  // The focused revision is not divergent, so the command's canExecute gates it.
+  expect(resolveForState("alt-j", plainState)).toBeNull();
+
+  const divergentState: AppState = {
+    ...plainState,
+    revisions: [
+      { ...plainState.revisions[0]!, revisionId: "abc1234/1", changeIdPrefixLength: 4 },
+      { ...plainState.revisions[1]!, revisionId: "abc1234/2", changeIdPrefixLength: 4 },
+    ],
+  };
+  expect(resolveForState("alt-j", divergentState)).toBe("jump-to-next-divergent");
+});
+
+test("y, alt-r, and alt-s resolve to duplicate, revert, and split-parallel in normal mode", () => {
+  const state = createState();
+  expect(resolveForState("y", state)).toBe("duplicate");
+  expect(resolveForState("alt-r", state)).toBe("revert");
+  expect(resolveForState("alt-s", state)).toBe("split-parallel");
 });
 
 test("search command only executes in searchable views", () => {
@@ -160,7 +188,7 @@ test("rebase-descendants resolves in rebase mode but not normal mode", () => {
   expect(resolveForState("s", rebaseState)).toBe("rebase-descendants");
 });
 
-test("rebase mode binds source, target, modifier, and force-apply keys", () => {
+test("rebase mode binds source, target, and modifier keys", () => {
   const rebaseState = startCommandDraft(createState(), draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
 
   expect(resolveForState("B", rebaseState)).toBe("rebase-source-branch");
@@ -168,14 +196,12 @@ test("rebase mode binds source, target, modifier, and force-apply keys", () => {
   expect(resolveForState("a", rebaseState)).toBe("rebase-target-after");
   expect(resolveForState("i", rebaseState)).toBe("rebase-target-insert-between");
   expect(resolveForState("e", rebaseState)).toBe("rebase-toggle-skip-emptied");
-  expect(resolveForState("alt-enter", rebaseState)).toBe("rebase-confirm-force");
 });
 
 test("getDirectCommandsForMode returns only rebase-local bindings", () => {
   const commands = getDirectCommandsForMode("rebase", defaultKeymap, commandDefinitions);
 
   expect(commands.map((command) => command.id).sort()).toEqual([
-    "rebase-confirm-force",
     "rebase-descendants",
     "rebase-source-branch",
     "rebase-target-after",
@@ -187,6 +213,55 @@ test("getDirectCommandsForMode returns only rebase-local bindings", () => {
 
 test("R triggers restore-revision in normal mode", () => {
   expect(resolveForState("R", createState())).toBe("restore-revision");
+});
+
+test("duplicate mode reuses the rebase target picker but drops the source knobs", () => {
+  const drafted = startCommandDraft(createState(), draftConfigs.duplicate);
+
+  expect(getActiveMode(drafted)).toBe("duplicate");
+  expect(drafted.commandDraft?.config.kind).toBe("duplicate");
+
+  // Target-kind toggles are shared with rebase.
+  expect(resolveForState("b", drafted)).toBe("rebase-target-before");
+  expect(resolveForState("a", drafted)).toBe("rebase-target-after");
+  expect(resolveForState("i", drafted)).toBe("rebase-target-insert-between");
+  // Duplicate has no --source / --branch / --skip-emptied modifiers.
+  expect(resolveForState("B", drafted)).toBeNull();
+
+  // Source revisions are positional; the destination uses the shared -d flag.
+  const text = getDisplayedCommandText(drafted);
+  expect(text.startsWith("duplicate a ")).toBeTrue();
+  expect(text).toContain("-d b");
+
+  const afterInsert = setRebaseTargetKind(drafted, "insert-after");
+  expect(getDisplayedCommandText(afterInsert)).toContain("-A b");
+});
+
+test("duplicate chips tag the source as copy and the target as onto", () => {
+  const drafted = startCommandDraft(createState(), draftConfigs.duplicate);
+  const sourceRowId = drafted.selectedRowIds[0]!;
+  const targetRowId = getCommandTargetRowId(drafted)!;
+
+  expect(getCommandChipTextForRevision(drafted, sourceRowId)).toBe("copy");
+  expect(getCommandChipTextForRevision(drafted, targetRowId)).toBe("onto");
+});
+
+test("revert mode composes jj revert -r <source> -d <target> with --ignore-immutable on force", () => {
+  const drafted = startCommandDraft(createState(), draftConfigs.revert);
+
+  expect(getActiveMode(drafted)).toBe("revert");
+  expect(drafted.commandDraft?.config.kind).toBe("revert");
+  expect(resolveForState("a", drafted)).toBe("rebase-target-after");
+
+  const text = getDisplayedCommandText(drafted);
+  expect(text.startsWith("revert -r a ")).toBeTrue();
+  expect(text).toContain("-d b");
+
+  const forced = getDisplayedCommandText(drafted, { forceApply: true });
+  expect(forced).toContain("--ignore-immutable");
+
+  const sourceRowId = drafted.selectedRowIds[0]!;
+  expect(getCommandChipTextForRevision(drafted, sourceRowId)).toBe("revert");
 });
 
 test("i starts interdiff in normal mode and composes jj interdiff -f/-t", () => {

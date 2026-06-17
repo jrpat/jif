@@ -317,7 +317,6 @@ namespace Jif {
     setRebaseSourceKind: (kind: "revisions" | "source" | "branch") => void;
     setRebaseTargetKind: (kind: "destination" | "insert-before" | "insert-after" | "insert-between") => void;
     toggleRebaseSkipEmptied: () => void;
-    confirmRebaseWithForce: () => void;
     toggleSquashAnchor: () => void;
     toggleInterdiffSwap: () => void;
     undo: () => void;
