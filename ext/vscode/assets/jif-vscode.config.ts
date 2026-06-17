@@ -27,10 +27,14 @@ const config = {
         id: "vscode-open-revision-diff",
         title: "Open revision diff in VS Code",
         description: "Open the focused revision's diff in the VS Code editor.",
-        canExecute: (state: any) => state.rev !== null && state.rev.marker !== "elided",
+        // `state.rev`/`state.file` are now plain strings; the structured
+        // objects (with revisionId/marker/path) live under focusedRevision /
+        // focusedFile.
+        canExecute: (state: any) =>
+          state.focusedRevision !== null && state.focusedRevision.marker !== "elided",
         run: (_controller: unknown, state: any) => {
-          if (!state.rev) return;
-          writeIpc({ kind: "diff-revision", revisionId: state.rev.revisionId });
+          if (!state.focusedRevision) return;
+          writeIpc({ kind: "diff-revision", revisionId: state.focusedRevision.revisionId });
         },
       },
     },
@@ -39,13 +43,14 @@ const config = {
         id: "vscode-open-file-diff",
         title: "Open file diff in VS Code",
         description: "Open the focused file's diff in the VS Code editor.",
-        canExecute: (state: any) => state.rev !== null && state.file !== null,
+        canExecute: (state: any) =>
+          state.focusedRevision !== null && state.focusedFile !== null,
         run: (_controller: unknown, state: any) => {
-          if (!state.rev || !state.file) return;
+          if (!state.focusedRevision || !state.focusedFile) return;
           writeIpc({
             kind: "diff-file",
-            revisionId: state.rev.revisionId,
-            path: state.file.path,
+            revisionId: state.focusedRevision.revisionId,
+            path: state.focusedFile.path,
           });
         },
       },
