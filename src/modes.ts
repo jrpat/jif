@@ -20,6 +20,7 @@ export type Mode =
   | "notifications"
   | "bookmark"
   | "bookmark-move"
+  | "set-parents"
   | "extra";
 
 export type ModeDefinition = Readonly<{
@@ -48,6 +49,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   notifications: { id: "notifications", inputPassthrough: false, label: "Notifications" },
   bookmark: { id: "bookmark", parent: "normal", inputPassthrough: false, label: "Bookmark" },
   "bookmark-move": { id: "bookmark-move", parent: "normal", inputPassthrough: false, label: "Bookmark Move" },
+  "set-parents": { id: "set-parents", parent: "normal", inputPassthrough: false, label: "Set Parents" },
   extra: { id: "extra", inputPassthrough: false, label: "Extra" },
 };
 
@@ -129,6 +131,7 @@ export const defaultKeymap: Keymap = {
     O: "open-operation-log",
     E: "open-evolog",
     b: "enter-bookmark-mode",
+    M: "set-parents",
     ";": "enter-extra-mode",
   },
   files: {
@@ -239,6 +242,9 @@ export const defaultKeymap: Keymap = {
     u: "bookmark-untrack",
   },
   "bookmark-move": {},
+  "set-parents": {
+    " ": "toggle-set-parents-pick",
+  },
   extra: {},
 };
 
@@ -258,6 +264,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.commandDraft?.config.kind === "interdiff") return "interdiff";
   if (state.commandDraft?.config.kind === "diff") return "diff";
   if (state.commandDraft?.config.kind === "absorb") return "absorb";
+  if (state.commandDraft?.config.kind === "set-parents") return "set-parents";
   if (state.commandDraft?.config.kind === "bookmark-move") return "bookmark-move";
   if (state.focusMode === "bookmark") return "bookmark";
   if (state.focusMode === "extra") return "extra";

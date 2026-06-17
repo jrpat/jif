@@ -96,6 +96,7 @@ Viewing and navigating the revision log.
 | `D` | describe | Edit description of the focused revision |
 | `e` | edit-revision | Edit the focused revision |
 | `i` | interdiff | Show the interdiff between the focused revision and another |
+| `M` | set-parents | Change the focused revision's parents, toggling revisions to add or remove them as parents (megamerge) |
 | `n` | new-revision | Create a new revision from the focused revision |
 | `r` | rebase | Start a rebase from the focused revision |
 | `R` | restore-revision | Restore the focused revision from another |
@@ -181,6 +182,10 @@ Active while previewing a diff between two revisions. Inherits Normal. Composes 
 ### Absorb
 
 Active while composing an absorb. Inherits Normal. The source is the revision focused when you pressed `A`, and its mutable ancestors (the revisions `jj absorb` would consider by default) are preselected, each tagged with an `into` chip. Use `space` to toggle candidate targets — like selecting in Normal mode, the focus advances to the next revision on each toggle — then `enter` to apply, or `escape` to cancel. Leaving the preselected set unchanged runs plain `jj absorb` (with `--from <source>` when the source is not the working copy); changing it constrains the operation with `--into <selected revisions>`.
+
+### Set Parents
+
+Pressing `M` from Normal mode enters Set Parents mode against the focused revision — the **subject** of the operation, tagged with a `subject` chip and the command-target highlight. Inherits Normal, so navigate with the usual keys (and incremental search with `/`). Use `space` to toggle a revision into the working parent set: a revision that is already a parent of the subject is tagged `remove` and will be dropped, while any other revision is tagged `add` and will be joined in as a co-parent — this is how you build a "megamerge". The command bar previews `jj rebase -r <subject> -d <parent> …` with the resulting parent set; `enter` runs it, `escape` cancels. The preview reflects today's parents until you change something, and running is blocked while the change would leave the subject with no parents. If the rebase is refused as immutable, retry it with `!`.
 
 ### Bookmark
 

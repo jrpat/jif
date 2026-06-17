@@ -80,11 +80,19 @@ export const draftConfigs = {
     badgeText: "into",
     sourceBadgeText: "into",
   },
+  "set-parents": {
+    kind: "set-parents" as const,
+    template: "rebase ${arg('-r --revisions')} ${subject} ${destinations.map(d => `${arg('-d --destination')} ${d}`).join(' ')}",
+    badgeText: "parent",
+    sourceBadgeText: "parent",
+  },
 } satisfies Record<string, CommandDraftConfig>;
 
 export type TemplateContext = Readonly<{
   selected: readonly (string | Tagged)[];
   target: string | Tagged;
+  subject: string | Tagged;
+  destinations: readonly (string | Tagged)[];
   anchorSuffix: string;
   arg: (pair: string) => string;
   sourceFlag: () => string;
@@ -1388,6 +1396,89 @@ function resolveSquashOntoSourceRowIds(state: AppState): readonly string[] {
   return rowIds.reverse();
 }
 
+// Set-parents keeps a fixed subject (the revision focused when the mode opened)
+// and lets the cursor roam to toggle a working set of parent picks. Each pick
+// XORs against the subject's current parents: toggling an existing parent
+// removes it, toggling any other revision adds it. The picks start empty so the
+// preview shows today's parents until the user changes something.
+export function startSetParents(state: AppState): AppState {
+  const subject = getFocusedRevision(state);
+  if (!subject) {
+    return state;
+  }
+
+  return {
+    ...state,
+    commandBar: createEmptyCommandBar(),
+    inlineConfirmation: null,
+    selectedRowIds: [],
+    markedRowIds: [],
+    commandDraft: {
+      config: draftConfigs["set-parents"],
+      setParentsSubjectRevisionId: subject.revisionId,
+    },
+  };
+}
+
+export function toggleSetParentsPick(state: AppState): AppState {
+  if (state.commandDraft?.config.kind !== "set-parents") {
+    return state;
+  }
+
+  const focused = getFocusedRevision(state);
+  if (!focused) {
+    return state;
+  }
+
+  // A revision cannot become its own parent, so the subject is never a pick.
+  if (focused.revisionId === state.commandDraft.setParentsSubjectRevisionId) {
+    return state;
+  }
+
+  const isSelected = state.selectedRowIds.includes(focused.rowId);
+  const nextSelected = isSelected
+    ? state.selectedRowIds.filter((id) => id !== focused.rowId)
+    : [...state.selectedRowIds, focused.rowId];
+
+  return {
+    ...state,
+    // Advance past a newly added pick like normal multi-select; hold on removal
+    // so the same row can be toggled back without re-navigating.
+    focusedRevisionIndex: isSelected
+      ? state.focusedRevisionIndex
+      : clampIndex(state.focusedRevisionIndex + 1, state.revisions.length),
+    selectedRowIds: nextSelected,
+    markedRowIds: nextSelected,
+  };
+}
+
+function getSetParentsSubject(state: AppState): RevisionSummary | null {
+  const draft = state.commandDraft;
+  if (!draft || draft.config.kind !== "set-parents" || !draft.setParentsSubjectRevisionId) {
+    return null;
+  }
+  return state.revisions.find((revision) => revision.revisionId === draft.setParentsSubjectRevisionId) ?? null;
+}
+
+// The new parent set is the subject's current parents XOR the toggled picks:
+// untoggled parents stay, toggled parents drop, toggled non-parents join. Picks
+// are always visible rows, so an off-graph parent only ever survives untouched.
+function getSetParentsDestinationRevisionIds(state: AppState): readonly string[] {
+  const draft = state.commandDraft;
+  if (!draft || draft.config.kind !== "set-parents") {
+    return [];
+  }
+
+  const subject = getSetParentsSubject(state);
+  const existingParents = subject?.parentRevisionIds ?? [];
+  const toggledRevisionIds = new Set(getSelectedRevisionIds(state));
+  const existingSet = new Set(existingParents);
+
+  const kept = existingParents.filter((parentId) => !toggledRevisionIds.has(parentId));
+  const added = getSelectedRevisionIds(state).filter((revisionId) => !existingSet.has(revisionId));
+  return [...kept, ...added];
+}
+
 export function setRebaseSourceKind(
   state: AppState,
   kind: RebaseSourceKind,
@@ -1854,6 +1945,10 @@ export function getCommandTargetRevisionId(state: AppState): string | null {
     return null;
   }
 
+  if (state.commandDraft.config.kind === "set-parents") {
+    return getSetParentsSubject(state)?.revisionId ?? null;
+  }
+
   const focusedRevision = getFocusedRevision(state);
   if (!focusedRevision || state.selectedRowIds.includes(focusedRevision.rowId)) {
     return null;
@@ -1871,6 +1966,20 @@ export function getCommandChipTextForRevision(
   }
 
   const draft = state.commandDraft;
+
+  if (draft.config.kind === "set-parents") {
+    const subject = getSetParentsSubject(state);
+    if (subject && subject.rowId === rowId) {
+      return "subject";
+    }
+    if (state.selectedRowIds.includes(rowId)) {
+      const revision = state.revisions.find((candidate) => candidate.rowId === rowId);
+      const isExistingParent = revision !== undefined &&
+        (subject?.parentRevisionIds ?? []).includes(revision.revisionId);
+      return isExistingParent ? "remove" : "add";
+    }
+    return null;
+  }
 
   if (draft.config.kind === "absorb") {
     if (state.selectedRowIds.includes(rowId)) {
@@ -1923,6 +2032,10 @@ export function getCommandChipTextForRevision(
 export function getCommandTargetRowId(state: AppState): string | null {
   if (!state.commandDraft) {
     return null;
+  }
+
+  if (state.commandDraft.config.kind === "set-parents") {
+    return getSetParentsSubject(state)?.rowId ?? null;
   }
 
   const focusedRevision = getFocusedRevision(state);
@@ -1995,11 +2108,28 @@ function buildContext(
     ? getRevisionArg(absorbSourceRevision.revisionId, absorbSourceRevision.changeIdPrefixLength)
     : "";
 
+  const isSetParents = draft.config.kind === "set-parents";
+  const setParentsSubject = isSetParents
+    ? revisionPrefix(state, getSetParentsSubject(state)?.revisionId ?? "") || DRAFT_PLACEHOLDER
+    : "";
+  const setParentsDestinationArgs = isSetParents
+    ? getSetParentsDestinationRevisionIds(state).map((revisionId) => revisionPrefix(state, revisionId))
+    : [];
+  // An empty result is an incomplete state (every parent removed): show a single
+  // placeholder so the preview reads `-d ░░░░` rather than a bare `rebase -r`.
+  const setParentsDestinations = setParentsDestinationArgs.length > 0
+    ? setParentsDestinationArgs
+    : isSetParents
+      ? [DRAFT_PLACEHOLDER]
+      : [];
+
   return {
     template: draft.config.template,
     context: {
       selected: state.selectedRowIds.map((id) => revisionPrefixFromRowId(state, id)),
       target,
+      subject: setParentsSubject,
+      destinations: setParentsDestinations,
       absorbConstrained,
       absorbTargets,
       absorbFromSource,
@@ -2055,6 +2185,11 @@ function buildTaggedContext(
     : "";
   const taggedTarget = new Tagged(targetRaw === DRAFT_PLACEHOLDER ? "" : targetRaw, "target");
   const taggedAnchor = new Tagged(anchorRaw, "target");
+  const subjectRaw = context.subject as string;
+  const taggedSubject = new Tagged(subjectRaw === DRAFT_PLACEHOLDER ? "" : subjectRaw, "selected");
+  const taggedDestinations = (context.destinations as string[]).map(
+    (destination) => new Tagged(destination === DRAFT_PLACEHOLDER ? "" : destination, "target"),
+  );
 
   return {
     template: resolved.template,
@@ -2062,6 +2197,8 @@ function buildTaggedContext(
       ...context,
       selected: (context.selected as string[]).map((s) => new Tagged(s, "selected")),
       target: taggedTarget,
+      subject: taggedSubject,
+      destinations: taggedDestinations,
       absorbTargets: (context.selected as string[])
         .map((s) => new Tagged(s, "selected").toString())
         .join("|"),
@@ -2210,6 +2347,12 @@ export function commandCanExecute(state: AppState): boolean {
 
   if (!state.commandDraft) {
     return false;
+  }
+
+  if (state.commandDraft.config.kind === "set-parents") {
+    // Require an actual change (a pick) that still leaves at least one parent.
+    return state.selectedRowIds.length > 0 &&
+      getSetParentsDestinationRevisionIds(state).length > 0;
   }
 
   if (state.commandDraft.config.template.includes("${target}")) {

@@ -44,6 +44,8 @@ export type CommandController = Readonly<{
   editRevision: () => void;
   enterBookmarkMode: () => void;
   enterExtraMode: () => void;
+  startSetParents: () => void;
+  toggleSetParentsPick: () => void;
   startBookmarkCreate: () => void;
   startBookmarkMoveFrom: () => void;
   startBookmarkMoveTo: () => void;
@@ -727,6 +729,22 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Enter bookmark mode",
     run: (controller) => controller.enterBookmarkMode(),
     group: "global",
+  },
+  {
+    id: "set-parents",
+    title: "Set Parents",
+    description: "Change the focused revision's parents; toggle revisions to add or remove them as parents",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startSetParents(),
+    group: "global",
+  },
+  {
+    id: "toggle-set-parents-pick",
+    title: "Toggle Parent",
+    description: "Add the focused revision as a parent of the subject, or remove it if it already is one",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.toggleSetParentsPick(),
+    group: "mode",
   },
   {
     id: "enter-extra-mode",

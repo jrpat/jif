@@ -348,6 +348,17 @@ export function createJifCommandController(args: Readonly<{
     enterExtraMode() {
       store.actions.enterExtraMode();
     },
+    startSetParents() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (!revision) {
+        return;
+      }
+
+      store.actions.startSetParents();
+    },
+    toggleSetParentsPick() {
+      store.actions.toggleSetParentsPick();
+    },
     startBookmarkCreate() {
       const state = store.snapshot();
       const revision = getFocusedRevision(state);

@@ -68,6 +68,8 @@ import {
   selectPreviousInlineConfirmationOption,
   startCommandDraft,
   startSquashOnto,
+  startSetParents,
+  toggleSetParentsPick,
   toggleFileSelection,
   toggleShortFlags,
   toggleShortcutPanel,
@@ -283,6 +285,12 @@ export function createAppStore(
       },
       startSquashOnto() {
         mutate((currentState) => startSquashOnto(currentState));
+      },
+      startSetParents() {
+        mutate((currentState) => startSetParents(currentState));
+      },
+      toggleSetParentsPick() {
+        mutate((currentState) => toggleSetParentsPick(currentState));
       },
       enterBookmarkLeader() {
         mutate((currentState) => enterBookmarkLeader(currentState));
