@@ -259,9 +259,10 @@ test("runJjCommand forwards an explicit cwd override", async () => {
     commandText: "status",
     cwd: "/tmp/other",
     cancelOnSuccess: true,
-    successFeedback: "event",
-    failureFeedback: "event",
+    successFeedback: "status-toast",
+    failureFeedback: "status-toast",
   });
+  expect(harness.commandRuns[0]?.showLoading).toBeUndefined();
   harness.store.dispose();
 });
 
@@ -276,9 +277,10 @@ test("runShellCommand forwards an explicit cwd override", async () => {
     executor: "shell",
     cwd: "/tmp/other",
     cancelOnSuccess: true,
-    successFeedback: "event",
-    failureFeedback: "event",
+    successFeedback: "status-toast",
+    failureFeedback: "status-toast",
   });
+  expect(harness.commandRuns[0]?.showLoading).toBeUndefined();
   harness.store.dispose();
 });
 

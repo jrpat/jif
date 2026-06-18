@@ -70,9 +70,8 @@ export function createJifRuntime(args: Readonly<{
         commandText,
         canExecute: true,
         cancelOnSuccess: true,
-        showLoading: true,
-        successFeedback: "event",
-        failureFeedback: "event",
+        successFeedback: "status-toast",
+        failureFeedback: "status-toast",
         focusWorkingCopyAfterRefresh: options?.focusWorkingCopyAfterRefresh,
         cwd: options?.cwd,
       });
@@ -87,9 +86,8 @@ export function createJifRuntime(args: Readonly<{
         executor: "shell",
         canExecute: true,
         cancelOnSuccess: true,
-        showLoading: true,
-        successFeedback: "event",
-        failureFeedback: "event",
+        successFeedback: "status-toast",
+        failureFeedback: "status-toast",
         focusWorkingCopyAfterRefresh: options?.focusWorkingCopyAfterRefresh,
         cwd: options?.cwd,
       });

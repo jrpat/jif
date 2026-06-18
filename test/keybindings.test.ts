@@ -3,7 +3,7 @@ import { resolveConfiguredKeymap } from "../src/config/index.ts";
 import { commandDefinitions, type CommandController } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
 import { getRevisionArg } from "../src/domain/revisionIds.ts";
-import { createInitialState, draftConfigs, startCommandDraft } from "../src/state/store.ts";
+import { createInitialState, draftConfigs, enterExtraMode, startCommandDraft } from "../src/state/store.ts";
 import { defaultKeymap } from "../src/modes.ts";
 import { dispatchGlobalKey } from "../src/ui/keybindings.ts";
 
@@ -489,6 +489,48 @@ test("dispatchGlobalKey reports rejected inline handlers through the controller"
 
   expect(handled).toBeTrue();
   expect(errors).toEqual(["boom"]);
+});
+
+test("dispatchGlobalKey dismisses shortcuts before running an async extra binding", async () => {
+  const calls: string[] = [];
+  const state = enterExtraMode(createState());
+  let releaseCommand!: () => void;
+
+  const resolved = resolveConfiguredKeymap({
+    extra: {
+      d: {
+        title: "Deploy",
+        description: "Run the deploy script",
+        run: async () => {
+          calls.push("run-start");
+          await new Promise<void>((resolve) => {
+            releaseCommand = resolve;
+          });
+          calls.push("run-end");
+        },
+      },
+    },
+  });
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "d",
+    state,
+    commands: resolved.commands,
+    controller: createController(calls),
+    keymap: resolved.keymap,
+    onBeforeCommandRun: ({ commandId, mode }) => {
+      calls.push(`dismiss:${mode}:${commandId}`);
+    },
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["dismiss:extra:user:extra:d", "run-start"]);
+
+  releaseCommand();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(calls).toEqual(["dismiss:extra:user:extra:d", "run-start", "run-end"]);
 });
 
 test("dispatchGlobalKey routes ! to forceLastCommand", () => {

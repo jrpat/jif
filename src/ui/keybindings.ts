@@ -11,14 +11,20 @@ import {
   resolveCommand,
 } from "../modes.ts";
 
+export type CommandDispatchDetails = Readonly<{
+  commandId: string;
+  mode: Mode;
+}>;
+
 export function dispatchGlobalKey(options: {
   normalizedKey: string;
   state: AppState;
   commands: readonly CommandDefinition[];
   controller: CommandController;
   keymap?: Keymap;
+  onBeforeCommandRun?: (details: CommandDispatchDetails) => void;
 }): boolean {
-  const { normalizedKey, state, commands, controller, keymap = defaultKeymap } = options;
+  const { normalizedKey, state, commands, controller, keymap = defaultKeymap, onBeforeCommandRun } = options;
   const mode = getActiveMode(state);
   const userState = createUserAppState(state);
 
@@ -33,6 +39,7 @@ export function dispatchGlobalKey(options: {
       return false;
     }
 
+    onBeforeCommandRun?.({ commandId, mode });
     runCommand(command, controller, userState);
     return true;
   }
@@ -57,6 +64,7 @@ export function dispatchGlobalKey(options: {
     return false;
   }
 
+  onBeforeCommandRun?.({ commandId: globalCommandId, mode });
   runCommand(command, controller, userState);
   return true;
 }

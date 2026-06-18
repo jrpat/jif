@@ -71,7 +71,7 @@ import {
 } from "./shortcutPanel.ts";
 import { resolveBottomChromeLayout } from "./bottomChrome.ts";
 import { normalizeKey } from "./keyboard.ts";
-import { dispatchGlobalKey } from "./keybindings.ts";
+import { dispatchGlobalKey, type CommandDispatchDetails } from "./keybindings.ts";
 import {
   collectCanonicalBindingsForMode,
   collectDirectCanonicalBindingsForMode,
@@ -429,6 +429,21 @@ export function JifView(props: {
     });
   });
 
+  const dismissShortcutsBeforeCommand = ({ commandId, mode }: CommandDispatchDetails) => {
+    if (commandId === "cancel" || commandId === "shortcut-panel") {
+      return;
+    }
+
+    if (store.state.shortcutPanelExpanded) {
+      store.actions.closeShortcutPanel();
+    }
+    if (mode === "extra") {
+      store.actions.exitExtraMode();
+    } else if (mode === "bookmark") {
+      store.actions.exitBookmarkLeader();
+    }
+  };
+
   useKeyboard((event) => {
     if (event.eventType === "release" || event.meta) {
       return;
@@ -461,6 +476,7 @@ export function JifView(props: {
       commands: configuredKeymap.commands,
       controller,
       keymap: configuredKeymap.keymap,
+      onBeforeCommandRun: dismissShortcutsBeforeCommand,
     });
     if (!handled) {
       logShortcutDebug("key-ignored", {
