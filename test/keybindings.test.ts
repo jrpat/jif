@@ -294,7 +294,6 @@ test("dispatchGlobalKey passes the full app state values to inline configured ha
     normal: {
       g: {
         title: "Capture State",
-        description: "Capture the current app state",
         run: (_controller, app) => {
           calls.push("custom");
           receivedState = {
@@ -334,7 +333,6 @@ test("dispatchGlobalKey exposes the focused revision object on app.focusedRevisi
     normal: {
       g: {
         title: "Read Focused Revision",
-        description: "Capture the focused revision via app.focusedRevision",
         run: (_controller, app) => {
           calls.push("custom");
           focusedRevisionId = app.focusedRevision?.revisionId ?? null;
@@ -373,7 +371,6 @@ test("app.rev is the focused revision's jj argument; app.focusedRevision is the 
     normal: {
       g: {
         title: "Read app.rev",
-        description: "Capture app.rev and app.focusedRevision",
         run: (_controller, app) => {
           captured.rev = app.rev;
           captured.interpolated = `show -r ${app.rev}`;
@@ -418,7 +415,6 @@ test("app.rev keeps the full id for divergent revisions", () => {
     normal: {
       g: {
         title: "Read divergent app.rev",
-        description: "Capture a divergent app.rev",
         run: (_controller, app) => {
           captured.rev = app.rev;
         },
@@ -461,7 +457,6 @@ test("app.file is the focused file's path; app.focusedFile is the object", () =>
     normal: {
       g: {
         title: "Read app.file",
-        description: "Capture app.file and app.focusedFile",
         run: (_controller, app) => {
           captured.file = app.file;
           captured.path = app.focusedFile?.path;
@@ -496,7 +491,6 @@ test("app.rev is empty and app.focusedRevision is null when there are no revisio
     normal: {
       g: {
         title: "Read empty app.rev",
-        description: "Confirm app.rev is empty when nothing is focused",
         run: (_controller, app) => {
           captured.rev = app.rev;
           captured.focusedRevisionIsNull = app.focusedRevision === null;
@@ -531,7 +525,6 @@ test("dispatchGlobalKey reports rejected inline handlers through the controller"
     normal: {
       g: {
         title: "Reject",
-        description: "Reject from an async handler",
         run: async () => {
           throw new Error("boom");
         },
@@ -562,7 +555,6 @@ test("dispatchGlobalKey dismisses shortcuts before running an async extra bindin
     extra: {
       d: {
         title: "Deploy",
-        description: "Run the deploy script",
         run: async () => {
           calls.push("run-start");
           await new Promise<void>((resolve) => {

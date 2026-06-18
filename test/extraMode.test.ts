@@ -95,7 +95,6 @@ describe("extra mode", () => {
       extra: {
         d: {
           title: "Deploy",
-          description: "Run the deploy script",
           run: () => {},
         },
       },

@@ -111,7 +111,7 @@ export type UserCommandController = Omit<CommandController, "reportError">;
 export type CommandDefinition = Readonly<{
   id: string;
   title: string;
-  description: string;
+  description?: string;
   canExecute?: (state: AppState) => boolean;
   run: (controller: CommandController, state: AppState) => void | Promise<void>;
   group?: "global" | "mode" | "cancel";

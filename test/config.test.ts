@@ -177,7 +177,6 @@ test("resolveConfiguredKeymap preserves built-in bindings while adding inline co
     normal: {
       g: {
         title: "Custom Search",
-        description: "Run a custom search action",
         run,
       },
     },
@@ -189,7 +188,7 @@ test("resolveConfiguredKeymap preserves built-in bindings while adding inline co
   const command = resolved.commands.find((entry) => entry.id === "user:normal:g");
   expect(command).toBeDefined();
   expect(command?.title).toBe("Custom Search");
-  expect(command?.description).toBe("Run a custom search action");
+  expect(command?.description).toBeUndefined();
   expect(typeof command?.run).toBe("function");
 });
 
@@ -201,7 +200,6 @@ test("resolveConfiguredKeymap preserves explicit ids for inline commands", () =>
       "ctrl-x": {
         id: "custom.refresh",
         title: "Refresh Everything",
-        description: "Refresh the repository view",
         group: "global",
         run,
       },
@@ -234,7 +232,6 @@ test("resolveConfiguredKeymap respects canonical: false on inline commands", () 
     normal: {
       g: {
         title: "Hidden Command",
-        description: "Hidden from the shortcut panel",
         canonical: false,
         run,
       },
@@ -251,7 +248,6 @@ test("resolveConfiguredKeymap namespaces explicit user ids away from built-in co
       g: {
         id: "move-up",
         title: "Custom Move Up",
-        description: "Do not collide with the built-in command id",
         run: () => {},
       },
     },
@@ -278,7 +274,6 @@ test("resolveConfiguredKeymap deep-merges user bindings into the default keymap"
     normal: {
       g: {
         title: "Custom Action",
-        description: "Run a custom action",
         run: () => {},
       },
     },

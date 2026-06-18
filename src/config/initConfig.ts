@@ -138,7 +138,6 @@ export default {
     normal: {
       // "ctrl-g": {
       //   title: "Show focused revision",
-      //   description: "Open jj show for the focused revision",
       //   run: (cmd, app) => {
       //     if (!app.rev) return;
       //     // app.rev is the focused revision's jj argument (app.focusedRevision is the object).
@@ -350,7 +349,6 @@ namespace Jif {
   type UserKeybindingCommand = Readonly<{
     id?: string;
     title: string;
-    description: string;
     canonical?: false;
     canExecute?: (state: AppState) => boolean;
     run: (controller: UserCommandController, state: AppState) => void | Promise<void>;

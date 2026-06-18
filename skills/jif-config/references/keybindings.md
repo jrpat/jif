@@ -28,7 +28,7 @@ The value is one of jif's command ids (see the full list below).
 
 ### 2. Inline command
 
-Defines a brand-new command on the spot. Required: `title`, `description`, `run`. Optional: `id`, `canExecute`, `canonical`, `group`.
+Defines a brand-new command on the spot. Required: `title`, `run`. Optional: `id`, `canExecute`, `canonical`, `group`.
 
 ```ts
 keymap: {
@@ -36,7 +36,6 @@ keymap: {
     "ctrl-g": {
       id: "show-focused",
       title: "Show Focused Revision",
-      description: "Open jj show for the focused revision",
       run: (cmd, app) => {
         const rev = app.rev;
         if (!rev) return;
@@ -106,7 +105,6 @@ keymap: {
   extra: {
     d: {
       title: "Deploy",
-      description: "Run the deploy script",
       run: (cmd) => cmd.sh("./scripts/deploy.sh"),
     },
   },
@@ -191,7 +189,6 @@ keymap: {
   normal: {
     Y: {
       title: "Copy change-id",
-      description: "Copy the focused change-id to the system clipboard",
       canonical: false,
       run: (cmd, app) => {
         const rev = app.rev;
@@ -210,7 +207,6 @@ keymap: {
   extra: {
     d: {
       title: "Deploy",
-      description: "Run the deploy script in this repo",
       run: (cmd) => cmd.sh("./scripts/deploy.sh"),
     },
   },

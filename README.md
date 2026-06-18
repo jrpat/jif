@@ -468,7 +468,6 @@ export default {
 			"ctrl-g": {
 				id: "show-focused",  // command ids are optional
 				title: "Show Focused Revision",
-				description: "Open jj show for the focused revision",
 				run: (cmd, app) => {
 					if (!app.rev) return;
 
@@ -478,7 +477,6 @@ export default {
 			},
 			"alt-e": {
 				title: "Edit Focused Revision",
-				description: "Run jj edit on the focused revision",
 				run: (cmd, app) => {
 					if (!app.rev) return;
 
@@ -498,7 +496,6 @@ export default {
 		extra: {
 			d: {
 				title: "Deploy",
-				description: "Run the deploy script",
 				run: (cmd) => cmd.sh("./scripts/deploy.sh"),
 			},
 		},
@@ -531,7 +528,6 @@ Inline commands accept the same flag:
 ```ts
 "ctrl-q": {
 	title: "Quick Action",
-	description: "Hidden from the shortcut panel",
 	canonical: false,
 	run: (cmd, app) => { /* ... */ },
 },

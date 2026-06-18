@@ -353,7 +353,6 @@ test("getShortcutPanelBindings includes inline configured commands from the merg
     normal: {
       g: {
         title: "Custom Action",
-        description: "Run a custom action",
         run: () => {},
       },
     },

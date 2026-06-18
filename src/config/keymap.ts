@@ -14,7 +14,6 @@ export type UserAliasBinding = Readonly<{ command: string; canonical: false }>;
 export type UserKeybindingCommand = Readonly<{
   id?: string;
   title: string;
-  description: string;
   canonical?: false;
   canExecute?: (state: UserAppState) => boolean;
   run: (controller: UserCommandController, state: UserAppState) => void | Promise<void>;
@@ -90,7 +89,6 @@ export function resolveConfiguredKeymap(userKeymap?: UserKeyMap): ResolvedConfig
       commandsById.set(id, {
         id,
         title: binding.title,
-        description: binding.description,
         canExecute: binding.canExecute
           ? (state) => binding.canExecute!(createUserAppState(state))
           : undefined,

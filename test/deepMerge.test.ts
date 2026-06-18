@@ -36,12 +36,12 @@ test("deepMergeConfigs treats objects containing functions as atomic", () => {
   const fA = () => "a";
   const fB = () => "b";
   const merged = deepMergeConfigs(
-    { normal: { g: { title: "A", description: "ad", run: fA } } },
+    { normal: { g: { title: "A", stale: true, run: fA } } },
     { normal: { g: { title: "B", run: fB } } },
   );
   expect(merged.normal.g.title).toBe("B");
   expect(merged.normal.g.run).toBe(fB);
-  expect((merged.normal.g as { description?: string }).description).toBeUndefined();
+  expect((merged.normal.g as { stale?: boolean }).stale).toBeUndefined();
   expect(Object.keys(merged.normal.g).sort()).toEqual(["run", "title"]);
 });
 
