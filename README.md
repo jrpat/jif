@@ -120,6 +120,7 @@ When the active revset is only `files(...)`, the collapsed status bar shows a `f
 | Key | Command | Description |
 |-----|---------|-------------|
 | `:` | command-bar | Run a jj subcommand |
+| `g` | git-command-bar | Open the command bar prefilled with `g ` (jj's alias for `git`), straight into complete-at-point so the git subcommands complete immediately |
 | `>` | shell-command-bar | Run a shell command |
 | `ctrl-o` | open-operation-log | Open the repository operation log |
 | `ctrl-e` | open-evolog | Open the evolution log for the focused revision |

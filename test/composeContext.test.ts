@@ -101,6 +101,12 @@ describe("resolveComposeContext: subcommands", () => {
   test("resolves a subcommand alias when descending", () => {
     expect(resolve("b set ")).toMatchObject({ kind: "flag-or-subcommand", path: ["bookmark", "set"] });
   });
+
+  test("resolves jj's hidden `g` alias to git so its subcommands complete", () => {
+    // `jj g` runs `jj git`, but jj does not advertise `g` as a subcommand alias
+    // in its help output, so the help-driven path-walk needs to know about it.
+    expect(resolve("g ")).toMatchObject({ kind: "subcommand", path: ["git"], partial: "" });
+  });
 });
 
 describe("resolveComposeContext: flag-or-subcommand", () => {

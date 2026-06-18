@@ -35,6 +35,7 @@ export type CommandController = Readonly<{
   cancelOrBlur: () => void;
   confirm: () => void;
   focusCommandBar: () => void;
+  focusGitCommandBar: () => void;
   focusShellCommandBar: () => void;
   forceLastCommand: () => void;
   startRebase: () => void;
@@ -348,6 +349,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Focus the command bar",
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.focusCommandBar(),
+    group: "global",
+  },
+  {
+    id: "git-command-bar",
+    title: "Git Command",
+    description: "Compose a jj git command with completion",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.focusGitCommandBar(),
     group: "global",
   },
   {

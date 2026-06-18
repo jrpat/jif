@@ -69,6 +69,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     cancelOrBlur: () => calls.push("cancelOrBlur"),
     confirm: () => calls.push("confirm"),
     focusCommandBar: () => calls.push("focusCommandBar"),
+    focusGitCommandBar: () => calls.push("focusGitCommandBar"),
     focusShellCommandBar: () => calls.push("focusShellCommandBar"),
     startRebase: () => calls.push("startRebase"),
     startDuplicate: () => calls.push("startDuplicate"),
@@ -186,6 +187,21 @@ test("dispatchGlobalKey routes ctrl-; to the command bar", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["focusCommandBar"]);
+});
+
+test("dispatchGlobalKey routes g to the git command bar", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "g",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["focusGitCommandBar"]);
 });
 
 test("dispatchGlobalKey routes ctrl-. to the shell command bar", () => {

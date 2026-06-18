@@ -108,6 +108,7 @@ export const defaultKeymap: Keymap = {
     "ctrl-;": alias("command-bar"),
     ">": "shell-command-bar",
     "ctrl-.": alias("shell-command-bar"),
+    g: "git-command-bar",
     "!": "force-last-command",
     "?": "shortcut-panel",
     enter: "confirm",

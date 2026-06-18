@@ -321,11 +321,16 @@ export function createEmptyCommandBar(): CommandBarState {
   };
 }
 
-function createManualCommandBar(kind: CommandBarKind, text: string): CommandBarState {
+function createManualCommandBar(
+  kind: CommandBarKind,
+  text: string,
+  options?: { startInCompose?: boolean },
+): CommandBarState {
   return {
     kind,
     text,
     manual: true,
+    ...(options?.startInCompose ? { startInCompose: true } : {}),
   };
 }
 
@@ -947,6 +952,19 @@ export function focusCommandBar(state: AppState): AppState {
       "jj",
       text.length > 0 && !text.endsWith(" ") ? `${text} ` : text,
     ),
+  };
+
+  return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "command"]);
+}
+
+export function focusGitCommandBar(state: AppState): AppState {
+  const nextState = {
+    ...state,
+    inlineConfirmation: null,
+    // Prefill `jj g ` (jj's alias for `jj git`) and open straight into
+    // complete-at-point completion so the git subcommands are one keystroke
+    // away. The cursor defaults to the end of the text, landing after the space.
+    commandBar: createManualCommandBar("jj", "g ", { startInCompose: true }),
   };
 
   return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "command"]);

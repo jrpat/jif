@@ -46,6 +46,11 @@ test("compose command bar: defaults by history, toggles with ':'/ctrl+h, complet
   expect(result.colonTogglesBackToHistory).toBe(true);
   expect(result.historyAgainUsesSingleBorder).toBe(true);
 
+  // startInCompose forces complete-at-point on open even when history exists,
+  // so the `g` git binding surfaces completions immediately.
+  expect(result.startInComposeOpensCompose).toBe(true);
+  expect(result.startInComposeUsesDoubleBorder).toBe(true);
+
   // The history view opens unfocused (Enter runs the blank/typed input, not the
   // most recent history entry), even when help loads before history.
   expect(result.historyEntriesShown).toBe(true);

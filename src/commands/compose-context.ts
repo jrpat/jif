@@ -88,6 +88,12 @@ export function tokenizeWithSpans(text: string): CommandToken[] {
 
 type HelpFor = (path: CommandPath) => JjHelp | undefined;
 
+// jj resolves a few short aliases that it does not advertise as subcommand
+// aliases in its `-h` output (they are hidden clap aliases). `jj g` runs
+// `jj git`, so completing `g ` should descend into git's subcommands. These
+// only apply at the top level, keyed by the alias's canonical subcommand name.
+const ROOT_ALIASES: Readonly<Record<string, string>> = { g: "git" };
+
 const isFlagToken = (value: string) => value.startsWith("-");
 
 function findFlag(help: JjHelp | undefined, name: string): JjHelpFlag | undefined {
@@ -123,8 +129,12 @@ export function resolveComposeContext(
     if (isFlagToken(token.value)) break;
     const help = helpFor(path);
     if (!help || help.kind !== "group") break;
+    const aliasTarget = path.length === 0 ? ROOT_ALIASES[token.value] : undefined;
     const match = help.subcommands.find(
-      (sub) => sub.name === token.value || sub.aliases.includes(token.value),
+      (sub) =>
+        sub.name === token.value ||
+        sub.aliases.includes(token.value) ||
+        sub.name === aliasTarget,
     );
     if (!match) break;
     path.push(match.name);

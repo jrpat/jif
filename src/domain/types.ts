@@ -134,6 +134,10 @@ export type CommandBarState = Readonly<{
   kind: CommandBarKind;
   text: string;
   manual: boolean;
+  // When true the jj bar opens directly in structured "complete at point"
+  // completion instead of command history, so prefilled subcommands (e.g. the
+  // `g` git-command binding) immediately surface their completions.
+  startInCompose?: boolean;
 }>;
 
 export type FailedCommand = Readonly<{

@@ -457,6 +457,8 @@ test("shortcut panel toggle uses ? in normal mode", () => {
   expect(resolveForState("!", state)).toBe("force-last-command");
   expect(resolveForState(">", state)).toBe("shell-command-bar");
   expect(defaultKeymap.normal[">"]).toBe("shell-command-bar");
+  expect(resolveForState("g", state)).toBe("git-command-bar");
+  expect(defaultKeymap.normal["g"]).toBe("git-command-bar");
 
   const revsetState: AppState = { ...state, focusMode: "revset" };
   expect(resolveForState("?", revsetState)).toBeNull();

@@ -32,6 +32,9 @@ export function CommandPrompt(props: {
   client?: JjClient;
   helpCache?: JjHelpCache;
   composeEnabled?: boolean;
+  // Open straight into structured completion instead of command history. Only
+  // meaningful when composeEnabled is true (the jj bar).
+  startInCompose?: boolean;
   workspaceRoot: string | null;
   loadHistory: (workspaceRoot: string) => Promise<string[]>;
   removeHistory?: (workspaceRoot: string, entry: string) => Promise<string[]>;
@@ -113,7 +116,9 @@ export function CommandPrompt(props: {
       if (props.composeEnabled && !initialViewChosen) {
         initialViewChosen = true;
         batch(() => {
-          setHistoryMode(entries.length > 0);
+          // startInCompose forces complete-at-point even when history exists,
+          // so a prefilled subcommand surfaces its completions immediately.
+          setHistoryMode(props.startInCompose ? false : entries.length > 0);
           setSelectedIndex(null);
         });
       }

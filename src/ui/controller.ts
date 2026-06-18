@@ -330,6 +330,9 @@ export function createJifCommandController(args: Readonly<{
     focusCommandBar() {
       store.actions.focusCommandBar();
     },
+    focusGitCommandBar() {
+      store.actions.focusGitCommandBar();
+    },
     focusShellCommandBar() {
       store.actions.focusShellCommandBar();
     },

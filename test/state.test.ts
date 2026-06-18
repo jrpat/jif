@@ -15,6 +15,7 @@ import {
   dismissStatusMessage,
   draftConfigs,
   focusCommandBar,
+  focusGitCommandBar,
   focusShellCommandBar,
   focusLogBottom,
   focusNotificationAt,
@@ -804,6 +805,19 @@ test("command bar editing is controlled by reducer state", () => {
   state = cancelCommandState(state);
   expect(getDisplayedCommandText(state)).toBe("");
   expect(state.focusMode).toBe("revisions");
+});
+
+test("git command bar prefills `g ` in compose mode for fast git subcommands", () => {
+  let state = createState();
+  state = focusGitCommandBar(state);
+
+  expect(state.focusMode).toBe("command");
+  expect(state.commandBar.kind).toBe("jj");
+  expect(state.commandBar.manual).toBe(true);
+  // The cursor lands at the end of the prefill (after the trailing space), so
+  // the displayed command reads `jj g |`.
+  expect(getDisplayedCommandText(state)).toBe("g ");
+  expect(state.commandBar.startInCompose).toBe(true);
 });
 
 test("shell command bar starts empty and preserves raw shell text", () => {

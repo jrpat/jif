@@ -96,13 +96,15 @@ function mountPrompt(opts: {
   history: string[];
   kittyKeyboard?: boolean;
   historyDelayTicks?: number;
+  startInCompose?: boolean;
+  initialText?: string;
   onSubmit?: () => void;
 }): Promise<Rendered> {
   const client = makeClient();
   const helpCache = new JjHelpCache(client);
   return testRender(
     () => {
-      const [text, setText] = createSignal("");
+      const [text, setText] = createSignal(opts.initialText ?? "");
       const store = {
         state: {},
         actions: { setCommandBarText: setText },
@@ -114,6 +116,7 @@ function mountPrompt(opts: {
           client={client}
           helpCache={helpCache}
           composeEnabled={true}
+          startInCompose={opts.startInCompose ?? false}
           workspaceRoot="/repo"
           loadHistory={async () => {
             for (let i = 0; i < (opts.historyDelayTicks ?? 0); i++) {
@@ -242,6 +245,23 @@ async function renderHistoryDefaultAndColonToggle() {
   }
 }
 
+// startInCompose forces complete-at-point on open even when history exists, so
+// a prefilled subcommand (the `g` git binding) surfaces completions right away.
+async function renderStartInComposeWithHistory() {
+  const rendered = await mountPrompt({ history: ["log -r @"], startInCompose: true });
+  try {
+    await settle(rendered);
+    const openFrame = frameText(rendered);
+    return {
+      startInComposeOpensCompose:
+        openFrame.includes("Show revision history") && !openFrame.includes("log -r @"),
+      startInComposeUsesDoubleBorder: openFrame.includes("═"),
+    };
+  } finally {
+    rendered.renderer.destroy();
+  }
+}
+
 // Opening in history must NOT auto-focus the bottom (most recent) entry, even
 // when help loads before history.
 async function renderHistoryNoAutoFocus() {
@@ -325,6 +345,7 @@ console.log(
     ...(await renderEnterSubmitsWhenUnfocused()),
     ...(await renderEnterAcceptsWhenFocused()),
     ...(await renderHistoryDefaultAndColonToggle()),
+    ...(await renderStartInComposeWithHistory()),
     ...(await renderHistoryNoAutoFocus()),
     ...(await renderCtrlHWithText()),
     ...(await renderShellTab()),

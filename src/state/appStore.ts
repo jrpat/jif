@@ -77,6 +77,7 @@ import {
   toggleShortcutPanel,
   createInitialState,
   focusCommandBar,
+  focusGitCommandBar,
   focusShellCommandBar,
   moveFocus,
   moveFocusToChild,
@@ -249,6 +250,9 @@ export function createAppStore(
       },
       focusCommandBar() {
         mutate((currentState) => focusCommandBar(currentState));
+      },
+      focusGitCommandBar() {
+        mutate((currentState) => focusGitCommandBar(currentState));
       },
       focusShellCommandBar() {
         mutate((currentState) => focusShellCommandBar(currentState));
