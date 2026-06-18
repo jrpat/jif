@@ -14,6 +14,7 @@
 # Repository And Tooling
 
 - This is a Jujutsu repository. Use `jj`, not Git, for version-control operations.
+- Run `jj commit` outside the sandbox with escalation. The repository metadata lives outside the writable workspace root, so sandboxed commits cannot lock the Jujutsu store.
 - Default runtime and package manager is Bun.
 - Commit messages should use:
   - a subject line that is a single sentence under 72 characters stating what changed
@@ -52,4 +53,3 @@
 # User-specific Instructions
 
 If the user has user-specific instructions, they can be found in [@my/AGENTS.md](my/agents.md). Read them immediately after reading this file.
-
