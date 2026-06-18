@@ -25,13 +25,14 @@ import { logShortcutDebug } from "../debug.ts";
 import { DEFAULT_REPOSITORY_LOAD_LIMIT, type JjClient } from "../jj/client.ts";
 import { JjHelpCache } from "../jj/helpCache.ts";
 import { runInteractiveCommand } from "../jj/process.ts";
+import { isFilesOnlyRevset } from "../revset/files.ts";
 import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/types.ts";
 import { createJifCommandController, loadRevisionFiles } from "./controller.ts";
 import { DiffViewer } from "./DiffViewer.tsx";
 import { InlineConfirmation } from "./InlineConfirmation.tsx";
 import { NotificationsOverlay } from "./NotificationsOverlay.tsx";
 import { OperationLogEntryItem } from "./OperationLogEntryItem.tsx";
-import { CommandPreview, CommandPrompt, RevsetPrompt, SearchPrompt } from "./prompts.tsx";
+import { CommandPreview, CommandPrompt, FileSearchPrompt, RevsetPrompt, SearchPrompt } from "./prompts.tsx";
 import {
   getRevisionBorderPolicy,
   type RevisionRowState,
@@ -63,6 +64,7 @@ import {
   buildShortcutSummarySegments,
   computeShortcutPanelHeight,
   getShortcutPanelBindings,
+  prependFileFilterExitSummary,
   shortcutLayoutRowCount,
   shortcutModeLabel,
   type ShortcutPanelBindingInput,
@@ -224,6 +226,8 @@ export function JifView(props: {
     runJjCommand: runtime.runJjCommand,
     runShellCommand: runtime.runShellCommand,
     runInteractiveJjCommand: runtime.runInteractiveJjCommand,
+    applyRevsetQuery: runtime.applyRevsetQuery,
+    restoreLogRevsetFromFileFilter: runtime.restoreLogRevsetFromFileFilter,
     openTextInEditor: (text) => openTextInEditor({
       text,
       runInteractive: async (cwd, command) => {
@@ -305,9 +309,13 @@ export function JifView(props: {
   );
   const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutBindings()));
   const shortcutContentWidth = createMemo(() => Math.max(1, terminalSize().width - 4));
-  const shortcutSummarySegments = createMemo(() =>
-    buildShortcutSummarySegments(shortcutEntries(), shortcutContentWidth())
-  );
+  const isFileFilterRevset = createMemo(() => isFilesOnlyRevset(store.state.revsetQuery));
+  const shortcutSummarySegments = createMemo(() => {
+    const segments = buildShortcutSummarySegments(shortcutEntries(), shortcutContentWidth());
+    return isFileFilterRevset()
+      ? prependFileFilterExitSummary(segments)
+      : segments;
+  });
   const shortcutSummary = createMemo(() =>
     buildShortcutSummary(shortcutEntries(), shortcutContentWidth())
   );
@@ -330,18 +338,20 @@ export function JifView(props: {
   const [promptSurfaceHeight, setPromptSurfaceHeight] = createSignal(3);
   const showsCommandPrompt = createMemo(() => store.state.focusMode === "command");
   const showsRevsetPrompt = createMemo(() => store.state.focusMode === "revset");
+  const showsFileSearchPrompt = createMemo(() => store.state.focusMode === "file-search");
   const showsSearchPrompt = createMemo(() =>
-    !showsCommandPrompt() && !showsRevsetPrompt() &&
+    !showsCommandPrompt() && !showsRevsetPrompt() && !showsFileSearchPrompt() &&
     hasVisibleSearchScope(store.state) &&
     store.state.focusMode === "search"
   );
   const showsPersistentShortcutPanel = createMemo(() =>
-    !showsCommandPrompt() && !showsRevsetPrompt() && !showsSearchPrompt() &&
+    !showsCommandPrompt() && !showsRevsetPrompt() && !showsFileSearchPrompt() && !showsSearchPrompt() &&
     store.state.shortcutPanelExpanded
   );
   const showsCommandPreview = createMemo(() =>
     !showsCommandPrompt() &&
     !showsRevsetPrompt() &&
+    !showsFileSearchPrompt() &&
     !showsSearchPrompt() &&
     !showsPersistentShortcutPanel() &&
     commandSegments() !== null
@@ -408,6 +418,7 @@ export function JifView(props: {
   const bottomChromeLayout = createMemo(() => resolveBottomChromeLayout({
     showsCommandPrompt: showsCommandPrompt(),
     showsRevsetPrompt: showsRevsetPrompt(),
+    showsFileSearchPrompt: showsFileSearchPrompt(),
     showsSearchPrompt: showsSearchPrompt(),
     showsCommandPreview: showsCommandPreview(),
     showsPersistentShortcutPanel: showsPersistentShortcutPanel(),
@@ -879,6 +890,7 @@ export function JifView(props: {
         <Show when={showsRevsetPrompt()}>
           <RevsetPrompt
             revsetQuery={store.state.revsetQuery}
+            initialQuery={store.state.revsetInputQuery}
             client={client}
             config={config}
             workspaceRoot={workspaceRoot()}
@@ -887,6 +899,24 @@ export function JifView(props: {
             onApply={runtime.applyRevsetQuery}
             onCancel={() => {
               store.actions.closeRevsetInput();
+            }}
+            onHeightChange={setPromptSurfaceHeight}
+          />
+        </Show>
+        <Show when={showsFileSearchPrompt()}>
+          <FileSearchPrompt
+            client={client}
+            config={config}
+            onApply={(query) => {
+              store.actions.closeFileSearch();
+              void runtime.applyRevsetQuery(query);
+            }}
+            onEditRevset={(query) => {
+              store.actions.closeFileSearch();
+              store.actions.openRevsetInput(query);
+            }}
+            onCancel={() => {
+              store.actions.closeFileSearch();
             }}
             onHeightChange={setPromptSurfaceHeight}
           />
@@ -917,6 +947,7 @@ export function JifView(props: {
             currentModeLabel={shortcutModeLabel(activeMode())}
             panelBodyHeight={shortcutPanelBodyHeight()}
             config={config}
+            stateChipLabel={isFileFilterRevset() ? "file" : null}
             loadingIndicatorText={loadingIndicatorText()}
           />
         </Show>

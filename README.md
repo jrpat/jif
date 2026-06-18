@@ -51,7 +51,7 @@ Available in every mode (mode-specific bindings can override these).
 | `ctrl-p` | search-prev | Jump to the previous search match (no-op when no search is active) |
 | `ctrl-j` | scroll-help-down | Scroll the visible help toast down one line (no-op when no help toast is shown) |
 | `ctrl-k` | scroll-help-up | Scroll the visible help toast up one line (no-op when no help toast is shown) |
-| `escape` | cancel | Cancel command composition or leave input mode |
+| `escape` | cancel | Cancel command composition, leave input mode, or return from a file filter to the log |
 | `~` | open-notifications | Open the notifications history panel |
 
 ### Normal
@@ -81,8 +81,11 @@ Viewing and navigating the revision log.
 | `h` / `←` | collapse | Close the focused detail view |
 | `l` / `→` | expand | Open changed files for the focused revision |
 | `L` | edit-revset | Change which revisions are displayed |
+| `ctrl-f` | find-file | Search jj-known files and show revisions that changed the selected file |
 | `/` | search | Incremental search through the revision log |
 | `_` | cycle-layout | Rotate loose, normal, and tight layouts |
+
+When the active revset is only `files(...)`, the collapsed status bar shows a `file` chip at the left and starts its shortcuts with `esc log`. Pressing Escape restores the most recent saved revset that is not another pure file filter; if none exists, jif falls back to the configured `revsets.log` value or jj's default log revset.
 
 #### Revision operations
 
@@ -135,6 +138,7 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 | `r` | restore | Restore selected files to their state before this change |
 | `ctrl-u` | untrack | Stop tracking the focused file, or all selected files (`jj file untrack <paths>`) |
 | `ctrl-s` | split | Split using the current file selection |
+| `ctrl-f` | restrict-revset-to-focused-file | Show revisions that changed the focused file |
 
 ### Rebase
 
@@ -290,7 +294,7 @@ Active in inline confirmation prompts.
 
 ### Text Input Modes
 
-Active in the command bar (`:`), revset prompt (`L`), and search prompt (`/`). Keystrokes pass through as text input; the bindings below navigate history and suggestion lists.
+Active in the command bar (`:`), revset prompt (`L`), file search prompt (`ctrl-f`), and search prompt (`/`). Keystrokes pass through as text input; the bindings below navigate history and suggestion lists.
 
 | Key | Description |
 |-----|-------------|
@@ -299,7 +303,7 @@ Active in the command bar (`:`), revset prompt (`L`), and search prompt (`/`). K
 | `tab` | In the `:` jj command bar's complete-at-point, insert the current suggestion and advance to the next thing to complete; `shift-tab` still moves to the previous suggestion. In history-style lists (the `>` shell bar, or the `:` bar's history view) `tab` / `shift-tab` move through the list |
 | `ctrl-h` | (`:` jj command bar) Toggle between command history and complete-at-point, regardless of what is typed. The bar opens in history when there is any, otherwise in complete-at-point; switching into history is a no-op when there is none. With an empty input, typing `:` (the first-and-only character) does the same toggle — the `:` is consumed as a command, not inserted as text. Complete-at-point is shown with a double border; the history view uses the default single border |
 | `ctrl-x` | Delete the highlighted suggestion from saved history (no-op for suggestions from non-history sources like subcommand, flag, or revset completions) |
-| `ctrl-l` | (revset prompt `L`) Toggle the suggestion list between revset-function completions and previously applied revsets (double-tap `l` while holding `ctrl`, since that prompt opens on `ctrl-l`). The completions view (complete-at-point) is shown with a double border; history uses the default single border, and toggling into it is a no-op when there is no history. Selecting a history entry replaces the whole input; the revset you switch away from is saved as the most recent entry and pre-focused (the active revset is hidden), so re-applying toggles between two revsets |
+| `ctrl-l` | (revset prompt `L`) Toggle the suggestion list between revset-function completions and previously applied revsets. (file search prompt `ctrl-f`) Open the revset prompt seeded with the selected `files("path")` revset before applying it |
 | `ctrl-'` | (`:` and `>` command bars) Insert the focused item's id at the cursor: the revision's shortest unique change-id prefix in Normal, the operation id in Op Log, the entry id in Evolog |
 | `enter` | Submit the current input (run the command, apply the revset, finalize the search). In the `:` jj command bar's complete-at-point, if you have moved to a suggestion, `Enter` accepts it instead (the same as `Tab`) |
 
@@ -551,7 +555,8 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `openFocusedRevision()` | Expand the focused revision details |
 | `openNotifications()` | Open notification history |
 | `openOperationLog()` | Open the repository operation log |
-| `openRevsetInput()` | Open the revset prompt |
+| `openFileSearch()` | Open the file search prompt |
+| `openRevsetInput(initialQuery?)` | Open the revset prompt, optionally seeded with draft text |
 | `openSearch()` | Open search in the current searchable view |
 | `prevSearchMatch()` | Jump to the previous search match |
 | `quit()` | Exit jif |
@@ -560,6 +565,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `restoreFiles()` | Restore the focused file or selected files |
 | `restoreOperation()` | Restore the focused operation |
 | `revertOperation()` | Revert the focused operation |
+| `restrictRevsetToFocusedFile()` | Show revisions that changed the focused file |
 | `scrollDiffViewer(rowDelta, colDelta)` | Scroll the diff viewer by rows and columns |
 | `scrollHelpToast(rowDelta)` | Scroll the visible help toast |
 | `selectAllFiles()` | Select all files in the expanded revision, or clear them if all are selected |
@@ -645,6 +651,7 @@ The `app` argument is a read-only snapshot of jif state, plus the ergonomic `rev
 | `repoPath` | `string` | Repository path jif is operating on |
 | `revisions` | `readonly RevisionSummary[]` | Visible revision rows |
 | `revsetQuery` | `string` | Current applied revset |
+| `revsetInputQuery` | `string \| null` | Seed text for the active revset prompt, or `null` |
 | `searchIdOnly` | `boolean` | Whether search is restricted to revision ids |
 | `searchQuery` | `string` | Current search query |
 | `searchScope` | `SearchScopeId \| null` | Active search scope |

@@ -99,6 +99,8 @@ function createControllerHarness(harnessOptions: Readonly<{
     options?: { cwd?: string };
   }> = [];
   const expandElidedCalls: number[] = [];
+  const appliedRevsetQueries: string[] = [];
+  const restoredLogRevsetCalls: string[] = [];
   const persistedLayouts: string[] = [];
   let suspendCalls = 0;
   let executeCurrentCommandCalls = 0;
@@ -146,6 +148,9 @@ function createControllerHarness(harnessOptions: Readonly<{
       async loadDescendantChangeIds() {
         return [];
       },
+      async loadKnownFiles() {
+        return [];
+      },
     },
     destroy: () => {},
     suspend: () => {
@@ -172,6 +177,12 @@ function createControllerHarness(harnessOptions: Readonly<{
       editorTexts.push(text);
     },
     refreshRepository: async () => true,
+    applyRevsetQuery: async (query) => {
+      appliedRevsetQueries.push(query);
+    },
+    restoreLogRevsetFromFileFilter: async () => {
+      restoredLogRevsetCalls.push("restore");
+    },
     expandElidedRevisions: async (index) => {
       expandElidedCalls.push(index);
     },
@@ -193,6 +204,8 @@ function createControllerHarness(harnessOptions: Readonly<{
     runShellCalls,
     runInteractiveCalls,
     expandElidedCalls,
+    appliedRevsetQueries,
+    restoredLogRevsetCalls,
     persistedLayouts,
     editorTexts,
     resolveAbsorbSources,
@@ -355,6 +368,44 @@ test("startSquashOnto keeps the focused revision as the target and selects the b
   expect(harness.store.state.focusedRevisionIndex).toBe(2);
   expect(harness.store.state.selectedRowIds).toEqual(["aaaaaaaa", "bbbbbbbb"]);
   expect(getDisplayedCommandText(harness.store.snapshot())).toBe("squash -f a -f b -t c");
+  harness.store.dispose();
+});
+
+test("restrictRevsetToFocusedFile applies a files revset for the focused file", async () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "source revision",
+        filesLoaded: true,
+        files: [
+          { path: "src/app.ts", status: "M" },
+          { path: "docs/guide.md", status: "A" },
+        ],
+      }),
+    ],
+  });
+
+  harness.store.actions.openFocusedRevision();
+  harness.store.actions.moveFocus(1);
+
+  harness.controller.restrictRevsetToFocusedFile();
+  await Promise.resolve();
+
+  expect(harness.appliedRevsetQueries).toEqual(['files("docs/guide.md")']);
+  harness.store.dispose();
+});
+
+test("cancelOrBlur restores the log revset while a pure file revset is active", async () => {
+  const harness = createControllerHarness({});
+
+  harness.store.actions.setRevsetQuery('files("docs/guide.md")');
+
+  harness.controller.cancelOrBlur();
+  await Promise.resolve();
+
+  expect(harness.restoredLogRevsetCalls).toEqual(["restore"]);
   harness.store.dispose();
 });
 

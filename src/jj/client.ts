@@ -122,6 +122,29 @@ export class JjClient {
       .map(parseChangedFile);
   }
 
+  async loadKnownFiles(): Promise<readonly string[]> {
+    const result = await this.runJj([
+      "file",
+      "list",
+      "-r",
+      "@",
+      "--color",
+      "never",
+    ]);
+
+    const seen = new Set<string>();
+    const files: string[] = [];
+    for (const line of result.stdout.split("\n")) {
+      const path = line.trimEnd();
+      if (path.length === 0 || seen.has(path)) {
+        continue;
+      }
+      seen.add(path);
+      files.push(path);
+    }
+    return files;
+  }
+
   async loadOperationLog(limit = DEFAULT_OPERATION_LOG_LIMIT): Promise<readonly OperationLogEntry[]> {
     const result = await this.runJj([
       "op",

@@ -161,6 +161,12 @@ export function buildShortcutSummarySegments(
   return summarySegments;
 }
 
+export function prependFileFilterExitSummary(
+  segments: readonly ShortcutSummarySegment[],
+): readonly ShortcutSummarySegment[] {
+  return [{ keyLabel: "esc", label: "log" }, ...segments];
+}
+
 export function buildShortcutGrid(
   entries: readonly ShortcutEntry[],
   availableWidth: number,
@@ -277,6 +283,8 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Command";
     case "revset":
       return "Revset";
+    case "file-search":
+      return "File Search";
     case "search":
       return "Search";
     case "diff-viewer":

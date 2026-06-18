@@ -5,6 +5,7 @@ import { matchHistoryEntries } from "../history/store.ts";
 import type { JjClient } from "../jj/client.ts";
 import type { JjHelpCache } from "../jj/helpCache.ts";
 import { buildCompletionItems, extractLastToken, matchCompletions, type CompletionItem } from "../revset/completions.ts";
+import { formatFilesRevset, matchFileSearchPaths } from "../revset/files.ts";
 import { resolveComposeContext, type ComposeContext } from "../commands/compose-context.ts";
 import { buildComposeItems, computeComposeAccept } from "../commands/compose-completions.ts";
 import type { AppStore } from "../state/appStore.ts";
@@ -550,8 +551,137 @@ export function SearchPrompt(props: {
   );
 }
 
+export function FileSearchPrompt(props: {
+  client: Pick<JjClient, "loadKnownFiles">;
+  config: ResolvedAppConfig;
+  onApply: (query: string) => void | Promise<void>;
+  onEditRevset: (query: string) => void | Promise<void>;
+  onCancel: () => void;
+  onHeightChange?: (height: number) => void;
+}) {
+  const colors = props.config.colorScheme.semanticColors;
+  const flow: AutocompleteFlow = "bottom-to-top";
+  const [text, setText] = createSignal("");
+  const [files, setFiles] = createSignal<readonly string[]>([]);
+  const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null);
+  let input: InputRenderable | undefined;
+
+  const suggestions = createMemo<AutocompleteListItem[]>(() =>
+    matchFileSearchPaths(text(), files()).map((path) => ({
+      id: `file:${path}`,
+      tag: "file",
+      text: path,
+    }))
+  );
+
+  const selectedPath = createMemo(() => {
+    const items = suggestions();
+    if (items.length === 0) {
+      const raw = text().trim();
+      return raw.length > 0 ? raw : null;
+    }
+    return items[selectedIndex() ?? 0]?.text ?? null;
+  });
+
+  onMount(() => {
+    void (async () => {
+      const paths = await props.client.loadKnownFiles();
+      setFiles(paths);
+    })();
+  });
+
+  createEffect(() => {
+    if (suggestions().length > 0) {
+      setSelectedIndex((current) => current ?? 0);
+    } else {
+      setSelectedIndex(null);
+    }
+  });
+
+  createEffect(() => {
+    syncPromptInput(input, text());
+  });
+
+  const applySelected = (handler: (query: string) => void | Promise<void>) => {
+    const path = selectedPath();
+    if (!path) {
+      return;
+    }
+    void handler(formatFilesRevset(path));
+  };
+
+  useKeyboard((event) => {
+    if (event.eventType === "release" || event.meta || event.option) {
+      return;
+    }
+
+    if (event.ctrl && event.name === "l") {
+      event.preventDefault();
+      applySelected(props.onEditRevset);
+      return;
+    }
+
+    const action = getAutocompleteAction(event, flow);
+    if (action !== null) {
+      event.preventDefault();
+      setSelectedIndex((currentIndex) =>
+        moveAutocompleteSelection(currentIndex, suggestions().length, action)
+      );
+      return;
+    }
+
+    if (event.name === "return") {
+      event.preventDefault();
+      applySelected(props.onApply);
+      return;
+    }
+
+    if (event.name === "escape") {
+      event.preventDefault();
+      props.onCancel();
+      return;
+    }
+  }, { release: true });
+
+  return (
+    <PromptShell
+      config={props.config}
+      items={suggestions()}
+      selectedIndex={selectedIndex()}
+      flow={flow}
+      focused
+      onHeightChange={props.onHeightChange}
+    >
+      <text fg={colors.textTertiary}>File: </text>
+      <input
+        ref={(el: InputRenderable) => {
+          input = el;
+          el.editorView.setScrollMargin(0);
+          syncPromptInput(el, text());
+        }}
+        flexGrow={1}
+        marginRight={1}
+        focused
+        placeholder="path"
+        textColor={colors.textPrimary}
+        focusedTextColor={colors.textPrimary}
+        placeholderColor={colors.textQuaternary}
+        cursorColor={colors.chromeBorderFocus}
+        cursorStyle={{ style: "line" }}
+        onInput={(value) => {
+          batch(() => {
+            setText(value);
+            setSelectedIndex(null);
+          });
+        }}
+      />
+    </PromptShell>
+  );
+}
+
 export function RevsetPrompt(props: {
   revsetQuery: string;
+  initialQuery?: string | null;
   client: JjClient;
   config: ResolvedAppConfig;
   workspaceRoot: string | null;
@@ -563,7 +693,7 @@ export function RevsetPrompt(props: {
 }) {
   const colors = props.config.colorScheme.semanticColors;
   const flow: AutocompleteFlow = "bottom-to-top";
-  const [text, setText] = createSignal(props.revsetQuery);
+  const [text, setText] = createSignal(props.initialQuery ?? props.revsetQuery);
   const [completionItems, setCompletionItems] = createSignal<CompletionItem[]>([]);
   const [historyEntries, setHistoryEntries] = createSignal<string[]>([]);
   const [historyMode, setHistoryMode] = createSignal(false);

@@ -15,6 +15,7 @@ export type Mode =
   | "absorb"
   | "command"
   | "revset"
+  | "file-search"
   | "search"
   | "diff-viewer"
   | "notifications"
@@ -44,6 +45,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   absorb: { id: "absorb", parent: "normal", inputPassthrough: false, label: "Absorb" },
   command: { id: "command", inputPassthrough: true, label: "Command" },
   revset: { id: "revset", inputPassthrough: true, label: "Revset" },
+  "file-search": { id: "file-search", inputPassthrough: true, label: "File Search" },
   search: { id: "search", inputPassthrough: true, label: "Search" },
   "diff-viewer": { id: "diff-viewer", inputPassthrough: false, label: "Diff" },
   notifications: { id: "notifications", inputPassthrough: false, label: "Notifications" },
@@ -124,6 +126,7 @@ export const defaultKeymap: Keymap = {
     "@": "jump-to-working-copy",
     L: "edit-revset",
     "ctrl-l": alias("edit-revset"),
+    "ctrl-f": "find-file",
     "/": "search",
     A: "absorb",
     a: "abandon",
@@ -145,6 +148,7 @@ export const defaultKeymap: Keymap = {
     r: "restore",
     d: "show-file-diff",
     "ctrl-u": "untrack",
+    "ctrl-f": "restrict-revset-to-focused-file",
     " ": "toggle-file-selection",
     a: "select-all-files",
     "?": "shortcut-panel",
@@ -203,6 +207,7 @@ export const defaultKeymap: Keymap = {
   absorb: {},
   command: {},
   revset: {},
+  "file-search": {},
   search: {
     tab: "search-toggle-id-only",
     "ctrl-i": alias("search-toggle-id-only"),
@@ -251,6 +256,7 @@ export const defaultKeymap: Keymap = {
 export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "command") return "command";
   if (state.focusMode === "revset") return "revset";
+  if (state.focusMode === "file-search") return "file-search";
   if (state.focusMode === "search") return "search";
   if (state.focusMode === "inline-confirmation") return "inline-confirmation";
   if (state.focusMode === "diff-viewer") return "diff-viewer";

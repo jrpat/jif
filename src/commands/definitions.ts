@@ -73,7 +73,9 @@ export type CommandController = Readonly<{
   undo: () => void;
   redo: () => void;
   focusWorkingCopy: () => void;
-  openRevsetInput: () => void;
+  openRevsetInput: (initialQuery?: string) => void;
+  openFileSearch: () => void;
+  restrictRevsetToFocusedFile: () => void;
   toggleShortcutPanel: () => void;
   commit: () => void;
   describe: () => void;
@@ -668,6 +670,21 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Edit Revset",
     description: "Change which revisions are displayed",
     run: (controller) => controller.openRevsetInput(),
+  },
+  {
+    id: "find-file",
+    title: "Find File",
+    description: "Find revisions that changed a file",
+    run: (controller) => controller.openFileSearch(),
+    group: "global",
+  },
+  {
+    id: "restrict-revset-to-focused-file",
+    title: "File History",
+    description: "Show revisions that changed the focused file",
+    canExecute: focusedFileExists,
+    run: (controller) => controller.restrictRevsetToFocusedFile(),
+    group: "mode",
   },
   {
     id: "search",

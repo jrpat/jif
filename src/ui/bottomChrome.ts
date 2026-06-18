@@ -7,6 +7,7 @@ export type BottomChromeLayout = Readonly<{
 export function resolveBottomChromeLayout(args: {
   showsCommandPrompt: boolean;
   showsRevsetPrompt: boolean;
+  showsFileSearchPrompt: boolean;
   showsSearchPrompt: boolean;
   showsCommandPreview: boolean;
   showsPersistentShortcutPanel: boolean;
@@ -14,7 +15,11 @@ export function resolveBottomChromeLayout(args: {
   promptSurfaceHeight: number;
   shortcutPanelRenderedHeight: number;
 }): BottomChromeLayout {
-  const showsPromptSurface = args.showsCommandPrompt || args.showsRevsetPrompt || args.showsSearchPrompt;
+  const showsPromptSurface =
+    args.showsCommandPrompt ||
+    args.showsRevsetPrompt ||
+    args.showsFileSearchPrompt ||
+    args.showsSearchPrompt;
   const showExpandedShortcutPanel = !showsPromptSurface &&
     (args.showsPersistentShortcutPanel || args.showsTransientShortcutPanel);
   const showCollapsedStatusArea = !showsPromptSurface && !args.showsCommandPreview && !showExpandedShortcutPanel;

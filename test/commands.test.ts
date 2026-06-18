@@ -138,6 +138,10 @@ test("search command only executes in searchable views", () => {
   })).toBeFalse();
 });
 
+test("ctrl-f opens file search from normal mode", () => {
+  expect(resolveForState("ctrl-f", createState())).toBe("find-file");
+});
+
 test("resolveCommand returns null in command mode for browse keys", () => {
   const state: AppState = {
     ...createState(),
@@ -241,6 +245,14 @@ test("files mode does not inherit Normal revision commands", () => {
   expect(resolveForState(" ", state)).toBe("toggle-file-selection");
   expect(resolveForState("s", state)).toBeNull();
   expect(resolveForState("ctrl-s", state)).toBe("split");
+  expect(resolveForState("ctrl-f", state)).toBe("restrict-revset-to-focused-file");
+});
+
+test("restrict-revset-to-focused-file requires a focused file", () => {
+  const command = commandDefinitions.find((c) => c.id === "restrict-revset-to-focused-file");
+  expect(command).toBeDefined();
+  expect(command?.canExecute?.(createFilesState())).toBeTrue();
+  expect(command?.canExecute?.({ ...createState(), focusMode: "files" })).toBeFalse();
 });
 
 test("= swaps from/to roles while composing interdiff", () => {

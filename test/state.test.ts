@@ -62,6 +62,8 @@ import {
   expandElidedRevision,
   openRevsetInput,
   closeRevsetInput,
+  openFileSearch,
+  closeFileSearch,
   setRevsetQuery,
   openSearch,
   setSearchText,
@@ -2020,13 +2022,25 @@ test("openRevsetInput sets focusMode to revset", () => {
   state = openRevsetInput(state);
   expect(state.focusMode).toBe("revset");
   expect(state.focusModeStack).toEqual(["revisions", "revset"]);
+  expect(state.revsetInputQuery).toBeNull();
+});
+
+test("openRevsetInput can seed the revset prompt without changing the active revset", () => {
+  let state = createState();
+  state = setRevsetQuery(state, "old()");
+  state = openRevsetInput(state, 'files("src/app.ts")');
+
+  expect(state.focusMode).toBe("revset");
+  expect(state.revsetQuery).toBe("old()");
+  expect(state.revsetInputQuery).toBe('files("src/app.ts")');
 });
 
 test("closeRevsetInput restores focusMode to revisions", () => {
   let state = createState();
-  state = openRevsetInput(state);
+  state = openRevsetInput(state, 'files("src/app.ts")');
   state = closeRevsetInput(state);
   expect(state.focusMode).toBe("revisions");
+  expect(state.revsetInputQuery).toBeNull();
 });
 
 test("closeRevsetInput returns to file navigation when a revision is expanded", () => {
@@ -2035,6 +2049,25 @@ test("closeRevsetInput returns to file navigation when a revision is expanded", 
   state = openRevsetInput(state);
 
   state = closeRevsetInput(state);
+
+  expect(state.focusMode).toBe("files");
+  expect(state.expandedRowId).toBe(FIRST_ROW_ID);
+});
+
+test("openFileSearch sets focusMode to file-search", () => {
+  let state = createState();
+  state = openFileSearch(state);
+
+  expect(state.focusMode).toBe("file-search");
+  expect(state.focusModeStack).toEqual(["revisions", "file-search"]);
+});
+
+test("closeFileSearch returns to file navigation when opened from files mode", () => {
+  let state = createState();
+  state = openFocusedRevision(state);
+  state = openFileSearch(state);
+
+  state = closeFileSearch(state);
 
   expect(state.focusMode).toBe("files");
   expect(state.expandedRowId).toBe(FIRST_ROW_ID);

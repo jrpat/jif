@@ -97,7 +97,8 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     undo: () => calls.push("undo"),
     redo: () => calls.push("redo"),
     focusWorkingCopy: () => calls.push("focusWorkingCopy"),
-    openRevsetInput: () => calls.push("openRevsetInput"),
+    openRevsetInput: (initialQuery?: string) =>
+      calls.push(initialQuery === undefined ? "openRevsetInput" : `openRevsetInput:${initialQuery}`),
     toggleShortcutPanel: () => calls.push("toggleShortcutPanel"),
     forceLastCommand: () => calls.push("forceLastCommand"),
     commit: () => calls.push("commit"),
@@ -115,6 +116,8 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     collapseNotification: () => calls.push("collapseNotification"),
     editFocusedNotification: () => calls.push("editFocusedNotification"),
     openSearch: () => calls.push("openSearch"),
+    openFileSearch: () => calls.push("openFileSearch"),
+    restrictRevsetToFocusedFile: () => calls.push("restrictRevsetToFocusedFile"),
     nextSearchMatch: () => calls.push("nextSearchMatch"),
     prevSearchMatch: () => calls.push("prevSearchMatch"),
     toggleSearchIdOnly: () => calls.push("toggleSearchIdOnly"),
@@ -206,6 +209,46 @@ test("dispatchGlobalKey routes ctrl-l to the revset prompt", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["openRevsetInput"]);
+});
+
+test("dispatchGlobalKey routes ctrl-f to file search in normal mode", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "ctrl-f",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["openFileSearch"]);
+});
+
+test("dispatchGlobalKey routes ctrl-f to focused-file revset restriction in files mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "files",
+    focusModeStack: ["revisions", "files"],
+    expandedRowId: "aaaaaaaa",
+    revisions: createState().revisions.map((revision, index) =>
+      index === 0
+        ? { ...revision, filesLoaded: true, files: [{ path: "src/app.ts", status: "M" }] }
+        : revision
+    ),
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "ctrl-f",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["restrictRevsetToFocusedFile"]);
 });
 
 test("dispatchGlobalKey routes > to the shell command bar", () => {

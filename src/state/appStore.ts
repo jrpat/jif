@@ -49,6 +49,8 @@ import {
   openDiffViewer,
   openRevsetInput,
   closeRevsetInput,
+  openFileSearch,
+  closeFileSearch,
   closeSearch,
   closeShortcutPanel,
   setRevsetQuery,
@@ -374,11 +376,17 @@ export function createAppStore(
       focusLogBottom() {
         mutate((currentState) => focusLogBottom(currentState));
       },
-      openRevsetInput() {
-        mutate((currentState) => openRevsetInput(currentState));
+      openRevsetInput(initialQuery?: string) {
+        mutate((currentState) => openRevsetInput(currentState, initialQuery));
       },
       closeRevsetInput() {
         mutate((currentState) => closeRevsetInput(currentState));
+      },
+      openFileSearch() {
+        mutate((currentState) => openFileSearch(currentState));
+      },
+      closeFileSearch() {
+        mutate((currentState) => closeFileSearch(currentState));
       },
       setRevsetQuery(query: string) {
         mutate((currentState) => setRevsetQuery(currentState, query));

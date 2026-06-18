@@ -44,6 +44,8 @@ function createRuntimeHarness(options: Readonly<{
   shellCwd?: string;
   refreshResults?: readonly boolean[];
   revisions?: readonly RevisionSummary[];
+  defaultRevset?: string;
+  revsetHistory?: readonly string[];
   loadElidedRevisions?: (
     afterRevisionId: string,
     beforeRevisionId: string | null,
@@ -67,6 +69,7 @@ function createRuntimeHarness(options: Readonly<{
     store,
     client: {
       loadElidedRevisions: options.loadElidedRevisions ?? (async () => []),
+      loadDefaultRevset: async () => options.defaultRevset ?? "",
     },
     commandRunner: {
       async run(runOptions) {
@@ -86,6 +89,9 @@ function createRuntimeHarness(options: Readonly<{
       async recordRevsetHistory(_workspaceRoot, query) {
         recordedRevsetHistory.push(query);
         return [];
+      },
+      async loadRevsetHistory(_workspaceRoot) {
+        return [...(options.revsetHistory ?? [])];
       },
       async saveActiveRevset(_workspaceRoot, query) {
         savedActiveRevsets.push(query);
@@ -343,6 +349,36 @@ test("applyRevsetQuery restores the previous revset after a failed refresh", asy
   expect(harness.refreshCalls).toEqual(["mine()", "old()"]);
   expect(harness.recordedRevsetHistory).toEqual([]);
   expect(harness.savedActiveRevsets).toEqual([]);
+  harness.store.dispose();
+});
+
+test("restoreLogRevsetFromFileFilter switches to the newest non-file revset from history", async () => {
+  const harness = createRuntimeHarness({
+    revsetHistory: ['files("src/other.ts")', "mine()", "all()"],
+  });
+
+  harness.store.actions.setRevsetQuery('files("src/app.ts")');
+
+  await harness.runtime.restoreLogRevsetFromFileFilter();
+
+  expect(harness.store.state.revsetQuery).toBe("mine()");
+  expect(harness.refreshCalls).toEqual(["mine()"]);
+  expect(harness.savedActiveRevsets).toEqual(["mine()"]);
+  harness.store.dispose();
+});
+
+test("restoreLogRevsetFromFileFilter falls back to the jj default revset", async () => {
+  const harness = createRuntimeHarness({
+    defaultRevset: "default()",
+    revsetHistory: ['files("src/other.ts")'],
+  });
+
+  harness.store.actions.setRevsetQuery('files("src/app.ts")');
+
+  await harness.runtime.restoreLogRevsetFromFileFilter();
+
+  expect(harness.store.state.revsetQuery).toBe("default()");
+  expect(harness.refreshCalls).toEqual(["default()"]);
   harness.store.dispose();
 });
 

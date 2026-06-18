@@ -5,6 +5,7 @@ test("resolveBottomChromeLayout stacks transient shortcuts above the command pre
   expect(resolveBottomChromeLayout({
     showsCommandPrompt: false,
     showsRevsetPrompt: false,
+    showsFileSearchPrompt: false,
     showsSearchPrompt: false,
     showsCommandPreview: true,
     showsPersistentShortcutPanel: false,
@@ -22,6 +23,7 @@ test("resolveBottomChromeLayout keeps the persistent shortcut panel behavior unc
   expect(resolveBottomChromeLayout({
     showsCommandPrompt: false,
     showsRevsetPrompt: false,
+    showsFileSearchPrompt: false,
     showsSearchPrompt: false,
     showsCommandPreview: false,
     showsPersistentShortcutPanel: true,

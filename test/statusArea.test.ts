@@ -195,3 +195,27 @@ test("a help toast registers a scrollable viewport that scrollBy drives", async 
   expect(result.scrollTopAfter).toBe(1);
 });
 
+test("collapsed status area shows file chip and escape log shortcut", async () => {
+  const proc = Bun.spawn({
+    cmd: ["bun", "run", "test/helpers/renderStatusAreaFileFilter.tsx"],
+    cwd: process.cwd(),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+
+  expect(exitCode).toBe(0);
+  expect(stderr).toBe("");
+
+  const { frame } = JSON.parse(stdout) as { frame: string };
+  const statusLine = frame.split("\n")[1] ?? "";
+  expect(statusLine).toStartWith("│ file ");
+  expect(statusLine).not.toStartWith("│esc");
+  expect(statusLine).toContain(" file   esc log");
+  expect(frame).toContain("esc log");
+  expect(frame).not.toContain("esclog");
+});

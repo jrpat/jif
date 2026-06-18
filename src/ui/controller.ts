@@ -12,6 +12,7 @@ import { buildBookmarkSuggestions, type BookmarkTarget } from "../state/bookmark
 import { buildForceRetryPlan } from "../jj/forceRetry.ts";
 import { tokenizeCommandText } from "../jj/client.ts";
 import { quoteCommand } from "../jj/process.ts";
+import { formatFilesRevset, isFilesOnlyRevset } from "../revset/files.ts";
 import { stripAnsi } from "../search/matching.ts";
 import type { AppStore } from "../state/appStore.ts";
 import {
@@ -42,6 +43,7 @@ type ControllerClient = Readonly<{
   loadBookmarkTargets(): Promise<readonly BookmarkTarget[]>;
   loadAncestorChangeIds(focusedChangeId: string): Promise<readonly string[]>;
   loadDescendantChangeIds(focusedChangeId: string): Promise<readonly string[]>;
+  loadKnownFiles(): Promise<readonly string[]>;
 }>;
 
 type ExecuteCurrentCommand = (
@@ -66,6 +68,9 @@ type RunInteractiveJjCommand = (
 
 type OpenTextInEditor = (text: string) => Promise<void>;
 
+type ApplyRevsetQuery = (query: string) => Promise<void>;
+type RestoreLogRevsetFromFileFilter = () => Promise<void>;
+
 export function createJifCommandController(args: Readonly<{
   store: AppStore;
   client: ControllerClient;
@@ -76,6 +81,8 @@ export function createJifCommandController(args: Readonly<{
   runShellCommand: RunShellCommand;
   runInteractiveJjCommand: RunInteractiveJjCommand;
   openTextInEditor: OpenTextInEditor;
+  applyRevsetQuery: ApplyRevsetQuery;
+  restoreLogRevsetFromFileFilter: RestoreLogRevsetFromFileFilter;
   refreshRepository(): Promise<boolean>;
   expandElidedRevisions(elidedIndex: number): Promise<void>;
   persistLayout(layout: AppLayout): void | Promise<unknown>;
@@ -204,6 +211,16 @@ export function createJifCommandController(args: Readonly<{
       args.suspend();
     },
     cancelOrBlur() {
+      const state = store.snapshot();
+      if (
+        isFilesOnlyRevset(state.revsetQuery) &&
+        state.commandDraft === null &&
+        (state.focusMode === "revisions" || state.focusMode === "files")
+      ) {
+        void args.restoreLogRevsetFromFileFilter();
+        return;
+      }
+
       store.actions.cancelOrBlur();
     },
     confirm() {
@@ -260,6 +277,21 @@ export function createJifCommandController(args: Readonly<{
     },
     focusShellCommandBar() {
       store.actions.focusShellCommandBar();
+    },
+    openFileSearch() {
+      store.actions.openFileSearch();
+    },
+    restrictRevsetToFocusedFile() {
+      const state = store.snapshot();
+      const revision = getExpandedRevision(state);
+      const file = revision?.files[state.focusedFileIndex];
+      if (!file) {
+        store.actions.pushEvent("Cannot filter by file: no file focused", "warning");
+        return;
+      }
+
+      store.actions.closeFocusedRevision();
+      void args.applyRevsetQuery(formatFilesRevset(file.path));
     },
     forceLastCommand() {
       const failedCommand = store.snapshot().lastFailedCommand;
@@ -641,8 +673,8 @@ export function createJifCommandController(args: Readonly<{
     focusCurrentOperation() {
       store.actions.focusOperationLogEntryAt(0);
     },
-    openRevsetInput() {
-      store.actions.openRevsetInput();
+    openRevsetInput(initialQuery?: string) {
+      store.actions.openRevsetInput(initialQuery);
     },
     toggleShortcutPanel() {
       const before = store.snapshot().shortcutPanelExpanded;

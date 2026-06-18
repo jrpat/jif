@@ -22,12 +22,19 @@ export function StatusArea(props: {
   currentModeLabel: string;
   panelBodyHeight: number;
   actionLabel?: string | null;
+  stateChipLabel?: string | null;
   config: ResolvedAppConfig;
   loadingIndicatorText?: string | null;
   emptyMessage?: string;
 }) {
   const colors = props.config.colorScheme.semanticColors;
   const [loadingFrameIndex, setLoadingFrameIndex] = createSignal(0);
+  const stateChipText = createMemo(() =>
+    props.stateChipLabel ? ` ${props.stateChipLabel} ` : null
+  );
+  const stateChipReservedWidth = createMemo(() =>
+    stateChipText() === null ? 0 : stateChipText()!.length + 2
+  );
   const loadingIndicator = createMemo(() =>
     props.loadingIndicatorText
       ? formatSpinnerText(props.loadingIndicatorText, loadingFrameIndex())
@@ -57,36 +64,58 @@ export function StatusArea(props: {
           borderStyle="single"
           borderColor={colors.chromeBorderIdle}
           backgroundColor={colors.chromeFillOne}
-          paddingX={1}
+          position="relative"
           flexDirection="row"
         >
-          <Show when={loadingIndicator() !== null}>
-            <text fg={getStatusColor("info", colors)}>{loadingIndicator()}</text>
-            <box width={3} />
-          </Show>
-          <box flexGrow={1} minWidth={0} flexDirection="row">
-            <Show
-              when={props.shortcutSummarySegments.length > 0}
-              fallback={
-                <text fg={colors.textTertiary} truncate>
-                  {props.shortcutSummary}
-                </text>
-              }
+          <Show when={stateChipText() !== null}>
+            <text
+              position="absolute"
+              left={0}
+              top={0}
+              zIndex={1}
+              fg={colors.statusInfo}
+              bg={colors.statusInfoFill}
+              attributes={TextAttributes.BOLD}
             >
-              <For each={props.shortcutSummarySegments}>
-                {(segment, index) => (
-                  <box flexDirection="row">
-                    <Show when={index() > 0}>
-                      <text fg={colors.textTertiary}>{"   "}</text>
-                    </Show>
-                    <text fg={colors.textTertiary} attributes={TextAttributes.BOLD}>
-                      {segment.keyLabel}
-                    </text>
-                    <text fg={colors.textTertiary}>{` ${segment.label}`}</text>
-                  </box>
-                )}
-              </For>
+              {stateChipText()!}
+            </text>
+          </Show>
+          <box
+            flexGrow={1}
+            minWidth={0}
+            flexDirection="row"
+            paddingX={stateChipText() ? 0 : 1}
+            marginLeft={stateChipReservedWidth()}
+          >
+            <Show when={loadingIndicator() !== null}>
+              <text fg={getStatusColor("info", colors)}>{loadingIndicator()}</text>
+              <box width={3} />
             </Show>
+            <box flexGrow={1} minWidth={0} flexDirection="row">
+              <Show
+                when={props.shortcutSummarySegments.length > 0}
+                fallback={
+                  <text fg={colors.textTertiary} truncate>
+                    {props.shortcutSummary}
+                  </text>
+                }
+              >
+                <For each={props.shortcutSummarySegments}>
+                  {(segment, index) => (
+                    <box flexDirection="row">
+                      <Show when={index() > 0}>
+                        <text fg={colors.textTertiary}>{"   "}</text>
+                      </Show>
+                      <text fg={colors.textTertiary} attributes={TextAttributes.BOLD}>
+                        {segment.keyLabel}
+                      </text>
+                      <box width={1} />
+                      <text fg={colors.textTertiary}>{segment.label}</text>
+                    </box>
+                  )}
+                </For>
+              </Show>
+            </box>
           </box>
         </box>
       }

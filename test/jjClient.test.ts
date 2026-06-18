@@ -432,6 +432,10 @@ test("JjClient loads a real sample repository", async () => {
 
   const firstFiles = await client.loadChangedFiles(firstChangedRevision!.revisionId);
   expect(firstFiles.length).toBeGreaterThan(0);
+
+  const knownFiles = await client.loadKnownFiles();
+  expect(knownFiles).toContain("src/app.ts");
+  expect(knownFiles).toContain("src/revset.ts");
 }, 20000);
 
 test("JjClient marks a real empty revision without loading changed files", async () => {

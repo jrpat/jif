@@ -197,6 +197,7 @@ export function createInitialState(
     useShortFlags: options?.useShortFlags ?? true,
     layout: options?.layout ?? "loose",
     revsetQuery: "",
+    revsetInputQuery: null,
     searchQuery: "",
     searchScope: null,
     searchStartIndex: null,
@@ -258,17 +259,36 @@ export function toggleShortcutPanel(state: AppState): AppState {
     : openShortcutPanel(state);
 }
 
-export function openRevsetInput(state: AppState): AppState {
-  const nextState = { ...state, inlineConfirmation: null };
+export function openRevsetInput(state: AppState, initialQuery?: string): AppState {
+  const nextState = {
+    ...state,
+    inlineConfirmation: null,
+    revsetInputQuery: initialQuery ?? null,
+  };
   return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "revset"]);
 }
 
 export function closeRevsetInput(state: AppState): AppState {
-  return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
+  return replaceFocusModeStack({
+    ...state,
+    revsetInputQuery: null,
+  }, getBrowseFocusModeStack(state));
 }
 
 export function setRevsetQuery(state: AppState, query: string): AppState {
   return { ...state, revsetQuery: query };
+}
+
+export function openFileSearch(state: AppState): AppState {
+  const nextState = {
+    ...state,
+    inlineConfirmation: null,
+  };
+  return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "file-search"]);
+}
+
+export function closeFileSearch(state: AppState): AppState {
+  return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
 }
 
 export function createEmptyCommandBar(): CommandBarState {
@@ -1155,6 +1175,10 @@ export function cancelOrBlurState(state: AppState): AppState {
 
   if (state.focusMode === "revset") {
     return closeRevsetInput(state);
+  }
+
+  if (state.focusMode === "file-search") {
+    return closeFileSearch(state);
   }
 
   if (state.focusMode === "inline-confirmation") {

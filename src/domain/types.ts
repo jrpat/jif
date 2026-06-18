@@ -21,6 +21,7 @@ export type FocusMode =
   | "inline-confirmation"
   | "command"
   | "revset"
+  | "file-search"
   | "search"
   | "diff-viewer"
   | "notifications"
@@ -181,6 +182,7 @@ export type AppState = Readonly<{
   useShortFlags: boolean;
   layout: AppLayout;
   revsetQuery: string;
+  revsetInputQuery: string | null;
   searchQuery: string;
   searchScope: SearchScopeId | null;
   searchStartIndex: number | null;

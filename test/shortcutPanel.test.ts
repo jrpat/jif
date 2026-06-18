@@ -19,6 +19,7 @@ import {
   formatShortcutKeyLabel,
   getShortcutPanelBindings,
   normalizeShortcutSortKey,
+  prependFileFilterExitSummary,
   shortcutModeLabel,
   type ShortcutPanelBinding,
   type ShortcutPanelBindingInput,
@@ -191,6 +192,23 @@ test("buildShortcutSummarySegments keeps key labels separate for bold rendering"
     { keyLabel: "?", label: "help" },
     { keyLabel: "j/k", label: "move" },
     { keyLabel: "e", label: "edit" },
+  ]);
+});
+
+test("prependFileFilterExitSummary makes escape log the first collapsed shortcut", () => {
+  const entries = buildShortcutEntries([
+    makeBinding("command-bar", "Command Bar", ":"),
+    makeBinding("shortcut-panel", "Shortcuts", "?"),
+    makeBinding("move-down", "Move Down", "j"),
+    makeBinding("move-up", "Move Up", "k"),
+  ]);
+  const segments = prependFileFilterExitSummary(buildShortcutSummarySegments(entries, 80));
+
+  expect(segments).toEqual([
+    { keyLabel: "esc", label: "log" },
+    { keyLabel: ":", label: "command" },
+    { keyLabel: "?", label: "help" },
+    { keyLabel: "j/k", label: "move" },
   ]);
 });
 

@@ -8,6 +8,7 @@ import { isAlwaysInteractiveJjCommand } from "../commands/interactive-subcommand
 import type { RevisionSummary } from "../domain/types.ts";
 import type { JjClient } from "../jj/client.ts";
 import type { PersistenceService } from "../persistence/service.ts";
+import { isFilesOnlyRevset } from "../revset/files.ts";
 import type { AppStore } from "../state/appStore.ts";
 import { commandCanExecute, getDisplayedCommandText } from "../state/store.ts";
 
@@ -15,11 +16,15 @@ type CommandRunnerLike = Readonly<{
   run(options: CommandRunOptions): Promise<boolean>;
 }>;
 
-type RuntimeClient = Pick<JjClient, "loadElidedRevisions">;
+type RuntimeClient = Pick<JjClient, "loadDefaultRevset" | "loadElidedRevisions">;
 
 type RuntimePersistence = Pick<
   PersistenceService,
-  "recordCommandHistory" | "recordShellHistory" | "recordRevsetHistory" | "saveActiveRevset"
+  | "loadRevsetHistory"
+  | "recordCommandHistory"
+  | "recordShellHistory"
+  | "recordRevsetHistory"
+  | "saveActiveRevset"
 >;
 
 export function createJifRuntime(args: Readonly<{
@@ -32,6 +37,29 @@ export function createJifRuntime(args: Readonly<{
   refreshRepository(revset?: string): Promise<boolean>;
 }>) {
   const { store, client, commandRunner, persistence } = args;
+
+  const applyRevsetQuery = async (query: string): Promise<void> => {
+    const previousQuery = store.snapshot().revsetQuery;
+    store.actions.setRevsetQuery(query);
+    store.actions.closeRevsetInput();
+
+    const success = await args.refreshRepository(query || undefined);
+    if (success) {
+      const workspaceRoot = args.getWorkspaceRoot();
+      if (workspaceRoot) {
+        // Record the revset we switched *away from* as the most recent entry
+        // so the previous revset is one keystroke away for quick toggling.
+        if (previousQuery.trim().length > 0 && previousQuery !== query) {
+          await persistence.recordRevsetHistory(workspaceRoot, previousQuery);
+        }
+        await persistence.saveActiveRevset(workspaceRoot, query);
+      }
+      return;
+    }
+
+    store.actions.setRevsetQuery(previousQuery);
+    void args.refreshRepository(previousQuery || undefined);
+  };
 
   return {
     async executeCurrentCommand(
@@ -134,27 +162,20 @@ export function createJifRuntime(args: Readonly<{
       }
     },
 
-    async applyRevsetQuery(query: string): Promise<void> {
-      const previousQuery = store.snapshot().revsetQuery;
-      store.actions.setRevsetQuery(query);
-      store.actions.closeRevsetInput();
+    applyRevsetQuery,
 
-      const success = await args.refreshRepository(query || undefined);
-      if (success) {
-        const workspaceRoot = args.getWorkspaceRoot();
-        if (workspaceRoot) {
-          // Record the revset we switched *away from* as the most recent entry
-          // so the previous revset is one keystroke away for quick toggling.
-          if (previousQuery.trim().length > 0 && previousQuery !== query) {
-            await persistence.recordRevsetHistory(workspaceRoot, previousQuery);
-          }
-          await persistence.saveActiveRevset(workspaceRoot, query);
-        }
+    async restoreLogRevsetFromFileFilter(): Promise<void> {
+      if (!isFilesOnlyRevset(store.snapshot().revsetQuery)) {
         return;
       }
 
-      store.actions.setRevsetQuery(previousQuery);
-      void args.refreshRepository(previousQuery || undefined);
+      const workspaceRoot = args.getWorkspaceRoot();
+      const history = workspaceRoot
+        ? await persistence.loadRevsetHistory(workspaceRoot)
+        : [];
+      const previousLogRevset = history.find((entry) => !isFilesOnlyRevset(entry));
+      const fallbackRevset = previousLogRevset ?? await client.loadDefaultRevset();
+      await applyRevsetQuery(fallbackRevset);
     },
   };
 }

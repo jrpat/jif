@@ -9,7 +9,7 @@ const config = resolveAppConfig({});
 
 function capturePromptLine(rendered: Awaited<ReturnType<typeof testRender>>): string {
   const lines = rendered.captureCharFrame().split("\n");
-  return lines.find((line) => line.includes("│")) ?? "";
+  return lines.find((line) => line.includes("│") || line.includes("║")) ?? "";
 }
 
 async function flushRender(rendered: Awaited<ReturnType<typeof testRender>>) {
