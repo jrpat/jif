@@ -149,6 +149,9 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     jji: async () => {
       calls.push("jji");
     },
+    shi: async () => {
+      calls.push("shi");
+    },
     reportError: (error) => {
       errors.push(error instanceof Error ? error.message : String(error));
     },

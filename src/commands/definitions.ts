@@ -13,6 +13,10 @@ export type InteractiveJjCommandOptions = Readonly<{
   cwd?: string;
 }>;
 
+export type InteractiveShellCommandOptions = Readonly<{
+  cwd?: string;
+}>;
+
 export type CommandController = Readonly<{
   moveFocus: (delta: number) => void;
   moveFocusToParent: () => void;
@@ -103,6 +107,7 @@ export type CommandController = Readonly<{
   jj: (commandText: string, options?: JjCommandOptions) => Promise<void>;
   sh: (commandText: string, options?: ShellCommandOptions) => Promise<void>;
   jji: (commandText: string, options?: InteractiveJjCommandOptions) => Promise<void>;
+  shi: (commandText: string, options?: InteractiveShellCommandOptions) => Promise<void>;
   reportError: (error: unknown) => void;
 }>;
 

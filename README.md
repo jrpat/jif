@@ -545,6 +545,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `jj(commandText, options?)` | Run a non-interactive `jj` command |
 | `jji(commandText, options?)` | Run an interactive `jj` command |
 | `sh(commandText, options?)` | Run a shell command through the configured shell |
+| `shi(commandText, options?)` | Run an interactive shell command through the configured shell |
 | `abandonRevision()` | Abandon the focused revision |
 | `cancelOrBlur()` | Run the current mode's cancel action |
 | `closeFocusedRevision()` | Collapse the focused revision details |
@@ -625,7 +626,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `undo()` | Undo the last repository operation |
 | `untrackFiles()` | Stop tracking the focused file or selected files |
 
-For `jj` and `sh`, `options` may include `cwd` and `focusWorkingCopyAfterRefresh`. For `jji`, `options` may include `cwd`.
+For `jj` and `sh`, `options` may include `cwd` and `focusWorkingCopyAfterRefresh`. For `jji` and `shi`, `options` may include `cwd`.
 
 </details>
 
@@ -696,7 +697,7 @@ Most successful commands surface a short toast that fades on its own after a few
 <details>
 <summary>Shell Commands</summary>
 
-Shell commands invoked via `>` (or `cmd.sh()` from a custom keybinding) run in your login shell (`$SHELL -lc`) with the cwd jif was launched from. Login shells source `.zprofile` / `.bash_profile` / `.profile`, but **not** `.zshrc` / `.bashrc`, so aliases and functions defined only in your interactive rc files will not be available.
+Shell commands invoked via `>` run in your login shell (`$SHELL -lc`) with the cwd jif was launched from. `cmd.sh()` and `cmd.shi()` from custom keybindings use the repository path by default, or `options.cwd` when provided. Login shells source `.zprofile` / `.bash_profile` / `.profile`, but **not** `.zshrc` / `.bashrc`, so aliases and functions defined only in your interactive rc files will not be available.
 
 If you want an alias to work from `>`, define it somewhere a non-interactive shell will see it — for zsh, that's `.zshenv` (sourced for every invocation) or `.zprofile` (sourced for login shells); for bash, `.bash_profile` or `.profile`.
 

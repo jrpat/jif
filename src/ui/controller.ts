@@ -2,6 +2,7 @@ import { join } from "node:path";
 import type { ScrollBoxRenderable } from "@opentui/core";
 import type {
   CommandController,
+  InteractiveShellCommandOptions,
   InteractiveJjCommandOptions,
   JjCommandOptions,
   ShellCommandOptions,
@@ -66,6 +67,11 @@ type RunInteractiveJjCommand = (
   options?: InteractiveJjCommandOptions,
 ) => Promise<boolean>;
 
+type RunInteractiveShellCommand = (
+  commandText: string,
+  options?: InteractiveShellCommandOptions,
+) => Promise<boolean>;
+
 type OpenTextInEditor = (text: string) => Promise<void>;
 
 type ApplyRevsetQuery = (query: string) => Promise<void>;
@@ -80,6 +86,7 @@ export function createJifCommandController(args: Readonly<{
   runJjCommand: RunJjCommand;
   runShellCommand: RunShellCommand;
   runInteractiveJjCommand: RunInteractiveJjCommand;
+  runInteractiveShellCommand: RunInteractiveShellCommand;
   openTextInEditor: OpenTextInEditor;
   applyRevsetQuery: ApplyRevsetQuery;
   restoreLogRevsetFromFileFilter: RestoreLogRevsetFromFileFilter;
@@ -840,6 +847,12 @@ export function createJifCommandController(args: Readonly<{
     },
     jji(commandText, options) {
       return args.runInteractiveJjCommand(commandText, {
+        ...options,
+        cwd: options?.cwd ?? store.snapshot().repoPath,
+      }).then(() => {});
+    },
+    shi(commandText, options) {
+      return args.runInteractiveShellCommand(commandText, {
         ...options,
         cwd: options?.cwd ?? store.snapshot().repoPath,
       }).then(() => {});

@@ -79,6 +79,13 @@ export async function executeShellCommand(
   return stderr || stdout || `Executed: ${commandText.trim()}`;
 }
 
+export async function runInteractiveShellCommand(
+  cwd: string,
+  commandText: string,
+): Promise<void> {
+  await runInteractiveCommand(cwd, [resolveShellPath(), "-lc", commandText]);
+}
+
 // Run a command interactively: stdin and stdout are inherited so any TUI the
 // child program draws (e.g. jj's builtin diff editor or $EDITOR) renders to
 // the real terminal. stderr is piped so we can attach the captured text to a

@@ -85,6 +85,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   const runJjCommands: string[] = [];
   const runShellCommands: string[] = [];
   const runInteractiveCommands: string[] = [];
+  const runInteractiveShellCommands: string[] = [];
   const resolveAbsorbSources: string[] = [];
   const runJjCalls: Array<{
     commandText: string;
@@ -95,6 +96,10 @@ function createControllerHarness(harnessOptions: Readonly<{
     options?: { focusWorkingCopyAfterRefresh?: boolean; cwd?: string };
   }> = [];
   const runInteractiveCalls: Array<{
+    commandText: string;
+    options?: { cwd?: string };
+  }> = [];
+  const runInteractiveShellCalls: Array<{
     commandText: string;
     options?: { cwd?: string };
   }> = [];
@@ -174,6 +179,11 @@ function createControllerHarness(harnessOptions: Readonly<{
       runInteractiveCalls.push({ commandText, options });
       return harnessOptions.runInteractiveResult ?? true;
     },
+    runInteractiveShellCommand: async (commandText, options) => {
+      runInteractiveShellCommands.push(commandText);
+      runInteractiveShellCalls.push({ commandText, options });
+      return harnessOptions.runInteractiveResult ?? true;
+    },
     openTextInEditor: async (text) => {
       editorTexts.push(text);
     },
@@ -204,9 +214,11 @@ function createControllerHarness(harnessOptions: Readonly<{
     runJjCommands,
     runShellCommands,
     runInteractiveCommands,
+    runInteractiveShellCommands,
     runJjCalls,
     runShellCalls,
     runInteractiveCalls,
+    runInteractiveShellCalls,
     expandElidedCalls,
     appliedRevsetQueries,
     restoredLogRevsetCalls,
@@ -280,6 +292,20 @@ test("jji preserves an explicit cwd override", () => {
     {
       commandText: "show -r @",
       options: { cwd: "/tmp/other" },
+    },
+  ]);
+  harness.store.dispose();
+});
+
+test("shi defaults cwd to repoPath for user-defined commands", () => {
+  const harness = createControllerHarness({ revisions: [] });
+
+  harness.controller.shi("vim README.md");
+
+  expect(harness.runInteractiveShellCalls).toEqual([
+    {
+      commandText: "vim README.md",
+      options: { cwd: REPO_PATH },
     },
   ]);
   harness.store.dispose();

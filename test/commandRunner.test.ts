@@ -383,3 +383,39 @@ test("interactive command runner uses the interactive executor and can focus wor
     "focusWorkingCopy",
   ]);
 });
+
+test("interactive shell command runner passes raw text to the interactive shell executor", async () => {
+  const { entries, actions } = createActionLog();
+
+  const runner = createCommandRunner({
+    actions,
+    executeCommandArgs: async () => {
+      throw new Error("jj path should not run");
+    },
+    executeInteractiveShellCommand: async (commandText, options) => {
+      entries.push(`interactive-shell:${commandText}:${options?.cwd ?? ""}`);
+    },
+    refreshRepository: async () => {
+      entries.push("refreshRepository");
+      return true;
+    },
+  });
+
+  await runner.run({
+    commandText: "vim 'file with spaces'",
+    executor: "shell",
+    interactive: true,
+    cwd: "/tmp/repo",
+    canExecute: true,
+    cancelOnSuccess: true,
+    successFeedback: "none",
+    failureFeedback: "event",
+  });
+
+  expect(entries).toEqual([
+    "interactive-shell:vim 'file with spaces':/tmp/repo",
+    "clearLastFailedCommand",
+    "cancelCommand",
+    "refreshRepository",
+  ]);
+});

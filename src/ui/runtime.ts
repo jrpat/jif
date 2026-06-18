@@ -1,5 +1,6 @@
 import type { CommandExecutor, CommandRunOptions } from "../commands/runner.ts";
 import type {
+  InteractiveShellCommandOptions,
   InteractiveJjCommandOptions,
   JjCommandOptions,
   ShellCommandOptions,
@@ -138,6 +139,22 @@ export function createJifRuntime(args: Readonly<{
         successFeedback: "none",
         failureFeedback: "event",
         cwd,
+      });
+    },
+
+    async runInteractiveShellCommand(
+      commandText: string,
+      options?: InteractiveShellCommandOptions,
+    ): Promise<boolean> {
+      return await commandRunner.run({
+        commandText,
+        executor: "shell",
+        interactive: true,
+        canExecute: true,
+        cancelOnSuccess: true,
+        successFeedback: "none",
+        failureFeedback: "event",
+        cwd: options?.cwd ?? args.getShellCwd(),
       });
     },
 

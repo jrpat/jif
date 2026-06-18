@@ -281,6 +281,10 @@ namespace Jif {
     cwd?: string;
   }>;
 
+  type InteractiveShellCommandOptions = Readonly<{
+    cwd?: string;
+  }>;
+
   type UserCommandController = Readonly<{
     moveFocus: (delta: number) => void;
     moveFocusToParent: () => void;
@@ -342,6 +346,7 @@ namespace Jif {
     jj: (commandText: string, options?: JjCommandOptions) => Promise<void>;
     sh: (commandText: string, options?: ShellCommandOptions) => Promise<void>;
     jji: (commandText: string, options?: InteractiveJjCommandOptions) => Promise<void>;
+    shi: (commandText: string, options?: InteractiveShellCommandOptions) => Promise<void>;
   }>;
 
   type UserAliasBinding = Readonly<{ command: string; canonical: false }>;

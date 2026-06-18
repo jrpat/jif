@@ -26,6 +26,7 @@ export type { UserAppState as AppState } from "./keymap.ts";
 export type {
   UserCommandController,
   InteractiveJjCommandOptions,
+  InteractiveShellCommandOptions,
   JjCommandOptions,
   ShellCommandOptions,
 } from "../commands/definitions.ts";

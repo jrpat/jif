@@ -307,6 +307,24 @@ test("runInteractiveJjCommand uses an explicit cwd override even without workspa
   harness.store.dispose();
 });
 
+test("runInteractiveShellCommand uses the shell executor interactively", async () => {
+  const harness = createRuntimeHarness({ shellCwd: "/tmp/shell-cwd" });
+
+  await harness.runtime.runInteractiveShellCommand("vim README.md");
+
+  expect(harness.commandRuns).toHaveLength(1);
+  expect(harness.commandRuns[0]).toMatchObject({
+    commandText: "vim README.md",
+    executor: "shell",
+    interactive: true,
+    cwd: "/tmp/shell-cwd",
+    cancelOnSuccess: true,
+    successFeedback: "none",
+    failureFeedback: "event",
+  });
+  harness.store.dispose();
+});
+
 test("applyRevsetQuery persists successful revset changes", async () => {
   const harness = createRuntimeHarness({});
 

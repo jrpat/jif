@@ -51,7 +51,8 @@ The `run` handler receives:
 - `cmd` — the command controller. The most useful methods:
   - `cmd.jj("...")` — run a jj command non-interactively.
   - `cmd.jji("...")` — run a jj command interactively (gives it the full terminal; use for `show`, `log`, anything that paints output).
-  - `cmd.sh("...")` — run a shell command through `$SHELL -lc` from the cwd jif was launched from.
+  - `cmd.sh("...")` — run a shell command through `$SHELL -lc` from the repository path by default.
+  - `cmd.shi("...")` — run an interactive shell command through `$SHELL -lc` from the repository path by default.
 - `app` — the full `AppState`. The two ergonomic shortcuts you will almost always want:
   - `app.rev` — the focused revision (or `null`).
   - `app.file` — the focused changed file (or `null`).

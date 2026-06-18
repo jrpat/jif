@@ -81,6 +81,7 @@ export function createCommandRunner(args: Readonly<{
   executeCommandArgs(commandArgs: readonly string[], options?: { cwd?: string }): Promise<string>;
   executeShellCommand?(commandText: string, options?: { cwd?: string }): Promise<string>;
   executeInteractiveCommandArgs?(commandArgs: readonly string[], options?: { cwd?: string }): Promise<void>;
+  executeInteractiveShellCommand?(commandText: string, options?: { cwd?: string }): Promise<void>;
   refreshRepository(): Promise<boolean>;
   createToastId?(): string;
   spinnerScheduler?: SpinnerScheduler;
@@ -188,15 +189,20 @@ function formatRunningCommandText(commandText: string, frameIndex: number): stri
 
 async function executeInteractive(
   args: Readonly<{
-    executeShellCommand?(commandText: string, options?: { cwd?: string }): Promise<string>;
     executeInteractiveCommandArgs?(commandArgs: readonly string[], options?: { cwd?: string }): Promise<void>;
+    executeInteractiveShellCommand?(commandText: string, options?: { cwd?: string }): Promise<void>;
   }>,
   executor: CommandExecutor,
   command: Pick<FailedCommand, "commandArgs" | "commandText">,
   cwd?: string,
 ): Promise<string> {
   if (executor === "shell") {
-    throw new Error("Interactive shell executor is unavailable.");
+    if (!args.executeInteractiveShellCommand) {
+      throw new Error("Interactive shell executor is unavailable.");
+    }
+
+    await args.executeInteractiveShellCommand(command.commandText, { cwd });
+    return "";
   }
 
   if (!args.executeInteractiveCommandArgs) {

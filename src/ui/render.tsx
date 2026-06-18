@@ -24,7 +24,7 @@ import {
 import { logShortcutDebug } from "../debug.ts";
 import { DEFAULT_REPOSITORY_LOAD_LIMIT, type JjClient } from "../jj/client.ts";
 import { JjHelpCache } from "../jj/helpCache.ts";
-import { runInteractiveCommand } from "../jj/process.ts";
+import { runInteractiveCommand, runInteractiveShellCommand } from "../jj/process.ts";
 import { isFilesOnlyRevset } from "../revset/files.ts";
 import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/types.ts";
 import { createJifCommandController, loadRevisionFiles } from "./controller.ts";
@@ -154,6 +154,19 @@ export function JifView(props: {
         renderer.resume();
       }
     },
+    executeInteractiveShellCommand: async (commandText, options) => {
+      const root = options?.cwd ?? workspaceRoot();
+      if (!root) {
+        throw new Error("Workspace root is unavailable.");
+      }
+
+      renderer.suspend();
+      try {
+        await runInteractiveShellCommand(root, commandText);
+      } finally {
+        renderer.resume();
+      }
+    },
     refreshRepository,
   });
   const runtime = createJifRuntime({
@@ -235,6 +248,7 @@ export function JifView(props: {
     runJjCommand: runtime.runJjCommand,
     runShellCommand: runtime.runShellCommand,
     runInteractiveJjCommand: runtime.runInteractiveJjCommand,
+    runInteractiveShellCommand: runtime.runInteractiveShellCommand,
     applyRevsetQuery: runtime.applyRevsetQuery,
     restoreLogRevsetFromFileFilter: runtime.restoreLogRevsetFromFileFilter,
     openTextInEditor: (text) => openTextInEditor({
