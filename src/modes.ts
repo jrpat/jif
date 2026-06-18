@@ -73,6 +73,7 @@ export const defaultKeymap: Keymap = {
   _global: {
     escape: "cancel",
     "ctrl-r": "refresh-repository",
+    "ctrl-,": "reload-config",
     "ctrl-z": "suspend",
     "ctrl-n": "search-next",
     "ctrl-p": "search-prev",

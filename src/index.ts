@@ -57,15 +57,19 @@ async function runApp(argv: readonly string[], options: RunOptions): Promise<voi
       })).repoPath
     : process.cwd();
 
-  const { raw: rawConfig, resolved: loadedConfig } = await loadAppConfig({
-    replaceUserConfigPath: options.configReplacement,
-    baseLayerPaths: options.configBaseLayers,
-    overrideLayerPaths: options.configOverrideLayers,
-    projectStartDir: repoPath,
-  });
-  const config = options.useLongFlags
-    ? { ...loadedConfig, commands: { ...loadedConfig.commands, shortFlags: false } }
-    : loadedConfig;
+  const loadRuntimeConfig = async () => {
+    const { raw, resolved: loadedConfig } = await loadAppConfig({
+      replaceUserConfigPath: options.configReplacement,
+      baseLayerPaths: options.configBaseLayers,
+      overrideLayerPaths: options.configOverrideLayers,
+      projectStartDir: repoPath,
+    });
+    const resolved = options.useLongFlags
+      ? { ...loadedConfig, commands: { ...loadedConfig.commands, shortFlags: false } }
+      : loadedConfig;
+    return { raw, resolved };
+  };
+  const { raw: rawConfig, resolved: config } = await loadRuntimeConfig();
 
   logShortcutDebug("startup", {
     argv: [...argv],
@@ -74,7 +78,9 @@ async function runApp(argv: readonly string[], options: RunOptions): Promise<voi
   });
 
   const { runJifApplication } = await import("./app.ts");
-  await runJifApplication(repoPath, config, rawConfig);
+  await runJifApplication(repoPath, config, rawConfig, {
+    reloadConfig: loadRuntimeConfig,
+  });
 }
 
 async function ensureRuntimeTempDir(): Promise<string> {

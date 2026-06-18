@@ -83,6 +83,7 @@ export function createJifCommandController(args: Readonly<{
   openTextInEditor: OpenTextInEditor;
   applyRevsetQuery: ApplyRevsetQuery;
   restoreLogRevsetFromFileFilter: RestoreLogRevsetFromFileFilter;
+  reloadConfig(): Promise<void> | void;
   refreshRepository(): Promise<boolean>;
   expandElidedRevisions(elidedIndex: number): Promise<void>;
   persistLayout(layout: AppLayout): void | Promise<unknown>;
@@ -767,6 +768,11 @@ export function createJifCommandController(args: Readonly<{
     },
     toggleSearchIdOnly() {
       store.actions.toggleSearchIdOnly();
+    },
+    reloadConfig() {
+      void Promise.resolve(args.reloadConfig()).catch((error) => {
+        reportError(store, error);
+      });
     },
     refreshRepository() {
       void args.refreshRepository();

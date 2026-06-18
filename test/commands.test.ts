@@ -389,6 +389,11 @@ test("shortcut panel toggle uses ? in normal mode", () => {
   expect(resolveForState(">", revsetState)).toBeNull();
 });
 
+test("reload config is globally bound to ctrl-comma", () => {
+  expect(defaultKeymap._global["ctrl-,"]).toBe("reload-config");
+  expect(commandDefinitions.some((command) => command.id === "reload-config")).toBeTrue();
+});
+
 test("new and edit resolve in normal mode only", () => {
   const state = createState();
   expect(resolveForState("n", state)).toBe("new-revision");

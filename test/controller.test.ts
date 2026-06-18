@@ -105,6 +105,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   let suspendCalls = 0;
   let executeCurrentCommandCalls = 0;
   const editorTexts: string[] = [];
+  let reloadConfigCalls = 0;
 
   const controller = createJifCommandController({
     store,
@@ -176,6 +177,9 @@ function createControllerHarness(harnessOptions: Readonly<{
     openTextInEditor: async (text) => {
       editorTexts.push(text);
     },
+    reloadConfig: async () => {
+      reloadConfigCalls += 1;
+    },
     refreshRepository: async () => true,
     applyRevsetQuery: async (query) => {
       appliedRevsetQueries.push(query);
@@ -215,6 +219,9 @@ function createControllerHarness(harnessOptions: Readonly<{
     get executeCurrentCommandCalls() {
       return executeCurrentCommandCalls;
     },
+    get reloadConfigCalls() {
+      return reloadConfigCalls;
+    },
   };
 }
 
@@ -224,6 +231,15 @@ test("suspend delegates to the injected renderer suspend hook", () => {
   harness.controller.suspend();
 
   expect(harness.suspendCalls).toBe(1);
+  harness.store.dispose();
+});
+
+test("reloadConfig delegates to the injected config reload hook", () => {
+  const harness = createControllerHarness({ revisions: [] });
+
+  harness.controller.reloadConfig();
+
+  expect(harness.reloadConfigCalls).toBe(1);
   harness.store.dispose();
 });
 

@@ -104,9 +104,11 @@ export function JifView(props: {
   client: JjClient;
   config: ResolvedAppConfig;
   rawConfig: AppConfig;
+  reloadConfig: () => Promise<{ raw: AppConfig; resolved: ResolvedAppConfig }>;
 }) {
-  const { store, client, rawConfig } = props;
+  const { store, client } = props;
   const helpCache = new JjHelpCache(client);
+  const [rawConfig, setRawConfig] = createSignal<AppConfig>(props.rawConfig);
   const [config, setConfig] = createStore<ResolvedAppConfig>(props.config);
   const [ready, setReady] = createSignal(false);
   const [workspaceRoot, setWorkspaceRoot] = createSignal<string | null>(null);
@@ -163,7 +165,7 @@ export function JifView(props: {
     getShellCwd: () => process.cwd(),
     refreshRepository,
   });
-  const configuredKeymap = resolveConfiguredKeymap(rawConfig.keymap);
+  const configuredKeymap = createMemo(() => resolveConfiguredKeymap(rawConfig().keymap));
   const focusClickGuard = createFocusClickGuard(renderer);
   onCleanup(() => focusClickGuard.dispose());
   let logViewport: ScrollBoxRenderable | undefined;
@@ -176,6 +178,13 @@ export function JifView(props: {
       setConfig(reconcile(nextConfig));
     },
   });
+  const reloadConfig = async () => {
+    const next = await props.reloadConfig();
+    setRawConfig(next.raw);
+    setConfig(reconcile(next.resolved));
+    await detectAndApplyPalette();
+    store.actions.pushEvent("Config reloaded.", "success");
+  };
 
   onMount(() => {
     void (async () => {
@@ -239,6 +248,7 @@ export function JifView(props: {
         }
       },
     }),
+    reloadConfig,
     refreshRepository,
     expandElidedRevisions: runtime.expandElidedRevisions,
     persistLayout: (layout) => persistence.saveLayoutPreference(layout),
@@ -276,27 +286,27 @@ export function JifView(props: {
     )
   );
   const activeMode = createMemo(() => getActiveMode(store.state));
-  const commandsById = new Map(
-    configuredKeymap.commands.map((command) => [command.id, command] as const),
+  const commandsById = createMemo(() =>
+    new Map(configuredKeymap().commands.map((command) => [command.id, command] as const))
   );
   const resolveBindings = (
     raw: readonly { key: string; commandId: string }[],
   ): readonly ShortcutPanelBindingInput[] => {
     const resolved: ShortcutPanelBindingInput[] = [];
     for (const { key, commandId } of raw) {
-      const command = commandsById.get(commandId);
+      const command = commandsById().get(commandId);
       if (command) resolved.push({ key, command });
     }
     return resolved;
   };
   const visibleBindings = createMemo(() =>
-    resolveBindings(collectCanonicalBindingsForMode(activeMode(), configuredKeymap.keymap))
+    resolveBindings(collectCanonicalBindingsForMode(activeMode(), configuredKeymap().keymap))
   );
   const directModeBindings = createMemo(() =>
-    resolveBindings(collectDirectCanonicalBindingsForMode(activeMode(), configuredKeymap.keymap))
+    resolveBindings(collectDirectCanonicalBindingsForMode(activeMode(), configuredKeymap().keymap))
   );
   const inheritedAndGlobalBindings = createMemo(() =>
-    resolveBindings(collectInheritedAndGlobalCanonicalBindings(activeMode(), configuredKeymap.keymap))
+    resolveBindings(collectInheritedAndGlobalCanonicalBindings(activeMode(), configuredKeymap().keymap))
   );
   const shortcutBindings = createMemo(() =>
     getShortcutPanelBindings(store.state, visibleBindings())
@@ -484,9 +494,9 @@ export function JifView(props: {
     const handled = dispatchGlobalKey({
       normalizedKey,
       state,
-      commands: configuredKeymap.commands,
+      commands: configuredKeymap().commands,
       controller,
-      keymap: configuredKeymap.keymap,
+      keymap: configuredKeymap().keymap,
       onBeforeCommandRun: dismissShortcutsBeforeCommand,
     });
     if (!handled) {

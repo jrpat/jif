@@ -334,6 +334,7 @@ namespace Jif {
     openSearch: () => void;
     nextSearchMatch: () => void;
     prevSearchMatch: () => void;
+    reloadConfig: () => void;
     refreshRepository: () => void;
     startAbsorb: () => void;
     abandonRevision: () => void;

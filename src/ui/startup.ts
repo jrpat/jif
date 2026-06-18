@@ -29,13 +29,16 @@ const MIN_REVISION_ROWS_BY_LAYOUT: Readonly<Record<AppLayout, number>> = {
 
 export function createPaletteDetector(args: {
   renderer: PaletteRenderer;
-  rawConfig: AppConfig;
+  rawConfig: AppConfig | (() => AppConfig);
   applyResolvedConfig(config: ResolvedAppConfig): void;
 }): () => Promise<void> {
   return async () => {
     try {
       const palette = await args.renderer.getPalette({ size: 16 });
-      args.applyResolvedConfig(resolveAppConfig(args.rawConfig, { palette }));
+      const rawConfig = typeof args.rawConfig === "function"
+        ? args.rawConfig()
+        : args.rawConfig;
+      args.applyResolvedConfig(resolveAppConfig(rawConfig, { palette }));
     } catch {
       // Keep current (fallback) colors
     }

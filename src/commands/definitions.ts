@@ -94,6 +94,7 @@ export type CommandController = Readonly<{
   nextSearchMatch: () => void;
   prevSearchMatch: () => void;
   toggleSearchIdOnly: () => void;
+  reloadConfig: () => void;
   refreshRepository: () => void;
   abandonRevision: () => void;
   jj: (commandText: string, options?: JjCommandOptions) => Promise<void>;
@@ -722,6 +723,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Refresh",
     description: "Refresh the revision log",
     run: (controller) => controller.refreshRepository(),
+    group: "global",
+  },
+  {
+    id: "reload-config",
+    title: "Reload Config",
+    description: "Reload config files and apply runtime settings",
+    run: (controller) => controller.reloadConfig(),
     group: "global",
   },
   {

@@ -121,6 +121,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     nextSearchMatch: () => calls.push("nextSearchMatch"),
     prevSearchMatch: () => calls.push("prevSearchMatch"),
     toggleSearchIdOnly: () => calls.push("toggleSearchIdOnly"),
+    reloadConfig: () => calls.push("reloadConfig"),
     refreshRepository: () => calls.push("refreshRepository"),
     startAbsorb: () => calls.push("startAbsorb"),
     abandonRevision: () => calls.push("abandonRevision"),
@@ -249,6 +250,21 @@ test("dispatchGlobalKey routes ctrl-f to focused-file revset restriction in file
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["restrictRevsetToFocusedFile"]);
+});
+
+test("dispatchGlobalKey routes ctrl-comma to reload config", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "ctrl-,",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["reloadConfig"]);
 });
 
 test("dispatchGlobalKey routes > to the shell command bar", () => {

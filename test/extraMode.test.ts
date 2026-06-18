@@ -81,6 +81,7 @@ describe("extra mode", () => {
       "open-notifications",
       "quit",
       "refresh-repository",
+      "reload-config",
       "scroll-help-down",
       "scroll-help-up",
       "search-next",

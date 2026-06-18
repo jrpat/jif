@@ -46,6 +46,7 @@ Available in every mode (mode-specific bindings can override these).
 |-----|---------|-------------|
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 | `ctrl-r` | refresh-repository | Refresh the revision log |
+| `ctrl-,` | reload-config | Reload config files and apply runtime settings |
 | `ctrl-z` | suspend | Suspend the application and return to the shell |
 | `ctrl-n` | search-next | Jump to the next search match (no-op when no search is active) |
 | `ctrl-p` | search-prev | Jump to the previous search match (no-op when no search is active) |
