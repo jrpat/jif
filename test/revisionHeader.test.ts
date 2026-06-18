@@ -174,20 +174,19 @@ test("hasUserDescription keeps literal user text that mentions no description", 
   expect(hasUserDescription(createRevision({ description: "docs: explain the (no description) marker" }))).toBeTrue();
 });
 
-test("getRevisionChangeIdColors matches focused row chrome", () => {
+test("getRevisionChangeIdColors keeps the prefix magenta when focused", () => {
   const colors = getRevisionChangeIdColors({
     rowState: "focused",
     colors: {
       rowSelectedAccent: "selected",
-      chromeBorderFocus: "focus",
       revsetPrefix: "prefix",
       textTertiary: "suffix",
     },
   });
 
   expect(colors).toEqual({
-    prefix: "focus",
-    suffix: "focus",
+    prefix: "prefix",
+    suffix: "suffix",
   });
 });
 
@@ -196,7 +195,6 @@ test("getRevisionChangeIdColors matches selected row accent", () => {
     rowState: "selected",
     colors: {
       rowSelectedAccent: "selected",
-      chromeBorderFocus: "focus",
       revsetPrefix: "prefix",
       textTertiary: "suffix",
     },
@@ -213,7 +211,6 @@ test("getRevisionChangeIdColors keeps default suffix dimmed", () => {
     rowState: "default",
     colors: {
       rowSelectedAccent: "selected",
-      chromeBorderFocus: "focus",
       revsetPrefix: "prefix",
       textTertiary: "suffix",
     },

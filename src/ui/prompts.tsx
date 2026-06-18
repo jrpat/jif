@@ -476,7 +476,7 @@ export function CommandPreview(props: {
               fg={segment.style === "selected" || segment.style === "files"
                 ? colors.rowSelectedAccent
                 : segment.style === "target"
-                  ? colors.chromeBorderFocus
+                  ? colors.revsetPrefix
                   : segment.style === "placeholder"
                     ? colors.chromeBorderFocus
                     : colors.textPrimary}

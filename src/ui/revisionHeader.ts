@@ -189,7 +189,6 @@ export function getRevisionChangeIdColors(options: Readonly<{
   rowState: RevisionRowState;
   colors: Readonly<{
     rowSelectedAccent: string | undefined;
-    chromeBorderFocus: string | undefined;
     revsetPrefix: string | undefined;
     textTertiary: string | undefined;
   }>;
@@ -201,10 +200,6 @@ export function getRevisionChangeIdColors(options: Readonly<{
         suffix: options.colors.rowSelectedAccent,
       };
     case "focused":
-      return {
-        prefix: options.colors.chromeBorderFocus,
-        suffix: options.colors.chromeBorderFocus,
-      };
     default:
       return {
         prefix: options.colors.revsetPrefix,

@@ -709,7 +709,7 @@ If you want an alias to work from `>`, define it somewhere a non-interactive she
 <details>
 <summary>Command Composition</summary>
 
-Every operation in jif — `rebase`, `squash`, `split`, `new`, `commit`, and the rest — composes a `jj` command. The command bar shows that command being assembled as you press keys, color-coded to match the TUI: the focused revision in blue (its highlight color), selected revisions and files in green (the selection accent), etc…
+Every operation in jif — `rebase`, `squash`, `split`, `new`, `commit`, and the rest — composes a `jj` command. The command bar shows that command being assembled as you press keys, color-coded to match the TUI: the focused revision in magenta (its highlight color), selected revisions and files in green (the selection accent), etc…
 
 You get the ergonomics of a TUI porcelain without the CLI being hidden from you, and over time the visible command bar teaches you the underlying `jj` commands.
 
