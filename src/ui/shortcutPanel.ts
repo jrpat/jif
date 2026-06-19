@@ -128,11 +128,12 @@ export function buildShortcutSummary(
 export function buildShortcutSummarySegments(
   entries: readonly ShortcutEntry[],
   availableWidth = Number.POSITIVE_INFINITY,
+  leadingSegments: readonly ShortcutSummarySegment[] = [],
 ): readonly ShortcutSummarySegment[] {
   const keyLabelsByCommand = groupShortcutLabelsByCommand(entries);
   const safeWidth = Math.max(1, availableWidth);
-  const summarySegments: ShortcutSummarySegment[] = [];
-  let summaryWidth = 0;
+  const summarySegments: ShortcutSummarySegment[] = [...leadingSegments];
+  let summaryWidth = measureSummaryWidth(summarySegments);
 
   for (const segment of SHORTCUT_SUMMARY_SEGMENTS) {
     const keyLabels = collectSummaryKeyLabels(keyLabelsByCommand, segment.commandIds);
@@ -161,10 +162,21 @@ export function buildShortcutSummarySegments(
   return summarySegments;
 }
 
-export function prependFileFilterExitSummary(
-  segments: readonly ShortcutSummarySegment[],
-): readonly ShortcutSummarySegment[] {
-  return [{ keyLabel: "esc", label: "log" }, ...segments];
+function measureSummaryWidth(segments: readonly ShortcutSummarySegment[]): number {
+  let width = 0;
+  segments.forEach((segment, index) => {
+    const segmentWidth = segment.keyLabel.length + 1 + segment.label.length;
+    width += index === 0 ? segmentWidth : SUMMARY_GAP.length + segmentWidth;
+  });
+  return width;
+}
+
+// The collapsed status chip renders as ` label ` and is absolutely positioned at
+// the left edge, so it steals this many columns from the shortcut summary's draw
+// area. The summary fit must subtract it to drop trailing hints instead of
+// overflowing them.
+export function stateChipSummaryWidth(label: string): number {
+  return label.length + 2;
 }
 
 export function buildShortcutGrid(

@@ -19,8 +19,8 @@ import {
   formatShortcutKeyLabel,
   getShortcutPanelBindings,
   normalizeShortcutSortKey,
-  prependFileFilterExitSummary,
   shortcutModeLabel,
+  stateChipSummaryWidth,
   type ShortcutPanelBinding,
   type ShortcutPanelBindingInput,
 } from "../src/ui/shortcutPanel.ts";
@@ -195,14 +195,14 @@ test("buildShortcutSummarySegments keeps key labels separate for bold rendering"
   ]);
 });
 
-test("prependFileFilterExitSummary makes escape log the first collapsed shortcut", () => {
+test("buildShortcutSummarySegments places leading segments first and budgets for them", () => {
   const entries = buildShortcutEntries([
     makeBinding("command-bar", "Command Bar", ":"),
     makeBinding("shortcut-panel", "Shortcuts", "?"),
     makeBinding("move-down", "Move Down", "j"),
     makeBinding("move-up", "Move Up", "k"),
   ]);
-  const segments = prependFileFilterExitSummary(buildShortcutSummarySegments(entries, 80));
+  const segments = buildShortcutSummarySegments(entries, 80, [{ keyLabel: "esc", label: "log" }]);
 
   expect(segments).toEqual([
     { keyLabel: "esc", label: "log" },
@@ -210,6 +210,27 @@ test("prependFileFilterExitSummary makes escape log the first collapsed shortcut
     { keyLabel: "?", label: "help" },
     { keyLabel: "j/k", label: "move" },
   ]);
+});
+
+test("buildShortcutSummarySegments drops trailing hints when the leading hint eats the width budget", () => {
+  const entries = buildShortcutEntries([
+    makeBinding("command-bar", "Command Bar", ":"),
+    makeBinding("shortcut-panel", "Shortcuts", "?"),
+    makeBinding("move-down", "Move Down", "j"),
+    makeBinding("move-up", "Move Up", "k"),
+  ]);
+  // `esc log` (7) + gap (3) + `: command` (9) = 19 fits; adding `? help` would
+  // need 9 more, so it drops rather than overflowing the chip-narrowed row.
+  const leading = [{ keyLabel: "esc", label: "log" }];
+
+  expect(buildShortcutSummarySegments(entries, 19, leading)).toEqual([
+    { keyLabel: "esc", label: "log" },
+    { keyLabel: ":", label: "command" },
+  ]);
+});
+
+test("stateChipSummaryWidth reserves the rendered ` label ` columns", () => {
+  expect(stateChipSummaryWidth("file")).toBe(6);
 });
 
 test("formatShortcutKeyLabel uses symbolic labels for space and modifiers", () => {

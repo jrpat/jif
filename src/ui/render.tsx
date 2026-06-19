@@ -64,9 +64,9 @@ import {
   buildShortcutSummarySegments,
   computeShortcutPanelHeight,
   getShortcutPanelBindings,
-  prependFileFilterExitSummary,
   shortcutLayoutRowCount,
   shortcutModeLabel,
+  stateChipSummaryWidth,
   type ShortcutPanelBindingInput,
   type ShortcutPanelLayout,
   type ShortcutSummarySegment,
@@ -98,6 +98,7 @@ import {
 import { executeShellCommand as executeShellTextCommand } from "../jj/process.ts";
 
 const EXTRA_EMPTY_MESSAGE = "No extra bindings defined. Bind keys under `keymap.extra` in your config.";
+const FILE_FILTER_CHIP_LABEL = "file";
 
 export function JifView(props: {
   store: AppStore;
@@ -335,10 +336,16 @@ export function JifView(props: {
   const shortcutContentWidth = createMemo(() => Math.max(1, terminalSize().width - 4));
   const isFileFilterRevset = createMemo(() => isFilesOnlyRevset(store.state.revsetQuery));
   const shortcutSummarySegments = createMemo(() => {
-    const segments = buildShortcutSummarySegments(shortcutEntries(), shortcutContentWidth());
-    return isFileFilterRevset()
-      ? prependFileFilterExitSummary(segments)
-      : segments;
+    if (!isFileFilterRevset()) {
+      return buildShortcutSummarySegments(shortcutEntries(), shortcutContentWidth());
+    }
+    // File-filter mode is just the normal summary with a leading `esc log` hint
+    // and a chip on the left. Budget for the chip and fold the hint into the
+    // fit so trailing hints drop gracefully instead of overflowing.
+    const availableWidth = shortcutContentWidth() - stateChipSummaryWidth(FILE_FILTER_CHIP_LABEL);
+    return buildShortcutSummarySegments(shortcutEntries(), availableWidth, [
+      { keyLabel: "esc", label: "log" },
+    ]);
   });
   const shortcutSummary = createMemo(() =>
     buildShortcutSummary(shortcutEntries(), shortcutContentWidth())
@@ -964,7 +971,7 @@ export function JifView(props: {
             currentModeLabel={shortcutModeLabel(activeMode())}
             panelBodyHeight={shortcutPanelBodyHeight()}
             config={config}
-            stateChipLabel={isFileFilterRevset() ? "file" : null}
+            stateChipLabel={isFileFilterRevset() ? FILE_FILTER_CHIP_LABEL : null}
             loadingIndicatorText={loadingIndicatorText()}
           />
         </Show>
