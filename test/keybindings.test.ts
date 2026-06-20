@@ -454,6 +454,54 @@ test("app.rev keeps the full id for divergent revisions", () => {
   expect(captured.rev).toBe("abc1234/2");
 });
 
+test("app.selectedRevs exposes selected revisions as jj arguments", () => {
+  const calls: string[] = [];
+  const base = createState();
+  const state: AppState = {
+    ...base,
+    selectedRowIds: ["bbbbbbbb", "divergent", "missing"],
+    revisions: [
+      base.revisions[0]!,
+      { ...base.revisions[1]!, changeIdPrefixLength: 1 },
+      {
+        ...base.revisions[1]!,
+        rowId: "divergent",
+        revisionId: "abc1234/2",
+        changeIdPrefixLength: 3,
+      },
+    ],
+  };
+  const captured: { selectedRevs?: readonly string[]; interpolated?: string } = {};
+
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        title: "Read selected revs",
+        run: (_controller, app) => {
+          captured.selectedRevs = app.selectedRevs;
+          captured.interpolated = `abandon ${app.selectedRevs.join(" ")}`;
+        },
+      },
+    },
+  });
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "g",
+    state,
+    commands: resolved.commands,
+    controller: createController(calls),
+    keymap: resolved.keymap,
+  });
+
+  expect(handled).toBeTrue();
+  expect(captured.selectedRevs).toEqual([
+    getRevisionArg("bbbbbbbb", 1),
+    getRevisionArg("abc1234/2", 3),
+  ]);
+  expect(captured.selectedRevs).toEqual(["b", "abc1234/2"]);
+  expect(captured.interpolated).toBe("abandon b abc1234/2");
+});
+
 test("app.file is the focused file's path; app.focusedFile is the object", () => {
   const calls: string[] = [];
   const base = createState();

@@ -264,6 +264,8 @@ namespace Jif {
     rev: string;
     /** Focused file's path, or "" when nothing is focused. e.g. \`diff \${app.file}\`. */
     file: string;
+    /** Selected revisions' jj arguments, in selection order. e.g. \`abandon \${app.selectedRevs.join(" ")}\`. */
+    selectedRevs: readonly string[];
     /** Focused revision object, or null. */
     focusedRevision: RevisionSummary | null;
     /** Focused changed file object, or null. */

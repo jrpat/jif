@@ -27,10 +27,12 @@ export type UserKeyMap = Partial<Record<KeymapScope, Readonly<Record<string, Use
 export type UserAppState = BaseAppState & Readonly<{
   // Ergonomic string shortcuts, ready to drop straight into a command:
   // `rev` is the focused revision's jj argument, `file` is the focused file's path.
-  // Both are "" when nothing is focused, so `${app.rev}` is always a clean string and
-  // `if (!app.rev)` still guards. Use `focusedRevision`/`focusedFile` for the objects.
+  // `selectedRevs` contains the selected revisions' jj arguments in selection order.
+  // Empty string / empty array values make missing focus or selection easy to guard.
+  // Use `focusedRevision`/`focusedFile` for the structured objects.
   rev: string;
   file: string;
+  selectedRevs: readonly string[];
   focusedRevision: RevisionSummary | null;
   focusedFile: ChangedFile | null;
 }>;
@@ -51,6 +53,12 @@ export function createUserAppState(state: BaseAppState): UserAppState {
       if (property === "rev") {
         const rev = target.revisions[target.focusedRevisionIndex];
         return rev ? getRevisionArg(rev.revisionId, rev.changeIdPrefixLength) : "";
+      }
+      if (property === "selectedRevs") {
+        return target.selectedRowIds
+          .map((rowId) => target.revisions.find((revision) => revision.rowId === rowId))
+          .filter((revision): revision is RevisionSummary => revision !== undefined)
+          .map((revision) => getRevisionArg(revision.revisionId, revision.changeIdPrefixLength));
       }
       if (property === "focusedFile") {
         return getExpandedRevision(target)?.files[target.focusedFileIndex] ?? null;
