@@ -1,6 +1,6 @@
-import { access } from "node:fs/promises";
+import { access, copyFile, unlink } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { TerminalColors } from "@opentui/core";
 import { runCommand } from "../jj/process.ts";
@@ -18,6 +18,8 @@ export const CONFIG_CANDIDATES = [
   "jif.config.ts",
   "jif.config.js",
 ] as const;
+
+let configImportCounter = 0;
 
 export async function loadAppConfig(options: Readonly<{
   configDir?: string;
@@ -116,14 +118,64 @@ async function loadConfigFile(absolutePath: string): Promise<AppConfig> {
     throw new Error(`Config file not found: ${absolutePath}`);
   }
 
-  const module = await import(`${pathToFileURL(absolutePath).href}?t=${Date.now()}`);
-  return (module.default ?? module.config ?? {}) as AppConfig;
+  const importPath = await getConfigImportPath(absolutePath);
+  try {
+    const specifier = importPath === absolutePath
+      ? `${pathToFileURL(absolutePath).href}?t=${Date.now()}.${configImportCounter += 1}`
+      : pathToFileURL(importPath).href;
+    const module = await import(specifier);
+    return (module.default ?? module.config ?? {}) as AppConfig;
+  } finally {
+    if (importPath !== absolutePath) {
+      await removeImportCopy(importPath);
+    }
+  }
 }
 
 function resolveLayerPath(input: string): string {
   if (input === "~") return homedir();
   if (input.startsWith("~/")) return resolve(homedir(), input.slice(2));
   return resolve(input);
+}
+
+async function getConfigImportPath(absolutePath: string): Promise<string> {
+  try {
+    return await copyConfigForFreshImport(absolutePath);
+  } catch (error) {
+    if (isPermissionError(error)) {
+      return absolutePath;
+    }
+
+    throw error;
+  }
+}
+
+async function copyConfigForFreshImport(absolutePath: string): Promise<string> {
+  const extension = extname(absolutePath);
+  const stem = basename(absolutePath, extension);
+  const importPath = join(
+    dirname(absolutePath),
+    `.${stem}.${process.pid}.${Date.now()}.${configImportCounter += 1}${extension}`,
+  );
+
+  await copyFile(absolutePath, importPath);
+  return importPath;
+}
+
+async function removeImportCopy(path: string): Promise<void> {
+  try {
+    await unlink(path);
+  } catch {
+    // Best-effort cleanup; stale temp copies should not mask config load errors.
+  }
+}
+
+function isPermissionError(error: unknown): boolean {
+  if (!(error instanceof Error) || !("code" in error)) {
+    return false;
+  }
+
+  return error.code === "EACCES" || error.code === "EPERM" || error.code === "EROFS";
 }
 
 async function fileExists(path: string): Promise<boolean> {

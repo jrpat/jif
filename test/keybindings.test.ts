@@ -5,7 +5,10 @@ import type { AppState } from "../src/domain/types.ts";
 import { getRevisionArg } from "../src/domain/revisionIds.ts";
 import { createInitialState, draftConfigs, enterExtraMode, startCommandDraft } from "../src/state/store.ts";
 import { defaultKeymap } from "../src/modes.ts";
-import { dispatchGlobalKey } from "../src/ui/keybindings.ts";
+import {
+  dispatchGlobalKey,
+  shouldDismissShortcutContextBeforeCommand,
+} from "../src/ui/keybindings.ts";
 
 function createState(): AppState {
   return {
@@ -652,6 +655,13 @@ test("dispatchGlobalKey dismisses shortcuts before running an async extra bindin
   await Promise.resolve();
 
   expect(calls).toEqual(["dismiss:extra:user:extra:d", "run-start", "run-end"]);
+});
+
+test("reload config preserves the active shortcut context", () => {
+  expect(shouldDismissShortcutContextBeforeCommand({
+    commandId: "reload-config",
+    mode: "extra",
+  })).toBeFalse();
 });
 
 test("dispatchGlobalKey routes ! to forceLastCommand", () => {

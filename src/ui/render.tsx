@@ -73,7 +73,11 @@ import {
 } from "./shortcutPanel.ts";
 import { resolveBottomChromeLayout } from "./bottomChrome.ts";
 import { resolveKeyToken } from "./keyboard.ts";
-import { dispatchGlobalKey, type CommandDispatchDetails } from "./keybindings.ts";
+import {
+  dispatchGlobalKey,
+  shouldDismissShortcutContextBeforeCommand,
+  type CommandDispatchDetails,
+} from "./keybindings.ts";
 import {
   collectCanonicalBindingsForMode,
   collectDirectCanonicalBindingsForMode,
@@ -471,17 +475,17 @@ export function JifView(props: {
     });
   });
 
-  const dismissShortcutsBeforeCommand = ({ commandId, mode }: CommandDispatchDetails) => {
-    if (commandId === "cancel" || commandId === "shortcut-panel") {
+  const dismissShortcutsBeforeCommand = (details: CommandDispatchDetails) => {
+    if (!shouldDismissShortcutContextBeforeCommand(details)) {
       return;
     }
 
     if (store.state.shortcutPanelExpanded) {
       store.actions.closeShortcutPanel();
     }
-    if (mode === "extra") {
+    if (details.mode === "extra") {
       store.actions.exitExtraMode();
-    } else if (mode === "bookmark") {
+    } else if (details.mode === "bookmark") {
       store.actions.exitBookmarkLeader();
     }
   };

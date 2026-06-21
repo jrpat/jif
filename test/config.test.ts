@@ -327,6 +327,36 @@ test("loadAppConfig reads config.ts from XDG_CONFIG_HOME/jif", async () => {
   }
 });
 
+test("loadAppConfig reloads modified config files", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-config-reload-"));
+
+  try {
+    const configPath = join(tempDir, "config.ts");
+    await writeFile(
+      configPath,
+      "export default { keymap: { extra: { d: { title: 'Deploy', run: () => {} } } } };\n",
+      "utf8",
+    );
+
+    const first = await loadAppConfig({ replaceUserConfigPath: configPath });
+    const firstKeymap = resolveConfiguredKeymap(first.raw.keymap).keymap;
+    expect(firstKeymap.extra.d).toBe("user:extra:d");
+
+    await writeFile(
+      configPath,
+      "export default { keymap: { extra: { x: { title: 'Xray', run: () => {} } } } };\n",
+      "utf8",
+    );
+
+    const second = await loadAppConfig({ replaceUserConfigPath: configPath });
+    const secondKeymap = resolveConfiguredKeymap(second.raw.keymap).keymap;
+    expect(secondKeymap.extra.x).toBe("user:extra:x");
+    expect(secondKeymap.extra.d).toBeUndefined();
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test("loadAppConfig with replaceUserConfigPath bypasses discovery", async () => {
   const tempDir = await mkdtemp(join(tmpdir(), "jif-replace-"));
   const previousXdg = process.env.XDG_CONFIG_HOME;

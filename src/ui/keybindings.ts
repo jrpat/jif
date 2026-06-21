@@ -16,6 +16,18 @@ export type CommandDispatchDetails = Readonly<{
   mode: Mode;
 }>;
 
+const SHORTCUT_CONTEXT_PRESERVING_COMMAND_IDS = new Set([
+  "cancel",
+  "reload-config",
+  "shortcut-panel",
+]);
+
+export function shouldDismissShortcutContextBeforeCommand(
+  details: CommandDispatchDetails,
+): boolean {
+  return !SHORTCUT_CONTEXT_PRESERVING_COMMAND_IDS.has(details.commandId);
+}
+
 export function dispatchGlobalKey(options: {
   normalizedKey: string;
   state: AppState;
