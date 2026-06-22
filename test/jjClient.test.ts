@@ -469,7 +469,7 @@ test("JjClient distinguishes a hidden remote-kept commit from its locally-edited
   await Bun.write(join(work, "a.txt"), "hello\n");
   await runCommand(work, ["jj", "describe", "-m", "A"]);
   await runCommand(work, ["jj", "bookmark", "create", "main", "-r", "@"]);
-  await runCommand(work, ["jj", "git", "push", "--allow-new", "-b", "main"]);
+  await runCommand(work, ["jj", "git", "push", "-b", "main"]);
 
   await Bun.write(join(work, "a.txt"), "hello modified\n");
   await runCommand(work, ["jj", "describe", "-m", "A modified"]);
