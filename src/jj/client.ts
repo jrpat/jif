@@ -9,6 +9,11 @@ import type {
 import { createRowId, createSyntheticRowId } from "../domain/rowIds.ts";
 import { getChangeIdFromRevisionId } from "../domain/revisionIds.ts";
 import { getMaxRevisionBaseGraphRowCount } from "../ui/revisionLayout.ts";
+import {
+  COMMAND_ALIAS_CONFIG_TEMPLATE,
+  parseCommandAliasConfigOutput,
+  type JjCommandAlias,
+} from "./commandAliases.ts";
 
 const FIELD_SEPARATOR = "\u001f";
 const ROW_KIND_HEADER = "header";
@@ -373,6 +378,23 @@ export class JjClient {
       return aliases;
     } catch {
       return {};
+    }
+  }
+
+  async loadCommandAliases(): Promise<readonly JjCommandAlias[]> {
+    try {
+      const result = await this.runJj([
+        "config",
+        "list",
+        "aliases",
+        "-T",
+        COMMAND_ALIAS_CONFIG_TEMPLATE,
+        "--color",
+        "never",
+      ]);
+      return parseCommandAliasConfigOutput(result.stdout);
+    } catch {
+      return [];
     }
   }
 

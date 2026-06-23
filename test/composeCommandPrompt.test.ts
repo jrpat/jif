@@ -47,7 +47,7 @@ test("compose command bar: defaults by history, toggles with ':'/ctrl+h, complet
   expect(result.historyAgainUsesSingleBorder).toBe(true);
 
   // startInCompose forces complete-at-point on open even when history exists,
-  // so the `g` git binding surfaces completions immediately.
+  // so the git command binding surfaces completions immediately.
   expect(result.startInComposeOpensCompose).toBe(true);
   expect(result.startInComposeUsesDoubleBorder).toBe(true);
 

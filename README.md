@@ -121,7 +121,7 @@ When the active revset is only `files(...)`, the collapsed status bar shows a `f
 | Key | Command | Description |
 |-----|---------|-------------|
 | `:` | command-bar | Run a jj subcommand |
-| `g` | git-command-bar | Open the command bar prefilled with `g ` (jj's alias for `git`), straight into complete-at-point so the git subcommands complete immediately |
+| `g` | git-command-bar | Open the command bar prefilled with `git `, straight into complete-at-point so git subcommands complete immediately |
 | `>` | shell-command-bar | Run a shell command |
 | `ctrl-o` | open-operation-log | Open the repository operation log |
 | `ctrl-e` | open-evolog | Open the evolution log for the focused revision |
@@ -723,7 +723,7 @@ Press `-` while composing to flip between short and long flag names. Press `:` a
 
 The `:` command bar has two views: your **command history**, and structured **complete-at-point**. It opens in history when you have any (otherwise it opens in complete-at-point), and you switch between them at any time with `ctrl-h`. With an empty input you can also just press `:` again — a `:` typed as the first-and-only character is treated as the toggle command rather than text, so `:` `:` drops you straight into complete-at-point.
 
-Complete-at-point suggests the next thing a `jj` command needs: subcommands, flags, revisions, enum values, and bookmark names. `tab` inserts the current suggestion and advances to the next thing to complete; the arrows / `ctrl-n`,`ctrl-p` / `ctrl-j`,`ctrl-k` move through the list. `enter` runs the command, unless you have moved to a suggestion, in which case it accepts that suggestion. The flag and value metadata comes straight from `jj`'s own help, so it matches your installed `jj`. The `>` shell command bar is unchanged (history only).
+Complete-at-point suggests the next thing a `jj` command needs: subcommands, configured command aliases, flags, revisions, enum values, and bookmark names. `tab` inserts the current suggestion and advances to the next thing to complete; the arrows / `ctrl-n`,`ctrl-p` / `ctrl-j`,`ctrl-k` move through the list. `enter` runs the command, unless you have moved to a suggestion, in which case it accepts that suggestion. The flag and value metadata comes straight from `jj`'s own help, so it matches your installed `jj`; command aliases come from `jj config list aliases`, excluding aliases that start with `util`. The `>` shell command bar is unchanged (history only).
 
 </details>
 

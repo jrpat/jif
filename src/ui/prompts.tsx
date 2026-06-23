@@ -3,6 +3,7 @@ import { For, Show, batch, createEffect, createMemo, createSignal, onMount } fro
 import { useKeyboard } from "@opentui/solid";
 import { matchHistoryEntries } from "../history/store.ts";
 import type { JjClient } from "../jj/client.ts";
+import type { JjCommandAlias } from "../jj/commandAliases.ts";
 import type { JjHelpCache } from "../jj/helpCache.ts";
 import { buildCompletionItems, extractLastToken, matchCompletions, type CompletionItem } from "../revset/completions.ts";
 import { formatFilesRevset, matchFileSearchPaths } from "../revset/files.ts";
@@ -62,7 +63,8 @@ export function CommandPrompt(props: {
   const [composeData, setComposeData] = createSignal<{
     revsetItems: readonly CompletionItem[];
     bookmarks: readonly string[];
-  }>({ revsetItems: [], bookmarks: [] });
+    commandAliases: readonly JjCommandAlias[];
+  }>({ revsetItems: [], bookmarks: [], commandAliases: [] });
   const [historyMode, setHistoryMode] = createSignal(false);
   const [helpVersion, setHelpVersion] = createSignal(0);
   const composeActive = () => props.composeEnabled && !props.bookmarkContext && !historyMode();
@@ -89,12 +91,17 @@ export function CommandPrompt(props: {
     }
     props.helpCache?.prefetchTopLevel();
     void (async () => {
-      const [bookmarks, tags, aliases] = await Promise.all([
+      const [bookmarks, tags, aliases, commandAliases] = await Promise.all([
         client.loadBookmarks(),
         client.loadTags(),
         client.loadAliases(),
+        client.loadCommandAliases(),
       ]);
-      setComposeData({ revsetItems: buildCompletionItems(bookmarks, tags, aliases), bookmarks });
+      setComposeData({
+        revsetItems: buildCompletionItems(bookmarks, tags, aliases),
+        bookmarks,
+        commandAliases,
+      });
     })();
   });
 
@@ -160,7 +167,12 @@ export function CommandPrompt(props: {
       return null;
     }
     helpVersion();
-    return resolveComposeContext(draftText(), cursorOffset(), (path) => props.helpCache?.peek(path));
+    return resolveComposeContext(
+      draftText(),
+      cursorOffset(),
+      (path) => props.helpCache?.peek(path),
+      composeData().commandAliases,
+    );
   });
 
   // Ensure the model for the resolved path — and each prefix the resolver needs
@@ -192,6 +204,7 @@ export function CommandPrompt(props: {
       help: props.helpCache?.peek(ctx.path),
       revsetItems: data.revsetItems,
       bookmarks: data.bookmarks,
+      commandAliases: data.commandAliases,
     });
   });
 

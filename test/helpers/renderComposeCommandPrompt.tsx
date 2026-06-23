@@ -47,6 +47,9 @@ function makeClient(): JjClient {
     async loadAliases() {
       return {};
     },
+    async loadCommandAliases() {
+      return [];
+    },
   } as unknown as JjClient;
 }
 
@@ -246,7 +249,7 @@ async function renderHistoryDefaultAndColonToggle() {
 }
 
 // startInCompose forces complete-at-point on open even when history exists, so
-// a prefilled subcommand (the `g` git binding) surfaces completions right away.
+// a prefilled subcommand surfaces completions right away.
 async function renderStartInComposeWithHistory() {
   const rendered = await mountPrompt({ history: ["log -r @"], startInCompose: true });
   try {

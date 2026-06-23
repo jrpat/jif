@@ -54,13 +54,29 @@ const MODELS: Record<string, JjHelp> = {
     flags: [{ short: "-m", long: "--message", valueToken: "MESSAGE", description: "" }],
     positionals: [{ token: "REVSETS", optional: true, variadic: true, description: "" }],
   },
-  git: { kind: "group", hasSubcommands: true, subcommands: [], flags: [], positionals: [] },
+  git: {
+    kind: "group",
+    hasSubcommands: true,
+    subcommands: [{ name: "fetch", aliases: [], description: "" }],
+    flags: [],
+    positionals: [],
+  },
+  "git fetch": {
+    kind: "leaf",
+    hasSubcommands: false,
+    subcommands: [],
+    flags: [{ short: undefined, long: "--remote", valueToken: "REMOTE", description: "" }],
+    positionals: [],
+  },
 };
 
 const helpFor = (path: readonly string[]): JjHelp | undefined => MODELS[path.join(" ")];
 
-const resolve = (text: string, cursor = text.length) =>
-  resolveComposeContext(text, cursor, helpFor);
+const resolve = (
+  text: string,
+  cursor = text.length,
+  commandAliases: Parameters<typeof resolveComposeContext>[3] = [],
+) => resolveComposeContext(text, cursor, helpFor, commandAliases);
 
 describe("tokenizeWithSpans", () => {
   test("tracks offsets for plain tokens", () => {
@@ -102,10 +118,32 @@ describe("resolveComposeContext: subcommands", () => {
     expect(resolve("b set ")).toMatchObject({ kind: "flag-or-subcommand", path: ["bookmark", "set"] });
   });
 
-  test("resolves jj's hidden `g` alias to git so its subcommands complete", () => {
-    // `jj g` runs `jj git`, but jj does not advertise `g` as a subcommand alias
-    // in its help output, so the help-driven path-walk needs to know about it.
-    expect(resolve("g ")).toMatchObject({ kind: "subcommand", path: ["git"], partial: "" });
+  test("resolves a configured single-token root alias to its command path", () => {
+    expect(resolve("g ", undefined, [{ name: "g", expansion: ["git"] }])).toMatchObject({
+      kind: "subcommand",
+      path: ["git"],
+      partial: "",
+    });
+  });
+
+  test("does not treat g as a built-in special case without a configured alias", () => {
+    expect(resolve("g ")).toMatchObject({ kind: "subcommand", path: [], partial: "" });
+  });
+
+  test("resolves a configured multi-token root alias to its command path", () => {
+    expect(resolve("pull ", undefined, [{ name: "pull", expansion: ["git", "fetch"] }])).toMatchObject({
+      kind: "flag-or-subcommand",
+      path: ["git", "fetch"],
+      partial: "",
+    });
+  });
+
+  test("ignores configured aliases that start with util", () => {
+    expect(resolve("up ", undefined, [{ name: "up", expansion: ["util", "exec", "--", "bash"] }])).toMatchObject({
+      kind: "subcommand",
+      path: [],
+      partial: "",
+    });
   });
 });
 

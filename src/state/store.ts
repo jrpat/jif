@@ -962,10 +962,10 @@ export function focusGitCommandBar(state: AppState): AppState {
   const nextState = {
     ...state,
     inlineConfirmation: null,
-    // Prefill `jj g ` (jj's alias for `jj git`) and open straight into
-    // complete-at-point completion so the git subcommands are one keystroke
-    // away. The cursor defaults to the end of the text, landing after the space.
-    commandBar: createManualCommandBar("jj", "g ", { startInCompose: true }),
+    // Prefill the canonical subcommand and open straight into complete-at-point
+    // completion so git subcommands are one keystroke away. The cursor defaults
+    // to the end of the text, landing after the space.
+    commandBar: createManualCommandBar("jj", "git ", { startInCompose: true }),
   };
 
   return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "command"]);

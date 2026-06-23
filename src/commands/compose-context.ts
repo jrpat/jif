@@ -1,4 +1,5 @@
 import type { JjHelp, JjHelpFlag } from "../jj/help.ts";
+import type { JjCommandAlias } from "../jj/commandAliases.ts";
 
 export type CommandPath = readonly string[];
 
@@ -87,12 +88,7 @@ export function tokenizeWithSpans(text: string): CommandToken[] {
 }
 
 type HelpFor = (path: CommandPath) => JjHelp | undefined;
-
-// jj resolves a few short aliases that it does not advertise as subcommand
-// aliases in its `-h` output (they are hidden clap aliases). `jj g` runs
-// `jj git`, so completing `g ` should descend into git's subcommands. These
-// only apply at the top level, keyed by the alias's canonical subcommand name.
-const ROOT_ALIASES: Readonly<Record<string, string>> = { g: "git" };
+type StepResult = "matched" | "missing-help" | "no-match";
 
 const isFlagToken = (value: string) => value.startsWith("-");
 
@@ -101,10 +97,52 @@ function findFlag(help: JjHelp | undefined, name: string): JjHelpFlag | undefine
   return help.flags.find((flag) => flag.long === name || flag.short === name);
 }
 
+function descendPath(path: string[], token: string, helpFor: HelpFor): StepResult {
+  const help = helpFor(path);
+  if (!help || help.kind !== "group") return "missing-help";
+  const match = help.subcommands.find(
+    (sub) => sub.name === token || sub.aliases.includes(token),
+  );
+  if (!match) return "no-match";
+  path.push(match.name);
+  return "matched";
+}
+
+function findCommandAlias(
+  aliases: readonly JjCommandAlias[],
+  name: string,
+): JjCommandAlias | undefined {
+  return aliases.find((alias) => {
+    const first = alias.expansion[0];
+    return alias.name === name && first !== undefined && first !== "util" && !isFlagToken(first);
+  });
+}
+
+function descendRootAlias(
+  path: string[],
+  alias: JjCommandAlias,
+  helpFor: HelpFor,
+): StepResult {
+  const startLength = path.length;
+  for (const token of alias.expansion) {
+    if (isFlagToken(token)) return "matched";
+
+    const result = descendPath(path, token, helpFor);
+    if (result === "matched") continue;
+    if (result === "missing-help") return result;
+
+    path.length = startLength;
+    return "no-match";
+  }
+
+  return path.length > startLength ? "matched" : "no-match";
+}
+
 export function resolveComposeContext(
   text: string,
   cursorOffset: number,
   helpFor: HelpFor,
+  commandAliases: readonly JjCommandAlias[] = [],
 ): ComposeContext {
   const cursor = Math.max(0, Math.min(cursorOffset, text.length));
   const tokens = tokenizeWithSpans(text);
@@ -127,17 +165,16 @@ export function resolveComposeContext(
   const path: string[] = [];
   for (const token of preceding) {
     if (isFlagToken(token.value)) break;
-    const help = helpFor(path);
-    if (!help || help.kind !== "group") break;
-    const aliasTarget = path.length === 0 ? ROOT_ALIASES[token.value] : undefined;
-    const match = help.subcommands.find(
-      (sub) =>
-        sub.name === token.value ||
-        sub.aliases.includes(token.value) ||
-        sub.name === aliasTarget,
-    );
-    if (!match) break;
-    path.push(match.name);
+    const direct = descendPath(path, token.value, helpFor);
+    if (direct === "matched") continue;
+    if (direct === "missing-help") break;
+
+    const alias = path.length === 0 ? findCommandAlias(commandAliases, token.value) : undefined;
+    if (!alias) break;
+
+    const aliased = descendRootAlias(path, alias, helpFor);
+    if (aliased === "matched") continue;
+    break;
   }
 
   const help = helpFor(path);

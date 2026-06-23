@@ -1,6 +1,7 @@
 import { hasMatch, score } from "fzy.js";
 import { quoteArg } from "../jj/process.ts";
-import type { JjHelp } from "../jj/help.ts";
+import type { JjHelp, JjHelpSubcommand } from "../jj/help.ts";
+import type { JjCommandAlias } from "../jj/commandAliases.ts";
 import {
   matchCompletions,
   type CompletionItem,
@@ -67,13 +68,48 @@ function isBookmarkNamePositional(help: JjHelp | undefined): boolean {
   return help.positionals.some((positional) => /NAMES?/.test(positional.token));
 }
 
+type CommandCandidate =
+  | Readonly<{ kind: "subcommand"; subcommand: JjHelpSubcommand }>
+  | Readonly<{ kind: "alias"; alias: JjCommandAlias }>;
+
+function findSubcommand(help: JjHelp, token: string): JjHelpSubcommand | undefined {
+  return help.subcommands.find((sub) => sub.name === token || sub.aliases.includes(token));
+}
+
+function isSupportedCommandAlias(help: JjHelp, alias: JjCommandAlias): boolean {
+  if (alias.expansion.length === 0 || alias.expansion[0] === "util") return false;
+  if (help.subcommands.some((sub) => sub.name === alias.name || sub.aliases.includes(alias.name))) {
+    return false;
+  }
+  return findSubcommand(help, alias.expansion[0]!) !== undefined;
+}
+
+function commandCandidateKeys(candidate: CommandCandidate): string | readonly string[] {
+  if (candidate.kind === "alias") return candidate.alias.name;
+  return [candidate.subcommand.name, ...candidate.subcommand.aliases];
+}
+
+function buildCommandCandidateItem(candidate: CommandCandidate): AutocompleteListItem {
+  if (candidate.kind === "alias") {
+    return {
+      id: `cmdalias:${candidate.alias.name}`,
+      tag: "al",
+      text: candidate.alias.name,
+      detail: candidate.alias.expansion.join(" "),
+    };
+  }
+  const sub = candidate.subcommand;
+  return { id: `sub:${sub.name}`, text: sub.name, detail: sub.description || undefined };
+}
+
 export function buildComposeItems(args: {
   context: ComposeContext;
   help: JjHelp | undefined;
   revsetItems: readonly CompletionItem[];
   bookmarks: readonly string[];
+  commandAliases?: readonly JjCommandAlias[];
 }): AutocompleteListItem[] {
-  const { context, help, revsetItems, bookmarks } = args;
+  const { context, help, revsetItems, bookmarks, commandAliases = [] } = args;
 
   if (context.kind === "value") {
     return buildValueItems(context, revsetItems, bookmarks);
@@ -116,12 +152,19 @@ export function buildComposeItems(args: {
   // Subcommands appear for an explicit subcommand context and for groups that
   // also accept flags.
   if (context.kind === "subcommand" || help.kind === "group") {
-    const subcommands = fuzzyFilter(context.partial, help.subcommands, (sub) => [
-      sub.name,
-      ...sub.aliases,
-    ]);
-    for (const sub of subcommands) {
-      items.push({ id: `sub:${sub.name}`, text: sub.name, detail: sub.description || undefined });
+    const candidates: CommandCandidate[] = help.subcommands.map((subcommand) => ({
+      kind: "subcommand",
+      subcommand,
+    }));
+    if (context.path.length === 0) {
+      for (const alias of commandAliases) {
+        if (isSupportedCommandAlias(help, alias)) {
+          candidates.push({ kind: "alias", alias });
+        }
+      }
+    }
+    for (const candidate of fuzzyFilter(context.partial, candidates, commandCandidateKeys)) {
+      items.push(buildCommandCandidateItem(candidate));
     }
   }
 
@@ -188,6 +231,7 @@ function acceptInsertion(item: AutocompleteListItem): [string, string] {
     case "rev":
       return [quoteArg(rest), " "];
     case "sub":
+    case "cmdalias":
     case "flag":
     case "lit":
     case "enum":

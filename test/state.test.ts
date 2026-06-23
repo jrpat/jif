@@ -807,7 +807,7 @@ test("command bar editing is controlled by reducer state", () => {
   expect(state.focusMode).toBe("revisions");
 });
 
-test("git command bar prefills `g ` in compose mode for fast git subcommands", () => {
+test("git command bar prefills `git ` in compose mode for fast git subcommands", () => {
   let state = createState();
   state = focusGitCommandBar(state);
 
@@ -815,8 +815,8 @@ test("git command bar prefills `g ` in compose mode for fast git subcommands", (
   expect(state.commandBar.kind).toBe("jj");
   expect(state.commandBar.manual).toBe(true);
   // The cursor lands at the end of the prefill (after the trailing space), so
-  // the displayed command reads `jj g |`.
-  expect(getDisplayedCommandText(state)).toBe("g ");
+  // the displayed command reads `jj git |`.
+  expect(getDisplayedCommandText(state)).toBe("git ");
   expect(state.commandBar.startInCompose).toBe(true);
 });
 

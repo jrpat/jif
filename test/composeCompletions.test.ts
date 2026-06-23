@@ -13,6 +13,8 @@ const TOP: JjHelp = {
   subcommands: [
     { name: "log", aliases: [], description: "Show revision history" },
     { name: "bookmark", aliases: ["b"], description: "Manage bookmarks" },
+    { name: "git", aliases: [], description: "Manage Git remotes" },
+    { name: "util", aliases: [], description: "Infrequently used commands" },
   ],
   flags: [],
   positionals: [],
@@ -110,6 +112,43 @@ describe("buildComposeItems", () => {
     expect(items.map((i) => i.id)).toContain("sub:quux");
   });
 
+  test("configured command aliases appear as top-level completions", () => {
+    const items = buildComposeItems({
+      context: ctx({ kind: "subcommand", partial: "g" }),
+      help: TOP,
+      revsetItems: [],
+      bookmarks: [],
+      commandAliases: [{ name: "g", expansion: ["git"] }],
+    });
+    expect(items[0]).toMatchObject({ id: "cmdalias:g", tag: "al", text: "g", detail: "git" });
+  });
+
+  test("multi-token command aliases are suggested when their first token is supported", () => {
+    const items = buildComposeItems({
+      context: ctx({ kind: "subcommand", partial: "pu" }),
+      help: TOP,
+      revsetItems: [],
+      bookmarks: [],
+      commandAliases: [{ name: "pull", expansion: ["git", "fetch"] }],
+    });
+    expect(items[0]).toMatchObject({ id: "cmdalias:pull", tag: "al", text: "pull", detail: "git fetch" });
+  });
+
+  test("unsupported command aliases are not suggested", () => {
+    const items = buildComposeItems({
+      context: ctx({ kind: "subcommand", partial: "" }),
+      help: TOP,
+      revsetItems: [],
+      bookmarks: [],
+      commandAliases: [
+        { name: "up", expansion: ["util", "exec", "--", "bash"] },
+        { name: "wat", expansion: ["not-a-command"] },
+      ],
+    });
+    expect(items.map((i) => i.id)).not.toContain("cmdalias:up");
+    expect(items.map((i) => i.id)).not.toContain("cmdalias:wat");
+  });
+
   test("flag rows render bold long flag, dim short tag, dim description", () => {
     const items = buildComposeItems({
       context: ctx({ kind: "flag-or-subcommand", path: ["log"] }),
@@ -189,6 +228,16 @@ describe("computeComposeAccept", () => {
         item: { id: "sub:bookmark", text: "bookmark" },
       }),
     ).toEqual({ text: "bookmark ", cursorOffset: 9 });
+  });
+
+  test("command alias inserts the alias and a trailing space", () => {
+    expect(
+      computeComposeAccept({
+        text: "pu",
+        context: ctx({ kind: "subcommand", partial: "pu", start: 0, end: 2 }),
+        item: { id: "cmdalias:pull", tag: "al", text: "pull", detail: "git fetch" },
+      }),
+    ).toEqual({ text: "pull ", cursorOffset: 5 });
   });
 
   test("flag inserts the long flag and a trailing space", () => {
