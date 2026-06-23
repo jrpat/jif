@@ -3,6 +3,7 @@ import { For, createEffect, createMemo } from "solid-js";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { DiffViewerState } from "../domain/types.ts";
 import { parseAnsiToStyledText } from "./ansiToStyledText.ts";
+import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
 
 type DiffLineViewModel = Readonly<{
   styledText: StyledText;
@@ -37,12 +38,10 @@ export function DiffViewer(props: {
         width: contentWidth(),
         maxWidth: undefined,
       }}
-      scrollbarOptions={{
-        trackOptions: {
-          backgroundColor: colors.chromeFillThree,
-          foregroundColor: colors.chromeScrollbarThumb,
-        },
-      }}
+      scrollbarOptions={buildScrollbarTrackOptions(
+        colors.chromeFillThree,
+        colors.chromeScrollbarThumb,
+      )}
     >
       <box flexDirection="column" width={contentWidth()}>
         <For each={lines()}>

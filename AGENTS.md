@@ -48,6 +48,7 @@
 - Sample repo materialization logic lives under `src/dev/`.
 - Debug mode should launch against a freshly materialized sample repo instead of the ambient working directory:
   - `bun run index.ts --sample`
+- `bun run dev` runs `scripts/dev.ts`, a launcher that restarts jif on `src/` changes. Do not switch `dev` back to `bun --watch`: bun's watcher reload-loops against jif's startup (it re-triggers faster than the opentui TUI can paint its first frame), so the screen is cleared on every restart and stays blank. The custom launcher only watches `src/` and `index.ts`, so jif's runtime file activity can't retrigger it.
 
 
 # User-specific Instructions

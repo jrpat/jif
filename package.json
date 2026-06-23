@@ -15,7 +15,7 @@
     "build": "bun run scripts/build.ts",
     "start": "bun run index.ts",
     "sample": "bun run index.ts --sample",
-    "dev": "bun --watch ./index.ts --sample",
+    "dev": "bun run scripts/dev.ts",
     "bin": "bun run scripts/install-binary.ts",
     "live": "bun run bin && jif",
     "vsc:local": "bun run --cwd ext/vscode install:local"

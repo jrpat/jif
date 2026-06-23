@@ -57,6 +57,7 @@ import {
 } from "./revisionHeader.ts";
 import { getChangedFileRowBackgroundColor, getRevisionRowBackgroundColor } from "./rowBackgrounds.ts";
 import { isScrollboxAtBottom, observeScrollboxBottomReached, scrollToKeepChildVisible } from "./scroll.ts";
+import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
 import {
   buildShortcutEntries,
   buildShortcutGrid,
@@ -749,12 +750,10 @@ export function JifView(props: {
               width="100%"
               flexGrow={1}
               scrollY
-              scrollbarOptions={{
-                trackOptions: {
-                  backgroundColor: config.colorScheme.semanticColors.chromeFillThree,
-                  foregroundColor: config.colorScheme.semanticColors.chromeScrollbarThumb,
-                },
-              }}
+              scrollbarOptions={buildScrollbarTrackOptions(
+                config.colorScheme.semanticColors.chromeFillThree,
+                config.colorScheme.semanticColors.chromeScrollbarThumb,
+              )}
             >
               <box width="100%" flexDirection="column">
                 <Show
