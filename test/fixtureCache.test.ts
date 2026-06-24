@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createTempDir } from "./helpers/tempRepo.ts";
-import { resolveFixtureCache, copyDir, computeFixtureHash } from "../src/dev/fixtureCache.ts";
+import {
+  resolveFixtureCache,
+  copyDir,
+  computeFixtureHash,
+  resolveCopyDirCommands,
+} from "../src/dev/fixtureCache.ts";
 import { materializeSampleRepoCached } from "../src/dev/sampleRepo.ts";
 import { runCommand } from "../src/jj/process.ts";
 
@@ -36,6 +41,16 @@ describe("computeFixtureHash", () => {
 
     expect(await computeFixtureHash(a)).not.toBe(await computeFixtureHash(b));
   });
+
+  test("cache key parts contribute to the hash", async () => {
+    const dir = await createTempDir("hash-key-parts");
+    const fixturePath = join(dir, "fixture.jsonl");
+    await writeFile(fixturePath, '{"kind":"mkdir","path":"src"}\n', "utf8");
+
+    expect(await computeFixtureHash(fixturePath, ["jj 0.1.0"])).not.toBe(
+      await computeFixtureHash(fixturePath, ["jj 0.2.0"]),
+    );
+  });
 });
 
 describe("resolveFixtureCache", () => {
@@ -47,6 +62,7 @@ describe("resolveFixtureCache", () => {
     const result = await resolveFixtureCache({
       fixturePath,
       cacheRoot: join(dir, "cache"),
+      jjVersion: "jj 0.1.0",
     });
 
     expect(result.isHit).toBe(false);
@@ -59,12 +75,25 @@ describe("resolveFixtureCache", () => {
     await writeFile(fixturePath, '{"kind":"mkdir","path":"src"}\n', "utf8");
 
     const cacheRoot = join(dir, "cache");
-    const first = await resolveFixtureCache({ fixturePath, cacheRoot });
+    const first = await resolveFixtureCache({ fixturePath, cacheRoot, jjVersion: "jj 0.1.0" });
     await mkdir(first.cacheDir, { recursive: true });
 
-    const second = await resolveFixtureCache({ fixturePath, cacheRoot });
+    const second = await resolveFixtureCache({ fixturePath, cacheRoot, jjVersion: "jj 0.1.0" });
     expect(second.isHit).toBe(true);
     expect(second.cacheDir).toBe(first.cacheDir);
+  });
+
+  test("includes jj version in the cache directory", async () => {
+    const dir = await createTempDir("cache-jj-version");
+    const fixturePath = join(dir, "fixture.jsonl");
+    const cacheRoot = join(dir, "cache");
+    await writeFile(fixturePath, '{"kind":"mkdir","path":"src"}\n', "utf8");
+
+    const first = await resolveFixtureCache({ fixturePath, cacheRoot, jjVersion: "jj 0.1.0" });
+    const second = await resolveFixtureCache({ fixturePath, cacheRoot, jjVersion: "jj 0.2.0" });
+
+    expect(first.cacheDir).not.toBe(second.cacheDir);
+    expect(first.cacheDir).toMatch(/fixture-[0-9a-f]{16}$/);
   });
 
   test("cleans stale entries on cache hit", async () => {
@@ -73,7 +102,7 @@ describe("resolveFixtureCache", () => {
     const cacheRoot = join(dir, "cache");
 
     await writeFile(fixturePath, '{"kind":"mkdir","path":"src"}\n', "utf8");
-    const old = await resolveFixtureCache({ fixturePath, cacheRoot });
+    const old = await resolveFixtureCache({ fixturePath, cacheRoot, jjVersion: "jj 0.1.0" });
     await mkdir(old.cacheDir, { recursive: true });
 
     // Create a stale entry with the same stem but different hash
@@ -82,11 +111,11 @@ describe("resolveFixtureCache", () => {
 
     // Update fixture so the hash changes
     await writeFile(fixturePath, '{"kind":"mkdir","path":"test"}\n', "utf8");
-    const fresh = await resolveFixtureCache({ fixturePath, cacheRoot });
+    const fresh = await resolveFixtureCache({ fixturePath, cacheRoot, jjVersion: "jj 0.1.0" });
     await mkdir(fresh.cacheDir, { recursive: true });
 
     // Trigger cleanup by hitting the new cache
-    await resolveFixtureCache({ fixturePath, cacheRoot });
+    await resolveFixtureCache({ fixturePath, cacheRoot, jjVersion: "jj 0.1.0" });
 
     const entries = await readdir(cacheRoot);
     const staleEntries = entries.filter(
@@ -97,6 +126,11 @@ describe("resolveFixtureCache", () => {
 });
 
 describe("copyDir", () => {
+  test("prefers copy-on-write clone commands when the platform supports them", () => {
+    expect(resolveCopyDirCommands("darwin")[0]).toEqual(["cp", "-cR"]);
+    expect(resolveCopyDirCommands("linux")[0]).toEqual(["cp", "-a", "--reflink=auto"]);
+  });
+
   test("copies directory contents to new location", async () => {
     const dir = await createTempDir("copy-test");
     const src = join(dir, "src");
@@ -114,13 +148,16 @@ describe("copyDir", () => {
 describe("materializeSampleRepoCached", () => {
   test("materializes and caches on first call, copies on second", async () => {
     const dir = await createTempDir("cached-e2e");
+    const fixturePath = join(dir, "tiny-sample.jsonl");
     const cacheRoot = join(dir, "cache");
     const baseDir1 = join(dir, "run1");
     const baseDir2 = join(dir, "run2");
+    await writeTinySampleFixture(fixturePath);
 
     const t0 = performance.now();
     const first = await materializeSampleRepoCached({
       baseDir: baseDir1,
+      fixturePath,
       cacheRoot,
     });
     const firstDuration = performance.now() - t0;
@@ -130,11 +167,12 @@ describe("materializeSampleRepoCached", () => {
     // Cache dir should exist now
     const cacheEntries = await readdir(cacheRoot);
     expect(cacheEntries.length).toBe(1);
-    expect(cacheEntries[0]).toMatch(/^sample-repo-[0-9a-f]{16}$/);
+    expect(cacheEntries[0]).toMatch(/^tiny-sample-[0-9a-f]{16}$/);
 
     const t1 = performance.now();
     const second = await materializeSampleRepoCached({
       baseDir: baseDir2,
+      fixturePath,
       cacheRoot,
     });
     const secondDuration = performance.now() - t1;
@@ -152,4 +190,57 @@ describe("materializeSampleRepoCached", () => {
     expect(secondLog.stdout.trim().length).toBeGreaterThan(0);
     expect(secondLog.stdout).toBe(firstLog.stdout);
   }, 30_000);
+
+  test("serializes concurrent cold cache population", async () => {
+    const dir = await createTempDir("cached-concurrent");
+    const fixturePath = join(dir, "tiny-sample.jsonl");
+    const cacheRoot = join(dir, "cache");
+    await writeTinySampleFixture(fixturePath);
+
+    const [first, second] = await Promise.all([
+      materializeSampleRepoCached({
+        baseDir: join(dir, "run1"),
+        fixturePath,
+        cacheRoot,
+      }),
+      materializeSampleRepoCached({
+        baseDir: join(dir, "run2"),
+        fixturePath,
+        cacheRoot,
+      }),
+    ]);
+
+    const cacheEntries = (await readdir(cacheRoot)).filter((entry) => !entry.startsWith("."));
+    expect(cacheEntries).toHaveLength(1);
+    expect((await readdir(join(cacheRoot, cacheEntries[0]!))).sort()).toEqual(["repo"]);
+
+    const [firstLog, secondLog] = await Promise.all([
+      runCommand(first.repoPath, ["jj", "log", "--no-pager", "--limit", "10"]),
+      runCommand(second.repoPath, ["jj", "log", "--no-pager", "--limit", "10"]),
+    ]);
+    expect(secondLog.stdout).toBe(firstLog.stdout);
+  }, 30_000);
 });
+
+async function writeTinySampleFixture(fixturePath: string): Promise<void> {
+  await writeFile(
+    fixturePath,
+    [
+      JSON.stringify({
+        kind: "writeFile",
+        path: "README.md",
+        content: "# Tiny Fixture\n",
+      }),
+      JSON.stringify({
+        kind: "jj",
+        args: ["describe", "-m", "init: tiny fixture"],
+      }),
+      JSON.stringify({
+        kind: "jj",
+        args: ["bookmark", "create", "main"],
+      }),
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+}

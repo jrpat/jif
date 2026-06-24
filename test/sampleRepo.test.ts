@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { materializeSampleRepo } from "../src/dev/sampleRepo.ts";
+import { materializeSampleRepo, materializeSampleRepoCached } from "../src/dev/sampleRepo.ts";
 import { JjClient } from "../src/jj/client.ts";
 import { runCommand } from "../src/jj/process.ts";
 import { createTempDir } from "./helpers/tempRepo.ts";
@@ -31,7 +31,7 @@ test("sample repo materialization creates bookmarks and workspaces", async () =>
 }, 20000);
 
 test("sample repo includes a simple side branch after the integration fixture commit", async () => {
-  const repo = await materializeSampleRepo({
+  const repo = await materializeSampleRepoCached({
     baseDir: await createTempDir("materialize-sample-branch"),
   });
   const client = new JjClient(repo.repoPath);

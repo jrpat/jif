@@ -1,11 +1,14 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import type { SampleRepoMaterialization } from "../domain/types.ts";
 import { runCommand } from "../jj/process.ts";
 import { copyDir, resolveFixtureCache } from "./fixtureCache.ts";
 
 const DEFAULT_FIXTURE = resolve("test/fixtures/sample-repo.jsonl");
 const DEFAULT_CACHE_ROOT = resolve(".tmp/cache");
+const CACHE_WAIT_TIMEOUT_MS = 60_000;
+const CACHE_WAIT_INTERVAL_MS = 50;
 
 type JsonlOperation =
   | Readonly<{
@@ -128,13 +131,10 @@ export async function materializeSampleRepoCached(options?: {
 
   const { cacheDir, isHit } = await resolveFixtureCache({ fixturePath, cacheRoot });
 
-  if (isHit) {
-    await copyDir(cacheDir, baseDir);
-  } else {
-    await materializeSampleRepo({ baseDir, fixturePath });
-    await mkdir(cacheRoot, { recursive: true });
-    await copyDir(baseDir, cacheDir);
+  if (!isHit) {
+    await ensureSampleRepoCache({ cacheDir, cacheRoot, fixturePath });
   }
+  await copyDir(cacheDir, baseDir);
 
   const workspacePaths: Record<string, string> = { default: join(baseDir, "repo") };
   try {
@@ -154,6 +154,46 @@ export async function materializeSampleRepoCached(options?: {
   };
 }
 
+async function ensureSampleRepoCache(options: {
+  cacheDir: string;
+  cacheRoot: string;
+  fixturePath: string;
+}): Promise<void> {
+  const { cacheDir, cacheRoot, fixturePath } = options;
+  await mkdir(cacheRoot, { recursive: true });
+
+  const cacheName = basename(cacheDir);
+  const lockDir = join(cacheRoot, `.${cacheName}.lock`);
+  const deadline = Date.now() + CACHE_WAIT_TIMEOUT_MS;
+
+  while (true) {
+    if (await dirExists(cacheDir)) {
+      return;
+    }
+
+    if (await tryCreateLockDir(lockDir)) {
+      break;
+    }
+
+    await waitForCacheOrUnlocked(cacheDir, lockDir, deadline);
+  }
+
+  const buildDir = await mktempDir(cacheRoot, `.${cacheName}.building-`);
+  try {
+    await materializeSampleRepo({ baseDir: buildDir, fixturePath });
+    try {
+      await rename(buildDir, cacheDir);
+    } catch (error) {
+      if (!isAlreadyExistsError(error)) {
+        throw error;
+      }
+    }
+  } finally {
+    await rm(lockDir, { recursive: true, force: true });
+    await rm(buildDir, { recursive: true, force: true });
+  }
+}
+
 async function loadOperations(path: string): Promise<readonly JsonlOperation[]> {
   const content = await readFile(path, "utf8");
   return content
@@ -166,4 +206,46 @@ async function loadOperations(path: string): Promise<readonly JsonlOperation[]> 
 async function mktempDir(parentDir: string, prefix: string): Promise<string> {
   await mkdir(parentDir, { recursive: true });
   return await Bun.$`mktemp -d ${join(parentDir, `${prefix}XXXXXX`)}`.text().then((value) => value.trim());
+}
+
+async function tryCreateLockDir(lockDir: string): Promise<boolean> {
+  try {
+    await mkdir(lockDir);
+    return true;
+  } catch (error) {
+    if (isAlreadyExistsError(error)) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function waitForCacheOrUnlocked(
+  cacheDir: string,
+  lockDir: string,
+  deadline: number,
+): Promise<void> {
+  while (Date.now() < deadline) {
+    if (await dirExists(cacheDir)) {
+      return;
+    }
+    if (!(await dirExists(lockDir))) {
+      return;
+    }
+    await sleep(CACHE_WAIT_INTERVAL_MS);
+  }
+
+  throw new Error(`Timed out waiting for sample repo cache: ${cacheDir}`);
+}
+
+async function dirExists(path: string): Promise<boolean> {
+  try {
+    return (await stat(path)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function isAlreadyExistsError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST";
 }

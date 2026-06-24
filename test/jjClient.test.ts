@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { join } from "node:path";
-import { materializeSampleRepo } from "../src/dev/sampleRepo.ts";
+import { materializeSampleRepoCached } from "../src/dev/sampleRepo.ts";
 import {
   JjClient,
   parseLogOutput,
@@ -416,7 +416,7 @@ test("parseLogOutput defaults hasConflict to false when field is missing", () =>
 });
 
 test("JjClient loads a real sample repository", async () => {
-  const repo = await materializeSampleRepo({
+  const repo = await materializeSampleRepoCached({
     baseDir: await createTempDir("client-sample"),
   });
   const client = new JjClient(repo.repoPath);
@@ -439,7 +439,7 @@ test("JjClient loads a real sample repository", async () => {
 }, 20000);
 
 test("JjClient marks a real empty revision without loading changed files", async () => {
-  const repo = await materializeSampleRepo({
+  const repo = await materializeSampleRepoCached({
     baseDir: await createTempDir("client-empty-revision"),
   });
   await runCommand(repo.repoPath, ["jj", "new", "-m", ""]);
@@ -490,7 +490,7 @@ test("JjClient distinguishes a hidden remote-kept commit from its locally-edited
 }, 20000);
 
 test("JjClient resolves the actual workspace root from nested paths", async () => {
-  const repo = await materializeSampleRepo({
+  const repo = await materializeSampleRepoCached({
     baseDir: await createTempDir("client-workspace-root"),
   });
   const client = new JjClient(join(repo.repoPath, "src"));
