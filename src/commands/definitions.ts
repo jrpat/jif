@@ -99,6 +99,7 @@ export type CommandController = Readonly<{
   collapseNotification: () => void;
   editFocusedNotification: () => void;
   openSearch: () => void;
+  openFastJump: () => void;
   nextSearchMatch: () => void;
   prevSearchMatch: () => void;
   toggleSearchIdOnly: () => void;
@@ -735,6 +736,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Incremental search through the revision log",
     canExecute: canSearchState,
     run: (controller) => controller.openSearch(),
+    group: "global",
+  },
+  {
+    id: "fast-jump",
+    title: "Fast Jump",
+    description: "Incremental search that clears highlights on Enter",
+    canExecute: canSearchState,
+    run: (controller) => controller.openFastJump(),
     group: "global",
   },
   {

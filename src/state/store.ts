@@ -224,6 +224,7 @@ export function createInitialState(
     searchScope: null,
     searchStartIndex: null,
     searchIdOnly: false,
+    searchMode: "search",
     diffViewer: null,
     commandBarBookmark: null,
   };
@@ -1045,6 +1046,14 @@ export function clearLastFailedCommand(state: AppState): AppState {
 }
 
 export function openSearch(state: AppState): AppState {
+  return openSearchMode(state, "search");
+}
+
+export function openFastJump(state: AppState): AppState {
+  return openSearchMode(state, "fast-jump");
+}
+
+function openSearchMode(state: AppState, searchMode: AppState["searchMode"]): AppState {
   const searchScope = getSearchScopeForState(state);
   if (searchScope === null) {
     return state;
@@ -1058,6 +1067,7 @@ export function openSearch(state: AppState): AppState {
     searchScope,
     searchStartIndex: getFocusedSearchIndex(state, searchScope),
     searchIdOnly: hasLiveQuery ? state.searchIdOnly : false,
+    searchMode,
   };
   return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "search"]);
 }
@@ -1120,7 +1130,22 @@ export function setSearchText(state: AppState, query: string): AppState {
 }
 
 export function finalizeSearch(state: AppState): AppState {
-  return replaceFocusModeStack({ ...state, searchStartIndex: null }, getBrowseFocusModeStack(state));
+  const finalizedState: AppState = state.searchMode === "fast-jump"
+    ? {
+      ...state,
+      searchQuery: "",
+      searchScope: null,
+      searchStartIndex: null,
+      searchIdOnly: false,
+      searchMode: "search",
+    }
+    : {
+      ...state,
+      searchStartIndex: null,
+      searchMode: "search",
+    };
+
+  return replaceFocusModeStack(finalizedState, getBrowseFocusModeStack(state));
 }
 
 export function closeSearch(state: AppState): AppState {
@@ -1131,6 +1156,7 @@ export function closeSearch(state: AppState): AppState {
       searchScope: null,
       searchStartIndex: null,
       searchIdOnly: false,
+      searchMode: "search",
     }, getBrowseFocusModeStack(state));
   }
 
@@ -1140,6 +1166,7 @@ export function closeSearch(state: AppState): AppState {
     searchScope: null,
     searchStartIndex: null,
     searchIdOnly: false,
+    searchMode: "search",
   };
 }
 

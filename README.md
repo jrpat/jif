@@ -84,6 +84,7 @@ Viewing and navigating the revision log.
 | `L` | edit-revset | Change which revisions are displayed |
 | `ctrl-f` | find-file | Search jj-known files and show revisions that changed the selected file |
 | `/` | search | Incremental search through the revision log |
+| `f` | fast-jump | Incremental search through the revision log, clearing highlights on Enter |
 | `_` | cycle-layout | Rotate loose, normal, and tight layouts |
 
 When the active revset is only `files(...)`, the collapsed status bar shows a `file` chip at the left and starts its shortcuts with `esc log`. Pressing Escape restores the most recent saved revset that is not another pure file filter; if none exists, jif falls back to the configured `revsets.log` value or jj's default log revset.
@@ -236,7 +237,7 @@ Bookmark autocomplete is sorted with the closest ancestor bookmark first (visual
 
 ### Search
 
-Press `/` from the revision log, operation log, or evolog to start an incremental search. Matching text is highlighted with inverse video as you type, and focus snaps to the first match.
+Press `/` from the revision log, operation log, or evolog to start an incremental search. Matching text is highlighted with inverse video as you type, and focus snaps to the first match. Press `f` from the same views to start a fast jump: it uses the same incremental matching, but Enter clears the query and highlights immediately after moving focus.
 
 - **Enter** dismisses the search input but leaves the highlights live. You stay in whatever mode you were in (Normal, Rebase, Squash, Op Log, …), so you can compose commands or multi-select against the matched revision.
 - **Escape (first press)** clears the highlights and the query. **Escape (second press)** runs whatever cancel that mode would normally do — for example, cancelling an in-flight rebase.
@@ -266,6 +267,7 @@ Active while the operation log panel is open. Does not inherit Normal.
 | `d` | show-operation-diff | Show repository changes for the focused operation |
 | `:` | command-bar | Run a jj subcommand |
 | `/` | search | Incremental search through the operation log |
+| `f` | fast-jump | Incremental search through the operation log, clearing highlights on Enter |
 
 ### Evolog
 
@@ -278,6 +280,7 @@ Active while the evolog panel is open. Opened from Normal with `ctrl-e` for the 
 | `G` | jump-to-bottom | Jump to the last evolog entry |
 | `:` | command-bar | Run a jj subcommand |
 | `/` | search | Incremental search through the evolog |
+| `f` | fast-jump | Incremental search through the evolog, clearing highlights on Enter |
 
 ### Notifications
 
@@ -578,6 +581,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `openNotifications()` | Open notification history |
 | `openOperationLog()` | Open the repository operation log |
 | `openFileSearch()` | Open the file search prompt |
+| `openFastJump()` | Open fast jump in the current searchable view |
 | `openRevsetInput(initialQuery?)` | Open the revset prompt, optionally seeded with draft text |
 | `openSearch()` | Open search in the current searchable view |
 | `prevSearchMatch()` | Jump to the previous search match |
@@ -676,6 +680,7 @@ The `app` argument is a read-only snapshot of jif state, plus the ergonomic `rev
 | `revsetQuery` | `string` | Current applied revset |
 | `revsetInputQuery` | `string \| null` | Seed text for the active revset prompt, or `null` |
 | `searchIdOnly` | `boolean` | Whether search is restricted to revision ids |
+| `searchMode` | `"search" \| "fast-jump"` | Search prompt variant currently active |
 | `searchQuery` | `string` | Current search query |
 | `searchScope` | `SearchScopeId \| null` | Active search scope |
 | `searchStartIndex` | `number \| null` | Search start index for cancellation/restoration |

@@ -77,6 +77,7 @@ async function scrollDuringSearch() {
         focused={store.state.focusMode === "search"}
         searchQuery={store.state.searchQuery}
         searchIdOnly={store.state.searchIdOnly}
+        searchMode={store.state.searchMode}
       />
       <Show when={hasVisibleSearchHighlights(store.state)}>
         <SearchHighlightLayer

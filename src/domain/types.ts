@@ -30,6 +30,7 @@ export type FocusMode =
 export type AppLayout = "loose" | "normal" | "tight";
 export type CommandBarKind = "jj" | "shell";
 export type SearchScopeId = "revision-log" | "operation-log" | "evolog";
+export type SearchMode = "search" | "fast-jump";
 
 export type ChangedFile = Readonly<{
   path: string;
@@ -191,6 +192,7 @@ export type AppState = Readonly<{
   searchScope: SearchScopeId | null;
   searchStartIndex: number | null;
   searchIdOnly: boolean;
+  searchMode: SearchMode;
   diffViewer: DiffViewerState | null;
   commandBarBookmark: CommandBarBookmarkContext | null;
 }>;

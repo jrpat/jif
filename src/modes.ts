@@ -138,6 +138,7 @@ export const defaultKeymap: Keymap = {
     "ctrl-l": alias("edit-revset"),
     "ctrl-f": "find-file",
     "/": "search",
+    f: "fast-jump",
     A: "absorb",
     a: "abandon",
     "ctrl-o": "open-operation-log",
@@ -176,6 +177,7 @@ export const defaultKeymap: Keymap = {
     ":": "command-bar",
     "ctrl-;": alias("command-bar"),
     "/": "search",
+    f: "fast-jump",
     "?": "shortcut-panel",
   },
   evolog: {
@@ -187,6 +189,7 @@ export const defaultKeymap: Keymap = {
     ":": "command-bar",
     "ctrl-;": alias("command-bar"),
     "/": "search",
+    f: "fast-jump",
     "?": "shortcut-panel",
   },
   "inline-confirmation": {

@@ -123,6 +123,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     collapseNotification: () => calls.push("collapseNotification"),
     editFocusedNotification: () => calls.push("editFocusedNotification"),
     openSearch: () => calls.push("openSearch"),
+    openFastJump: () => calls.push("openFastJump"),
     openFileSearch: () => calls.push("openFileSearch"),
     restrictRevsetToFocusedFile: () => calls.push("restrictRevsetToFocusedFile"),
     nextSearchMatch: () => calls.push("nextSearchMatch"),
@@ -973,6 +974,25 @@ test("dispatchGlobalKey routes / to openSearch in op-log mode", () => {
   expect(calls).toEqual(["openSearch"]);
 });
 
+test("dispatchGlobalKey routes f to openFastJump in op-log mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "op-log",
+    focusModeStack: ["op-log"],
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "f",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["openFastJump"]);
+});
+
 test("dispatchGlobalKey preserves h as collapse", () => {
   const calls: string[] = [];
   const state = createState();
@@ -1433,6 +1453,21 @@ test("dispatchGlobalKey routes / to openSearch in normal mode", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["openSearch"]);
+});
+
+test("dispatchGlobalKey routes f to openFastJump in normal mode", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "f",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["openFastJump"]);
 });
 
 test("dispatchGlobalKey passes keys through in search mode", () => {

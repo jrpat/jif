@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { closeSearch, createInitialState, finalizeSearch, getSearchMatchIndices, nextSearchMatch, openDiffViewer, openEvolog, openOperationLog, openSearch, prevSearchMatch, setEvologEntries, setOperationLogEntries, setSearchText } from "../src/state/store.ts";
+import { closeSearch, createInitialState, finalizeSearch, getSearchMatchIndices, nextSearchMatch, openDiffViewer, openEvolog, openFastJump, openOperationLog, openSearch, prevSearchMatch, setEvologEntries, setOperationLogEntries, setSearchText } from "../src/state/store.ts";
 import type { AppState, RevisionSummary } from "../src/domain/types.ts";
 import { hasVisibleSearchHighlights } from "../src/search/matching.ts";
 
@@ -80,6 +80,29 @@ test("confirming revision search keeps the matched focus", () => {
   expect(state.focusMode).toBe("revisions");
   expect(state.searchQuery).toBe("first");
   expect(state.searchScope).toBe("revision-log");
+  expect(state.focusedRevisionIndex).toBe(0);
+});
+
+test("confirming fast jump keeps the matched focus and clears highlights", () => {
+  let state: AppState = {
+    ...createInitialState("/tmp/repo"),
+    focusedRevisionIndex: 1,
+    revisions: [
+      createRevision({ rowId: "one", revisionId: "aaaaaaaa", description: "first revision" }),
+      createRevision({ rowId: "two", revisionId: "bbbbbbbb", description: "second revision" }),
+    ],
+  };
+
+  state = openFastJump(state);
+  expect(state.searchMode).toBe("fast-jump");
+  state = setSearchText(state, "first");
+  state = finalizeSearch(state);
+
+  expect(state.focusMode).toBe("revisions");
+  expect(state.searchQuery).toBe("");
+  expect(state.searchScope).toBeNull();
+  expect(state.searchMode).toBe("search");
+  expect(hasVisibleSearchHighlights(state)).toBeFalse();
   expect(state.focusedRevisionIndex).toBe(0);
 });
 

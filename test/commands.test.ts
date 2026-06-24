@@ -157,9 +157,18 @@ test("y, alt-r, and alt-s resolve to duplicate, revert, and split-parallel in no
 
 test("search command only executes in searchable views", () => {
   const searchCommand = commandDefinitions.find((command) => command.id === "search");
+  const fastJumpCommand = commandDefinitions.find((command) => command.id === "fast-jump");
+
   expect(searchCommand?.canExecute?.(createState())).toBeTrue();
+  expect(fastJumpCommand?.canExecute?.(createState())).toBeTrue();
   expect(searchCommand?.canExecute?.({ ...createState(), focusMode: "op-log" })).toBeTrue();
+  expect(fastJumpCommand?.canExecute?.({ ...createState(), focusMode: "op-log" })).toBeTrue();
   expect(searchCommand?.canExecute?.({
+    ...createState(),
+    focusMode: "diff-viewer",
+    diffViewer: { content: "diff" },
+  })).toBeFalse();
+  expect(fastJumpCommand?.canExecute?.({
     ...createState(),
     focusMode: "diff-viewer",
     diffViewer: { content: "diff" },

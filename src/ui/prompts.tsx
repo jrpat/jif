@@ -503,6 +503,7 @@ export function SearchPrompt(props: {
   focused: boolean;
   searchQuery: string;
   searchIdOnly: boolean;
+  searchMode: "search" | "fast-jump";
   onHeightChange?: (height: number) => void;
 }) {
   const { store, config } = props;
@@ -520,7 +521,10 @@ export function SearchPrompt(props: {
     }
   }, { release: true });
 
-  const prefix = createMemo(() => (props.searchIdOnly ? "id " : "/ "));
+  const prefix = createMemo(() => {
+    if (props.searchIdOnly) return "id ";
+    return props.searchMode === "fast-jump" ? "f " : "/ ";
+  });
 
   return (
     <PromptShell

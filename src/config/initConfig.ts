@@ -158,6 +158,7 @@ namespace Jif {
   type AppLayout = "loose" | "normal" | "tight";
   type FocusMode = "revisions" | "files" | "op-log" | "evolog" | "inline-confirmation" | "command" | "revset" | "file-search" | "search" | "diff-viewer" | "notifications";
   type SearchScopeId = "revision-log" | "operation-log" | "evolog";
+  type SearchMode = "search" | "fast-jump";
   type StatusLevel = "info" | "success" | "warning" | "error";
   type RevisionMarker = "working-copy" | "bookmark" | "plain" | "immutable" | "elided";
   type CommandGroup = "global" | "mode" | "cancel";
@@ -260,6 +261,8 @@ namespace Jif {
     searchQuery: string;
     searchScope: SearchScopeId | null;
     searchStartIndex: number | null;
+    searchIdOnly: boolean;
+    searchMode: SearchMode;
     /** Focused revision's jj argument, or "" when nothing is focused. e.g. \`edit \${app.rev}\`. */
     rev: string;
     /** Focused file's path, or "" when nothing is focused. e.g. \`diff \${app.file}\`. */
@@ -336,6 +339,7 @@ namespace Jif {
     showRevisionDiff: () => void;
     showFileDiff: () => void;
     openSearch: () => void;
+    openFastJump: () => void;
     nextSearchMatch: () => void;
     prevSearchMatch: () => void;
     reloadConfig: () => void;

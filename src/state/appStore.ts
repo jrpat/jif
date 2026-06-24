@@ -56,6 +56,7 @@ import {
   setRevsetQuery,
   setSearchText,
   openSearch,
+  openFastJump,
   finalizeSearch,
   nextSearchMatch,
   prevSearchMatch,
@@ -397,6 +398,9 @@ export function createAppStore(
       },
       openSearch() {
         mutate((currentState) => openSearch(currentState));
+      },
+      openFastJump() {
+        mutate((currentState) => openFastJump(currentState));
       },
       setSearchText(query: string) {
         mutate((currentState) => setSearchText(currentState, query));

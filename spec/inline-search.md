@@ -24,6 +24,11 @@ Pressing Enter confirms the search. The focused match remains focused and the
 query remains active, so search-result navigation can continue with `n` and
 `p`.
 
+Pressing `f` enters fast jump when the active view supports search. Fast jump
+uses the same incremental matching and focus movement as search, but pressing
+Enter clears the query and highlights immediately after accepting the focused
+match.
+
 Pressing Escape cancels the active search. The query is cleared and focus
 returns to the item that was focused when search started.
 
@@ -142,6 +147,7 @@ old focus.
 Search follows the mode-stack model described in `spec/ux-philosophy.md`.
 
 - `/` enters search only in searchable modes.
+- `f` enters fast jump only in searchable modes.
 - Text input is handled by search mode.
 - Enter finalizes search and returns to the underlying browse mode.
 - Escape cancels search and returns to the underlying browse mode.

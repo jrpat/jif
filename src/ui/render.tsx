@@ -955,6 +955,7 @@ export function JifView(props: {
             focused={store.state.focusMode === "search"}
             searchQuery={store.state.searchQuery}
             searchIdOnly={store.state.searchIdOnly}
+            searchMode={store.state.searchMode}
             onHeightChange={setPromptSurfaceHeight}
           />
         </Show>

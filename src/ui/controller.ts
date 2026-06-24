@@ -796,6 +796,9 @@ export function createJifCommandController(args: Readonly<{
     openSearch() {
       store.actions.openSearch();
     },
+    openFastJump() {
+      store.actions.openFastJump();
+    },
     nextSearchMatch() {
       store.actions.nextSearchMatch();
     },
