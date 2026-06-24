@@ -112,6 +112,18 @@ test("resolveAppConfig makes the scrollbar thumb three steps more prominent than
   expect(light.colorScheme.semanticColors.chromeScrollbarThumb).toBe("#c2c2c2");
 });
 
+test("resolveAppConfig keeps the focused row fill subtle", () => {
+  const dark = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
+  const light = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_LIGHT,
+  });
+
+  expect(dark.colorScheme.semanticColors.rowFocusedFill).toBe("#120012");
+  expect(light.colorScheme.semanticColors.rowFocusedFill).toBe("#fbebfb");
+});
+
 test("resolveAppConfig defaults log.scrollMargin to 1", () => {
   const resolved = resolveAppConfig(defaultAppConfig);
 

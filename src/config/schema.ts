@@ -101,14 +101,14 @@ export type ResolvedAppConfig = Readonly<{
 const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   // Chrome / containers
   chromeFillOne:          { source: "background",  opacity: 1.0  },
-  chromeFillTwo:          { source: "foreground",  opacity: 0.08 },
+  chromeFillTwo:          { source: "foreground",  opacity: 0.09 },
   chromeFillThree:        { source: "foreground",  opacity: 0.12 },
   chromeScrollbarThumb:   { source: "foreground",  opacity: 0.24 },
   chromeBorderIdle:       { source: "foreground",  opacity: 0.35 },
   chromeBorderFocus:      { source: "blue",        opacity: 1.0  },
 
   // Row states
-  rowFocusedFill:         { source: "magenta",     opacity: 0.12 },
+  rowFocusedFill:         { source: "magenta",     opacity: 0.09 },
   rowSelectedFill:        { source: "green",       opacity: 0.12 },
   rowSelectedAccent:      { source: "green",       opacity: 1.0  },
   rowAffectedFill:        { source: "green",       opacity: 0.12 },

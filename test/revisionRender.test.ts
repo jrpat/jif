@@ -1,4 +1,14 @@
 import { expect, test } from "bun:test";
+import { resolveAppConfig } from "../src/config/index.ts";
+
+function hexToRgb(hex: string): [number, number, number] {
+  const normalized = hex.startsWith("#") ? hex.slice(1) : hex;
+  return [
+    Number.parseInt(normalized.slice(0, 2), 16),
+    Number.parseInt(normalized.slice(2, 4), 16),
+    Number.parseInt(normalized.slice(4, 6), 16),
+  ];
+}
 
 test("normal-layout branch elbow rows keep gutter dividers aligned with focused and unfocused borders", async () => {
   const proc = Bun.spawn({
@@ -21,6 +31,8 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     normalFocused,
     tight,
     tightExpanded,
+    normalFocusedBackgrounds,
+    tightFocusedBackgrounds,
     cycledToTight,
     longTight,
     resizedLongTight,
@@ -40,6 +52,14 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     normalFocused: string;
     tight: string;
     tightExpanded: string;
+    normalFocusedBackgrounds: {
+      graphBg: [number, number, number, number];
+      contentBg: [number, number, number, number];
+    };
+    tightFocusedBackgrounds: {
+      graphBg: [number, number, number, number];
+      contentBg: [number, number, number, number];
+    };
     cycledToTight: string;
     longTight: string;
     resizedLongTight: {
@@ -62,6 +82,8 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     dateChipLongDescriptionTight: string;
   };
 
+  const expectedFocusedBg = hexToRgb(resolveAppConfig({}).colorScheme.semanticColors.rowFocusedFill!);
+
   const dateChipPattern = /\d+(s|m|h|d|w|mo|y)/;
   for (const [layout, frame] of [
     ["loose", dateChipLongDescriptionLoose],
@@ -76,6 +98,8 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
   expect(normalFocused).toContain("│ │ ┌");
   expect(normalFocused).toContain("│ │ └");
   expect(normalFocused).toContain("├─╯");
+  expect(normalFocusedBackgrounds.graphBg.slice(0, 3)).toEqual(expectedFocusedBg);
+  expect(normalFocusedBackgrounds.contentBg.slice(0, 3)).toEqual(expectedFocusedBg);
 
   expect(tight).toContain("├─╯");
   expect(tight).not.toContain("┌");
@@ -83,6 +107,8 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
   expect(tight).not.toContain("└");
   expect(tight).not.toContain("┘");
   expect(tight).not.toContain("─┤");
+  expect(tightFocusedBackgrounds.graphBg.slice(0, 3)).toEqual(expectedFocusedBg);
+  expect(tightFocusedBackgrounds.contentBg.slice(0, 3)).toEqual(expectedFocusedBg);
 
   expect(tightExpanded).toContain("src/layout.ts");
   expect(tightExpanded).not.toContain("┌");

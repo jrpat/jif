@@ -1240,6 +1240,7 @@ export function RevisionItem(props: {
       id={`revision-${props.revision.rowId}`}
       width="100%"
       flexDirection="column"
+      backgroundColor={rowBackgroundColor()}
       opacity={anyExpanded() && !isExpanded() ? 0.6 : 1}
       onMouseDown={(event: MouseEvent) => {
         if (event.button !== MouseButton.LEFT) return;

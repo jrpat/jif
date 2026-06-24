@@ -7,6 +7,9 @@ import type { RevisionSummary } from "../../src/domain/types.ts";
 import { RevisionItem } from "../../src/ui/render.tsx";
 import type { AppLayout } from "../../src/domain/types.ts";
 
+type CapturedSpans = Awaited<ReturnType<typeof testRender>>["captureSpans"] extends () => infer T ? T : never;
+type CapturedSpan = CapturedSpans["lines"][number]["spans"][number];
+
 function createRevision(
   revisionId: string,
   description: string,
@@ -76,6 +79,60 @@ async function renderRevisionStack(
   const frame = rendered.captureCharFrame();
   rendered.renderer.destroy();
   return frame;
+}
+
+function findLineSpan(frame: CapturedSpans, lineText: string, spanText: string): CapturedSpan {
+  const line = frame.lines.find((candidate) =>
+    candidate.spans.map((span) => span.text).join("").includes(lineText)
+  );
+
+  if (!line) {
+    throw new Error(`Expected to find line containing ${lineText}.`);
+  }
+
+  const span = line.spans.find((candidate) => candidate.text.includes(spanText));
+  if (!span) {
+    throw new Error(`Expected to find span containing ${spanText} in line ${lineText}.`);
+  }
+
+  return span;
+}
+
+async function renderFocusedRevisionBackgrounds(layout: AppLayout) {
+  const revisions = [
+    createRevision("curr", "branch", ["│ ○  ", "├─╯  "]),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+
+  const rendered = await testRender(() => (
+    <box width={32} flexDirection="column">
+      <RevisionItem
+        state={store.state}
+        revision={store.state.revisions[0]!}
+        index={0}
+        previousRowId={null}
+        nextRowId={null}
+        config={resolveAppConfig({ commands: { layout } })}
+        focusedRowId="curr"
+        selectedRowIds={new Set()}
+        expandedRowId={null}
+        commandTargetRowId={null}
+      />
+    </box>
+  ), { width: 32, height: 6 });
+
+  await rendered.renderOnce();
+  const spans = rendered.captureSpans();
+  rendered.renderer.destroy();
+
+  return {
+    graphBg: findLineSpan(spans, "cu branch", "○").bg.toInts(),
+    contentBg: findLineSpan(spans, "cu branch", "cu").bg.toInts(),
+  };
 }
 
 async function renderLayoutCycleAfterMount() {
@@ -423,6 +480,8 @@ const normalUnfocused = await renderRevisionStack("normal", null);
 const normalFocused = await renderRevisionStack("normal", "curr");
 const tight = await renderRevisionStack("tight", "curr");
 const tightExpanded = await renderRevisionStack("tight", "curr", "curr");
+const normalFocusedBackgrounds = await renderFocusedRevisionBackgrounds("normal");
+const tightFocusedBackgrounds = await renderFocusedRevisionBackgrounds("tight");
 const cycledToTight = await renderLayoutCycleAfterMount();
 const longTight = await renderLongSuperCondensedDescription();
 const resizedLongTight = await renderLongSuperCondensedDescriptionAfterResize();
@@ -443,6 +502,8 @@ console.log(JSON.stringify({
   normalFocused,
   tight,
   tightExpanded,
+  normalFocusedBackgrounds,
+  tightFocusedBackgrounds,
   cycledToTight,
   longTight,
   resizedLongTight,

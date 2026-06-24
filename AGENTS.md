@@ -37,6 +37,7 @@
 # Testing Policy
 
 - Use real `jj` for integration tests. Do not mock core JJ behavior.
+- Run full test suites and real-`jj` integration tests outside the sandbox with escalation. `jj` may need secure config under `~/.config/jj`, which is outside the writable workspace root.
 - Repo fixtures should be created in temp directories.
 - Keep deterministic sample data checked in and replayable.
 - When UI-specific testing is needed, start with narrow renderer/state coverage before broader interactive checks.
