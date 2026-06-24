@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "clean": "rm -rf dist .tmp",
-    "test": "bun test",
+    "test": "bun test --only-failures",
     "typecheck": "bunx tsc --noEmit",
     "typecheck:workspaces": "bun run --filter '*' typecheck",
     "build": "bun run scripts/build.ts",
@@ -17,7 +17,6 @@
     "sample": "bun run index.ts --sample",
     "dev": "bun run scripts/dev.ts",
     "bin": "bun run scripts/install-binary.ts",
-    "live": "bun run bin && jif",
     "vsc:local": "bun run --cwd ext/vscode install:local"
   },
   "devDependencies": {
