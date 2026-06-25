@@ -27,6 +27,7 @@ test("resolveAppConfig resolves semantic colors from dark fallback palette", () 
   expect(typeof resolved.colorScheme.semanticColors.graphWorkingCopy).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.rowSelectedFill).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.rowSelectedAccent).toBe("string");
+  expect(typeof resolved.colorScheme.semanticColors.promptSuggestionFocusedFill).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.statusError).toBe("string");
 });
 
@@ -121,7 +122,22 @@ test("resolveAppConfig keeps the focused row fill subtle", () => {
   });
 
   expect(dark.colorScheme.semanticColors.rowFocusedFill).toBe("#120012");
-  expect(light.colorScheme.semanticColors.rowFocusedFill).toBe("#fbebfb");
+  expect(light.colorScheme.semanticColors.rowFocusedFill).toBe("#fbe8fb");
+});
+
+test("resolveAppConfig keeps prompt suggestion focus on the old blue fill", () => {
+  const dark = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
+  const light = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_LIGHT,
+  });
+
+  expect(dark.colorScheme.semanticColors.promptSuggestionFocusedFill).toBe("#000024");
+  expect(light.colorScheme.semanticColors.promptSuggestionFocusedFill).toBe("#d9d9fc");
+  expect(dark.colorScheme.semanticColors.promptSuggestionFocusedFill).not.toBe(
+    dark.colorScheme.semanticColors.rowFocusedFill,
+  );
 });
 
 test("resolveAppConfig defaults log.scrollMargin to 1", () => {

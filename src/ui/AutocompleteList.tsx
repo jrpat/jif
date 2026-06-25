@@ -89,7 +89,8 @@ export function AutocompleteList(props: {
           <For each={visibleItems()}>
             {({ item, logicalIndex }) => {
               const isSelected = () => logicalIndex === props.selectedIndex;
-              const backgroundColor = () => isSelected() ? colors.rowFocusedFill : colors.chromeFillTwo;
+              const backgroundColor = () =>
+                isSelected() ? colors.promptSuggestionFocusedFill : colors.chromeFillTwo;
               return (
                 <box
                   id={`autocomplete-${logicalIndex}`}

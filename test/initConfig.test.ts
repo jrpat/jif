@@ -37,6 +37,7 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(typesText).toContain("declare global {");
   expect(typesText).toContain("namespace Jif {");
   expect(typesText).toContain("type Config = Readonly<{");
+  expect(typesText).toContain('"promptSuggestionFocusedFill"');
   expect(typesText).toContain("rev: string");
   expect(typesText).toContain("file: string");
   expect(typesText).toContain("focusedRevision: RevisionSummary | null");

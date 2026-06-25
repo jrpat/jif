@@ -425,6 +425,8 @@ jif --config-base ~/work/team.jif.ts --config-override ~/.config/jif/personal-ov
 
 The color configuration supports `light`, `dark`, and `auto` theme mode. In `auto`, startup queries the terminal background color and picks the light or dark theme accordingly. jif also re-queries when the terminal regains focus (and when it reports a color-scheme change), so switching your system between light and dark while jif is in the background takes effect as soon as you focus the terminal again.
 
+Autocomplete suggestion focus is controlled separately from revision-row focus. Override `colorScheme.colors.promptSuggestionFocusedFill` to change the highlighted suggestion background without changing `rowFocusedFill`.
+
 </details>
 
 <details>

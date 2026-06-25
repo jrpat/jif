@@ -22,6 +22,7 @@ export type SemanticColorScheme = Readonly<{
   chromeScrollbarThumb: SemanticColorValue;
   chromeBorderIdle: SemanticColorValue;
   chromeBorderFocus: SemanticColorValue;
+  promptSuggestionFocusedFill: SemanticColorValue;
   rowFocusedFill: SemanticColorValue;
   rowSelectedFill: SemanticColorValue;
   rowSelectedAccent: SemanticColorValue;
@@ -106,6 +107,7 @@ const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   chromeScrollbarThumb:   { source: "foreground",  opacity: 0.24 },
   chromeBorderIdle:       { source: "foreground",  opacity: 0.35 },
   chromeBorderFocus:      { source: "blue",        opacity: 1.0  },
+  promptSuggestionFocusedFill: { source: "blue",   opacity: 0.15 },
 
   // Row states
   rowFocusedFill:         { source: "magenta",     opacity: 0.09 },

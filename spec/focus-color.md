@@ -46,3 +46,9 @@ shades follow.
   opacity for large fills, higher opacity for thin borders and text.
 - The accent for the focused state is the same color used for the revision-id
   prefix; keep those two in sync so the focused revision reads as one color.
+
+This principle applies to revision-row states, not every focused surface in the
+application. The input prompt's autocomplete list is prompt chrome, so its
+focused suggestion background uses `promptSuggestionFocusedFill` instead of
+`rowFocusedFill`; changing the focused revision accent must not recolor prompt
+suggestion selection.

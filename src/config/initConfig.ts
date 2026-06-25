@@ -176,6 +176,7 @@ namespace Jif {
   type SemanticColorKey =
     | "chromeFillOne" | "chromeFillTwo" | "chromeFillThree" | "chromeScrollbarThumb"
     | "chromeBorderIdle" | "chromeBorderFocus"
+    | "promptSuggestionFocusedFill"
     | "rowFocusedFill" | "rowSelectedFill" | "rowSelectedAccent" | "rowAffectedFill"
     | "rowCommandTargetBorder" | "rowBorderIdle" | "rowBorderFocus" | "rowBorderSelected" | "rowBorderCommandTarget"
     | "graphWorkingCopy" | "graphPlain" | "graphImmutable" | "graphBookmark"

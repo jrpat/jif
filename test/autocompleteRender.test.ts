@@ -1,4 +1,14 @@
 import { expect, test } from "bun:test";
+import { resolveAppConfig } from "../src/config/index.ts";
+
+function hexToRgb(hex: string): [number, number, number] {
+  const normalized = hex.startsWith("#") ? hex.slice(1) : hex;
+  return [
+    Number.parseInt(normalized.slice(0, 2), 16),
+    Number.parseInt(normalized.slice(2, 4), 16),
+    Number.parseInt(normalized.slice(4, 6), 16),
+  ];
+}
 
 test("autocomplete list keeps a blank parent row above suggestions and highlights padded selection columns", async () => {
   const proc = Bun.spawn({
@@ -27,6 +37,9 @@ test("autocomplete list keeps a blank parent row above suggestions and highlight
   const beforeSpan = selectedLineSpans[selectedTextIndex - 1];
   const selectedSpan = selectedLineSpans[selectedTextIndex];
   const afterSpan = selectedLineSpans[selectedTextIndex + 1];
+  const colors = resolveAppConfig({}).colorScheme.semanticColors;
+  const expectedFocusedSuggestionBg = hexToRgb(colors.promptSuggestionFocusedFill!);
+  const expectedFocusedRowBg = hexToRgb(colors.rowFocusedFill!);
 
   expect(firstLine.trim()).toBe("");
   expect(lastLine).toStartWith(" ");
@@ -40,4 +53,6 @@ test("autocomplete list keeps a blank parent row above suggestions and highlight
   expect(beforeSpan?.bg).toEqual(selectedSpan?.bg);
   expect(afterSpan?.text).toMatch(/\s+/);
   expect(afterSpan?.bg).toEqual(selectedSpan?.bg);
+  expect(selectedSpan?.bg.slice(0, 3)).toEqual(expectedFocusedSuggestionBg);
+  expect(selectedSpan?.bg.slice(0, 3)).not.toEqual(expectedFocusedRowBg);
 }, 20000);
