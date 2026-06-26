@@ -26,11 +26,13 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(configText).toContain("colorScheme: {");
   expect(configText).toContain("colors: {");
   expect(configText).toContain("log: {");
+  expect(configText).toContain("refresh: {");
   expect(configText).toContain("commands: {");
   expect(configText).toContain("keymap: {");
   expect(configText).toContain("normal: {");
   expect(configText).toContain('// chromeBorderFocus: "#00cdcd",');
   expect(configText).toContain('// scrollMargin: 1,');
+  expect(configText).toContain("// intervalMs: 0,");
   expect(configText).toContain('// layout: "normal",');
   expect(configText).toContain("if (!app.rev) return;");
   expect(configText).toContain("return cmd.jji(`show -r ${app.rev}`);");
@@ -38,6 +40,7 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(typesText).toContain("namespace Jif {");
   expect(typesText).toContain("type Config = Readonly<{");
   expect(typesText).toContain('"promptSuggestionFocusedFill"');
+  expect(typesText).toContain("intervalMs?: number");
   expect(typesText).toContain("rev: string");
   expect(typesText).toContain("file: string");
   expect(typesText).toContain("focusedRevision: RevisionSummary | null");

@@ -1,5 +1,5 @@
 import type { FailedCommand, StatusLevel, StatusMessageVariant } from "../domain/types.ts";
-import { tokenizeCommandText } from "../jj/client.ts";
+import { tokenizeCommandText, type WorkingCopyRefreshOptions } from "../jj/client.ts";
 import { buildForceRetryPlan } from "../jj/forceRetry.ts";
 import { isHelpJjCommand } from "./interactive-subcommands.ts";
 import { SPINNER_INTERVAL_MS, formatSpinnerText } from "../ui/spinner.ts";
@@ -82,7 +82,7 @@ export function createCommandRunner(args: Readonly<{
   executeShellCommand?(commandText: string, options?: { cwd?: string }): Promise<string>;
   executeInteractiveCommandArgs?(commandArgs: readonly string[], options?: { cwd?: string }): Promise<void>;
   executeInteractiveShellCommand?(commandText: string, options?: { cwd?: string }): Promise<void>;
-  refreshRepository(): Promise<boolean>;
+  refreshRepository(options?: WorkingCopyRefreshOptions): Promise<boolean>;
   createToastId?(): string;
   spinnerScheduler?: SpinnerScheduler;
 }>) {
@@ -138,7 +138,7 @@ export function createCommandRunner(args: Readonly<{
         const successVariant: StatusMessageVariant | undefined =
           executor === "jj" && isHelpJjCommand(command.commandText) ? "help" : undefined;
         publishSuccess(args.actions, toastId, resultMessage, options.successFeedback, successVariant);
-        await args.refreshRepository();
+        await args.refreshRepository({ workingCopy: "read-only" });
         if (options.focusWorkingCopyAfterRefresh) {
           args.actions.focusWorkingCopy();
         }

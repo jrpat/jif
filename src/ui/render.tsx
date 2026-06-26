@@ -86,7 +86,7 @@ import {
   getActiveMode,
 } from "../modes.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
-import { bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
+import { bindAutoRefresh, bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { createFocusClickGuard } from "./focusClickGuard.ts";
 import { suspendProcessToShell } from "./suspend.ts";
 import { openTextInEditor } from "./openTextInEditor.ts";
@@ -173,7 +173,7 @@ export function JifView(props: {
         renderer.resume();
       }
     },
-    refreshRepository,
+    refreshRepository: (options) => refreshRepository(undefined, undefined, options),
   });
   const runtime = createJifRuntime({
     store,
@@ -182,7 +182,7 @@ export function JifView(props: {
     persistence,
     getWorkspaceRoot: workspaceRoot,
     getShellCwd: () => process.cwd(),
-    refreshRepository,
+    refreshRepository: (revset, options) => refreshRepository(revset, undefined, options),
   });
   const configuredKeymap = createMemo(() => resolveConfiguredKeymap(rawConfig().keymap));
   const focusClickGuard = createFocusClickGuard(renderer);
@@ -211,8 +211,8 @@ export function JifView(props: {
       const initialLoad = await startInitialRepositoryLoad({
         initialRevisionLimit,
         detectAndApplyPalette,
-        loadWorkspaceRoot: () => client.loadWorkspaceRoot().catch(() => null),
-        loadDefaultRevset: () => client.loadDefaultRevset(),
+        loadWorkspaceRoot: () => client.loadWorkspaceRoot({ workingCopy: "read-only" }).catch(() => null),
+        loadDefaultRevset: () => client.loadDefaultRevset({ workingCopy: "read-only" }),
         loadSavedRevset: (resolvedWorkspaceRoot) => persistence.loadActiveRevset(resolvedWorkspaceRoot),
         refreshRepository,
         setWorkspaceRoot,
@@ -224,7 +224,10 @@ export function JifView(props: {
         },
       });
       setReady(true);
-      const disposeFocusRefresh = bindRefreshOnFocus(renderer, () => refreshRepository());
+      const disposeFocusRefresh = bindRefreshOnFocus(
+        renderer,
+        () => refreshRepository(undefined, undefined, { workingCopy: "read-only" }),
+      );
       onCleanup(() => disposeFocusRefresh());
       if (canLoadMoreRevisions()) {
         queueDeferredRepositoryLoad({
@@ -243,6 +246,18 @@ export function JifView(props: {
       setTerminalSize,
     });
     onCleanup(() => disposeRendererEvents());
+  });
+
+  createEffect(() => {
+    if (!ready()) {
+      return;
+    }
+
+    const disposeAutoRefresh = bindAutoRefresh({
+      intervalMs: config.refresh.intervalMs,
+      refreshRepository: (options) => refreshRepository(undefined, undefined, options),
+    });
+    onCleanup(() => disposeAutoRefresh());
   });
 
   const controller = createJifCommandController({
@@ -269,7 +284,7 @@ export function JifView(props: {
       },
     }),
     reloadConfig,
-    refreshRepository,
+    refreshRepository: (options) => refreshRepository(undefined, undefined, options),
     expandElidedRevisions: runtime.expandElidedRevisions,
     persistLayout: (layout) => persistence.saveLayoutPreference(layout),
     getDiffViewport: () => diffViewport,
@@ -681,7 +696,7 @@ export function JifView(props: {
     const nextLimit = Math.max(currentRevisionLoadLimit(), store.state.revisions.length) + DEFAULT_REPOSITORY_LOAD_LIMIT;
     setLoadingMoreRevisions(true);
     try {
-      await refreshRepository(undefined, nextLimit);
+      await refreshRepository(undefined, nextLimit, { workingCopy: "read-only" });
     } finally {
       setLoadingMoreRevisions(false);
     }

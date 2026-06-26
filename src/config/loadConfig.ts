@@ -92,7 +92,7 @@ async function discoverProjectLocalConfig(startDir: string): Promise<AppConfig> 
 
 export async function resolveWorkspaceRoot(startDir: string): Promise<string | null> {
   try {
-    const result = await runCommand(resolve(startDir), ["jj", "workspace", "root"]);
+    const result = await runCommand(resolve(startDir), ["jj", "--ignore-working-copy", "workspace", "root"]);
     const root = result.stdout.trim();
     return root.length > 0 ? root : null;
   } catch {

@@ -365,6 +365,53 @@ test("loadEvolog passes --color and --ignore-working-copy with -r", async () => 
   ]);
 });
 
+test("loadRepository can ignore the working copy for passive refreshes", async () => {
+  const client = new JjClient(REPO_PATH);
+  let capturedArgs: readonly string[] = [];
+  let capturedOptions: { workingCopy?: string } | undefined;
+
+  (client as unknown as {
+    runJj(
+      args: readonly string[],
+      options?: { workingCopy?: string },
+    ): Promise<{ stdout: string; stderr: string; exitCode: number }>;
+  }).runJj = async (args, options) => {
+    capturedArgs = args;
+    capturedOptions = options;
+    return { stdout: "", stderr: "", exitCode: 0 };
+  };
+
+  await client.loadRepository(7, "mine()", { workingCopy: "read-only" });
+
+  expect(capturedArgs).toContain("log");
+  expect(capturedArgs).toContain("--limit");
+  expect(capturedArgs).toContain("7");
+  expect(capturedArgs).toContain("mine()");
+  expect(capturedOptions?.workingCopy).toBe("read-only");
+});
+
+test("verifyRepository can ignore the working copy for passive refreshes", async () => {
+  const client = new JjClient(REPO_PATH);
+  let capturedArgs: readonly string[] = [];
+  let capturedOptions: { workingCopy?: string } | undefined;
+
+  (client as unknown as {
+    runJj(
+      args: readonly string[],
+      options?: { workingCopy?: string },
+    ): Promise<{ stdout: string; stderr: string; exitCode: number }>;
+  }).runJj = async (args, options) => {
+    capturedArgs = args;
+    capturedOptions = options;
+    return { stdout: "", stderr: "", exitCode: 0 };
+  };
+
+  await client.verifyRepository({ workingCopy: "read-only" });
+
+  expect(capturedArgs).toEqual(["root"]);
+  expect(capturedOptions?.workingCopy).toBe("read-only");
+});
+
 test("loadOperationLog keeps jj graph output enabled", async () => {
   const client = new JjClient(REPO_PATH);
   let capturedArgs: readonly string[] = [];

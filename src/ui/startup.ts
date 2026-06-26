@@ -1,6 +1,7 @@
 import { CliRenderEvents, type TerminalColors } from "@opentui/core";
 import type { AppLayout } from "../domain/types.ts";
 import { resolveAppConfig, type AppConfig, type ResolvedAppConfig } from "../config/schema.ts";
+import type { RepositoryRefreshOptions } from "./repositoryRefresh.ts";
 
 export type InitialRepositoryLoad = Readonly<{
   workspaceRoot: string | null;
@@ -101,14 +102,14 @@ export function queueDeferredRepositoryLoad(args: Readonly<{
   backgroundRevisionLimit: number;
   revset?: string;
   schedule(task: () => void): void;
-  refreshRepository(revset?: string, limit?: number): Promise<unknown>;
+  refreshRepository(revset?: string, limit?: number, options?: RepositoryRefreshOptions): Promise<unknown>;
 }>): boolean {
   if (args.initialRevisionLimit >= args.backgroundRevisionLimit) {
     return false;
   }
 
   args.schedule(() => {
-    void args.refreshRepository(args.revset, args.backgroundRevisionLimit);
+    void args.refreshRepository(args.revset, args.backgroundRevisionLimit, { workingCopy: "read-only" });
   });
 
   return true;
@@ -120,7 +121,7 @@ export function startInitialRepositoryLoad(args: {
   loadWorkspaceRoot: () => Promise<string | null>;
   loadDefaultRevset: () => Promise<string>;
   loadSavedRevset: (workspaceRoot: string) => Promise<string>;
-  refreshRepository: (revset?: string, limit?: number) => Promise<unknown>;
+  refreshRepository: (revset?: string, limit?: number, options?: RepositoryRefreshOptions) => Promise<unknown>;
   setWorkspaceRoot: (workspaceRoot: string | null) => void;
   setRevsetQuery: (query: string) => void;
   focusWorkingCopy: () => void;
@@ -143,7 +144,7 @@ export function startInitialRepositoryLoad(args: {
       args.setRevsetQuery(initialRevset);
     }
 
-    await args.refreshRepository(initialRevset || undefined, args.initialRevisionLimit);
+    await args.refreshRepository(initialRevset || undefined, args.initialRevisionLimit, { workingCopy: "read-only" });
     args.focusWorkingCopy();
 
     return {

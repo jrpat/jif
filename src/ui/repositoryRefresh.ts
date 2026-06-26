@@ -1,10 +1,17 @@
 import { CliRenderEvents, type CliRenderer } from "@opentui/core";
 import type { RepositoryData, StatusLevel } from "../domain/types.ts";
-import { DEFAULT_REPOSITORY_LOAD_LIMIT } from "../jj/client.ts";
+import {
+  DEFAULT_REPOSITORY_LOAD_LIMIT,
+  type WorkingCopyRefreshOptions,
+} from "../jj/client.ts";
 
 type RepositoryRefreshClient = {
-  verifyRepository(): Promise<void>;
-  loadRepository(limit?: number, revset?: string): Promise<RepositoryData>;
+  verifyRepository(options?: WorkingCopyRefreshOptions): Promise<void>;
+  loadRepository(
+    limit?: number,
+    revset?: string,
+    options?: WorkingCopyRefreshOptions,
+  ): Promise<RepositoryData>;
 };
 
 type RepositoryRefreshActions = {
@@ -19,6 +26,8 @@ export type RepositoryRefreshSuccess = Readonly<{
   canLoadMore: boolean;
 }>;
 
+export type RepositoryRefreshOptions = WorkingCopyRefreshOptions;
+
 export function createRepositoryRefresher(args: {
   client: RepositoryRefreshClient;
   actions: RepositoryRefreshActions;
@@ -28,7 +37,11 @@ export function createRepositoryRefresher(args: {
   let refreshInFlight: Promise<boolean> | null = null;
   let currentRevisionLimit = DEFAULT_REPOSITORY_LOAD_LIMIT;
 
-  return async function refreshRepository(revset?: string, limit?: number): Promise<boolean> {
+  return async function refreshRepository(
+    revset?: string,
+    limit?: number,
+    options?: RepositoryRefreshOptions,
+  ): Promise<boolean> {
     if (refreshInFlight) {
       return refreshInFlight;
     }
@@ -37,8 +50,8 @@ export function createRepositoryRefresher(args: {
     const effectiveLimit = limit ?? currentRevisionLimit;
     refreshInFlight = (async () => {
       try {
-        await args.client.verifyRepository();
-        const repositoryData = await args.client.loadRepository(effectiveLimit, effectiveRevset);
+        await args.client.verifyRepository(options);
+        const repositoryData = await args.client.loadRepository(effectiveLimit, effectiveRevset, options);
         currentRevisionLimit = effectiveLimit;
         args.actions.applyRepositoryData(repositoryData);
         args.onRefreshSuccess?.({
@@ -58,6 +71,39 @@ export function createRepositoryRefresher(args: {
     })();
 
     return refreshInFlight;
+  };
+}
+
+type RefreshScheduler = Readonly<{
+  setInterval(callback: () => void, delayMs: number): ReturnType<typeof globalThis.setInterval>;
+  clearInterval(handle: ReturnType<typeof globalThis.setInterval>): void;
+}>;
+
+const defaultRefreshScheduler: RefreshScheduler = {
+  setInterval(callback, delayMs) {
+    return globalThis.setInterval(callback, delayMs);
+  },
+  clearInterval(handle) {
+    globalThis.clearInterval(handle);
+  },
+};
+
+export function bindAutoRefresh(args: Readonly<{
+  intervalMs: number;
+  refreshRepository(options?: RepositoryRefreshOptions): Promise<boolean>;
+  scheduler?: RefreshScheduler;
+}>): () => void {
+  if (args.intervalMs <= 0) {
+    return () => {};
+  }
+
+  const scheduler = args.scheduler ?? defaultRefreshScheduler;
+  const handle = scheduler.setInterval(() => {
+    void args.refreshRepository({ workingCopy: "read-only" });
+  }, args.intervalMs);
+
+  return () => {
+    scheduler.clearInterval(handle);
   };
 }
 

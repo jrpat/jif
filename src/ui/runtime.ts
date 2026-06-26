@@ -7,7 +7,7 @@ import type {
 } from "../commands/definitions.ts";
 import { isAlwaysInteractiveJjCommand } from "../commands/interactive-subcommands.ts";
 import type { RevisionSummary } from "../domain/types.ts";
-import type { JjClient } from "../jj/client.ts";
+import type { JjClient, WorkingCopyRefreshOptions } from "../jj/client.ts";
 import type { PersistenceService } from "../persistence/service.ts";
 import { isFilesOnlyRevset } from "../revset/files.ts";
 import type { AppStore } from "../state/appStore.ts";
@@ -35,7 +35,7 @@ export function createJifRuntime(args: Readonly<{
   persistence: RuntimePersistence;
   getWorkspaceRoot(): string | null;
   getShellCwd(): string;
-  refreshRepository(revset?: string): Promise<boolean>;
+  refreshRepository(revset?: string, options?: WorkingCopyRefreshOptions): Promise<boolean>;
 }>) {
   const { store, client, commandRunner, persistence } = args;
 
@@ -44,7 +44,7 @@ export function createJifRuntime(args: Readonly<{
     store.actions.setRevsetQuery(query);
     store.actions.closeRevsetInput();
 
-    const success = await args.refreshRepository(query || undefined);
+    const success = await args.refreshRepository(query || undefined, { workingCopy: "read-only" });
     if (success) {
       const workspaceRoot = args.getWorkspaceRoot();
       if (workspaceRoot) {
@@ -59,7 +59,7 @@ export function createJifRuntime(args: Readonly<{
     }
 
     store.actions.setRevsetQuery(previousQuery);
-    void args.refreshRepository(previousQuery || undefined);
+    void args.refreshRepository(previousQuery || undefined, { workingCopy: "read-only" });
   };
 
   return {

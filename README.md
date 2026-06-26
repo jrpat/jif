@@ -430,6 +430,23 @@ Autocomplete suggestion focus is controlled separately from revision-row focus. 
 </details>
 
 <details>
+<summary>Refresh Settings</summary>
+
+Auto-refresh is disabled by default. Set `refresh.intervalMs` to periodically reload the visible repository state:
+
+```ts
+export default {
+	refresh: {
+		intervalMs: 5000,
+	},
+} satisfies Jif.Config;
+```
+
+Set `intervalMs` to `0` to disable auto-refresh. Positive values below `1000` are clamped to `1000` ms. Automatic refreshes are passive: jif runs its repository reads with `--ignore-working-copy` so multiple worktrees and background agents do not get their working copies snapshotted by the timer. Use `ctrl-r` when you intentionally want to snapshot and refresh the current worktree.
+
+</details>
+
+<details>
 <summary>Revision IDs</summary>
 
 Revision IDs default to the longest unique prefix across the visible log. You can show a few extra characters with:

@@ -128,6 +128,7 @@ test("command runner records history and updates a status toast on success", asy
   const { entries, actions } = createActionLog();
   const history: string[] = [];
   let refreshCount = 0;
+  const refreshOptions: Array<{ workingCopy?: string }> = [];
 
   const runner = createCommandRunner({
     actions,
@@ -135,8 +136,9 @@ test("command runner records history and updates a status toast on success", asy
       entries.push(`execute:${commandArgs.join(" ")}`);
       return "ok";
     },
-    refreshRepository: async () => {
+    refreshRepository: async (options) => {
       refreshCount += 1;
+      refreshOptions.push(options ?? {});
       entries.push("refreshRepository");
       return true;
     },
@@ -156,6 +158,7 @@ test("command runner records history and updates a status toast on success", asy
 
   expect(history).toEqual(["describe -r abc"]);
   expect(refreshCount).toBe(1);
+  expect(refreshOptions).toEqual([{ workingCopy: "read-only" }]);
   expect(entries).toEqual([
     "cancelCommand",
     "pushStatusMessage:toast-1:info:⠋ describe -r abc",

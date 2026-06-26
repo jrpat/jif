@@ -2,7 +2,12 @@ import { EventEmitter } from "node:events";
 import { expect, test } from "bun:test";
 import { CliRenderEvents } from "@opentui/core";
 import type { RepositoryData, StatusLevel } from "../src/domain/types.ts";
-import { bindRefreshOnFocus, createRepositoryRefresher } from "../src/ui/repositoryRefresh.ts";
+import {
+  bindAutoRefresh,
+  bindRefreshOnFocus,
+  createRepositoryRefresher,
+  type RepositoryRefreshOptions,
+} from "../src/ui/repositoryRefresh.ts";
 
 function createRepositoryData(): RepositoryData {
   return {
@@ -59,6 +64,40 @@ test("createRepositoryRefresher reloads using the active revset", async () => {
     "load:mine()",
   ]);
   expect(appliedRepositoryData).toEqual(repositoryData);
+});
+
+test("createRepositoryRefresher forwards the working-copy refresh mode", async () => {
+  const calls: string[] = [];
+
+  const refreshRepository = createRepositoryRefresher({
+    client: {
+      async verifyRepository(options) {
+        calls.push(`verify:${options?.workingCopy ?? "snapshot"}`);
+      },
+      async loadRepository(_limit, _revset, options) {
+        calls.push(`load:${options?.workingCopy ?? "snapshot"}`);
+        return createRepositoryData();
+      },
+    },
+    actions: {
+      setLoading() {},
+      applyRepositoryData() {},
+      pushEvent() {
+        throw new Error("refresh should not fail");
+      },
+    },
+    getRevsetQuery: () => "",
+  });
+
+  await refreshRepository(undefined, undefined, { workingCopy: "read-only" });
+  await refreshRepository(undefined, undefined, { workingCopy: "snapshot" });
+
+  expect(calls).toEqual([
+    "verify:read-only",
+    "load:read-only",
+    "verify:snapshot",
+    "load:snapshot",
+  ]);
 });
 
 test("createRepositoryRefresher forwards an explicit revision load limit", async () => {
@@ -248,4 +287,53 @@ test("bindRefreshOnFocus refreshes on focus and unsubscribes cleanly", async () 
   renderer.emit(CliRenderEvents.FOCUS);
   await Promise.resolve();
   expect(refreshCalls).toBe(1);
+});
+
+test("bindAutoRefresh schedules read-only refreshes and unsubscribes cleanly", async () => {
+  const callbacks: Array<() => void> = [];
+  const cleared: unknown[] = [];
+  const refreshOptions: RepositoryRefreshOptions[] = [];
+
+  const dispose = bindAutoRefresh({
+    intervalMs: 5000,
+    refreshRepository: async (options) => {
+      refreshOptions.push(options ?? {});
+      return true;
+    },
+    scheduler: {
+      setInterval(callback, delayMs) {
+        expect(delayMs).toBe(5000);
+        callbacks.push(callback);
+        return "handle" as unknown as ReturnType<typeof globalThis.setInterval>;
+      },
+      clearInterval(handle) {
+        cleared.push(handle);
+      },
+    },
+  });
+
+  expect(callbacks).toHaveLength(1);
+  callbacks[0]!();
+  await Promise.resolve();
+
+  expect(refreshOptions).toEqual([{ workingCopy: "read-only" }]);
+  dispose();
+  expect(cleared).toEqual(["handle"]);
+});
+
+test("bindAutoRefresh skips disabled intervals", () => {
+  const dispose = bindAutoRefresh({
+    intervalMs: 0,
+    refreshRepository: async () => true,
+    scheduler: {
+      setInterval() {
+        throw new Error("disabled auto-refresh should not schedule");
+      },
+      clearInterval() {
+        throw new Error("disabled auto-refresh should not clear");
+      },
+    },
+  });
+
+  dispose();
 });

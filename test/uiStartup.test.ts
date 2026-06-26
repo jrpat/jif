@@ -42,8 +42,8 @@ test("startInitialRepositoryLoad awaits palette detection before refreshing", as
       events.push(`saved-revset.load:${workspaceRoot}`);
       return "";
     },
-    refreshRepository: async (revset, limit) => {
-      events.push(`refresh:${revset}:${limit}`);
+    refreshRepository: async (revset, limit, options) => {
+      events.push(`refresh:${revset}:${limit}:${options?.workingCopy ?? "snapshot"}`);
       return true;
     },
     setWorkspaceRoot: (workspaceRoot) => {
@@ -63,7 +63,7 @@ test("startInitialRepositoryLoad awaits palette detection before refreshing", as
   });
   // palette.done must appear before refresh — it's awaited in Promise.all
   const paletteIndex = events.indexOf("palette.done");
-  const refreshIndex = events.indexOf("refresh:all():21");
+  const refreshIndex = events.indexOf("refresh:all():21:read-only");
   expect(paletteIndex).toBeGreaterThanOrEqual(0);
   expect(refreshIndex).toBeGreaterThan(paletteIndex);
   // focus on the working-copy revision must run after the refresh lands
@@ -78,7 +78,8 @@ test("startInitialRepositoryLoad prefers saved revset over default revset", asyn
     loadWorkspaceRoot: async () => "/repo",
     loadDefaultRevset: async () => "default()",
     loadSavedRevset: async () => "mine()",
-    refreshRepository: async (revset, limit) => revset === "mine()" && limit === 34,
+    refreshRepository: async (revset, limit, options) =>
+      revset === "mine()" && limit === 34 && options?.workingCopy === "read-only",
     setWorkspaceRoot: () => {},
     setRevsetQuery: () => {},
     focusWorkingCopy: () => {},
@@ -92,7 +93,11 @@ test("startInitialRepositoryLoad prefers saved revset over default revset", asyn
 
 test("queueDeferredRepositoryLoad schedules a follow-up refresh after the initial render", async () => {
   const scheduled: Array<() => void> = [];
-  const refreshCalls: Array<{ revset: string | undefined; limit: number | undefined }> = [];
+  const refreshCalls: Array<{
+    revset: string | undefined;
+    limit: number | undefined;
+    workingCopy: string | undefined;
+  }> = [];
 
   const queued = queueDeferredRepositoryLoad({
     initialRevisionLimit: 21,
@@ -101,8 +106,8 @@ test("queueDeferredRepositoryLoad schedules a follow-up refresh after the initia
     schedule(task) {
       scheduled.push(task);
     },
-    refreshRepository: async (revset, limit) => {
-      refreshCalls.push({ revset, limit });
+    refreshRepository: async (revset, limit, options) => {
+      refreshCalls.push({ revset, limit, workingCopy: options?.workingCopy });
       return true;
     },
   });
@@ -114,7 +119,7 @@ test("queueDeferredRepositoryLoad schedules a follow-up refresh after the initia
   scheduled[0]!();
   await Promise.resolve();
 
-  expect(refreshCalls).toEqual([{ revset: "mine()", limit: 250 }]);
+  expect(refreshCalls).toEqual([{ revset: "mine()", limit: 250, workingCopy: "read-only" }]);
 });
 
 test("queueDeferredRepositoryLoad skips the follow-up refresh when the initial load already hit the ceiling", () => {

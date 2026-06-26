@@ -106,6 +106,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   const expandElidedCalls: number[] = [];
   const appliedRevsetQueries: string[] = [];
   const restoredLogRevsetCalls: string[] = [];
+  const refreshOptions: Array<{ workingCopy?: string }> = [];
   const persistedLayouts: string[] = [];
   let suspendCalls = 0;
   let executeCurrentCommandCalls = 0;
@@ -190,7 +191,10 @@ function createControllerHarness(harnessOptions: Readonly<{
     reloadConfig: async () => {
       reloadConfigCalls += 1;
     },
-    refreshRepository: async () => true,
+    refreshRepository: async (options) => {
+      refreshOptions.push(options ?? {});
+      return true;
+    },
     applyRevsetQuery: async (query) => {
       appliedRevsetQueries.push(query);
     },
@@ -222,6 +226,7 @@ function createControllerHarness(harnessOptions: Readonly<{
     expandElidedCalls,
     appliedRevsetQueries,
     restoredLogRevsetCalls,
+    refreshOptions,
     persistedLayouts,
     editorTexts,
     resolveAbsorbSources,
@@ -252,6 +257,15 @@ test("reloadConfig delegates to the injected config reload hook", () => {
   harness.controller.reloadConfig();
 
   expect(harness.reloadConfigCalls).toBe(1);
+  harness.store.dispose();
+});
+
+test("manual refresh snapshots the working copy", () => {
+  const harness = createControllerHarness({ revisions: [] });
+
+  harness.controller.refreshRepository();
+
+  expect(harness.refreshOptions).toEqual([{ workingCopy: "snapshot" }]);
   harness.store.dispose();
 });
 

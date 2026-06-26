@@ -70,6 +70,9 @@ export type AppConfig = Readonly<{
     scrollMargin?: number;
     revisionIdAdditionalChars?: number;
   }>;
+  refresh?: Readonly<{
+    intervalMs?: number;
+  }>;
   commands?: Readonly<{
     shortFlags?: boolean;
     layout?: AppLayout;
@@ -87,6 +90,9 @@ export type ResolvedAppConfig = Readonly<{
   log: Readonly<{
     scrollMargin: number;
     revisionIdAdditionalChars: number;
+  }>;
+  refresh: Readonly<{
+    intervalMs: number;
   }>;
   commands: Readonly<{
     shortFlags: boolean;
@@ -269,6 +275,9 @@ export function resolveAppConfig(
       scrollMargin: config.log?.scrollMargin ?? 1,
       revisionIdAdditionalChars: config.log?.revisionIdAdditionalChars ?? 0,
     },
+    refresh: {
+      intervalMs: resolveRefreshIntervalMs(config.refresh?.intervalMs),
+    },
     commands: {
       shortFlags: config.commands?.shortFlags ?? true,
       layout: config.commands?.layout ?? "normal",
@@ -277,6 +286,14 @@ export function resolveAppConfig(
       historyLimit: Math.max(1, Math.floor(config.notifications?.historyLimit ?? 50)),
     },
   };
+}
+
+function resolveRefreshIntervalMs(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value) || value <= 0) {
+    return 0;
+  }
+
+  return Math.max(1000, Math.floor(value));
 }
 
 // Pre-palette fallback: resolve against the dark xterm fallback palette

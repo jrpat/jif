@@ -59,6 +59,7 @@ function createRuntimeHarness(options: Readonly<{
 
   const commandRuns: CommandRunOptions[] = [];
   const refreshCalls: Array<string | undefined> = [];
+  const refreshOptions: Array<{ workingCopy?: string }> = [];
   const recordedCommandHistory: string[] = [];
   const recordedShellHistory: string[] = [];
   const recordedRevsetHistory: string[] = [];
@@ -99,8 +100,9 @@ function createRuntimeHarness(options: Readonly<{
     },
     getWorkspaceRoot: () => options.workspaceRoot === undefined ? REPO_PATH : options.workspaceRoot,
     getShellCwd: () => options.shellCwd ?? "/tmp/parent-shell",
-    refreshRepository: async (revset) => {
+    refreshRepository: async (revset, refreshOption) => {
       refreshCalls.push(revset);
+      refreshOptions.push(refreshOption ?? {});
       const result = options.refreshResults?.[refreshIndex];
       refreshIndex += 1;
       return result ?? true;
@@ -112,6 +114,7 @@ function createRuntimeHarness(options: Readonly<{
     runtime,
     commandRuns,
     refreshCalls,
+    refreshOptions,
     recordedCommandHistory,
     recordedShellHistory,
     recordedRevsetHistory,
@@ -336,6 +339,7 @@ test("applyRevsetQuery persists successful revset changes", async () => {
   expect(harness.store.state.revsetQuery).toBe("mine()");
   expect(harness.store.state.focusMode).toBe("revisions");
   expect(harness.refreshCalls).toEqual(["mine()"]);
+  expect(harness.refreshOptions).toEqual([{ workingCopy: "read-only" }]);
   // The revset switched away from ("old()") becomes the most recent history
   // entry, so the previous revset is one keystroke away.
   expect(harness.recordedRevsetHistory).toEqual(["old()"]);
@@ -365,6 +369,10 @@ test("applyRevsetQuery restores the previous revset after a failed refresh", asy
 
   expect(harness.store.state.revsetQuery).toBe("old()");
   expect(harness.refreshCalls).toEqual(["mine()", "old()"]);
+  expect(harness.refreshOptions).toEqual([
+    { workingCopy: "read-only" },
+    { workingCopy: "read-only" },
+  ]);
   expect(harness.recordedRevsetHistory).toEqual([]);
   expect(harness.savedActiveRevsets).toEqual([]);
   harness.store.dispose();

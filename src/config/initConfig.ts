@@ -127,6 +127,9 @@ export default {
     // scrollMargin: 1,
     // revisionIdAdditionalChars: 0,
   },
+  refresh: {
+    // intervalMs: 0,
+  },
   commands: {
     // shortFlags: true,
     // layout: "normal",
@@ -398,6 +401,9 @@ namespace Jif {
     log?: Readonly<{
       scrollMargin?: number;
       revisionIdAdditionalChars?: number;
+    }>;
+    refresh?: Readonly<{
+      intervalMs?: number;
     }>;
     commands?: Readonly<{
       shortFlags?: boolean;

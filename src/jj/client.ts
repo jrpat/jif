@@ -22,6 +22,17 @@ const LOG_TEMPLATE = buildLogTemplate(getMaxRevisionBaseGraphRowCount());
 const FALLBACK_REPOSITORY_LOAD_LIMIT = 250;
 const FALLBACK_OPERATION_LOG_LIMIT = 200;
 
+export type WorkingCopyRefreshMode = "snapshot" | "read-only";
+
+export type WorkingCopyRefreshOptions = Readonly<{
+  workingCopy?: WorkingCopyRefreshMode;
+}>;
+
+type JjRunOptions = Readonly<{
+  color?: boolean;
+  cwd?: string;
+}> & WorkingCopyRefreshOptions;
+
 export function resolveRepositoryLoadLimit(
   rawValue = process.env.JIF_REPOSITORY_LOAD_LIMIT,
   fallback = FALLBACK_REPOSITORY_LOAD_LIMIT,
@@ -40,7 +51,11 @@ export const DEFAULT_OPERATION_LOG_LIMIT = FALLBACK_OPERATION_LOG_LIMIT;
 export class JjClient {
   constructor(readonly repoPath: string) {}
 
-  async loadRepository(limit = DEFAULT_REPOSITORY_LOAD_LIMIT, revset?: string): Promise<RepositoryData> {
+  async loadRepository(
+    limit = DEFAULT_REPOSITORY_LOAD_LIMIT,
+    revset?: string,
+    options?: WorkingCopyRefreshOptions,
+  ): Promise<RepositoryData> {
     const args = [
       "log",
       "--limit",
@@ -53,7 +68,7 @@ export class JjClient {
     if (revset) {
       args.push("-r", revset);
     }
-    const logOutput = await this.runJj(args);
+    const logOutput = await this.runJj(args, options);
 
     const revisions = parseLogOutput(logOutput.stdout);
 
@@ -252,18 +267,18 @@ export class JjClient {
     return stderr || stdout || `Executed: jj ${quoteCommand(args)}`;
   }
 
-  async verifyRepository(): Promise<void> {
-    await this.runJj(["root"]);
+  async verifyRepository(options?: WorkingCopyRefreshOptions): Promise<void> {
+    await this.runJj(["root"], options);
   }
 
-  async loadWorkspaceRoot(): Promise<string> {
-    const result = await this.runJj(["workspace", "root"]);
+  async loadWorkspaceRoot(options?: WorkingCopyRefreshOptions): Promise<string> {
+    const result = await this.runJj(["workspace", "root"], options);
     return result.stdout.trim();
   }
 
-  async loadDefaultRevset(): Promise<string> {
+  async loadDefaultRevset(options?: WorkingCopyRefreshOptions): Promise<string> {
     try {
-      const result = await this.runJj(["config", "get", "revsets.log"]);
+      const result = await this.runJj(["config", "get", "revsets.log"], options);
       return result.stdout.trim();
     } catch {
       return "";
@@ -411,8 +426,11 @@ export class JjClient {
     }
   }
 
-  private async runJj(args: readonly string[], options?: { color?: boolean; cwd?: string }) {
-    return await runCommand(options?.cwd ?? this.repoPath, ["jj", ...args], options);
+  private async runJj(args: readonly string[], options?: JjRunOptions) {
+    const workingCopyArgs = options?.workingCopy === "read-only"
+      ? ["--ignore-working-copy"]
+      : [];
+    return await runCommand(options?.cwd ?? this.repoPath, ["jj", ...workingCopyArgs, ...args], options);
   }
 }
 

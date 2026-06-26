@@ -152,6 +152,37 @@ test("resolveAppConfig defaults log.revisionIdAdditionalChars to 0", () => {
   expect(resolved.log.revisionIdAdditionalChars).toBe(0);
 });
 
+test("resolveAppConfig defaults refresh.intervalMs to 0", () => {
+  const resolved = resolveAppConfig(defaultAppConfig);
+
+  expect(resolved.refresh.intervalMs).toBe(0);
+});
+
+test("resolveAppConfig applies refresh.intervalMs", () => {
+  const config: AppConfig = {
+    refresh: {
+      intervalMs: 5000,
+    },
+  };
+
+  const resolved = resolveAppConfig(config);
+
+  expect(resolved.refresh.intervalMs).toBe(5000);
+});
+
+test("resolveAppConfig disables invalid refresh intervals", () => {
+  expect(resolveAppConfig({ refresh: { intervalMs: 0 } }).refresh.intervalMs).toBe(0);
+  expect(resolveAppConfig({ refresh: { intervalMs: -1 } }).refresh.intervalMs).toBe(0);
+  expect(resolveAppConfig({ refresh: { intervalMs: Number.NaN } }).refresh.intervalMs).toBe(0);
+  expect(resolveAppConfig({ refresh: { intervalMs: Number.POSITIVE_INFINITY } }).refresh.intervalMs).toBe(0);
+});
+
+test("resolveAppConfig floors and clamps positive refresh intervals", () => {
+  expect(resolveAppConfig({ refresh: { intervalMs: 1 } }).refresh.intervalMs).toBe(1000);
+  expect(resolveAppConfig({ refresh: { intervalMs: 999 } }).refresh.intervalMs).toBe(1000);
+  expect(resolveAppConfig({ refresh: { intervalMs: 1500.9 } }).refresh.intervalMs).toBe(1500);
+});
+
 test("resolveAppConfig applies log.revisionIdAdditionalChars", () => {
   const config: AppConfig = {
     log: {
