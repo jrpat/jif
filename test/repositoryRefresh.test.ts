@@ -269,24 +269,24 @@ test("createRepositoryRefresher reports refresh failures and clears loading", as
   expect(events).toEqual([{ text: "Not a jj workspace", level: "error" }]);
 });
 
-test("bindRefreshOnFocus refreshes on focus and unsubscribes cleanly", async () => {
+test("bindRefreshOnFocus snapshots the working copy on focus and unsubscribes cleanly", async () => {
   class FakeRenderer extends EventEmitter {}
 
   const renderer = new FakeRenderer();
-  let refreshCalls = 0;
-  const dispose = bindRefreshOnFocus(renderer, async () => {
-    refreshCalls += 1;
+  const refreshOptions: RepositoryRefreshOptions[] = [];
+  const dispose = bindRefreshOnFocus(renderer, async (options) => {
+    refreshOptions.push(options ?? {});
     return true;
   });
 
   renderer.emit(CliRenderEvents.FOCUS);
   await Promise.resolve();
-  expect(refreshCalls).toBe(1);
+  expect(refreshOptions).toEqual([{ workingCopy: "snapshot" }]);
 
   dispose();
   renderer.emit(CliRenderEvents.FOCUS);
   await Promise.resolve();
-  expect(refreshCalls).toBe(1);
+  expect(refreshOptions).toEqual([{ workingCopy: "snapshot" }]);
 });
 
 test("bindAutoRefresh schedules read-only refreshes and unsubscribes cleanly", async () => {

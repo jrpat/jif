@@ -226,7 +226,7 @@ export function JifView(props: {
       setReady(true);
       const disposeFocusRefresh = bindRefreshOnFocus(
         renderer,
-        () => refreshRepository(undefined, undefined, { workingCopy: "read-only" }),
+        (options) => refreshRepository(undefined, undefined, options),
       );
       onCleanup(() => disposeFocusRefresh());
       if (canLoadMoreRevisions()) {

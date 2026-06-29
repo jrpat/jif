@@ -114,10 +114,10 @@ type FocusRefreshRenderer = {
 
 export function bindRefreshOnFocus(
   renderer: FocusRefreshRenderer,
-  refreshRepository: () => Promise<boolean>,
+  refreshRepository: (options?: RepositoryRefreshOptions) => Promise<boolean>,
 ): () => void {
   const handleFocus = () => {
-    void refreshRepository();
+    void refreshRepository({ workingCopy: "snapshot" });
   };
 
   renderer.on(CliRenderEvents.FOCUS, handleFocus);

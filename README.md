@@ -445,7 +445,7 @@ export default {
 } satisfies Jif.Config;
 ```
 
-Set `intervalMs` to `0` to disable auto-refresh. Positive values below `1000` are clamped to `1000` ms. Automatic refreshes are passive: jif runs its repository reads with `--ignore-working-copy` so multiple worktrees and background agents do not get their working copies snapshotted by the timer. Use `ctrl-r` when you intentionally want to snapshot and refresh the current worktree.
+Set `intervalMs` to `0` to disable auto-refresh. Positive values below `1000` are clamped to `1000` ms. Interval refreshes are passive: jif runs timer-based repository reads with `--ignore-working-copy` so multiple worktrees and background agents do not get their working copies snapshotted by the timer. Regaining terminal focus and pressing `ctrl-r` snapshot and refresh the current worktree.
 
 </details>
 
