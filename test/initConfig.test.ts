@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "bun:test";
 import { createTempDir } from "./helpers/tempRepo.ts";
-import { initProjectConfig, initUserConfig } from "../src/config/initConfig.ts";
+import { initProjectConfig, initUserConfig, refreshUserConfigTypes } from "../src/config/initConfig.ts";
 import { runCommand } from "../src/jj/process.ts";
 
 test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
@@ -72,6 +72,35 @@ test("initUserConfig refreshes an existing jif.d.ts", async () => {
   expect(result.updatedTypes).toBeTrue();
   expect(await readFile(typesPath, "utf8")).toContain("declare global {");
   expect(await readFile(typesPath, "utf8")).toContain("namespace Jif {");
+});
+
+test("refreshUserConfigTypes rewrites jif.d.ts without creating config.ts", async () => {
+  const configDir = await createTempDir("refresh-user-config-types");
+  const typesPath = join(configDir, "jif.d.ts");
+  await writeFile(typesPath, "export {};\n", "utf8");
+
+  const result = await refreshUserConfigTypes({ configDir });
+
+  expect(result.configDir).toBe(configDir);
+  expect(result.typesPath).toBe(typesPath);
+  expect(result.createdTypes).toBeFalse();
+  expect(result.updatedTypes).toBeTrue();
+  expect(await readFile(typesPath, "utf8")).toContain("type Config = Readonly<{");
+  expect(await Bun.file(join(configDir, "config.ts")).exists()).toBeFalse();
+});
+
+test("refreshUserConfigTypes writes jif.d.ts next to an explicit config path", async () => {
+  const configDir = await createTempDir("refresh-explicit-config-types");
+  const configPath = join(configDir, "custom-config.ts");
+  await writeFile(configPath, "export default {};\n", "utf8");
+
+  const result = await refreshUserConfigTypes({ configPath });
+
+  expect(result.configDir).toBe(configDir);
+  expect(result.typesPath).toBe(join(configDir, "jif.d.ts"));
+  expect(result.createdTypes).toBeTrue();
+  expect(result.updatedTypes).toBeFalse();
+  expect(await readFile(result.typesPath, "utf8")).toContain("namespace Jif {");
 });
 
 test("initProjectConfig seeds config.ts under the workspace .jj/jif directory", async () => {

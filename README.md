@@ -352,6 +352,9 @@ Run `jif init-config` to create a starter user config. The command creates:
 
 If a config file already exists, `jif init-config` leaves it alone and only fills in missing support files.
 
+jif also rewrites the generated `jif.d.ts` on normal startup for your user config directory, or next to the file passed with `--config`, so editor type hints stay current after upgrades.
+Startup never rewrites your `config.ts`.
+
 To seed a project-local config instead, pass `--project` (or `-p`):
 
 ```bash

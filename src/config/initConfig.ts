@@ -1,8 +1,9 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   CONFIG_CANDIDATES,
   projectConfigDir,
+  resolveConfigFilePath,
   resolveUserConfigDir,
   resolveWorkspaceRoot,
 } from "./loadConfig.ts";
@@ -11,10 +12,13 @@ const GENERATED_TYPES_FILENAME = "jif.d.ts";
 const DEFAULT_CONFIG_FILENAME = "config.ts";
 
 type SeedConfigResult = Readonly<{
-  configDir: string;
   configPath: string;
-  typesPath: string;
   createdConfig: boolean;
+}> & ConfigTypesResult;
+
+type ConfigTypesResult = Readonly<{
+  configDir: string;
+  typesPath: string;
   createdTypes: boolean;
   updatedTypes: boolean;
 }>;
@@ -29,6 +33,17 @@ export async function initUserConfig(options: Readonly<{
   configDir?: string;
 }> = {}): Promise<InitUserConfigResult> {
   return seedConfig(options.configDir ?? resolveUserConfigDir());
+}
+
+export async function refreshUserConfigTypes(options: Readonly<{
+  configDir?: string;
+  configPath?: string;
+}> = {}): Promise<ConfigTypesResult> {
+  const configDir = options.configDir
+    ?? (options.configPath !== undefined
+      ? dirname(resolveConfigFilePath(options.configPath))
+      : resolveUserConfigDir());
+  return writeGeneratedConfigTypes(configDir);
 }
 
 export async function initProjectConfig(options: Readonly<{
@@ -46,8 +61,6 @@ export async function initProjectConfig(options: Readonly<{
 }
 
 async function seedConfig(configDir: string): Promise<SeedConfigResult> {
-  const typesPath = join(configDir, GENERATED_TYPES_FILENAME);
-
   await mkdir(configDir, { recursive: true });
 
   const existingConfigPath = await findExistingConfigPath(configDir);
@@ -55,6 +68,20 @@ async function seedConfig(configDir: string): Promise<SeedConfigResult> {
   const createdConfig = existingConfigPath === null
     ? await writeIfMissing(configPath, renderPlaceholderConfig())
     : false;
+  const typesResult = await writeGeneratedConfigTypes(configDir);
+
+  return {
+    ...typesResult,
+    configPath,
+    createdConfig,
+  };
+}
+
+async function writeGeneratedConfigTypes(configDir: string): Promise<ConfigTypesResult> {
+  const typesPath = join(configDir, GENERATED_TYPES_FILENAME);
+
+  await mkdir(configDir, { recursive: true });
+
   const renderedTypes = renderConfigTypes();
   const existingTypes = await readOptionalText(typesPath);
   const createdTypes = existingTypes === null;
@@ -63,9 +90,7 @@ async function seedConfig(configDir: string): Promise<SeedConfigResult> {
 
   return {
     configDir,
-    configPath,
     typesPath,
-    createdConfig,
     createdTypes,
     updatedTypes,
   };

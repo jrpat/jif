@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { formatUsageText, parseCommand, type InitConfigOptions, type RunOptions } from "./cliOptions.ts";
-import { initProjectConfig, initUserConfig } from "./config/initConfig.ts";
+import { initProjectConfig, initUserConfig, refreshUserConfigTypes } from "./config/initConfig.ts";
 import { loadAppConfig } from "./config/loadConfig.ts";
 import { logShortcutDebug } from "./debug.ts";
 import { materializeSampleRepoCachedViaCli } from "./dev/sampleRepoLauncher.ts";
@@ -56,6 +56,10 @@ async function runApp(argv: readonly string[], options: RunOptions): Promise<voi
         fixturePath,
       })).repoPath
     : process.cwd();
+
+  await refreshUserConfigTypes(
+    options.configReplacement === undefined ? {} : { configPath: options.configReplacement },
+  );
 
   const loadRuntimeConfig = async () => {
     const { raw, resolved: loadedConfig } = await loadAppConfig({

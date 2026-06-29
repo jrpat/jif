@@ -34,7 +34,7 @@ export async function loadAppConfig(options: Readonly<{
   const overrideLayerPaths = options.overrideLayerPaths ?? [];
 
   const userLayer = options.replaceUserConfigPath !== undefined
-    ? await loadConfigFile(resolveLayerPath(options.replaceUserConfigPath))
+    ? await loadConfigFile(resolveConfigFilePath(options.replaceUserConfigPath))
     : await discoverUserConfig(options.configDir);
 
   const projectLayer = options.projectStartDir !== undefined
@@ -43,12 +43,12 @@ export async function loadAppConfig(options: Readonly<{
 
   const baseLayers: AppConfig[] = [];
   for (const path of baseLayerPaths) {
-    baseLayers.push(await loadConfigFile(resolveLayerPath(path)));
+    baseLayers.push(await loadConfigFile(resolveConfigFilePath(path)));
   }
 
   const overrideLayers: AppConfig[] = [];
   for (const path of overrideLayerPaths) {
-    overrideLayers.push(await loadConfigFile(resolveLayerPath(path)));
+    overrideLayers.push(await loadConfigFile(resolveConfigFilePath(path)));
   }
 
   const raw = mergeConfigLayers([
@@ -132,7 +132,7 @@ async function loadConfigFile(absolutePath: string): Promise<AppConfig> {
   }
 }
 
-function resolveLayerPath(input: string): string {
+export function resolveConfigFilePath(input: string): string {
   if (input === "~") return homedir();
   if (input.startsWith("~/")) return resolve(homedir(), input.slice(2));
   return resolve(input);
