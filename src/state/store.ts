@@ -1664,6 +1664,89 @@ export function toggleSquashAnchor(
   };
 }
 
+export function selectAbsorbDescendants(state: AppState): AppState {
+  const draft = state.commandDraft;
+  if (draft?.config.kind !== "absorb" || !draft.absorbSourceRevisionId) {
+    return state;
+  }
+
+  const focusedRevision = getFocusedRevision(state);
+  if (!focusedRevision) {
+    return state;
+  }
+  if (!state.revisions.some((revision) => revision.revisionId === draft.absorbSourceRevisionId)) {
+    return state;
+  }
+
+  const sourceAncestorIds = collectVisibleAncestorRevisionIds(
+    state,
+    draft.absorbSourceRevisionId,
+  );
+  const focusedDescendantIds = collectVisibleDescendantRevisionIds(
+    state,
+    focusedRevision.revisionId,
+  );
+  const selectedRowIds = state.revisions
+    .filter((revision) =>
+      sourceAncestorIds.has(revision.revisionId) &&
+      focusedDescendantIds.has(revision.revisionId)
+    )
+    .map((revision) => revision.rowId);
+
+  return {
+    ...state,
+    selectedRowIds,
+    markedRowIds: selectedRowIds,
+  };
+}
+
+function collectVisibleAncestorRevisionIds(
+  state: AppState,
+  revisionId: string,
+): ReadonlySet<string> {
+  const revisionsById = new Map(
+    state.revisions.map((revision) => [revision.revisionId, revision]),
+  );
+  const result = new Set<string>();
+  const pending = [revisionId];
+
+  while (pending.length > 0) {
+    const current = revisionsById.get(pending.pop()!);
+    for (const parentId of current?.parentRevisionIds ?? []) {
+      if (result.has(parentId)) {
+        continue;
+      }
+      result.add(parentId);
+      pending.push(parentId);
+    }
+  }
+
+  return result;
+}
+
+function collectVisibleDescendantRevisionIds(
+  state: AppState,
+  revisionId: string,
+): ReadonlySet<string> {
+  const result = new Set<string>([revisionId]);
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    for (const revision of state.revisions) {
+      if (result.has(revision.revisionId)) {
+        continue;
+      }
+      if (revision.parentRevisionIds?.some((parentId) => result.has(parentId))) {
+        result.add(revision.revisionId);
+        changed = true;
+      }
+    }
+  }
+
+  return result;
+}
+
 export function toggleRevisionSelection(state: AppState): AppState {
   const focusedRevision = getFocusedRevision(state);
   if (!focusedRevision) {
@@ -2036,6 +2119,10 @@ export function getCommandTargetRevisionId(state: AppState): string | null {
     return null;
   }
 
+  if (state.commandDraft.config.kind === "absorb") {
+    return getAbsorbSourceRevision(state)?.revisionId ?? null;
+  }
+
   if (state.commandDraft.config.kind === "set-parents") {
     return getSetParentsSubject(state)?.revisionId ?? null;
   }
@@ -2073,6 +2160,10 @@ export function getCommandChipTextForRevision(
   }
 
   if (draft.config.kind === "absorb") {
+    const source = getAbsorbSourceRevision(state);
+    if (source?.rowId === rowId) {
+      return "absorb";
+    }
     if (state.selectedRowIds.includes(rowId)) {
       return draft.config.sourceBadgeText;
     }
@@ -2125,6 +2216,10 @@ export function getCommandTargetRowId(state: AppState): string | null {
     return null;
   }
 
+  if (state.commandDraft.config.kind === "absorb") {
+    return getAbsorbSourceRevision(state)?.rowId ?? null;
+  }
+
   if (state.commandDraft.config.kind === "set-parents") {
     return getSetParentsSubject(state)?.rowId ?? null;
   }
@@ -2135,6 +2230,14 @@ export function getCommandTargetRowId(state: AppState): string | null {
   }
 
   return focusedRevision.rowId;
+}
+
+function getAbsorbSourceRevision(state: AppState): RevisionSummary | null {
+  const draft = state.commandDraft;
+  if (!draft || draft.config.kind !== "absorb" || !draft.absorbSourceRevisionId) {
+    return null;
+  }
+  return state.revisions.find((revision) => revision.revisionId === draft.absorbSourceRevisionId) ?? null;
 }
 
 export function getMarkedRowIds(state: AppState): ReadonlySet<string> {

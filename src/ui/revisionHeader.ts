@@ -47,14 +47,14 @@ export function getRevisionCommandChipBgColor(options: Readonly<{
   rowState: RevisionRowState;
   colors: Readonly<{
     rowSelectedAccent: string | undefined;
-    chromeBorderFocus: string | undefined;
+    revsetPrefix: string | undefined;
   }>;
 }>): string | undefined {
   switch (options.rowState) {
     case "selected":
       return options.colors.rowSelectedAccent;
     default:
-      return options.colors.chromeBorderFocus;
+      return options.colors.revsetPrefix;
   }
 }
 

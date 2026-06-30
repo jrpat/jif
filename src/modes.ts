@@ -226,7 +226,9 @@ export const defaultKeymap: Keymap = {
     "=": "interdiff-swap",
   },
   diff: {},
-  absorb: {},
+  absorb: {
+    s: "absorb-descendants",
+  },
   command: {},
   revset: {},
   "file-search": {},

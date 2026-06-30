@@ -69,6 +69,7 @@ export type CommandController = Readonly<{
   restoreFiles: () => void;
   untrackFiles: () => void;
   startAbsorb: () => void;
+  selectAbsorbDescendants: () => void;
   selectPreviousInlineConfirmationOption: () => void;
   selectNextInlineConfirmationOption: () => void;
   toggleShortFlags: () => void;
@@ -693,6 +694,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Swap from/to",
     description: "Swap whether the focused and selected revisions are the --from or --to of the interdiff",
     run: (controller) => controller.toggleInterdiffSwap(),
+    group: "mode",
+  },
+  {
+    id: "absorb-descendants",
+    title: "Select Descendants",
+    description: "Select absorb targets from the focused revision, stopping before the absorb source",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.selectAbsorbDescendants(),
     group: "mode",
   },
   {

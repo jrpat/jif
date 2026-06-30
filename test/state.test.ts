@@ -26,6 +26,7 @@ import {
   getFocusedInsertArg,
   focusWorkingCopy,
   getCommandChipTextForRevision,
+  getCommandTargetRowId,
   getDisplayedCommandSegments,
   getDisplayedCommandText,
   getMarkedRowIds,
@@ -53,6 +54,7 @@ import {
   setRevisionFiles,
   startCommandDraft,
   startSquashOnto,
+  selectAbsorbDescendants,
   toggleFileSelection,
   getOperationAffectedRowIds,
   setRebaseSourceKind,
@@ -192,6 +194,50 @@ function createAbsorbState(): AppState {
       base(ABSORB_ANC1_ROW_ID, "bbbbbbbb", "b0000000", "plain"),
       base(ABSORB_ANC2_ROW_ID, "cccccccc", "c0000000", "plain"),
       base(ABSORB_SRC_ROW_ID, "dddddddd", "d0000000", "plain"),
+    ],
+  };
+}
+
+const ABSORB_STACK_SOURCE_ROW_ID = createRowId("a1000000", "aaaaaaaa");
+const ABSORB_STACK_CHILD_ROW_ID = createRowId("b1000000", "bbbbbbbb");
+const ABSORB_STACK_SIDE_ROW_ID = createRowId("e1000000", "eeeeeeee");
+const ABSORB_STACK_FOCUSED_ROW_ID = createRowId("c1000000", "cccccccc");
+const ABSORB_STACK_BASE_ROW_ID = createRowId("d1000000", "dddddddd");
+
+function createAbsorbDescendantState(): AppState {
+  const revision = (
+    rowId: string,
+    revisionId: string,
+    commitId: string,
+    parentRevisionIds: readonly string[],
+    marker: RevisionSummary["marker"] = "plain",
+  ): RevisionSummary => ({
+    rowId,
+    revisionId,
+    parentRevisionIds,
+    changeIdPrefixLength: 1,
+    commitId,
+    description: revisionId,
+    localTimestamp: "2026-03-30 07:22:39",
+    bookmarks: [],
+    workspaces: [],
+    graphRows: ["○  "],
+    isEmpty: false,
+    hasConflict: false,
+    marker,
+    filesLoaded: true,
+    files: [],
+  });
+
+  return {
+    ...createInitialState("/tmp/repo"),
+    loading: false,
+    revisions: [
+      revision(ABSORB_STACK_SOURCE_ROW_ID, "aaaaaaaa", "a1000000", ["bbbbbbbb"], "working-copy"),
+      revision(ABSORB_STACK_CHILD_ROW_ID, "bbbbbbbb", "b1000000", ["cccccccc"]),
+      revision(ABSORB_STACK_SIDE_ROW_ID, "eeeeeeee", "e1000000", ["cccccccc"]),
+      revision(ABSORB_STACK_FOCUSED_ROW_ID, "cccccccc", "c1000000", ["dddddddd"]),
+      revision(ABSORB_STACK_BASE_ROW_ID, "dddddddd", "d1000000", []),
     ],
   };
 }
@@ -1037,7 +1083,7 @@ test("absorb preselects the source's ancestor candidates and enters absorb mode"
   expect(state.focusedRevisionIndex).toBe(0);
 });
 
-test("absorb chips each candidate but not the source revision", () => {
+test("absorb chips each candidate and marks the source revision", () => {
   let state = createAbsorbState();
   state = startCommandDraft(state, draftConfigs.absorb, {
     presetRevisionIds: ["bbbbbbbb", "cccccccc"],
@@ -1046,7 +1092,8 @@ test("absorb chips each candidate but not the source revision", () => {
 
   expect(getCommandChipTextForRevision(state, ABSORB_ANC1_ROW_ID)).toBe("into");
   expect(getCommandChipTextForRevision(state, ABSORB_ANC2_ROW_ID)).toBe("into");
-  expect(getCommandChipTextForRevision(state, ABSORB_WC_ROW_ID)).toBeNull();
+  expect(getCommandChipTextForRevision(state, ABSORB_WC_ROW_ID)).toBe("absorb");
+  expect(getCommandTargetRowId(state)).toBe(ABSORB_WC_ROW_ID);
 });
 
 test("absorb runs plain absorb from the working copy while the set is unchanged", () => {
@@ -1154,6 +1201,67 @@ test("absorb advances focus after toggling a target in either direction", () => 
   state = toggleRevisionSelection(state);
   expect(state.selectedRowIds).toEqual([ABSORB_ANC2_ROW_ID, ABSORB_ANC1_ROW_ID]);
   expect(state.focusedRevisionIndex).toBe(2);
+});
+
+test("absorb descendant selection replaces targets with the focused-to-source chain", () => {
+  let state = createAbsorbDescendantState();
+  state = startCommandDraft(state, draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb", "cccccccc", "dddddddd"],
+    absorbSourceRevisionId: "aaaaaaaa",
+  });
+
+  state = focusRevisionAt(state, 3);
+  state = selectAbsorbDescendants(state);
+
+  expect(state.selectedRowIds).toEqual([
+    ABSORB_STACK_CHILD_ROW_ID,
+    ABSORB_STACK_FOCUSED_ROW_ID,
+  ]);
+  expect(state.markedRowIds).toEqual([
+    ABSORB_STACK_CHILD_ROW_ID,
+    ABSORB_STACK_FOCUSED_ROW_ID,
+  ]);
+  expect(state.selectedRowIds).not.toContain(ABSORB_STACK_SOURCE_ROW_ID);
+  expect(state.selectedRowIds).not.toContain(ABSORB_STACK_SIDE_ROW_ID);
+  expect(getDisplayedCommandText(state)).toBe("absorb -t b|c");
+});
+
+test("absorb descendant selection clears targets when focus is off the source path", () => {
+  let state = createAbsorbDescendantState();
+  state = startCommandDraft(state, draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb", "cccccccc", "dddddddd"],
+    absorbSourceRevisionId: "aaaaaaaa",
+  });
+
+  state = focusRevisionAt(state, 2);
+  state = selectAbsorbDescendants(state);
+
+  expect(state.selectedRowIds).toEqual([]);
+  expect(state.markedRowIds).toEqual([]);
+  expect(getDisplayedCommandText(state)).toBe("absorb");
+});
+
+test("absorb descendant selection is a no-op when the source is no longer visible", () => {
+  let state = createAbsorbDescendantState();
+  state = startCommandDraft(state, draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb", "cccccccc"],
+    absorbSourceRevisionId: "aaaaaaaa",
+  });
+  state = {
+    ...state,
+    revisions: state.revisions.filter((revision) => revision.rowId !== ABSORB_STACK_SOURCE_ROW_ID),
+  };
+
+  const next = selectAbsorbDescendants(state);
+
+  expect(next.selectedRowIds).toEqual([
+    ABSORB_STACK_CHILD_ROW_ID,
+    ABSORB_STACK_FOCUSED_ROW_ID,
+  ]);
+  expect(next.markedRowIds).toEqual([
+    ABSORB_STACK_CHILD_ROW_ID,
+    ABSORB_STACK_FOCUSED_ROW_ID,
+  ]);
 });
 
 test("pushEvent appends visible status messages instead of replacing them", () => {

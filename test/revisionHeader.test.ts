@@ -302,21 +302,21 @@ test("getRevisionCommandChipBgColor matches selected row accent", () => {
     rowState: "selected",
     colors: {
       rowSelectedAccent: "selected",
-      chromeBorderFocus: "focus",
+      revsetPrefix: "prefix",
     },
   });
 
   expect(color).toBe("selected");
 });
 
-test("getRevisionCommandChipBgColor keeps focused rows on focus chrome", () => {
+test("getRevisionCommandChipBgColor uses the focused revision accent for target rows", () => {
   const color = getRevisionCommandChipBgColor({
     rowState: "focused",
     colors: {
       rowSelectedAccent: "selected",
-      chromeBorderFocus: "focus",
+      revsetPrefix: "prefix",
     },
   });
 
-  expect(color).toBe("focus");
+  expect(color).toBe("prefix");
 });

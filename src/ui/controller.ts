@@ -762,6 +762,9 @@ export function createJifCommandController(args: Readonly<{
     toggleInterdiffSwap() {
       store.actions.toggleInterdiffSwap();
     },
+    selectAbsorbDescendants() {
+      store.actions.selectAbsorbDescendants();
+    },
     toggleSquashAnchor() {
       const state = store.snapshot();
       if (state.commandDraft?.config.kind !== "squash") {

@@ -356,6 +356,7 @@ namespace Jif {
     toggleRebaseSkipEmptied: () => void;
     toggleSquashAnchor: () => void;
     toggleInterdiffSwap: () => void;
+    selectAbsorbDescendants: () => void;
     undo: () => void;
     redo: () => void;
     focusWorkingCopy: () => void;
@@ -409,6 +410,7 @@ namespace Jif {
     | "squash"
     | "interdiff"
     | "diff"
+    | "absorb"
     | "command"
     | "revset"
     | "search"

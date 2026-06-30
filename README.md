@@ -212,7 +212,11 @@ Active while previewing a diff between two revisions. Inherits Normal. Composes 
 
 ### Absorb
 
-Active while composing an absorb. Inherits Normal. The source is the revision focused when you pressed `A`, and its mutable ancestors (the revisions `jj absorb` would consider by default) are preselected, each tagged with an `into` chip. Use `space` to toggle candidate targets — like selecting in Normal mode, the focus advances to the next revision on each toggle — then `enter` to apply, or `escape` to cancel. Leaving the preselected set unchanged runs plain `jj absorb` (with `--from <source>` when the source is not the working copy); changing it constrains the operation with `--into <selected revisions>`.
+Active while composing an absorb. Inherits Normal. The source is the revision focused when you pressed `A`, tagged with an `absorb` chip, and its mutable ancestors (the revisions `jj absorb` would consider by default) are preselected, each tagged with an `into` chip. Use `space` to toggle candidate targets — like selecting in Normal mode, the focus advances to the next revision on each toggle — then `enter` to apply, or `escape` to cancel. Leaving the preselected set unchanged runs plain `jj absorb` (with `--from <source>` when the source is not the working copy); changing it constrains the operation with `--into <selected revisions>`.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `s` | absorb-descendants | Replace the selected `--into` targets with the visible chain from the focused revision, stopping before the absorb source |
 
 ### Set Parents
 
@@ -619,6 +623,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `selectAllFiles()` | Select all files in the expanded revision, or clear them if all are selected |
 | `selectNextInlineConfirmationOption()` | Move to the next inline confirmation option |
 | `selectPreviousInlineConfirmationOption()` | Move to the previous inline confirmation option |
+| `selectAbsorbDescendants()` | Select absorb targets from the focused revision, stopping before the absorb source |
 | `setRebaseSourceKind(kind)` | Set rebase source kind: `"revisions"`, `"source"`, or `"branch"` |
 | `setRebaseTargetKind(kind)` | Set rebase target kind: `"destination"`, `"insert-before"`, `"insert-after"`, or `"insert-between"` |
 | `showFileDiff()` | Show the focused file diff |

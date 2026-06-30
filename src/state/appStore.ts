@@ -67,6 +67,7 @@ import {
   openInlineConfirmation,
   pushStatusMessage,
   selectAllFiles,
+  selectAbsorbDescendants,
   selectNextInlineConfirmationOption,
   selectPreviousInlineConfirmationOption,
   startCommandDraft,
@@ -320,6 +321,9 @@ export function createAppStore(
       },
       toggleRevisionSelection() {
         mutate((currentState) => toggleRevisionSelection(currentState));
+      },
+      selectAbsorbDescendants() {
+        mutate((currentState) => selectAbsorbDescendants(currentState));
       },
       toggleFileSelection() {
         mutate((currentState) => toggleFileSelection(currentState));

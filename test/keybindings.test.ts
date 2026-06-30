@@ -101,6 +101,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     toggleRebaseSkipEmptied: () => calls.push("toggleRebaseSkipEmptied"),
     toggleSquashAnchor: () => calls.push("toggleSquashAnchor"),
     toggleInterdiffSwap: () => calls.push("toggleInterdiffSwap"),
+    selectAbsorbDescendants: () => calls.push("selectAbsorbDescendants"),
     undo: () => calls.push("undo"),
     redo: () => calls.push("redo"),
     focusWorkingCopy: () => calls.push("focusWorkingCopy"),
@@ -1230,6 +1231,25 @@ test("dispatchGlobalKey routes s to squash-from-anchor in squash mode", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["toggleSquashAnchor"]);
+});
+
+test("dispatchGlobalKey routes s to absorb-descendants in absorb mode", () => {
+  const calls: string[] = [];
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.absorb, {
+    presetRevisionIds: ["bbbbbbbb"],
+    absorbSourceRevisionId: "aaaaaaaa",
+  });
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "s",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["selectAbsorbDescendants"]);
 });
 
 test("dispatchGlobalKey routes S to squash-from-anchor in squash mode (alias for s)", () => {
