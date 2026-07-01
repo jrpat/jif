@@ -66,6 +66,10 @@ export type OperationLogEntry = Readonly<{
 
 export type PreviewPosition = "right" | "below";
 
+// A session position preference set via `shift+p`. Includes `"auto"` so the user
+// can cycle back to the responsive layout after pinning a fixed side.
+export type PreviewPositionPreference = PreviewPosition | "auto";
+
 export type RepositoryData = Readonly<{
   repoPath: string;
   revisions: readonly RevisionSummary[];
@@ -202,7 +206,7 @@ export type AppState = Readonly<{
   diffViewer: DiffViewerState | null;
   commandBarBookmark: CommandBarBookmarkContext | null;
   // Preview pane session overrides. `null` means "follow config default".
-  previewPositionOverride: PreviewPosition | null;
+  previewPositionOverride: PreviewPositionPreference | null;
   previewVisibleOverride: boolean | null;
   previewSizePercentOverride: number | null;
   previewWordWrap: boolean;

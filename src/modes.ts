@@ -78,7 +78,7 @@ const alias = (command: string): KeymapBinding => ({ command, canonical: false }
 // all of them at once.
 const previewBindings = {
   p: "toggle-preview",
-  P: "toggle-preview-position",
+  P: "cycle-preview-position",
   W: "toggle-preview-word-wrap",
   "ctrl-[": "expand-preview",
   "ctrl-]": "shrink-preview",

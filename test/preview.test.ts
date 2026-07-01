@@ -6,6 +6,7 @@ import {
   effectivePreviewPercent,
   effectivePreviewPosition,
   effectivePreviewVisible,
+  nextPreviewPosition,
   type PreviewSettings,
 } from "../src/domain/preview.ts";
 import {
@@ -76,6 +77,14 @@ describe("effectivePreviewVisible", () => {
     // Toggled on and wide enough: shown.
     expect(effectivePreviewVisible(settings({ previewVisibleOverride: true }), c, WIDE)).toBe(true);
   });
+
+  test("cycling back to an explicit auto override re-enables narrow-hide", () => {
+    const c = cfg({ showByDefault: true, position: "right", narrowWidth: 100, whenNarrow: "hide" });
+    // Pinned right (fixed config): shown even when narrow.
+    expect(effectivePreviewVisible(settings(), c, 40)).toBe(true);
+    // Cycled to explicit auto: narrow-hide takes effect again.
+    expect(effectivePreviewVisible(settings({ previewPositionOverride: "auto" }), c, 40)).toBe(false);
+  });
 });
 
 describe("effectivePreviewPosition", () => {
@@ -96,6 +105,24 @@ describe("effectivePreviewPosition", () => {
     expect(effectivePreviewPosition(settings({ previewPositionOverride: "below" }), auto, 200)).toBe(
       "below",
     );
+  });
+
+  test("an explicit auto override resolves responsively, even over a fixed config", () => {
+    const fixed = cfg({ position: "right", narrowWidth: 100 });
+    expect(effectivePreviewPosition(settings({ previewPositionOverride: "auto" }), fixed, 200)).toBe(
+      "right",
+    );
+    expect(effectivePreviewPosition(settings({ previewPositionOverride: "auto" }), fixed, 40)).toBe(
+      "below",
+    );
+  });
+});
+
+describe("nextPreviewPosition", () => {
+  test("cycles auto -> right -> below -> auto", () => {
+    expect(nextPreviewPosition("auto")).toBe("right");
+    expect(nextPreviewPosition("right")).toBe("below");
+    expect(nextPreviewPosition("below")).toBe("auto");
   });
 });
 

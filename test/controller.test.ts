@@ -1208,6 +1208,59 @@ test("scrollPreview falls back to the help toast when the preview is hidden", ()
   harness.store.dispose();
 });
 
+test("cyclePreviewPosition rotates auto -> right -> below -> auto", () => {
+  const harness = createControllerHarness({});
+
+  // Config default is "auto" with no session override yet.
+  expect(harness.store.snapshot().previewPositionOverride).toBeNull();
+
+  harness.controller.cyclePreviewPosition();
+  expect(harness.store.snapshot().previewPositionOverride).toBe("right");
+
+  harness.controller.cyclePreviewPosition();
+  expect(harness.store.snapshot().previewPositionOverride).toBe("below");
+
+  harness.controller.cyclePreviewPosition();
+  expect(harness.store.snapshot().previewPositionOverride).toBe("auto");
+
+  harness.controller.cyclePreviewPosition();
+  expect(harness.store.snapshot().previewPositionOverride).toBe("right");
+
+  harness.store.dispose();
+});
+
+test("cyclePreviewPosition is a no-op when the preview is hidden", () => {
+  const harness = createControllerHarness({});
+  harness.store.actions.setPreviewVisibleOverride(false);
+
+  harness.controller.cyclePreviewPosition();
+
+  const state = harness.store.snapshot();
+  expect(state.previewPositionOverride).toBeNull();
+  expect(state.statusMessages).toHaveLength(0);
+
+  harness.store.dispose();
+});
+
+test("cyclePreviewPosition shows a single toast that refreshes in place", () => {
+  const harness = createControllerHarness({});
+
+  harness.controller.cyclePreviewPosition();
+  let toasts = harness.store.snapshot().statusMessages;
+  expect(toasts).toHaveLength(1);
+  expect(toasts[0]?.text).toBe("Preview position: right");
+  // "success" so the toast auto-dismisses and escape can clear it ("info" does neither).
+  expect(toasts[0]?.level).toBe("success");
+
+  // Cycling again replaces the toast rather than stacking a second one.
+  harness.controller.cyclePreviewPosition();
+  toasts = harness.store.snapshot().statusMessages;
+  expect(toasts).toHaveLength(1);
+  expect(toasts[0]?.text).toBe("Preview position: below");
+
+  harness.store.dispose();
+});
+
 test("scrollHelpToast is a no-op when no help scrollbox is registered", () => {
   const harness = createControllerHarness({});
 

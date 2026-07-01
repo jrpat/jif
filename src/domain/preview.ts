@@ -1,15 +1,32 @@
 import type { ResolvedAppConfig } from "../config/schema.ts";
-import type { PreviewPosition } from "./types.ts";
+import type { PreviewPosition, PreviewPositionPreference } from "./types.ts";
 
 export type PreviewConfig = ResolvedAppConfig["preview"];
 
 // The subset of AppState the preview helpers need. Kept structural so tests can
 // pass small literals and AppState remains assignable.
 export type PreviewSettings = Readonly<{
-  previewPositionOverride: PreviewPosition | null;
+  previewPositionOverride: PreviewPositionPreference | null;
   previewVisibleOverride: boolean | null;
   previewSizePercentOverride: number | null;
 }>;
+
+// The order `shift+p` cycles through: auto → right → below → auto.
+const PREVIEW_POSITION_CYCLE: readonly PreviewPositionPreference[] = ["auto", "right", "below"];
+
+/** The next position preference in the `shift+p` cycle. */
+export function nextPreviewPosition(current: PreviewPositionPreference): PreviewPositionPreference {
+  const index = PREVIEW_POSITION_CYCLE.indexOf(current);
+  return PREVIEW_POSITION_CYCLE[(index + 1) % PREVIEW_POSITION_CYCLE.length]!;
+}
+
+/** The active position preference: a session override, else the config default. */
+export function effectivePreviewPositionPreference(
+  state: PreviewSettings,
+  preview: PreviewConfig,
+): PreviewPositionPreference {
+  return state.previewPositionOverride ?? preview.position;
+}
 
 /**
  * Whether the preview pane should be shown. The pane is *wanted* when the
@@ -42,13 +59,11 @@ export function effectivePreviewPosition(
   preview: PreviewConfig,
   terminalWidth: number,
 ): PreviewPosition {
-  if (state.previewPositionOverride !== null) {
-    return state.previewPositionOverride;
-  }
-  if (preview.position === "auto") {
+  const preference = effectivePreviewPositionPreference(state, preview);
+  if (preference === "auto") {
     return isNarrowTerminal(preview, terminalWidth) ? "below" : "right";
   }
-  return preview.position;
+  return preference;
 }
 
 // A terminal too narrow for the "auto" layout to place the pane on the right.
@@ -56,17 +71,17 @@ function isNarrowTerminal(preview: PreviewConfig, terminalWidth: number): boolea
   return terminalWidth < preview.narrowWidth;
 }
 
-// Whether the "auto" layout suppresses the pane on this terminal: only when no
-// session position override is active, the layout is "auto", the terminal is
-// narrow, and `whenNarrow` is configured to hide rather than relocate.
+// Whether the "auto" layout suppresses the pane on this terminal: only when the
+// effective preference is "auto" (config default or an explicit `shift+p` cycle
+// back to auto), the terminal is narrow, and `whenNarrow` is set to hide rather
+// than relocate. A pinned position takes the pane out of "auto", so it stays.
 function hiddenByNarrowTerminal(
   state: PreviewSettings,
   preview: PreviewConfig,
   terminalWidth: number,
 ): boolean {
   return (
-    state.previewPositionOverride === null &&
-    preview.position === "auto" &&
+    effectivePreviewPositionPreference(state, preview) === "auto" &&
     preview.whenNarrow === "hide" &&
     isNarrowTerminal(preview, terminalWidth)
   );

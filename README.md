@@ -69,7 +69,7 @@ By default the pane is placed automatically: on the right in wide terminals and 
 | Key | Command | Description |
 |-----|---------|-------------|
 | `p` | toggle-preview | Show or hide the preview pane for this session |
-| `shift+p` | toggle-preview-position | Flip the pane between right and below |
+| `shift+p` | cycle-preview-position | Cycle the pane between auto, right, and below |
 | `shift+w` | toggle-preview-word-wrap | Wrap or unwrap long preview diff lines |
 | `ctrl+[` | expand-preview | Grow the pane by `preview.resizeStepPercent` |
 | `ctrl+]` | shrink-preview | Shrink the pane by `preview.resizeStepPercent` |

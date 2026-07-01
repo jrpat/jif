@@ -13,7 +13,7 @@ import type {
   InlineConfirmation,
   InlineConfirmationOptionId,
   OperationLogEntry,
-  PreviewPosition,
+  PreviewPositionPreference,
   RebaseSourceKind,
   RebaseTargetKind,
   RepositoryData,
@@ -268,7 +268,7 @@ export function cycleLayout(state: AppState): AppState {
 
 export function setPreviewPositionOverride(
   state: AppState,
-  position: PreviewPosition | null,
+  position: PreviewPositionPreference | null,
 ): AppState {
   return { ...state, previewPositionOverride: position };
 }
@@ -1871,6 +1871,27 @@ export function pushStatusMessage(
     lastInteractedAt: now,
   };
   return { ...state, statusMessages: [...dismissHelpToasts(state.statusMessages), message] };
+}
+
+// Show a toast under a stable id, replacing any prior toast with that id rather
+// than stacking. Used for repeatable feedback (e.g. cycling a setting): pressing
+// the key several times keeps a single, refreshed toast instead of a pile.
+export function upsertStatusMessage(
+  state: AppState,
+  id: string,
+  text: string,
+  level: StatusLevel,
+): AppState {
+  const now = Date.now();
+  const message: StatusMessage = {
+    id,
+    text,
+    level,
+    createdAt: now,
+    lastInteractedAt: now,
+  };
+  const withoutPrior = state.statusMessages.filter((m) => m.id !== id);
+  return { ...state, statusMessages: [...dismissHelpToasts(withoutPrior), message] };
 }
 
 export function updateStatusMessage(

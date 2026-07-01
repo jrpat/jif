@@ -19,8 +19,9 @@ import type { ResolvedAppConfig } from "../config/schema.ts";
 import {
   clampPreviewPercent,
   effectivePreviewPercent,
-  effectivePreviewPosition,
+  effectivePreviewPositionPreference,
   effectivePreviewVisible,
+  nextPreviewPosition,
 } from "../domain/preview.ts";
 import type { AppStore } from "../state/appStore.ts";
 import {
@@ -83,6 +84,10 @@ type OpenTextInEditor = (text: string) => Promise<void>;
 
 type ApplyRevsetQuery = (query: string) => Promise<void>;
 type RestoreLogRevsetFromFileFilter = () => Promise<void>;
+
+// Stable toast id so cycling the preview position refreshes one toast in place
+// instead of stacking a new one per press.
+const PREVIEW_POSITION_TOAST_ID = "preview-position";
 
 export function createJifCommandController(args: Readonly<{
   store: AppStore;
@@ -665,13 +670,21 @@ export function createJifCommandController(args: Readonly<{
       );
       store.actions.setPreviewVisibleOverride(!visible);
     },
-    togglePreviewPosition() {
-      const current = effectivePreviewPosition(
-        store.snapshot(),
-        args.getPreviewConfig(),
-        args.getTerminalSize().width,
-      );
-      store.actions.setPreviewPositionOverride(current === "right" ? "below" : "right");
+    cyclePreviewPosition() {
+      const state = store.snapshot();
+      const previewConfig = args.getPreviewConfig();
+      // Nothing to reposition when there is no pane on screen.
+      if (!effectivePreviewVisible(state, previewConfig, args.getTerminalSize().width)) {
+        return;
+      }
+      const current = effectivePreviewPositionPreference(state, previewConfig);
+      const next = nextPreviewPosition(current);
+      store.actions.setPreviewPositionOverride(next);
+      // A toast makes the choice legible even when the layout does not visibly
+      // move (e.g. "auto" already resolving to "right" on a wide terminal). A
+      // stable id refreshes one toast in place rather than stacking per press.
+      // "success" (not "info") so it auto-dismisses and escape can clear it.
+      store.actions.upsertStatusMessage(PREVIEW_POSITION_TOAST_ID, `Preview position: ${next}`, "success");
     },
     togglePreviewWordWrap() {
       store.actions.togglePreviewWordWrap();

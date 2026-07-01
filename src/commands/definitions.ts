@@ -96,7 +96,7 @@ export type CommandController = Readonly<{
   scrollDiffViewer: (rowDelta: number, colDelta: number) => void;
   scrollHelpToast: (rowDelta: number) => void;
   togglePreview: () => void;
-  togglePreviewPosition: () => void;
+  cyclePreviewPosition: () => void;
   togglePreviewWordWrap: () => void;
   expandPreview: () => void;
   shrinkPreview: () => void;
@@ -634,10 +634,10 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     group: "global",
   },
   {
-    id: "toggle-preview-position",
+    id: "cycle-preview-position",
     title: "Preview Position",
-    description: "Switch the preview pane between right and below",
-    run: (controller) => controller.togglePreviewPosition(),
+    description: "Cycle the preview pane between auto, right, and below",
+    run: (controller) => controller.cyclePreviewPosition(),
     group: "global",
   },
   {

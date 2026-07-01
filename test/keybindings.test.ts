@@ -120,7 +120,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
       calls.push(`scrollDiffViewer(${rowDelta},${colDelta})`),
     scrollHelpToast: (rowDelta) => calls.push(`scrollHelpToast(${rowDelta})`),
     togglePreview: () => calls.push("togglePreview"),
-    togglePreviewPosition: () => calls.push("togglePreviewPosition"),
+    cyclePreviewPosition: () => calls.push("cyclePreviewPosition"),
     togglePreviewWordWrap: () => calls.push("togglePreviewWordWrap"),
     expandPreview: () => calls.push("expandPreview"),
     shrinkPreview: () => calls.push("shrinkPreview"),

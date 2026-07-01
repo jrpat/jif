@@ -35,6 +35,7 @@ import {
   openShortcutPanel,
   pushStatusMessage,
   updateStatusMessage,
+  upsertStatusMessage,
   pushEvent,
   setCommandBarText,
   moveFocus,
@@ -930,6 +931,15 @@ test("cancelOrBlurState pops the active mode before dismissing error status mess
   expect(state.statusMessages[0]?.level).toBe("error");
 });
 
+test("cancelOrBlurState dismisses a success toast (e.g. the preview-position toast)", () => {
+  let state = createState();
+  state = upsertStatusMessage(state, "preview-position", "Preview position: right", "success");
+
+  state = cancelOrBlurState(state);
+
+  expect(state.statusMessages).toHaveLength(0);
+});
+
 test("startCommandDraft advances focus to parent revision", () => {
   let state = createState();
   expect(state.focusedRevisionIndex).toBe(0);
@@ -1274,6 +1284,22 @@ test("pushEvent appends visible status messages instead of replacing them", () =
     "all good",
   ]);
   expect(state.eventLog).toHaveLength(2);
+});
+
+test("upsertStatusMessage replaces a same-id toast in place, preserving others", () => {
+  let state = createState();
+  state = pushEvent(state, "other", "success", 10);
+  state = upsertStatusMessage(state, "preview-position", "Preview position: right", "info");
+  state = upsertStatusMessage(state, "preview-position", "Preview position: below", "info");
+
+  // One toast per id: the repeated upsert refreshes rather than stacks, and the
+  // unrelated message is left untouched.
+  expect(state.statusMessages.map((message) => message.text)).toEqual([
+    "other",
+    "Preview position: below",
+  ]);
+  // A transient toast, not an event: nothing is recorded to history.
+  expect(state.eventLog).toHaveLength(1);
 });
 
 test("dismissStatusMessage clears the oldest visible status message first", () => {

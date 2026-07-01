@@ -8,7 +8,7 @@ import type {
   CommandDraftConfig,
   FailedCommand,
   InlineConfirmation,
-  PreviewPosition,
+  PreviewPositionPreference,
   RebaseSourceKind,
   RebaseTargetKind,
   RepositoryData,
@@ -111,6 +111,7 @@ import {
   toggleRevisionSelection,
   toggleSquashAnchor,
   updateStatusMessage,
+  upsertStatusMessage,
 } from "./store.ts";
 
 export type AppStore = ReturnType<typeof createAppStore>;
@@ -164,6 +165,9 @@ export function createAppStore(
       },
       pushStatusMessage(id: string, text: string, level: StatusLevel) {
         mutate((currentState) => pushStatusMessage(currentState, id, text, level));
+      },
+      upsertStatusMessage(id: string, text: string, level: StatusLevel) {
+        mutate((currentState) => upsertStatusMessage(currentState, id, text, level));
       },
       updateStatusMessage(id: string, text: string, level: StatusLevel, variant?: StatusMessageVariant) {
         mutate((currentState) => updateStatusMessage(currentState, id, text, level, variant));
@@ -360,7 +364,7 @@ export function createAppStore(
       cycleLayout() {
         mutate((currentState) => cycleLayout(currentState));
       },
-      setPreviewPositionOverride(position: PreviewPosition | null) {
+      setPreviewPositionOverride(position: PreviewPositionPreference | null) {
         mutate((currentState) => setPreviewPositionOverride(currentState, position));
       },
       setPreviewVisibleOverride(visible: boolean | null) {
