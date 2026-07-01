@@ -7,6 +7,7 @@ import {
   fileTypeForPath,
   splitGitDiff,
 } from "../domain/previewDiff.ts";
+import { buildPreviewSyntaxStyle } from "./previewSyntaxStyle.ts";
 import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
 
 /**
@@ -32,6 +33,7 @@ export function PreviewPane(props: {
   registerScrollbox: (el: ScrollBoxRenderable | undefined) => void;
 }) {
   const colors = props.config.colorScheme.semanticColors;
+  const syntaxStyle = buildPreviewSyntaxStyle();
   const files = createMemo(() => splitGitDiff(props.diff));
   // At least the viewport width so short diffs fill the pane; wider than it (so
   // the scrollbox scrolls horizontally) when a diff line is longer. Wrapped
@@ -117,6 +119,7 @@ export function PreviewPane(props: {
                         wrapMode={diffWrapMode()}
                         showLineNumbers
                         filetype={fileTypeForPath(file.path)}
+                        syntaxStyle={syntaxStyle}
                         fg={colors.textPrimary}
                         addedBg={colors.diffAddedFill}
                         removedBg={colors.diffRemovedFill}

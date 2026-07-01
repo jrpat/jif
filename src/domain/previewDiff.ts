@@ -4,7 +4,7 @@
 // single-file patch per `<diff>`. It also renders exactly the in-hunk lines
 // (no `@@`/file headers), so we can compute an exact row count for sizing.
 
-import { extname } from "node:path";
+import { pathToFiletype } from "@opentui/core";
 
 export type PreviewFilePatch = Readonly<{
   path: string;
@@ -118,9 +118,9 @@ export function estimateDiffWidth(files: readonly PreviewFilePatch[]): number {
   return max;
 }
 
-/** File extension (without the dot) for `<diff>`'s `filetype` syntax hint. */
+/** Canonical OpenTUI filetype for `<diff>`'s syntax hint. */
 export function fileTypeForPath(path: string): string {
-  return extname(path).slice(1);
+  return pathToFiletype(path) ?? "";
 }
 
 // Keep only lines belonging to this file's patch, discarding trailing

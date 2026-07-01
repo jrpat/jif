@@ -76,7 +76,7 @@ By default the pane is placed automatically: on the right in wide terminals and 
 | `ctrl+j` | scroll-preview-down | Scroll the preview down (falls back to the help toast when the pane is hidden) |
 | `ctrl+k` | scroll-preview-up | Scroll the preview up (falls back to the help toast when the pane is hidden) |
 
-The pane also scrolls **horizontally** with the mouse wheel / trackpad when a diff line is wider than the pane.
+Diff bodies are syntax-highlighted for filetypes supported by OpenTUI's parser, with token foregrounds using indexed ANSI colors from the terminal palette. When word wrap is off, the pane also scrolls **horizontally** with the mouse wheel / trackpad when a diff line is wider than the pane.
 
 `ctrl+[` / `ctrl+]` require a terminal that distinguishes them from other keys via the Kitty keyboard protocol (kitty, Ghostty, WezTerm, recent iTerm2, Alacritty, foot). In terminals without it, `ctrl+[` is indistinguishable from Escape.
 
@@ -459,7 +459,7 @@ The color configuration supports `light`, `dark`, and `auto` theme mode. In `aut
 
 Autocomplete suggestion focus is controlled separately from revision-row focus. Override `colorScheme.colors.promptSuggestionFocusedFill` to change the highlighted suggestion background without changing `rowFocusedFill`.
 
-The preview pane's diff adapts to the terminal theme like the rest of jif: added and removed lines are blended from the palette's green and red against the terminal background, so they stay legible on both light and dark terminals. Override `colorScheme.colors.diffFileName`, `diffAddedFill`, `diffRemovedFill`, `diffAddedSign`, `diffRemovedSign`, or `diffLineNumber` to tune the diff colors.
+The preview pane's diff adapts to the terminal theme like the rest of jif: added and removed lines are blended from the palette's green and red against the terminal background, and syntax tokens use indexed ANSI foreground colors from the terminal palette. Override `colorScheme.colors.diffFileName`, `diffAddedFill`, `diffRemovedFill`, `diffAddedSign`, `diffRemovedSign`, or `diffLineNumber` to tune the diff colors.
 
 </details>
 

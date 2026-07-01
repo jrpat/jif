@@ -7,6 +7,14 @@ import {
 } from "../../src/config/index.ts";
 import { PreviewPane } from "../../src/ui/PreviewPane.tsx";
 
+const originalConsoleLog = console.log;
+console.log = (...args: unknown[]) => {
+  if (typeof args[0] === "string" && args[0].startsWith("TSWorker:")) {
+    return;
+  }
+  originalConsoleLog(...args);
+};
+
 const config = resolveAppConfig({});
 const darkConfig = resolveAppConfig({}, { palette: FALLBACK_PALETTE_DARK });
 const lightConfig = resolveAppConfig({}, { palette: FALLBACK_PALETTE_LIGHT });
@@ -57,6 +65,7 @@ async function capture(
     scrollDownBy?: number;
     config?: typeof config;
     previewWordWrap?: boolean;
+    waitForExactSpan?: string;
   } = {},
 ) {
   const width = options.width ?? 60;
@@ -77,6 +86,19 @@ async function capture(
   ), { width, height });
 
   await rendered.renderOnce();
+  // Code highlighting happens asynchronously after the first render pass.
+  const highlightPasses = options.waitForExactSpan ? 100 : 5;
+  for (let i = 0; i < highlightPasses; i++) {
+    await new Promise((resolve) => setTimeout(resolve, options.waitForExactSpan ? 10 : 0));
+    await rendered.renderOnce();
+    if (options.waitForExactSpan) {
+      const frame = rendered.captureSpans();
+      const foundSpan = frame.lines.some((line) =>
+        line.spans.some((span) => span.text === options.waitForExactSpan)
+      );
+      if (foundSpan) break;
+    }
+  }
   const spans = rendered.captureSpans();
   const toLines = (frame: typeof spans) => frame.lines.map((l) => l.spans.map((s) => s.text).join(""));
   const scrollWidth = scrollbox?.scrollWidth ?? null;
@@ -105,7 +127,7 @@ async function capture(
   const coloredSpans = spans.lines
     .flatMap((l) => l.spans)
     .filter((s) => s.text.trim().length > 0)
-    .map((s) => ({ text: s.text, bg: rgb(s.bg) }));
+    .map((s) => ({ text: s.text, fg: rgb(s.fg), bg: rgb(s.bg) }));
 
   return {
     registered: Boolean(scrollbox),
@@ -125,6 +147,10 @@ function bgOf(scenario: { coloredSpans: { text: string; bg: [number, number, num
   return scenario.coloredSpans.find((s) => s.text.includes(needle))?.bg ?? null;
 }
 
+function fgOf(scenario: { coloredSpans: { text: string; fg: [number, number, number] }[] }, needle: string): [number, number, number] | null {
+  return scenario.coloredSpans.find((s) => s.text.includes(needle))?.fg ?? null;
+}
+
 // Distinctive single-token added/removed lines so their rendered background
 // color can be located unambiguously in the captured spans.
 const themedDiff = `diff --git a/theme.ts b/theme.ts
@@ -135,6 +161,16 @@ index 1111111..2222222 100644
  keepcontext
 -removedtoken
 +addedtoken
+`;
+
+const syntaxDiff = `diff --git a/syntax.ts b/syntax.ts
+index 1111111..2222222 100644
+--- a/syntax.ts
++++ b/syntax.ts
+@@ -1,2 +1,2 @@
+ const keep = "contextsyntax"; // contextcomment
+-const before = "removedsyntax"; // removedcomment
++const after = "addedsyntax"; // addedcomment
 `;
 
 // A diff tall enough to overflow a short viewport, so the header (top of the
@@ -164,12 +200,23 @@ const wideWrapped = await capture(null, wideDiff, { width: 40, scrollX: true, pr
 
 const darkThemed = await capture(null, themedDiff, { config: darkConfig });
 const lightThemed = await capture(null, themedDiff, { config: lightConfig });
+const darkSyntax = await capture(null, syntaxDiff, { config: darkConfig, waitForExactSpan: "const" });
+const lightSyntax = await capture(null, syntaxDiff, { config: lightConfig, waitForExactSpan: "const" });
 
 const themeColors = {
   darkAdded: bgOf(darkThemed, "addedtoken"),
   darkRemoved: bgOf(darkThemed, "removedtoken"),
   lightAdded: bgOf(lightThemed, "addedtoken"),
   lightRemoved: bgOf(lightThemed, "removedtoken"),
+  darkSyntaxKeyword: fgOf(darkSyntax, "const"),
+  lightSyntaxKeyword: fgOf(lightSyntax, "const"),
+  darkSyntaxString: fgOf(darkSyntax, "addedsyntax"),
+  lightSyntaxString: fgOf(lightSyntax, "addedsyntax"),
+  darkSyntaxComment: fgOf(darkSyntax, "addedcomment"),
+  lightSyntaxComment: fgOf(lightSyntax, "addedcomment"),
+  darkSyntaxAddedBg: bgOf(darkSyntax, "addedsyntax"),
+  lightSyntaxAddedBg: bgOf(lightSyntax, "addedsyntax"),
+  configDarkAdded: darkConfig.colorScheme.semanticColors.diffAddedFill,
   configLightAdded: lightConfig.colorScheme.semanticColors.diffAddedFill,
   configLightRemoved: lightConfig.colorScheme.semanticColors.diffRemovedFill,
 };

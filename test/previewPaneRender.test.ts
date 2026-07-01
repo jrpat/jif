@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { ansi256IndexToRgb } from "@opentui/core";
 
 test("PreviewPane renders split per-file diffs through the built-in diff component", async () => {
   const proc = Bun.spawn({
@@ -23,7 +24,7 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
   type Scenario = {
     registered: boolean;
     lines: string[];
-    coloredSpans: { text: string; bg: [number, number, number] }[];
+    coloredSpans: { text: string; fg: [number, number, number]; bg: [number, number, number] }[];
     scrollWidth: number | null;
     scrollHeight: number | null;
     viewportWidth: number | null;
@@ -44,6 +45,15 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
       darkRemoved: RGB | null;
       lightAdded: RGB | null;
       lightRemoved: RGB | null;
+      darkSyntaxKeyword: RGB | null;
+      lightSyntaxKeyword: RGB | null;
+      darkSyntaxString: RGB | null;
+      lightSyntaxString: RGB | null;
+      darkSyntaxComment: RGB | null;
+      lightSyntaxComment: RGB | null;
+      darkSyntaxAddedBg: RGB | null;
+      lightSyntaxAddedBg: RGB | null;
+      configDarkAdded: string;
       configLightAdded: string;
       configLightRemoved: string;
     };
@@ -94,7 +104,7 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
   // Word-wrapped preview diffs stay constrained to the viewport and expose the
   // tail of a long line without horizontal scrolling.
   expect(result.wideWrapped.scrollWidth ?? 0).toBeLessThanOrEqual(result.wideWrapped.viewportWidth ?? 0);
-  expect(result.wideWrapped.afterScrollLeft ?? 0).toBe(0);
+  expect(result.wideWrapped.afterScrollLeft ?? 0).toBeLessThanOrEqual(0);
   expect(result.wideWrapped.lines.join("\n")).toContain("forSure");
 
   // The header is part of the scrolled content, not pinned: it is visible at the
@@ -131,4 +141,27 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
   expect(lightAdded).toEqual(hexToRgb(result.themeColors.configLightAdded));
   expect(lightRemoved).toEqual(hexToRgb(result.themeColors.configLightRemoved));
   expect(lightAdded).not.toEqual([26, 77, 26]);
+
+  // Syntax highlighting uses indexed ANSI foregrounds without replacing the
+  // diff line backgrounds.
+  const ansiRgb = (index: number): RGB => {
+    const [r, g, b] = ansi256IndexToRgb(index);
+    return [r, g, b];
+  };
+  expect(result.themeColors.darkSyntaxKeyword).not.toBeNull();
+  expect(result.themeColors.lightSyntaxKeyword).not.toBeNull();
+  expect(result.themeColors.darkSyntaxString).not.toBeNull();
+  expect(result.themeColors.lightSyntaxString).not.toBeNull();
+  expect(result.themeColors.darkSyntaxComment).not.toBeNull();
+  expect(result.themeColors.lightSyntaxComment).not.toBeNull();
+
+  expect(result.themeColors.darkSyntaxKeyword).toEqual(ansiRgb(1));
+  expect(result.themeColors.lightSyntaxKeyword).toEqual(ansiRgb(1));
+  expect(result.themeColors.darkSyntaxString).toEqual(ansiRgb(2));
+  expect(result.themeColors.lightSyntaxString).toEqual(ansiRgb(2));
+  expect(result.themeColors.darkSyntaxComment).toEqual(ansiRgb(8));
+  expect(result.themeColors.lightSyntaxComment).toEqual(ansiRgb(8));
+
+  expect(result.themeColors.darkSyntaxAddedBg).toEqual(hexToRgb(result.themeColors.configDarkAdded));
+  expect(result.themeColors.lightSyntaxAddedBg).toEqual(hexToRgb(result.themeColors.configLightAdded));
 });

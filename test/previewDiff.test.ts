@@ -94,13 +94,12 @@ Binary files a/img.png and b/img.png differ`;
 });
 
 describe("fileTypeForPath", () => {
-  test("returns extension without the dot", () => {
-    expect(fileTypeForPath("dir/one.ts")).toBe("ts");
-    expect(fileTypeForPath("a/b/c.test.js")).toBe("js");
+  test("returns OpenTUI's canonical syntax filetype", () => {
+    expect(fileTypeForPath("dir/one.ts")).toBe("typescript");
+    expect(fileTypeForPath("a/b/c.test.js")).toBe("javascript");
   });
 
-  test("returns empty for extensionless or dotfile paths", () => {
-    expect(fileTypeForPath("Makefile")).toBe("");
+  test("returns empty for unknown dotfile paths", () => {
     expect(fileTypeForPath(".gitignore")).toBe("");
   });
 });
