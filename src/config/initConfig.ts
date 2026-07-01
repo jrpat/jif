@@ -356,6 +356,7 @@ namespace Jif {
     toggleRebaseSkipEmptied: () => void;
     toggleSquashAnchor: () => void;
     toggleInterdiffSwap: () => void;
+    togglePreviewWordWrap: () => void;
     selectAbsorbDescendants: () => void;
     undo: () => void;
     redo: () => void;

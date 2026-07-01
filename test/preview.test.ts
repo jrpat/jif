@@ -13,6 +13,7 @@ import {
   setPreviewPositionOverride,
   setPreviewSizePercentOverride,
   setPreviewVisibleOverride,
+  togglePreviewWordWrap,
 } from "../src/state/store.ts";
 
 const base = resolveAppConfig({});
@@ -120,6 +121,7 @@ describe("preview reducers", () => {
     expect(initial.previewPositionOverride).toBeNull();
     expect(initial.previewVisibleOverride).toBeNull();
     expect(initial.previewSizePercentOverride).toBeNull();
+    expect(initial.previewWordWrap).toBeFalse();
   });
 
   test("setters round-trip without mutating the input state", () => {
@@ -130,5 +132,12 @@ describe("preview reducers", () => {
     expect(setPreviewVisibleOverride(initial, true).previewVisibleOverride).toBe(true);
     expect(setPreviewSizePercentOverride(initial, 60).previewSizePercentOverride).toBe(60);
     expect(setPreviewPositionOverride(positioned, null).previewPositionOverride).toBeNull();
+  });
+
+  test("word wrap toggles without mutating the input state", () => {
+    const wrapped = togglePreviewWordWrap(initial);
+    expect(wrapped.previewWordWrap).toBeTrue();
+    expect(initial.previewWordWrap).toBeFalse();
+    expect(togglePreviewWordWrap(wrapped).previewWordWrap).toBeFalse();
   });
 });

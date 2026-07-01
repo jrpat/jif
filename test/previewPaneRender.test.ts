@@ -38,6 +38,7 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
     headerSingle: Scenario;
     scrollingHeader: Scenario;
     wide: Scenario;
+    wideWrapped: Scenario;
     themeColors: {
       darkAdded: RGB | null;
       darkRemoved: RGB | null;
@@ -89,6 +90,12 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
   // A diff wider than the viewport can be scrolled horizontally.
   expect(result.wide.scrollWidth ?? 0).toBeGreaterThan(result.wide.viewportWidth ?? 0);
   expect(result.wide.afterScrollLeft ?? 0).toBeGreaterThan(0);
+
+  // Word-wrapped preview diffs stay constrained to the viewport and expose the
+  // tail of a long line without horizontal scrolling.
+  expect(result.wideWrapped.scrollWidth ?? 0).toBeLessThanOrEqual(result.wideWrapped.viewportWidth ?? 0);
+  expect(result.wideWrapped.afterScrollLeft ?? 0).toBe(0);
+  expect(result.wideWrapped.lines.join("\n")).toContain("forSure");
 
   // The header is part of the scrolled content, not pinned: it is visible at the
   // top, then scrolls out of view as the diff scrolls down.

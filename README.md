@@ -70,6 +70,7 @@ By default the pane is placed automatically: on the right in wide terminals and 
 |-----|---------|-------------|
 | `p` | toggle-preview | Show or hide the preview pane for this session |
 | `shift+p` | toggle-preview-position | Flip the pane between right and below |
+| `shift+w` | toggle-preview-word-wrap | Wrap or unwrap long preview diff lines |
 | `ctrl+[` | expand-preview | Grow the pane by `preview.resizeStepPercent` |
 | `ctrl+]` | shrink-preview | Shrink the pane by `preview.resizeStepPercent` |
 | `ctrl+j` | scroll-preview-down | Scroll the preview down (falls back to the help toast when the pane is hidden) |
@@ -699,6 +700,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `suspend()` | Suspend jif and return to the shell |
 | `toggleFileSelection()` | Toggle the focused file selection |
 | `toggleInterdiffSwap()` | Swap interdiff `--from` and `--to` roles |
+| `togglePreviewWordWrap()` | Wrap or unwrap long preview diff lines |
 | `toggleRebaseSkipEmptied()` | Toggle `--skip-emptied` on a rebase draft |
 | `toggleSearchIdOnly()` | Toggle ID-only search |
 | `toggleSelection()` | Toggle the focused revision selection |
@@ -752,6 +754,7 @@ The `app` argument is a read-only snapshot of jif state, plus the ergonomic `rev
 | `notificationHistoryLimit` | `number` | Maximum stored notification count |
 | `operationLogEntries` | `readonly OperationLogEntry[]` | Loaded operation log entries |
 | `operationLogLoading` | `boolean` | Whether the operation log is loading |
+| `previewWordWrap` | `boolean` | Whether preview diff word wrap is enabled for this session |
 | `repoPath` | `string` | Repository path jif is operating on |
 | `revisions` | `readonly RevisionSummary[]` | Visible revision rows |
 | `revsetQuery` | `string` | Current applied revset |

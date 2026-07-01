@@ -205,6 +205,7 @@ export type AppState = Readonly<{
   previewPositionOverride: PreviewPosition | null;
   previewVisibleOverride: boolean | null;
   previewSizePercentOverride: number | null;
+  previewWordWrap: boolean;
 }>;
 
 export type SampleRepoMaterialization = Readonly<{

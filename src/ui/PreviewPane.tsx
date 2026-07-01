@@ -13,9 +13,9 @@ import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
  * The preview pane. It renders a git-format diff (from `jj … --git`) using
  * OpenTUI's built-in `<diff>` component. That component only renders the first
  * file of a multi-file patch and is a fixed-height viewer, so we split the diff
- * into one single-file `<diff>` per file (each sized to its exact row count)
- * and stack them inside a scrollbox. `wrapMode="none"` keeps one logical line
- * per row, which the {@link countDiffRows} height relies on.
+ * into one single-file `<diff>` per file and stack them inside a scrollbox.
+ * Unwrapped mode uses the exact logical row count from {@link countDiffRows};
+ * wrapped mode gives the diff component the available width and lets it wrap.
  *
  * The header scrolls with the diff content (it is the top of the scroll area),
  * but its box is constrained to the viewport width so it word-wraps at the
@@ -28,18 +28,24 @@ export function PreviewPane(props: {
   loading: boolean;
   viewportWidth: number;
   config: ResolvedAppConfig;
+  previewWordWrap: boolean;
   registerScrollbox: (el: ScrollBoxRenderable | undefined) => void;
 }) {
   const colors = props.config.colorScheme.semanticColors;
   const files = createMemo(() => splitGitDiff(props.diff));
   // At least the viewport width so short diffs fill the pane; wider than it (so
-  // the scrollbox scrolls horizontally) when a diff line is longer. Memoized so
-  // the diff isn't re-measured on every render (it is read from two bindings).
-  const contentWidth = createMemo(() => Math.max(props.viewportWidth, estimateDiffWidth(files())));
+  // the scrollbox scrolls horizontally) when a diff line is longer. Wrapped
+  // mode keeps content at the viewport width so OpenTUI can actually wrap.
+  const contentWidth = createMemo(() =>
+    props.previewWordWrap
+      ? Math.max(1, props.viewportWidth)
+      : Math.max(props.viewportWidth, estimateDiffWidth(files()))
+  );
   // The header lives inside the (possibly very wide) content box, so pin its
   // width to the viewport minus the content box's horizontal padding, keeping it
   // readable without horizontal scrolling.
   const headerWidth = () => Math.max(1, props.viewportWidth - 2);
+  const diffWrapMode = () => props.previewWordWrap ? "word" : "none";
 
   return (
     <box
@@ -52,7 +58,7 @@ export function PreviewPane(props: {
         ref={(el: ScrollBoxRenderable) => props.registerScrollbox(el)}
         width="100%"
         flexGrow={1}
-        scrollX
+        scrollX={!props.previewWordWrap}
         scrollY
         viewportCulling
         backgroundColor={colors.chromeFillOne}
@@ -108,7 +114,7 @@ export function PreviewPane(props: {
                       <diff
                         diff={file.patch}
                         view="unified"
-                        wrapMode="none"
+                        wrapMode={diffWrapMode()}
                         showLineNumbers
                         filetype={fileTypeForPath(file.path)}
                         fg={colors.textPrimary}
@@ -119,7 +125,7 @@ export function PreviewPane(props: {
                         removedSignColor={colors.diffRemovedSign}
                         lineNumberFg={colors.diffLineNumber}
                         width="100%"
-                        height={rows}
+                        height={props.previewWordWrap ? "auto" : rows}
                         flexShrink={0}
                       />
                     </Show>

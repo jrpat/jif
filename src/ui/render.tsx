@@ -1043,6 +1043,7 @@ export function JifView(props: {
                 loading={previewLoading()}
                 viewportWidth={previewViewportWidth()}
                 config={config}
+                previewWordWrap={store.state.previewWordWrap}
                 registerScrollbox={(el) => {
                   previewViewport = el;
                 }}

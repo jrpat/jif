@@ -56,6 +56,7 @@ async function capture(
     scrollX?: boolean;
     scrollDownBy?: number;
     config?: typeof config;
+    previewWordWrap?: boolean;
   } = {},
 ) {
   const width = options.width ?? 60;
@@ -68,6 +69,7 @@ async function capture(
       loading={false}
       viewportWidth={width - 1}
       config={options.config ?? config}
+      previewWordWrap={options.previewWordWrap ?? false}
       registerScrollbox={(el) => {
         scrollbox = el;
       }}
@@ -158,6 +160,7 @@ const scrollingHeader = await capture("ZZHEADERZZ revision summary", tallDiff, {
 const singleFile = await capture(null, singleFileDiff);
 const headerSingle = await capture("A single-file revision preview", singleFileDiff);
 const wide = await capture(null, wideDiff, { width: 40, scrollX: true });
+const wideWrapped = await capture(null, wideDiff, { width: 40, scrollX: true, previewWordWrap: true });
 
 const darkThemed = await capture(null, themedDiff, { config: darkConfig });
 const lightThemed = await capture(null, themedDiff, { config: lightConfig });
@@ -171,4 +174,4 @@ const themeColors = {
   configLightRemoved: lightConfig.colorScheme.semanticColors.diffRemovedFill,
 };
 
-console.log(JSON.stringify({ withHeader, singleFile, headerSingle, scrollingHeader, wide, themeColors }));
+console.log(JSON.stringify({ withHeader, singleFile, headerSingle, scrollingHeader, wide, wideWrapped, themeColors }));

@@ -106,6 +106,7 @@ import {
   setRebaseSourceKind,
   setRebaseTargetKind,
   toggleInterdiffSwap,
+  togglePreviewWordWrap,
   toggleRebaseSkipEmptied,
   toggleRevisionSelection,
   toggleSquashAnchor,
@@ -367,6 +368,9 @@ export function createAppStore(
       },
       setPreviewSizePercentOverride(percent: number | null) {
         mutate((currentState) => setPreviewSizePercentOverride(currentState, percent));
+      },
+      togglePreviewWordWrap() {
+        mutate((currentState) => togglePreviewWordWrap(currentState));
       },
       openShortcutPanel() {
         mutate((currentState) => openShortcutPanel(currentState));

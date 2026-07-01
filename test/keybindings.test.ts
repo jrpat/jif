@@ -121,6 +121,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     scrollHelpToast: (rowDelta) => calls.push(`scrollHelpToast(${rowDelta})`),
     togglePreview: () => calls.push("togglePreview"),
     togglePreviewPosition: () => calls.push("togglePreviewPosition"),
+    togglePreviewWordWrap: () => calls.push("togglePreviewWordWrap"),
     expandPreview: () => calls.push("expandPreview"),
     shrinkPreview: () => calls.push("shrinkPreview"),
     scrollPreview: (rowDelta) => calls.push(`scrollPreview(${rowDelta})`),
@@ -1903,4 +1904,21 @@ test("ctrl-j/ctrl-k route to scrollPreview even without a help toast", () => {
   expect(downHandled).toBeTrue();
   expect(upHandled).toBeTrue();
   expect(calls).toEqual(["scrollPreview(1)", "scrollPreview(-1)"]);
+});
+
+test("W routes to preview word wrap in browse modes", () => {
+  const modes: AppState["focusMode"][] = ["revisions", "files", "op-log", "evolog"];
+
+  for (const focusMode of modes) {
+    const calls: string[] = [];
+    const handled = dispatchGlobalKey({
+      normalizedKey: "W",
+      state: { ...createState(), focusMode },
+      commands: commandDefinitions,
+      controller: createController(calls),
+    });
+
+    expect(handled).toBeTrue();
+    expect(calls).toEqual(["togglePreviewWordWrap"]);
+  }
 });

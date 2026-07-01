@@ -673,6 +673,11 @@ export function createJifCommandController(args: Readonly<{
       );
       store.actions.setPreviewPositionOverride(current === "right" ? "below" : "right");
     },
+    togglePreviewWordWrap() {
+      store.actions.togglePreviewWordWrap();
+      const preview = args.getPreviewViewport();
+      preview?.scrollTo({ x: 0, y: preview.scrollTop });
+    },
     expandPreview() {
       adjustPreviewSize(1);
     },

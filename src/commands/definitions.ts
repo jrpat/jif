@@ -97,6 +97,7 @@ export type CommandController = Readonly<{
   scrollHelpToast: (rowDelta: number) => void;
   togglePreview: () => void;
   togglePreviewPosition: () => void;
+  togglePreviewWordWrap: () => void;
   expandPreview: () => void;
   shrinkPreview: () => void;
   scrollPreview: (rowDelta: number) => void;
@@ -637,6 +638,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Preview Position",
     description: "Switch the preview pane between right and below",
     run: (controller) => controller.togglePreviewPosition(),
+    group: "global",
+  },
+  {
+    id: "toggle-preview-word-wrap",
+    title: "Preview Word Wrap",
+    description: "Wrap or unwrap long preview diff lines",
+    run: (controller) => controller.togglePreviewWordWrap(),
     group: "global",
   },
   {
