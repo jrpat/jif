@@ -1,6 +1,7 @@
 import type { MouseEvent, ScrollBoxRenderable } from "@opentui/core";
 
 type BottomAwareScrollBox = Pick<ScrollBoxRenderable, "scrollBy" | "scrollTop" | "scrollHeight" | "viewport">;
+export type ScrollVisibilityDirection = "down" | "up" | "nearest";
 
 type MouseEventHandler = (event: MouseEvent) => void;
 type WithMouseEvent = { onMouseEvent: MouseEventHandler };
@@ -67,22 +68,30 @@ export function observeScrollboxInteraction(
 export function scrollToKeepChildVisible(
   scrollbox: ScrollBoxRenderable,
   childId: string,
-  direction: "down" | "up",
+  direction: ScrollVisibilityDirection,
 ): void {
   const child = scrollbox.findDescendantById(childId);
   if (!child) return;
 
   const vpTop = scrollbox.viewport.y;
   const vpBottom = vpTop + scrollbox.viewport.height;
+  const childBottom = child.y + child.height;
 
   if (direction === "down") {
-    const childBottom = child.y + child.height;
     if (childBottom > vpBottom) {
       scrollbox.scrollBy(childBottom - vpBottom);
     }
-  } else {
-    if (child.y < vpTop) {
-      scrollbox.scrollBy(child.y - vpTop);
-    }
+    return;
+  }
+
+  if (direction === "up") {
+    if (child.y < vpTop) scrollbox.scrollBy(child.y - vpTop);
+    return;
+  }
+
+  if (child.y < vpTop) {
+    scrollbox.scrollBy(child.y - vpTop);
+  } else if (childBottom > vpBottom) {
+    scrollbox.scrollBy(childBottom - vpBottom);
   }
 }

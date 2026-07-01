@@ -167,6 +167,7 @@ export type AppState = Readonly<{
   inlineConfirmation?: InlineConfirmation | null;
   shortcutPanelExpanded: boolean;
   focusedRevisionIndex: number;
+  revisionScrollRequest: number;
   focusedOperationLogIndex: number;
   focusedEvologIndex: number;
   expandedRowId: string | null;

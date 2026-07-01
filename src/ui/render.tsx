@@ -56,7 +56,7 @@ import {
   getRevisionSelectionMarker,
 } from "./revisionHeader.ts";
 import { getChangedFileRowBackgroundColor, getRevisionRowBackgroundColor } from "./rowBackgrounds.ts";
-import { isScrollboxAtBottom, observeScrollboxBottomReached, scrollToKeepChildVisible } from "./scroll.ts";
+import { isScrollboxAtBottom, observeScrollboxBottomReached, scrollToKeepChildVisible, type ScrollVisibilityDirection } from "./scroll.ts";
 import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
 import {
   buildShortcutEntries,
@@ -548,6 +548,7 @@ export function JifView(props: {
   }, { release: true });
 
   let prevFocusedIndex = store.state.focusedRevisionIndex;
+  let prevRevisionScrollRequest = store.state.revisionScrollRequest;
   let prevFocusedOperationIndex = store.state.focusedOperationLogIndex;
   let prevFocusedEvologIndex = store.state.focusedEvologIndex;
   let prevFocusedNotificationIndex = store.state.focusedNotificationIndex;
@@ -564,10 +565,19 @@ export function JifView(props: {
     }
 
     const focusedIndex = store.state.focusedRevisionIndex;
-    const direction = focusedIndex >= prevFocusedIndex ? "down" : "up";
+    const revisionScrollRequest = store.state.revisionScrollRequest;
+    const explicitScrollRequest = revisionScrollRequest !== prevRevisionScrollRequest;
+    const direction: ScrollVisibilityDirection = explicitScrollRequest && focusedIndex === prevFocusedIndex
+      ? "nearest"
+      : focusedIndex >= prevFocusedIndex ? "down" : "up";
+    prevRevisionScrollRequest = revisionScrollRequest;
     prevFocusedIndex = focusedIndex;
 
     const marginRowId = (() => {
+      if (direction === "nearest") {
+        return focusedRevision.rowId;
+      }
+
       const margin = config.log.scrollMargin;
       const idx = direction === "down"
         ? Math.min(focusedIndex + margin, store.state.revisions.length - 1)

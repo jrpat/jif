@@ -75,6 +75,42 @@ test("does not scroll up when child is visible", () => {
   expect(scrollByDeltas).toEqual([]);
 });
 
+test("nearest scrolls up when child is above viewport", () => {
+  const { scrollbox, scrollByDeltas } = createMockScrollBox({
+    viewportY: 3,
+    viewportHeight: 10,
+    children: { "target": { y: 1, height: 2 } },
+  });
+
+  scrollToKeepChildVisible(scrollbox, "target", "nearest");
+
+  expect(scrollByDeltas).toEqual([-2]);
+});
+
+test("nearest scrolls down when child is below viewport", () => {
+  const { scrollbox, scrollByDeltas } = createMockScrollBox({
+    viewportY: 3,
+    viewportHeight: 10,
+    children: { "target": { y: 14, height: 2 } },
+  });
+
+  scrollToKeepChildVisible(scrollbox, "target", "nearest");
+
+  expect(scrollByDeltas).toEqual([3]);
+});
+
+test("nearest does not scroll when child is visible", () => {
+  const { scrollbox, scrollByDeltas } = createMockScrollBox({
+    viewportY: 3,
+    viewportHeight: 10,
+    children: { "target": { y: 5, height: 2 } },
+  });
+
+  scrollToKeepChildVisible(scrollbox, "target", "nearest");
+
+  expect(scrollByDeltas).toEqual([]);
+});
+
 test("viewport offset does not pollute coordinate math", () => {
   // Regression test: with viewport.y=5, a child at y=4 is above the viewport.
   // The old code (child.y + scrollTop) would produce an inflated contentY

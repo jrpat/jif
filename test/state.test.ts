@@ -1579,10 +1579,22 @@ test("focusWorkingCopy jumps to the working-copy revision", () => {
   let state = createState();
   state = moveFocus(state, 1);
   expect(state.focusedRevisionIndex).toBe(1);
+  const beforeRequest = state.revisionScrollRequest;
 
   state = focusWorkingCopy(state);
   expect(state.focusedRevisionIndex).toBe(0);
   expect(state.focusedFileIndex).toBe(0);
+  expect(state.revisionScrollRequest).toBe(beforeRequest + 1);
+});
+
+test("focusWorkingCopy requests visibility when working copy is already focused", () => {
+  let state = createState();
+  const beforeRequest = state.revisionScrollRequest;
+
+  state = focusWorkingCopy(state);
+
+  expect(state.focusedRevisionIndex).toBe(0);
+  expect(state.revisionScrollRequest).toBe(beforeRequest + 1);
 });
 
 test("focusWorkingCopy is a no-op when no working copy exists", () => {
@@ -1593,9 +1605,11 @@ test("focusWorkingCopy is a no-op when no working copy exists", () => {
   };
   state = moveFocus(state, 1);
   const before = state.focusedRevisionIndex;
+  const beforeRequest = state.revisionScrollRequest;
 
   state = focusWorkingCopy(state);
   expect(state.focusedRevisionIndex).toBe(before);
+  expect(state.revisionScrollRequest).toBe(beforeRequest);
 });
 
 test("focusRevisionAt sets focusedRevisionIndex when index changes", () => {

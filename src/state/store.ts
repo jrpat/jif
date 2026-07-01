@@ -199,6 +199,7 @@ export function createInitialState(
     inlineConfirmation: null,
     shortcutPanelExpanded: false,
     focusedRevisionIndex: 0,
+    revisionScrollRequest: 0,
     focusedOperationLogIndex: 0,
     focusedEvologIndex: 0,
     expandedRowId: null,
@@ -636,6 +637,7 @@ export function focusWorkingCopy(state: AppState): AppState {
   return {
     ...state,
     focusedRevisionIndex: index,
+    revisionScrollRequest: state.revisionScrollRequest + 1,
     focusedFileIndex: 0,
   };
 }
