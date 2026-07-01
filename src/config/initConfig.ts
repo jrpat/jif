@@ -439,6 +439,15 @@ namespace Jif {
     notifications?: Readonly<{
       historyLimit?: number;
     }>;
+    preview?: Readonly<{
+      position?: "auto" | "right" | "below";
+      showByDefault?: boolean;
+      defaultWidthPercent?: number;
+      resizeStepPercent?: number;
+      minSizePercent?: number;
+      maxSizePercent?: number;
+      autoRightMinWidth?: number;
+    }>;
   }>;
 }
 }

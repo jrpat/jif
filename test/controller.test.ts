@@ -72,6 +72,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   evologCalls?: string[];
   diffViewport?: ScrollBoxRenderable;
   helpViewport?: ScrollBoxRenderable;
+  previewViewport?: ScrollBoxRenderable;
   interdiffOutput?: string;
   interdiffCalls?: Array<readonly string[]>;
   anchorRange?: readonly string[];
@@ -209,6 +210,17 @@ function createControllerHarness(harnessOptions: Readonly<{
     },
     getDiffViewport: () => harnessOptions.diffViewport,
     getHelpViewport: () => harnessOptions.helpViewport,
+    getPreviewViewport: () => harnessOptions.previewViewport,
+    getTerminalSize: () => ({ width: 120, height: 40 }),
+    getPreviewConfig: () => ({
+      position: "auto",
+      showByDefault: true,
+      defaultWidthPercent: 50,
+      resizeStepPercent: 5,
+      minSizePercent: 15,
+      maxSizePercent: 90,
+      autoRightMinWidth: 100,
+    }),
     logShortcutPanelToggle: () => {},
   });
 
@@ -1154,6 +1166,44 @@ test("scrollHelpToast forwards vertical deltas to the registered help scrollbox"
     { x: 0, y: 1 },
     { x: 0, y: -1 },
   ]);
+  harness.store.dispose();
+});
+
+test("scrollPreview forwards to the preview scrollbox when the preview is visible", () => {
+  const calls: Array<{ x: number; y: number }> = [];
+  const fakeScrollbox = {
+    scrollBy: (delta: { x: number; y: number }) => {
+      calls.push(delta);
+    },
+  } as unknown as ScrollBoxRenderable;
+  const harness = createControllerHarness({ previewViewport: fakeScrollbox });
+
+  harness.controller.scrollPreview(1);
+  harness.controller.scrollPreview(-1);
+
+  expect(calls).toEqual([
+    { x: 0, y: 1 },
+    { x: 0, y: -1 },
+  ]);
+  harness.store.dispose();
+});
+
+test("scrollPreview falls back to the help toast when the preview is hidden", () => {
+  const previewCalls: Array<{ x: number; y: number }> = [];
+  const helpCalls: Array<{ x: number; y: number }> = [];
+  const previewBox = {
+    scrollBy: (delta: { x: number; y: number }) => previewCalls.push(delta),
+  } as unknown as ScrollBoxRenderable;
+  const helpBox = {
+    scrollBy: (delta: { x: number; y: number }) => helpCalls.push(delta),
+  } as unknown as ScrollBoxRenderable;
+  const harness = createControllerHarness({ previewViewport: previewBox, helpViewport: helpBox });
+
+  harness.store.actions.setPreviewVisibleOverride(false);
+  harness.controller.scrollPreview(1);
+
+  expect(previewCalls).toEqual([]);
+  expect(helpCalls).toEqual([{ x: 0, y: 1 }]);
   harness.store.dispose();
 });
 

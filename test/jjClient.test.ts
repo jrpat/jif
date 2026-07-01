@@ -314,6 +314,22 @@ test("parseEvolutionLogOutput splits entries on graph-node glyphs and extracts o
   expect(entries[2]?.id).toBe("0c0c798bfcf6");
 });
 
+test("parseEvolutionLogOutput captures each entry's commit id from its header line", () => {
+  const output = [
+    "@  xuntkrpo jrp@maild.name 2026-05-15 06:30:40 dafa8495",
+    "│  third",
+    "│  -- operation 35bf4e939772 describe commit f5029c4b0880",
+    "○  xuntkrpo/1 jrp@maild.name 2026-05-15 06:30:40 f5029c4b (hidden)",
+    "│  second",
+    "│  -- operation fbb9651ace30 describe commit a44bb4e65445",
+  ].join("\n");
+
+  const entries = parseEvolutionLogOutput(output);
+
+  expect(entries[0]?.commitId).toBe("dafa8495");
+  expect(entries[1]?.commitId).toBe("f5029c4b");
+});
+
 test("parseEvolutionLogOutput preserves ANSI escapes in entry lines", () => {
   const output = [
     "[1m[38;5;2m@[0m  [1m[38;5;13mx[38;5;8muntkrpo[39m",

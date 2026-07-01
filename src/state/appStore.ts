@@ -8,6 +8,7 @@ import type {
   CommandDraftConfig,
   FailedCommand,
   InlineConfirmation,
+  PreviewPosition,
   RebaseSourceKind,
   RebaseTargetKind,
   RepositoryData,
@@ -24,6 +25,9 @@ import {
   clearLastFailedCommand,
   clearRevisionSelection,
   cycleLayout,
+  setPreviewPositionOverride,
+  setPreviewVisibleOverride,
+  setPreviewSizePercentOverride,
   clearStatusMessage,
   closeFocusedRevision,
   closeOperationLog,
@@ -354,6 +358,15 @@ export function createAppStore(
       },
       cycleLayout() {
         mutate((currentState) => cycleLayout(currentState));
+      },
+      setPreviewPositionOverride(position: PreviewPosition | null) {
+        mutate((currentState) => setPreviewPositionOverride(currentState, position));
+      },
+      setPreviewVisibleOverride(visible: boolean | null) {
+        mutate((currentState) => setPreviewVisibleOverride(currentState, visible));
+      },
+      setPreviewSizePercentOverride(percent: number | null) {
+        mutate((currentState) => setPreviewSizePercentOverride(currentState, percent));
       },
       openShortcutPanel() {
         mutate((currentState) => openShortcutPanel(currentState));

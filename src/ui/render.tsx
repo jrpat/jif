@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { MouseButton, TextAttributes, type MouseEvent, type ScrollBoxRenderable } from "@opentui/core";
 import { For, Show, createEffect, createMemo, createRenderEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
@@ -16,6 +17,8 @@ import {
   getDisplayedCommandText,
   getExpandedRevision,
   getFocusedRevision,
+  getFocusedOperationLogEntry,
+  getFocusedRevisionArg,
   getMarkedRowIds,
   getDisplayedNotifications,
   getOperationAffectedRowIds,
@@ -29,6 +32,13 @@ import { isFilesOnlyRevset } from "../revset/files.ts";
 import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/types.ts";
 import { createJifCommandController, loadRevisionFiles } from "./controller.ts";
 import { DiffViewer } from "./DiffViewer.tsx";
+import { PreviewPane } from "./PreviewPane.tsx";
+import {
+  effectivePreviewCols,
+  effectivePreviewPosition,
+  effectivePreviewRows,
+  effectivePreviewVisible,
+} from "../domain/preview.ts";
 import { InlineConfirmation } from "./InlineConfirmation.tsx";
 import { NotificationsOverlay } from "./NotificationsOverlay.tsx";
 import { OperationLogEntryItem } from "./OperationLogEntryItem.tsx";
@@ -90,7 +100,7 @@ import { bindAutoRefresh, bindRefreshOnFocus, createRepositoryRefresher } from "
 import { createFocusClickGuard } from "./focusClickGuard.ts";
 import { suspendProcessToShell } from "./suspend.ts";
 import { openTextInEditor } from "./openTextInEditor.ts";
-import { hasVisibleSearchHighlights, hasVisibleSearchScope } from "../search/matching.ts";
+import { hasVisibleSearchHighlights, hasVisibleSearchScope, stripAnsi } from "../search/matching.ts";
 import { SearchHighlightLayer } from "./searchOverlay.tsx";
 import { getStatusHelpToastMaxBodyHeight, getStatusToastMaxBodyHeight } from "./statusMessages.ts";
 import {
@@ -126,6 +136,23 @@ export function JifView(props: {
     width: Math.max(renderer.width, 1),
     height: Math.max(renderer.height, 1),
   });
+  const [previewDiff, setPreviewDiff] = createSignal("");
+  const [previewHeader, setPreviewHeader] = createSignal<string | null>(null);
+  const [previewLoading, setPreviewLoading] = createSignal(false);
+  let previewSeq = 0;
+  const previewVisible = () => effectivePreviewVisible(store.state, config.preview);
+  const previewPosition = () =>
+    effectivePreviewPosition(store.state, config.preview, terminalSize().width);
+  const previewCols = () =>
+    effectivePreviewCols(store.state, config.preview, terminalSize().width);
+  const previewRows = () =>
+    effectivePreviewRows(store.state, config.preview, terminalSize().height);
+  // The scrollable width inside the pane: full width below (minus scrollbar),
+  // or the pane columns minus the left divider and scrollbar on the right.
+  const previewViewportWidth = () =>
+    previewPosition() === "below"
+      ? Math.max(1, terminalSize().width - 1)
+      : Math.max(1, previewCols() - 2);
   const persistence = createPersistenceService();
   const refreshRepository = createRepositoryRefresher({
     client,
@@ -190,6 +217,7 @@ export function JifView(props: {
   let logViewport: ScrollBoxRenderable | undefined;
   let diffViewport: ScrollBoxRenderable | undefined;
   let helpViewport: ScrollBoxRenderable | undefined;
+  let previewViewport: ScrollBoxRenderable | undefined;
   const detectAndApplyPalette = createPaletteDetector({
     renderer,
     rawConfig,
@@ -289,6 +317,9 @@ export function JifView(props: {
     persistLayout: (layout) => persistence.saveLayoutPreference(layout),
     getDiffViewport: () => diffViewport,
     getHelpViewport: () => helpViewport,
+    getPreviewViewport: () => previewViewport,
+    getTerminalSize: () => terminalSize(),
+    getPreviewConfig: () => config.preview,
     logShortcutPanelToggle: ({ before, after, focusMode }) => {
       logShortcutDebug("toggle-shortcut-panel", {
         before,
@@ -296,6 +327,99 @@ export function JifView(props: {
         focusMode,
       });
     },
+  });
+
+  // Keep the preview pane's content in sync with whatever is focused. Debounced
+  // so rapid j/k navigation doesn't spawn a jj process per keystroke; a sequence
+  // token discards stale async results.
+  createEffect(() => {
+    const mode = store.state.focusMode;
+    const visible = previewVisible();
+
+    if (
+      !visible ||
+      (mode !== "revisions" && mode !== "files" && mode !== "op-log" && mode !== "evolog")
+    ) {
+      setPreviewHeader(null);
+      setPreviewDiff("");
+      setPreviewLoading(false);
+      return;
+    }
+
+    let fetcher: (() => Promise<{ diff: string; header: string | null }>) | null = null;
+    // Shown immediately (from state) while the async fetch runs.
+    let placeholderHeader: string | null = null;
+
+    if (mode === "revisions") {
+      const revision = getFocusedRevision(store.state);
+      const revArg = getFocusedRevisionArg(store.state);
+      if (revision && revArg) {
+        placeholderHeader = revision.description;
+        fetcher = async () => {
+          const [diff, description] = await Promise.all([
+            client.loadRevisionDiff(revArg),
+            client.loadRevisionDescription(revArg),
+          ]);
+          return { diff, header: description.trim() || revision.description };
+        };
+      }
+    } else if (mode === "files") {
+      const revArg = getFocusedRevisionArg(store.state);
+      const file = getExpandedRevision(store.state)?.files[store.state.focusedFileIndex];
+      if (revArg && file) {
+        const absolutePath = join(store.state.repoPath, file.path);
+        fetcher = async () => ({ diff: await client.loadFileDiff(revArg, absolutePath), header: null });
+      }
+    } else if (mode === "op-log") {
+      const entry = getFocusedOperationLogEntry(store.state);
+      if (entry) {
+        placeholderHeader = stripAnsi(entry.lines[0] ?? "").trim() || entry.id;
+        const header = placeholderHeader;
+        fetcher = async () => ({ diff: await client.loadOperationDiffGit(entry.id), header });
+      }
+    } else {
+      const entry = store.state.evologEntries[store.state.focusedEvologIndex];
+      const commitId = entry?.commitId;
+      if (entry && commitId) {
+        placeholderHeader = stripAnsi(entry.lines[0] ?? "").trim() || commitId;
+        const header = placeholderHeader;
+        fetcher = async () => ({ diff: await client.loadEvologEntryDiff(commitId), header });
+      }
+    }
+
+    setPreviewHeader(placeholderHeader);
+
+    if (!fetcher) {
+      setPreviewDiff("");
+      setPreviewLoading(false);
+      return;
+    }
+
+    const runFetch = fetcher;
+    const seq = ++previewSeq;
+    const timer = setTimeout(() => {
+      setPreviewLoading(true);
+      void (async () => {
+        try {
+          const result = await runFetch();
+          if (seq === previewSeq) {
+            setPreviewDiff(result.diff);
+            setPreviewHeader(result.header);
+            previewViewport?.scrollTo({ x: 0, y: 0 });
+          }
+        } catch (error) {
+          if (seq === previewSeq) {
+            setPreviewDiff("");
+            store.actions.reportError(error);
+          }
+        } finally {
+          if (seq === previewSeq) {
+            setPreviewLoading(false);
+          }
+        }
+      })();
+    }, 50);
+    onCleanup(() => clearTimeout(timer));
   });
 
   const commandText = createMemo(() => {
@@ -767,6 +891,13 @@ export function JifView(props: {
         flexDirection="column"
         backgroundColor={config.colorScheme.semanticColors.chromeFillOne}
       >
+        <box
+          flexGrow={1}
+          width="100%"
+          minHeight={0}
+          flexDirection={previewPosition() === "below" ? "column" : "row"}
+        >
+          <box flexGrow={1} minWidth={0} minHeight={0}>
         <Show
           when={store.state.focusMode === "diff-viewer" && store.state.diffViewer}
           fallback={(
@@ -894,6 +1025,30 @@ export function JifView(props: {
             />
           </box>
         </Show>
+          </box>
+          <Show when={previewVisible() && store.state.focusMode !== "diff-viewer"}>
+            <box
+              flexShrink={0}
+              width={previewPosition() === "below" ? "100%" : previewCols()}
+              height={previewPosition() === "below" ? previewRows() : "100%"}
+              border={previewPosition() === "below" ? ["top"] : ["left"]}
+              borderStyle="single"
+              borderColor={config.colorScheme.semanticColors.chromeBorderIdle}
+              backgroundColor={config.colorScheme.semanticColors.chromeFillOne}
+            >
+              <PreviewPane
+                header={previewHeader()}
+                diff={previewDiff()}
+                loading={previewLoading()}
+                viewportWidth={previewViewportWidth()}
+                config={config}
+                registerScrollbox={(el) => {
+                  previewViewport = el;
+                }}
+              />
+            </box>
+          </Show>
+        </box>
         <Show when={bottomChromeLayout().showExpandedShortcutPanel}>
           <StatusArea
             shortcutSummary={shortcutSummary()}

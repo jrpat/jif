@@ -95,6 +95,11 @@ export type CommandController = Readonly<{
   showOperationDiff: () => void;
   scrollDiffViewer: (rowDelta: number, colDelta: number) => void;
   scrollHelpToast: (rowDelta: number) => void;
+  togglePreview: () => void;
+  togglePreviewPosition: () => void;
+  expandPreview: () => void;
+  shrinkPreview: () => void;
+  scrollPreview: (rowDelta: number) => void;
   openNotifications: () => void;
   expandNotification: () => void;
   collapseNotification: () => void;
@@ -618,6 +623,48 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Cycle Layout",
     description: "Rotate expanded, condensed, and super-condensed layouts",
     run: (controller) => controller.cycleLayout(),
+    group: "global",
+  },
+  {
+    id: "toggle-preview",
+    title: "Toggle Preview",
+    description: "Show or hide the preview pane for this session",
+    run: (controller) => controller.togglePreview(),
+    group: "global",
+  },
+  {
+    id: "toggle-preview-position",
+    title: "Preview Position",
+    description: "Switch the preview pane between right and below",
+    run: (controller) => controller.togglePreviewPosition(),
+    group: "global",
+  },
+  {
+    id: "expand-preview",
+    title: "Grow Preview",
+    description: "Grow the preview pane",
+    run: (controller) => controller.expandPreview(),
+    group: "global",
+  },
+  {
+    id: "shrink-preview",
+    title: "Shrink Preview",
+    description: "Shrink the preview pane",
+    run: (controller) => controller.shrinkPreview(),
+    group: "global",
+  },
+  {
+    id: "scroll-preview-down",
+    title: "Scroll Preview Down",
+    description: "Scroll the preview pane down",
+    run: (controller) => controller.scrollPreview(1),
+    group: "global",
+  },
+  {
+    id: "scroll-preview-up",
+    title: "Scroll Preview Up",
+    description: "Scroll the preview pane up",
+    run: (controller) => controller.scrollPreview(-1),
     group: "global",
   },
   {

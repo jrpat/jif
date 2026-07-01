@@ -59,7 +59,12 @@ export type RevisionSummary = Readonly<{
 export type OperationLogEntry = Readonly<{
   id: string;
   lines: readonly string[];
+  // Only populated for evolog entries: the commit id of that historical
+  // version, used to fetch its diff for the preview pane.
+  commitId?: string;
 }>;
+
+export type PreviewPosition = "right" | "below";
 
 export type RepositoryData = Readonly<{
   repoPath: string;
@@ -196,6 +201,10 @@ export type AppState = Readonly<{
   searchMode: SearchMode;
   diffViewer: DiffViewerState | null;
   commandBarBookmark: CommandBarBookmarkContext | null;
+  // Preview pane session overrides. `null` means "follow config default".
+  previewPositionOverride: PreviewPosition | null;
+  previewVisibleOverride: boolean | null;
+  previewSizePercentOverride: number | null;
 }>;
 
 export type SampleRepoMaterialization = Readonly<{

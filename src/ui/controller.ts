@@ -15,6 +15,13 @@ import { tokenizeCommandText, type WorkingCopyRefreshOptions } from "../jj/clien
 import { quoteCommand } from "../jj/process.ts";
 import { formatFilesRevset, isFilesOnlyRevset } from "../revset/files.ts";
 import { stripAnsi } from "../search/matching.ts";
+import type { ResolvedAppConfig } from "../config/schema.ts";
+import {
+  clampPreviewPercent,
+  effectivePreviewPercent,
+  effectivePreviewPosition,
+  effectivePreviewVisible,
+} from "../domain/preview.ts";
 import type { AppStore } from "../state/appStore.ts";
 import {
   draftConfigs,
@@ -96,6 +103,9 @@ export function createJifCommandController(args: Readonly<{
   persistLayout(layout: AppLayout): void | Promise<unknown>;
   getDiffViewport(): ScrollBoxRenderable | undefined;
   getHelpViewport(): ScrollBoxRenderable | undefined;
+  getPreviewViewport(): ScrollBoxRenderable | undefined;
+  getTerminalSize(): Readonly<{ width: number; height: number }>;
+  getPreviewConfig(): ResolvedAppConfig["preview"];
   logShortcutPanelToggle(details: Readonly<{
     before: boolean;
     after: boolean;
@@ -103,6 +113,16 @@ export function createJifCommandController(args: Readonly<{
   }>): void;
 }>): CommandController {
   const { store, client } = args;
+
+  function adjustPreviewSize(direction: 1 | -1) {
+    const previewConfig = args.getPreviewConfig();
+    const current = effectivePreviewPercent(store.snapshot(), previewConfig);
+    const next = clampPreviewPercent(
+      current + direction * previewConfig.resizeStepPercent,
+      previewConfig,
+    );
+    store.actions.setPreviewSizePercentOverride(next);
+  }
 
   // `jj split` and `jj split --parallel` share the same flow: split the whole
   // revision when nothing is selected, otherwise confirm whether to carve out
@@ -636,6 +656,31 @@ export function createJifCommandController(args: Readonly<{
     },
     scrollHelpToast(rowDelta: number) {
       args.getHelpViewport()?.scrollBy({ x: 0, y: rowDelta });
+    },
+    togglePreview() {
+      const visible = effectivePreviewVisible(store.snapshot(), args.getPreviewConfig());
+      store.actions.setPreviewVisibleOverride(!visible);
+    },
+    togglePreviewPosition() {
+      const current = effectivePreviewPosition(
+        store.snapshot(),
+        args.getPreviewConfig(),
+        args.getTerminalSize().width,
+      );
+      store.actions.setPreviewPositionOverride(current === "right" ? "below" : "right");
+    },
+    expandPreview() {
+      adjustPreviewSize(1);
+    },
+    shrinkPreview() {
+      adjustPreviewSize(-1);
+    },
+    scrollPreview(rowDelta: number) {
+      if (effectivePreviewVisible(store.snapshot(), args.getPreviewConfig())) {
+        args.getPreviewViewport()?.scrollBy({ x: 0, y: rowDelta });
+      } else {
+        args.getHelpViewport()?.scrollBy({ x: 0, y: rowDelta });
+      }
     },
     toggleSelection() {
       store.actions.toggleRevisionSelection();

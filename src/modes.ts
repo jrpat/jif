@@ -73,6 +73,18 @@ export const isCanonicalBinding = (binding: KeymapBinding): boolean =>
 
 const alias = (command: string): KeymapBinding => ({ command, canonical: false });
 
+// Preview-pane controls, shared by every mode that can show a preview
+// (revisions/files/op-log/evolog). Kept in one place so a key change lands in
+// all of them at once.
+const previewBindings = {
+  p: "toggle-preview",
+  P: "toggle-preview-position",
+  "ctrl-[": "expand-preview",
+  "ctrl-]": "shrink-preview",
+  "ctrl-j": "scroll-preview-down",
+  "ctrl-k": "scroll-preview-up",
+} satisfies Readonly<Record<string, KeymapBinding>>;
+
 export const defaultKeymap: Keymap = {
   _global: {
     escape: "cancel",
@@ -146,6 +158,7 @@ export const defaultKeymap: Keymap = {
     b: "enter-bookmark-mode",
     M: "set-parents",
     ";": "enter-extra-mode",
+    ...previewBindings,
   },
   files: {
     j: "move-down",
@@ -163,6 +176,7 @@ export const defaultKeymap: Keymap = {
     " ": "toggle-file-selection",
     a: "select-all-files",
     "?": "shortcut-panel",
+    ...previewBindings,
   },
   "op-log": {
     j: "move-down",
@@ -179,6 +193,7 @@ export const defaultKeymap: Keymap = {
     "/": "search",
     f: "fast-jump",
     "?": "shortcut-panel",
+    ...previewBindings,
   },
   evolog: {
     j: "move-down",
@@ -191,6 +206,7 @@ export const defaultKeymap: Keymap = {
     "/": "search",
     f: "fast-jump",
     "?": "shortcut-panel",
+    ...previewBindings,
   },
   "inline-confirmation": {
     h: "inline-confirmation-prev-option",

@@ -13,6 +13,7 @@ import type {
   InlineConfirmation,
   InlineConfirmationOptionId,
   OperationLogEntry,
+  PreviewPosition,
   RebaseSourceKind,
   RebaseTargetKind,
   RepositoryData,
@@ -228,6 +229,9 @@ export function createInitialState(
     searchMode: "search",
     diffViewer: null,
     commandBarBookmark: null,
+    previewPositionOverride: null,
+    previewVisibleOverride: null,
+    previewSizePercentOverride: null,
   };
 }
 
@@ -259,6 +263,27 @@ export function cycleLayout(state: AppState): AppState {
   const currentIndex = LAYOUT_CYCLE.indexOf(state.layout);
   const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % LAYOUT_CYCLE.length;
   return { ...state, layout: LAYOUT_CYCLE[nextIndex]! };
+}
+
+export function setPreviewPositionOverride(
+  state: AppState,
+  position: PreviewPosition | null,
+): AppState {
+  return { ...state, previewPositionOverride: position };
+}
+
+export function setPreviewVisibleOverride(
+  state: AppState,
+  visible: boolean | null,
+): AppState {
+  return { ...state, previewVisibleOverride: visible };
+}
+
+export function setPreviewSizePercentOverride(
+  state: AppState,
+  percent: number | null,
+): AppState {
+  return { ...state, previewSizePercentOverride: percent };
 }
 
 export function openShortcutPanel(state: AppState): AppState {

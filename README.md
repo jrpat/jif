@@ -50,10 +50,34 @@ Available in every mode (mode-specific bindings can override these).
 | `ctrl-z` | suspend | Suspend the application and return to the shell |
 | `ctrl-n` | search-next | Jump to the next search match (no-op when no search is active) |
 | `ctrl-p` | search-prev | Jump to the previous search match (no-op when no search is active) |
-| `ctrl-j` | scroll-help-down | Scroll the visible help toast down one line (no-op when no help toast is shown) |
-| `ctrl-k` | scroll-help-up | Scroll the visible help toast up one line (no-op when no help toast is shown) |
+| `ctrl-j` | scroll-help-down | Scroll the visible help toast down one line (in Normal, Files, Operation Log, and Evolog this scrolls the [preview](#preview) instead when it is shown) |
+| `ctrl-k` | scroll-help-up | Scroll the visible help toast up one line (in Normal, Files, Operation Log, and Evolog this scrolls the [preview](#preview) instead when it is shown) |
 | `escape` | cancel | Cancel command composition, leave input mode, or return from a file filter to the log |
 | `~` | open-notifications | Open the notifications history panel |
+
+### Preview
+
+A pane beside the log that shows the diff of whatever is focused, following your navigation. Active in Normal, Files, Operation Log, and Evolog.
+
+- **Normal** — the full diff of the focused revision (all files), with a change-id + description header.
+- **Files** — the diff of the focused file only.
+- **Operation Log** — the diff of the focused operation (`jj operation diff`).
+- **Evolog** — the diff of the focused evolution entry.
+
+By default the pane is placed automatically: on the right in wide terminals and below in narrow ones (below `preview.autoRightMinWidth` columns). See the [Preview Pane](#configuration) configuration for defaults, including whether it shows on startup and its size.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `p` | toggle-preview | Show or hide the preview pane for this session |
+| `shift+p` | toggle-preview-position | Flip the pane between right and below |
+| `ctrl+[` | expand-preview | Grow the pane by `preview.resizeStepPercent` |
+| `ctrl+]` | shrink-preview | Shrink the pane by `preview.resizeStepPercent` |
+| `ctrl+j` | scroll-preview-down | Scroll the preview down (falls back to the help toast when the pane is hidden) |
+| `ctrl+k` | scroll-preview-up | Scroll the preview up (falls back to the help toast when the pane is hidden) |
+
+The pane also scrolls **horizontally** with the mouse wheel / trackpad when a diff line is wider than the pane.
+
+`ctrl+[` / `ctrl+]` require a terminal that distinguishes them from other keys via the Kitty keyboard protocol (kitty, Ghostty, WezTerm, recent iTerm2, Alacritty, foot). In terminals without it, `ctrl+[` is indistinguishable from Escape.
 
 ### Normal
 
@@ -434,6 +458,8 @@ The color configuration supports `light`, `dark`, and `auto` theme mode. In `aut
 
 Autocomplete suggestion focus is controlled separately from revision-row focus. Override `colorScheme.colors.promptSuggestionFocusedFill` to change the highlighted suggestion background without changing `rowFocusedFill`.
 
+The preview pane's diff adapts to the terminal theme like the rest of jif: added and removed lines are blended from the palette's green and red against the terminal background, so they stay legible on both light and dark terminals. Override `colorScheme.colors.diffFileName`, `diffAddedFill`, `diffRemovedFill`, `diffAddedSign`, `diffRemovedSign`, or `diffLineNumber` to tune the diff colors.
+
 </details>
 
 <details>
@@ -465,6 +491,29 @@ export default {
 	},
 } satisfies Jif.Config;
 ```
+
+</details>
+
+<details>
+<summary>Preview Pane</summary>
+
+The [preview pane](#preview) shows the diff of the focused item beside the log. These are its defaults:
+
+```ts
+export default {
+	preview: {
+		position: "auto",         // "auto" | "right" | "below"; auto uses right on wide terminals, below on narrow
+		showByDefault: false,      // show the pane on startup (toggle in-session with `p`)
+		defaultWidthPercent: 50,   // initial size as a percent of the terminal
+		resizeStepPercent: 5,      // percent added/removed by ctrl+[ / ctrl+]
+		minSizePercent: 15,        // clamp for the size percent
+		maxSizePercent: 90,
+		autoRightMinWidth: 100,    // in "auto", terminals at least this wide place the pane on the right, else below
+	},
+} satisfies Jif.Config;
+```
+
+Position, visibility, and size can also be changed for the current session with `p`, `shift+p`, and `ctrl+[` / `ctrl+]`; those session changes are not persisted.
 
 </details>
 

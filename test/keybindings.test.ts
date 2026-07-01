@@ -119,6 +119,11 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     scrollDiffViewer: (rowDelta, colDelta) =>
       calls.push(`scrollDiffViewer(${rowDelta},${colDelta})`),
     scrollHelpToast: (rowDelta) => calls.push(`scrollHelpToast(${rowDelta})`),
+    togglePreview: () => calls.push("togglePreview"),
+    togglePreviewPosition: () => calls.push("togglePreviewPosition"),
+    expandPreview: () => calls.push("expandPreview"),
+    shrinkPreview: () => calls.push("shrinkPreview"),
+    scrollPreview: (rowDelta) => calls.push(`scrollPreview(${rowDelta})`),
     openNotifications: () => calls.push("openNotifications"),
     expandNotification: () => calls.push("expandNotification"),
     collapseNotification: () => calls.push("collapseNotification"),
@@ -1853,7 +1858,10 @@ test("escape dismisses a visible help toast via the global cancel binding", () =
   expect(calls).toEqual(["cancelOrBlur"]);
 });
 
-test("ctrl-j/ctrl-k scroll the visible help toast one line while j/k still navigate", () => {
+// In browse modes ctrl-j/ctrl-k drive the preview pane (the controller's
+// scrollPreview delegates to the help toast when the preview is hidden, so help
+// scrolling is preserved without a dedicated keymap entry here).
+test("ctrl-j/ctrl-k route to scrollPreview in browse modes", () => {
   const calls: string[] = [];
   const state = helpToastState();
 
@@ -1872,10 +1880,10 @@ test("ctrl-j/ctrl-k scroll the visible help toast one line while j/k still navig
 
   expect(downHandled).toBeTrue();
   expect(upHandled).toBeTrue();
-  expect(calls).toEqual(["scrollHelpToast(1)", "scrollHelpToast(-1)"]);
+  expect(calls).toEqual(["scrollPreview(1)", "scrollPreview(-1)"]);
 });
 
-test("ctrl-j/ctrl-k are inert when no help toast is visible", () => {
+test("ctrl-j/ctrl-k route to scrollPreview even without a help toast", () => {
   const calls: string[] = [];
   const state = createState();
 
@@ -1892,7 +1900,7 @@ test("ctrl-j/ctrl-k are inert when no help toast is visible", () => {
     controller: createController(calls),
   });
 
-  expect(downHandled).toBeFalse();
-  expect(upHandled).toBeFalse();
-  expect(calls).toEqual([]);
+  expect(downHandled).toBeTrue();
+  expect(upHandled).toBeTrue();
+  expect(calls).toEqual(["scrollPreview(1)", "scrollPreview(-1)"]);
 });

@@ -213,6 +213,49 @@ export class JjClient {
     return result.stdout;
   }
 
+  // Preview-pane diffs are fetched in git format (not colored): OpenTUI's
+  // `<diff>` component parses the raw patch itself and applies its own
+  // highlighting, so ANSI would break it. All are read-only (no snapshot).
+  async loadRevisionDiff(revisionArg: string): Promise<string> {
+    const result = await this.runJj(
+      ["diff", "-r", revisionArg, "--git"],
+      { workingCopy: "read-only" },
+    );
+    return result.stdout;
+  }
+
+  async loadRevisionDescription(revisionArg: string): Promise<string> {
+    const result = await this.runJj(
+      ["log", "--no-graph", "--color", "never", "-r", revisionArg, "-T", "description"],
+      { workingCopy: "read-only" },
+    );
+    return result.stdout;
+  }
+
+  async loadFileDiff(revisionArg: string, path: string): Promise<string> {
+    const result = await this.runJj(
+      ["diff", "-r", revisionArg, "--git", path],
+      { workingCopy: "read-only" },
+    );
+    return result.stdout;
+  }
+
+  async loadOperationDiffGit(operationId: string): Promise<string> {
+    const result = await this.runJj(
+      ["operation", "diff", "--operation", operationId, "--git"],
+      { workingCopy: "read-only" },
+    );
+    return result.stdout;
+  }
+
+  async loadEvologEntryDiff(commitId: string): Promise<string> {
+    const result = await this.runJj(
+      ["evolog", "-r", commitId, "--git", "-p", "-n", "1"],
+      { workingCopy: "read-only" },
+    );
+    return result.stdout;
+  }
+
   async resolveDescendants(revisionId: string): Promise<readonly string[]> {
     return this.resolveRevset(`${revisionId}::`);
   }
@@ -576,6 +619,16 @@ export function parseOperationLogOutput(output: string): readonly OperationLogEn
 
 const EVOLOG_GRAPH_NODE_CHARS = new Set(["@", "○", "◆", "×", "*", "+"]);
 const EVOLOG_OPERATION_ID_PATTERN = /--\s+operation\s+([0-9a-f]{8,})/;
+const EVOLOG_COMMIT_ID_PATTERN = /\b[0-9a-f]{8,}\b/g;
+
+// The commit id of a historical version is the trailing hex token on the
+// entry's header line (change ids use the k–z alphabet, so they never match).
+// Used to fetch that version's diff for the preview pane.
+function parseEvologCommitId(headerLine: string): string | undefined {
+  const plain = headerLine.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "");
+  const matches = plain.match(EVOLOG_COMMIT_ID_PATTERN);
+  return matches && matches.length > 0 ? matches[matches.length - 1] : undefined;
+}
 
 export function parseEvolutionLogOutput(output: string): readonly OperationLogEntry[] {
   const entries: OperationLogEntry[] = [];
@@ -597,9 +650,11 @@ export function parseEvolutionLogOutput(output: string): readonly OperationLogEn
       }
     }
 
+    const commitId = parseEvologCommitId(currentLines[0] ?? "");
     entries.push({
       id: id ?? `evolog-${currentIndex}`,
       lines: currentLines,
+      ...(commitId ? { commitId } : {}),
     });
     currentIndex += 1;
     currentLines = [];

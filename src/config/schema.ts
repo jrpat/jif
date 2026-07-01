@@ -49,6 +49,12 @@ export type SemanticColorScheme = Readonly<{
   revsetPrefix: SemanticColorValue;
   fileFocusMarker: SemanticColorValue;
   fileStatusAccent: SemanticColorValue;
+  diffFileName: SemanticColorValue;
+  diffAddedFill: SemanticColorValue;
+  diffRemovedFill: SemanticColorValue;
+  diffAddedSign: SemanticColorValue;
+  diffRemovedSign: SemanticColorValue;
+  diffLineNumber: SemanticColorValue;
   statusInfo: SemanticColorValue;
   statusSuccess: SemanticColorValue;
   statusWarning: SemanticColorValue;
@@ -80,7 +86,18 @@ export type AppConfig = Readonly<{
   notifications?: Readonly<{
     historyLimit?: number;
   }>;
+  preview?: Readonly<{
+    position?: PreviewConfigPosition;
+    showByDefault?: boolean;
+    defaultWidthPercent?: number;
+    resizeStepPercent?: number;
+    minSizePercent?: number;
+    maxSizePercent?: number;
+    autoRightMinWidth?: number;
+  }>;
 }>;
+
+export type PreviewConfigPosition = "auto" | "right" | "below";
 
 export type ResolvedAppConfig = Readonly<{
   colorScheme: Readonly<{
@@ -100,6 +117,15 @@ export type ResolvedAppConfig = Readonly<{
   }>;
   notifications: Readonly<{
     historyLimit: number;
+  }>;
+  preview: Readonly<{
+    position: PreviewConfigPosition;
+    showByDefault: boolean;
+    defaultWidthPercent: number;
+    resizeStepPercent: number;
+    minSizePercent: number;
+    maxSizePercent: number;
+    autoRightMinWidth: number;
   }>;
 }>;
 
@@ -150,6 +176,14 @@ const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   revsetPrefix:           { source: "magenta",     opacity: 1.0  },
   fileFocusMarker:        { source: "blue",        opacity: 1.0  },
   fileStatusAccent:       { source: "yellow",      opacity: 1.0  },
+
+  // Diff preview (OpenTUI <diff> component)
+  diffFileName:           { source: "cyan",        opacity: 1.0  },
+  diffAddedFill:          { source: "green",       opacity: 0.15 },
+  diffRemovedFill:        { source: "red",         opacity: 0.15 },
+  diffAddedSign:          { source: "green",       opacity: 1.0  },
+  diffRemovedSign:        { source: "red",         opacity: 1.0  },
+  diffLineNumber:         { source: "foreground",  opacity: 0.40 },
 
   // Status
   statusInfo:             { source: "blue",        opacity: 1.0  },
@@ -285,7 +319,23 @@ export function resolveAppConfig(
     notifications: {
       historyLimit: Math.max(1, Math.floor(config.notifications?.historyLimit ?? 50)),
     },
+    preview: {
+      position: config.preview?.position ?? "auto",
+      showByDefault: config.preview?.showByDefault ?? false,
+      defaultWidthPercent: clampPercent(config.preview?.defaultWidthPercent ?? 50),
+      resizeStepPercent: Math.max(1, Math.floor(config.preview?.resizeStepPercent ?? 5)),
+      minSizePercent: clampPercent(config.preview?.minSizePercent ?? 15),
+      maxSizePercent: clampPercent(config.preview?.maxSizePercent ?? 90),
+      autoRightMinWidth: Math.max(1, Math.floor(config.preview?.autoRightMinWidth ?? 100)),
+    },
   };
+}
+
+function clampPercent(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 50;
+  }
+  return Math.min(100, Math.max(1, Math.round(value)));
 }
 
 function resolveRefreshIntervalMs(value: number | undefined): number {

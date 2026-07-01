@@ -113,6 +113,31 @@ test("resolveAppConfig makes the scrollbar thumb three steps more prominent than
   expect(light.colorScheme.semanticColors.chromeScrollbarThumb).toBe("#c2c2c2");
 });
 
+test("resolveAppConfig derives adaptive diff preview colors from the palette", () => {
+  const dark = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
+  const light = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_LIGHT,
+  });
+
+  // Added/removed line fills blend the palette's green/red against the
+  // terminal background, so they stay dark on dark and light on light rather
+  // than using OpenTUI's hardcoded dark-background defaults (#1a4d1a/#4d1a1a).
+  expect(dark.colorScheme.semanticColors.diffAddedFill).toBe("#001f00");
+  expect(dark.colorScheme.semanticColors.diffRemovedFill).toBe("#1f0000");
+  expect(light.colorScheme.semanticColors.diffAddedFill).toBe("#d9f8d9");
+  expect(light.colorScheme.semanticColors.diffRemovedFill).toBe("#f8d9d9");
+
+  // The +/- signs stay at full palette strength on both themes.
+  expect(dark.colorScheme.semanticColors.diffAddedSign).toBe("#00cd00");
+  expect(dark.colorScheme.semanticColors.diffRemovedSign).toBe("#cd0000");
+
+  // The line-number gutter follows the foreground, so it flips with the theme.
+  expect(dark.colorScheme.semanticColors.diffLineNumber).toBe("#5c5c5c");
+  expect(light.colorScheme.semanticColors.diffLineNumber).toBe("#999999");
+});
+
 test("resolveAppConfig keeps the focused row fill subtle", () => {
   const dark = resolveAppConfig(defaultAppConfig, {
     palette: FALLBACK_PALETTE_DARK,
