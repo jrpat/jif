@@ -64,7 +64,7 @@ A pane beside the log that shows the diff of whatever is focused, following your
 - **Operation Log** — the diff of the focused operation (`jj operation diff`).
 - **Evolog** — the diff of the focused evolution entry.
 
-By default the pane is placed automatically: on the right in wide terminals and below in narrow ones (below `preview.autoRightMinWidth` columns). See the [Preview Pane](#configuration) configuration for defaults, including whether it shows on startup and its size.
+By default the pane is placed automatically: on the right in wide terminals and below in narrow ones (narrower than `preview.narrowWidth` columns). Set `preview.whenNarrow` to `"hide"` to hide the pane on narrow terminals instead of relocating it below. See the [Preview Pane](#configuration) configuration for defaults, including whether it shows on startup and its size.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -502,13 +502,14 @@ The [preview pane](#preview) shows the diff of the focused item beside the log. 
 ```ts
 export default {
 	preview: {
-		position: "auto",         // "auto" | "right" | "below"; auto uses right on wide terminals, below on narrow
+		position: "auto",         // "auto" | "right" | "below"; auto uses right on wide terminals, below/hidden on narrow
 		showByDefault: false,      // show the pane on startup (toggle in-session with `p`)
 		defaultWidthPercent: 50,   // initial size as a percent of the terminal
 		resizeStepPercent: 5,      // percent added/removed by ctrl+[ / ctrl+]
 		minSizePercent: 15,        // clamp for the size percent
 		maxSizePercent: 90,
-		autoRightMinWidth: 100,    // in "auto", terminals at least this wide place the pane on the right, else below
+		narrowWidth: 100,          // in "auto", terminals narrower than this are "too narrow" for the right layout
+		whenNarrow: "below",       // in "auto", what to do when too narrow: "below" (relocate) or "hide"
 	},
 } satisfies Jif.Config;
 ```

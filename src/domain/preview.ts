@@ -12,16 +12,24 @@ export type PreviewSettings = Readonly<{
 }>;
 
 /**
- * Whether the preview pane should be shown. A session toggle (`p`) wins;
- * otherwise the configured default applies. The terminal-width threshold only
- * affects *positioning* (see {@link effectivePreviewPosition}), not visibility:
- * a narrow terminal shows the pane below rather than hiding it.
+ * Whether the preview pane should be shown. The pane is *wanted* when the
+ * session visibility toggle (`p`) says so, or by config default. Even when
+ * wanted, the `"auto"` layout hides it on a terminal narrower than `narrowWidth`
+ * if `whenNarrow` is `"hide"` (the default `"below"` instead relocates it — see
+ * {@link effectivePreviewPosition}). An explicit position — a config `position`
+ * other than `"auto"`, or a `shift+p` override — takes the pane out of `"auto"`,
+ * so it is always shown at that position regardless of width.
  */
 export function effectivePreviewVisible(
   state: PreviewSettings,
   preview: PreviewConfig,
+  terminalWidth: number,
 ): boolean {
-  return state.previewVisibleOverride ?? preview.showByDefault;
+  const wantsVisible = state.previewVisibleOverride ?? preview.showByDefault;
+  if (!wantsVisible) {
+    return false;
+  }
+  return !hiddenByNarrowTerminal(state, preview, terminalWidth);
 }
 
 /**
@@ -38,9 +46,30 @@ export function effectivePreviewPosition(
     return state.previewPositionOverride;
   }
   if (preview.position === "auto") {
-    return terminalWidth >= preview.autoRightMinWidth ? "right" : "below";
+    return isNarrowTerminal(preview, terminalWidth) ? "below" : "right";
   }
   return preview.position;
+}
+
+// A terminal too narrow for the "auto" layout to place the pane on the right.
+function isNarrowTerminal(preview: PreviewConfig, terminalWidth: number): boolean {
+  return terminalWidth < preview.narrowWidth;
+}
+
+// Whether the "auto" layout suppresses the pane on this terminal: only when no
+// session position override is active, the layout is "auto", the terminal is
+// narrow, and `whenNarrow` is configured to hide rather than relocate.
+function hiddenByNarrowTerminal(
+  state: PreviewSettings,
+  preview: PreviewConfig,
+  terminalWidth: number,
+): boolean {
+  return (
+    state.previewPositionOverride === null &&
+    preview.position === "auto" &&
+    preview.whenNarrow === "hide" &&
+    isNarrowTerminal(preview, terminalWidth)
+  );
 }
 
 /** The pane size as a percentage of the relevant terminal dimension. */

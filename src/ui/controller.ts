@@ -658,7 +658,11 @@ export function createJifCommandController(args: Readonly<{
       args.getHelpViewport()?.scrollBy({ x: 0, y: rowDelta });
     },
     togglePreview() {
-      const visible = effectivePreviewVisible(store.snapshot(), args.getPreviewConfig());
+      const visible = effectivePreviewVisible(
+        store.snapshot(),
+        args.getPreviewConfig(),
+        args.getTerminalSize().width,
+      );
       store.actions.setPreviewVisibleOverride(!visible);
     },
     togglePreviewPosition() {
@@ -676,7 +680,7 @@ export function createJifCommandController(args: Readonly<{
       adjustPreviewSize(-1);
     },
     scrollPreview(rowDelta: number) {
-      if (effectivePreviewVisible(store.snapshot(), args.getPreviewConfig())) {
+      if (effectivePreviewVisible(store.snapshot(), args.getPreviewConfig(), args.getTerminalSize().width)) {
         args.getPreviewViewport()?.scrollBy({ x: 0, y: rowDelta });
       } else {
         args.getHelpViewport()?.scrollBy({ x: 0, y: rowDelta });

@@ -219,7 +219,8 @@ function createControllerHarness(harnessOptions: Readonly<{
       resizeStepPercent: 5,
       minSizePercent: 15,
       maxSizePercent: 90,
-      autoRightMinWidth: 100,
+      narrowWidth: 100,
+      whenNarrow: "below",
     }),
     logShortcutPanelToggle: () => {},
   });

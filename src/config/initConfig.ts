@@ -446,7 +446,8 @@ namespace Jif {
       resizeStepPercent?: number;
       minSizePercent?: number;
       maxSizePercent?: number;
-      autoRightMinWidth?: number;
+      narrowWidth?: number;
+      whenNarrow?: "below" | "hide";
     }>;
   }>;
 }

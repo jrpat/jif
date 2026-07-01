@@ -140,7 +140,8 @@ export function JifView(props: {
   const [previewHeader, setPreviewHeader] = createSignal<string | null>(null);
   const [previewLoading, setPreviewLoading] = createSignal(false);
   let previewSeq = 0;
-  const previewVisible = () => effectivePreviewVisible(store.state, config.preview);
+  const previewVisible = () =>
+    effectivePreviewVisible(store.state, config.preview, terminalSize().width);
   const previewPosition = () =>
     effectivePreviewPosition(store.state, config.preview, terminalSize().width);
   const previewCols = () =>

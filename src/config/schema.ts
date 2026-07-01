@@ -93,11 +93,16 @@ export type AppConfig = Readonly<{
     resizeStepPercent?: number;
     minSizePercent?: number;
     maxSizePercent?: number;
-    autoRightMinWidth?: number;
+    narrowWidth?: number;
+    whenNarrow?: PreviewNarrowBehavior;
   }>;
 }>;
 
 export type PreviewConfigPosition = "auto" | "right" | "below";
+
+// What the "auto" layout does when the terminal is narrower than `narrowWidth`:
+// move the pane below the log, or hide it entirely.
+export type PreviewNarrowBehavior = "below" | "hide";
 
 export type ResolvedAppConfig = Readonly<{
   colorScheme: Readonly<{
@@ -125,7 +130,8 @@ export type ResolvedAppConfig = Readonly<{
     resizeStepPercent: number;
     minSizePercent: number;
     maxSizePercent: number;
-    autoRightMinWidth: number;
+    narrowWidth: number;
+    whenNarrow: PreviewNarrowBehavior;
   }>;
 }>;
 
@@ -326,7 +332,8 @@ export function resolveAppConfig(
       resizeStepPercent: Math.max(1, Math.floor(config.preview?.resizeStepPercent ?? 5)),
       minSizePercent: clampPercent(config.preview?.minSizePercent ?? 15),
       maxSizePercent: clampPercent(config.preview?.maxSizePercent ?? 90),
-      autoRightMinWidth: Math.max(1, Math.floor(config.preview?.autoRightMinWidth ?? 100)),
+      narrowWidth: Math.max(1, Math.floor(config.preview?.narrowWidth ?? 100)),
+      whenNarrow: config.preview?.whenNarrow ?? "below",
     },
   };
 }

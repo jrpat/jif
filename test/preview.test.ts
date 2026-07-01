@@ -29,23 +29,56 @@ function settings(over: Partial<PreviewSettings> = {}): PreviewSettings {
 }
 
 describe("effectivePreviewVisible", () => {
+  const WIDE = 200;
+
   test("follows config default when no session override", () => {
-    expect(effectivePreviewVisible(settings(), cfg({ showByDefault: true }))).toBe(true);
-    expect(effectivePreviewVisible(settings(), cfg({ showByDefault: false }))).toBe(false);
+    expect(effectivePreviewVisible(settings(), cfg({ showByDefault: true }), WIDE)).toBe(true);
+    expect(effectivePreviewVisible(settings(), cfg({ showByDefault: false }), WIDE)).toBe(false);
   });
 
   test("session override wins over config default", () => {
     expect(
-      effectivePreviewVisible(settings({ previewVisibleOverride: true }), cfg({ showByDefault: false })),
+      effectivePreviewVisible(settings({ previewVisibleOverride: true }), cfg({ showByDefault: false }), WIDE),
     ).toBe(true);
     expect(
-      effectivePreviewVisible(settings({ previewVisibleOverride: false }), cfg({ showByDefault: true })),
+      effectivePreviewVisible(settings({ previewVisibleOverride: false }), cfg({ showByDefault: true }), WIDE),
     ).toBe(false);
+  });
+
+  test("auto + whenNarrow:hide hides the pane in a narrow terminal", () => {
+    const c = cfg({ showByDefault: true, position: "auto", narrowWidth: 100, whenNarrow: "hide" });
+    expect(effectivePreviewVisible(settings(), c, 99)).toBe(false);
+    expect(effectivePreviewVisible(settings(), c, 100)).toBe(true);
+    expect(effectivePreviewVisible(settings(), c, 160)).toBe(true);
+  });
+
+  test("whenNarrow:below keeps the pane visible when narrow (default)", () => {
+    const c = cfg({ showByDefault: true, position: "auto", narrowWidth: 100, whenNarrow: "below" });
+    expect(effectivePreviewVisible(settings(), c, 40)).toBe(true);
+  });
+
+  test("whenNarrow:hide only applies to the auto layout", () => {
+    // A fixed position ignores the narrow behavior entirely.
+    const right = cfg({ showByDefault: true, position: "right", narrowWidth: 100, whenNarrow: "hide" });
+    expect(effectivePreviewVisible(settings(), right, 40)).toBe(true);
+    // A session position override takes the pane out of "auto", so it stays shown.
+    const auto = cfg({ showByDefault: true, position: "auto", narrowWidth: 100, whenNarrow: "hide" });
+    expect(
+      effectivePreviewVisible(settings({ previewPositionOverride: "below" }), auto, 40),
+    ).toBe(true);
+  });
+
+  test("narrow-hide applies even when visibility comes from the `p` toggle", () => {
+    const c = cfg({ showByDefault: false, position: "auto", narrowWidth: 100, whenNarrow: "hide" });
+    // Toggled on with `p`, but still hidden because the auto layout is too narrow.
+    expect(effectivePreviewVisible(settings({ previewVisibleOverride: true }), c, 40)).toBe(false);
+    // Toggled on and wide enough: shown.
+    expect(effectivePreviewVisible(settings({ previewVisibleOverride: true }), c, WIDE)).toBe(true);
   });
 });
 
 describe("effectivePreviewPosition", () => {
-  const auto = cfg({ position: "auto", autoRightMinWidth: 100 });
+  const auto = cfg({ position: "auto", narrowWidth: 100 });
 
   test("auto resolves to right when wide, below when narrow", () => {
     expect(effectivePreviewPosition(settings(), auto, 100)).toBe("right");
