@@ -459,7 +459,7 @@ The color configuration supports `light`, `dark`, and `auto` theme mode. In `aut
 
 Autocomplete suggestion focus is controlled separately from revision-row focus. Override `colorScheme.colors.promptSuggestionFocusedFill` to change the highlighted suggestion background without changing `rowFocusedFill`.
 
-The preview pane's diff adapts to the terminal theme like the rest of jif: added and removed lines are blended from the palette's green and red against the terminal background, and syntax tokens use indexed ANSI foreground colors from the terminal palette. Override `colorScheme.colors.diffFileName`, `diffAddedFill`, `diffRemovedFill`, `diffAddedSign`, `diffRemovedSign`, or `diffLineNumber` to tune the diff colors.
+The preview pane's background defaults to the terminal foreground blended at 3% opacity against the terminal background. Override `colorScheme.colors.previewPaneFill` to tune it. The diff adapts to the terminal theme too: added and removed lines are blended from the palette's green and red against the terminal background, and syntax tokens use indexed ANSI foreground colors from the terminal palette. Override `colorScheme.colors.diffFileName`, `diffAddedFill`, `diffRemovedFill`, `diffAddedSign`, or `diffLineNumber` to tune the diff colors.
 
 </details>
 

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { expect, test } from "bun:test";
 import { createTempDir } from "./helpers/tempRepo.ts";
 import { initProjectConfig, initUserConfig, refreshUserConfigTypes } from "../src/config/initConfig.ts";
+import { DEFAULT_PREVIEW_PANE_FILL_OPACITY } from "../src/config/index.ts";
 import { runCommand } from "../src/jj/process.ts";
 
 test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
@@ -31,6 +32,9 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(configText).toContain("keymap: {");
   expect(configText).toContain("normal: {");
   expect(configText).toContain('// chromeBorderFocus: "#00cdcd",');
+  expect(configText).toContain(
+    `// previewPaneFill: { source: "foreground", opacity: ${DEFAULT_PREVIEW_PANE_FILL_OPACITY} },`,
+  );
   expect(configText).toContain('// scrollMargin: 1,');
   expect(configText).toContain("// intervalMs: 0,");
   expect(configText).toContain('// layout: "normal",');
@@ -40,6 +44,7 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(typesText).toContain("namespace Jif {");
   expect(typesText).toContain("type Config = Readonly<{");
   expect(typesText).toContain('"promptSuggestionFocusedFill"');
+  expect(typesText).toContain('"previewPaneFill"');
   expect(typesText).toContain("intervalMs?: number");
   expect(typesText).toContain("rev: string");
   expect(typesText).toContain("file: string");

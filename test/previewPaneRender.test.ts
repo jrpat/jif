@@ -53,6 +53,10 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
       lightSyntaxComment: RGB | null;
       darkSyntaxAddedBg: RGB | null;
       lightSyntaxAddedBg: RGB | null;
+      darkPaneBackground: RGB | null;
+      lightPaneBackground: RGB | null;
+      configDarkPaneFill: string;
+      configLightPaneFill: string;
       configDarkAdded: string;
       configLightAdded: string;
       configLightRemoved: string;
@@ -164,4 +168,7 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
 
   expect(result.themeColors.darkSyntaxAddedBg).toEqual(hexToRgb(result.themeColors.configDarkAdded));
   expect(result.themeColors.lightSyntaxAddedBg).toEqual(hexToRgb(result.themeColors.configLightAdded));
+
+  expect(result.themeColors.darkPaneBackground).toEqual(hexToRgb(result.themeColors.configDarkPaneFill));
+  expect(result.themeColors.lightPaneBackground).toEqual(hexToRgb(result.themeColors.configLightPaneFill));
 });

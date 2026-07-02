@@ -47,6 +47,10 @@ Group them by what they paint.
 - `chromeScrollbarThumb`
 - `chromeBorderIdle`, `chromeBorderFocus`
 
+**Preview pane**
+- `previewPaneFill` — the pane background and unchanged diff line fill.
+- `diffFileName`, `diffAddedFill`, `diffRemovedFill`, `diffAddedSign`, `diffRemovedSign`, `diffLineNumber`
+
 **Row states**
 - `rowFocusedFill`
 - `rowSelectedFill`, `rowSelectedAccent`

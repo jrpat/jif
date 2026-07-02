@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "bun:test";
 import {
+  DEFAULT_PREVIEW_PANE_FILL_OPACITY,
   defaultAppConfig,
   loadAppConfig,
   resolveAppConfig,
@@ -28,6 +29,7 @@ test("resolveAppConfig resolves semantic colors from dark fallback palette", () 
   expect(typeof resolved.colorScheme.semanticColors.rowSelectedFill).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.rowSelectedAccent).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.promptSuggestionFocusedFill).toBe("string");
+  expect(typeof resolved.colorScheme.semanticColors.previewPaneFill).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.statusError).toBe("string");
 });
 
@@ -97,6 +99,33 @@ test("resolveAppConfig blends colors at sub-1.0 opacity against background", () 
   expect(fillTwo).not.toBe("#e5e5e5");
   // Should be a very dark gray (foreground #e5e5e5 at 8% over #000000)
   expect(fillTwo.startsWith("#")).toBe(true);
+});
+
+test("resolveAppConfig derives preview pane fill from the default opacity", () => {
+  const dark = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
+  const light = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_LIGHT,
+  });
+
+  expect(DEFAULT_PREVIEW_PANE_FILL_OPACITY).toBe(0.03);
+  expect(dark.colorScheme.semanticColors.previewPaneFill).toBe("#070707");
+  expect(light.colorScheme.semanticColors.previewPaneFill).toBe("#f7f7f7");
+});
+
+test("resolveAppConfig applies preview pane fill overrides", () => {
+  const resolved = resolveAppConfig({
+    colorScheme: {
+      colors: {
+        previewPaneFill: "#123456",
+      },
+    },
+  }, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
+
+  expect(resolved.colorScheme.semanticColors.previewPaneFill).toBe("#123456");
 });
 
 test("resolveAppConfig makes the scrollbar thumb three steps more prominent than the track", () => {

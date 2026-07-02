@@ -7,6 +7,7 @@ import {
   resolveUserConfigDir,
   resolveWorkspaceRoot,
 } from "./loadConfig.ts";
+import { DEFAULT_PREVIEW_PANE_FILL_OPACITY } from "./schema.ts";
 
 const GENERATED_TYPES_FILENAME = "jif.d.ts";
 const DEFAULT_CONFIG_FILENAME = "config.ts";
@@ -146,6 +147,7 @@ export default {
   colorScheme: {
     colors: {
       // chromeBorderFocus: "#00cdcd",
+      // previewPaneFill: { source: "foreground", opacity: ${DEFAULT_PREVIEW_PANE_FILL_OPACITY} },
     },
   },
   log: {
@@ -204,7 +206,7 @@ namespace Jif {
   type SemanticColorKey =
     | "chromeFillOne" | "chromeFillTwo" | "chromeFillThree" | "chromeScrollbarThumb"
     | "chromeBorderIdle" | "chromeBorderFocus"
-    | "promptSuggestionFocusedFill"
+    | "promptSuggestionFocusedFill" | "previewPaneFill"
     | "rowFocusedFill" | "rowSelectedFill" | "rowSelectedAccent" | "rowAffectedFill"
     | "rowCommandTargetBorder" | "rowBorderIdle" | "rowBorderFocus" | "rowBorderSelected" | "rowBorderCommandTarget"
     | "graphWorkingCopy" | "graphPlain" | "graphImmutable" | "graphBookmark"
@@ -212,6 +214,7 @@ namespace Jif {
     | "conflictTagFill" | "conflictTagText"
     | "textPrimary" | "textSecondary" | "textTertiary" | "textQuaternary"
     | "revsetPrefix" | "fileFocusMarker" | "fileStatusAccent"
+    | "diffFileName" | "diffAddedFill" | "diffRemovedFill" | "diffAddedSign" | "diffRemovedSign" | "diffLineNumber"
     | "statusInfo" | "statusSuccess" | "statusWarning" | "statusError"
     | "statusInfoFill" | "statusSuccessFill" | "statusWarningFill" | "statusErrorFill";
 

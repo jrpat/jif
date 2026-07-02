@@ -23,6 +23,7 @@ export type SemanticColorScheme = Readonly<{
   chromeBorderIdle: SemanticColorValue;
   chromeBorderFocus: SemanticColorValue;
   promptSuggestionFocusedFill: SemanticColorValue;
+  previewPaneFill: SemanticColorValue;
   rowFocusedFill: SemanticColorValue;
   rowSelectedFill: SemanticColorValue;
   rowSelectedAccent: SemanticColorValue;
@@ -66,6 +67,8 @@ export type SemanticColorScheme = Readonly<{
 }>;
 
 type SemanticColorKey = keyof SemanticColorScheme;
+
+export const DEFAULT_PREVIEW_PANE_FILL_OPACITY = 0.03;
 
 export type AppConfig = Readonly<{
   colorScheme?: Readonly<{
@@ -146,6 +149,7 @@ const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   chromeBorderIdle:       { source: "foreground",  opacity: 0.35 },
   chromeBorderFocus:      { source: "blue",        opacity: 1.0  },
   promptSuggestionFocusedFill: { source: "blue",   opacity: 0.15 },
+  previewPaneFill:        { source: "foreground",  opacity: DEFAULT_PREVIEW_PANE_FILL_OPACITY },
 
   // Row states
   rowFocusedFill:         { source: "magenta",     opacity: 0.09 },

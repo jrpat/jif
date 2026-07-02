@@ -54,7 +54,7 @@ export function PreviewPane(props: {
       flexDirection="column"
       width="100%"
       height="100%"
-      backgroundColor={colors.chromeFillOne}
+      backgroundColor={colors.previewPaneFill}
     >
       <scrollbox
         ref={(el: ScrollBoxRenderable) => props.registerScrollbox(el)}
@@ -63,7 +63,7 @@ export function PreviewPane(props: {
         scrollX={!props.previewWordWrap}
         scrollY
         viewportCulling
-        backgroundColor={colors.chromeFillOne}
+        backgroundColor={colors.previewPaneFill}
         scrollbarOptions={buildScrollbarTrackOptions(
           colors.chromeFillThree,
           colors.chromeScrollbarThumb,
@@ -123,7 +123,7 @@ export function PreviewPane(props: {
                         fg={colors.textPrimary}
                         addedBg={colors.diffAddedFill}
                         removedBg={colors.diffRemovedFill}
-                        contextBg={colors.chromeFillOne}
+                        contextBg={colors.previewPaneFill}
                         addedSignColor={colors.diffAddedSign}
                         removedSignColor={colors.diffRemovedSign}
                         lineNumberFg={colors.diffLineNumber}

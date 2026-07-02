@@ -1035,7 +1035,7 @@ export function JifView(props: {
               border={previewPosition() === "below" ? ["top"] : ["left"]}
               borderStyle="single"
               borderColor={config.colorScheme.semanticColors.chromeBorderIdle}
-              backgroundColor={config.colorScheme.semanticColors.chromeFillOne}
+              backgroundColor={config.colorScheme.semanticColors.previewPaneFill}
             >
               <PreviewPane
                 header={previewHeader()}

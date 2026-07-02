@@ -1,6 +1,7 @@
 export {
   defaultAppConfig,
   defineConfig,
+  DEFAULT_PREVIEW_PANE_FILL_OPACITY,
   resolveAppConfig,
   resolveSemanticColors,
   FALLBACK_PALETTE_DARK,
