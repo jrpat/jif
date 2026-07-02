@@ -51,7 +51,3 @@
   - `bun run index.ts --sample`
 - `bun run dev` runs `scripts/dev.ts`, a launcher that restarts jif on `src/` changes. Do not switch `dev` back to `bun --watch`: bun's watcher reload-loops against jif's startup (it re-triggers faster than the opentui TUI can paint its first frame), so the screen is cleared on every restart and stays blank. The custom launcher only watches `src/` and `index.ts`, so jif's runtime file activity can't retrigger it.
 
-
-# User-specific Instructions
-
-If the user has user-specific instructions, they can be found in [@my/AGENTS.md](my/agents.md). Read them immediately after reading this file.
