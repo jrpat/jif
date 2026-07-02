@@ -4,7 +4,7 @@
 
 When the user asks jif to perform an operation, execute it immediately. Do not
 prompt for confirmation. Jujutsu has strong built-in undo/redo support (`jj undo`,
-`jj redo`), and jif exposes these as single-key shortcuts (`u` / `U`).
+`jj redo`), and jif exposes these as nearby shortcuts (`u` / `alt-u`).
 
 This is a deliberate departure from tools that confirm before acting. Confirmation
 dialogs interrupt flow and teach users to press Enter reflexively, which defeats
@@ -159,8 +159,8 @@ fires the notification toggle. The modifier acts as a guard against drift.
 - Audit physical neighbors, not just letter mnemonics, when introducing a
   default binding — especially for global bindings and for any
   "open dismissable surface" / "dismiss" pair.
-- Same-key + modifier pairs (`u` / `U` for undo / redo) are safe: a slipped
-  modifier keeps the user on the same conceptual axis.
+- Same-key + modifier pairs (`u` / `alt-u` for undo / redo) can keep related
+  actions on the same conceptual axis, but still audit the specific modifier.
 - When a corner key is the natural choice but its unshifted form sits next
   to `Escape` or another inverse, prefer the shifted form. The modifier is
   the guard.

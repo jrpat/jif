@@ -432,7 +432,10 @@ test("inline confirmation uses a dedicated mode with local option navigation", (
 test("undo and redo resolve in normal mode", () => {
   const state = createState();
   expect(resolveForState("u", state)).toBe("undo");
-  expect(resolveForState("U", state)).toBe("redo");
+  expect(resolveForState("alt-u", state)).toBe("redo");
+  expect(resolveForState("U", state)).toBeNull();
+  expect(defaultKeymap.normal["alt-u"]).toBe("redo");
+  expect(defaultKeymap.normal.U).toBeUndefined();
   expect(defaultKeymap.normal.G).toBe("jump-to-bottom");
 });
 

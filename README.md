@@ -138,7 +138,7 @@ When the active revset is only `files(...)`, the collapsed status bar shows a `f
 | `ctrl-s` | split | Split the focused revision, or use the current file selection |
 | `alt-s` | split-parallel | Split the focused revision into sibling commits sharing its parent (`jj split --parallel`) |
 | `u` | undo | Undo the last operation |
-| `U` | redo | Redo the last undone operation |
+| `alt-u` | redo | Redo the last undone operation |
 | `space` | toggle-revision-selection | Add or remove the focused revision from the selection |
 
 #### Miscellaneous

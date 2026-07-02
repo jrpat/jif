@@ -846,6 +846,21 @@ test("dispatchGlobalKey routes alt-s to split-parallel", () => {
   expect(calls).toEqual(["startSplitParallel"]);
 });
 
+test("dispatchGlobalKey routes alt-u to redo", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "alt-u",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["redo"]);
+});
+
 test("dispatchGlobalKey routes op-log actions to operation commands", () => {
   const calls: string[] = [];
   const state: AppState = {

@@ -145,7 +145,7 @@ export const defaultKeymap: Keymap = {
     "-": "toggle-flags",
     _: "cycle-layout",
     u: "undo",
-    U: "redo",
+    "alt-u": "redo",
     "@": "jump-to-working-copy",
     L: "edit-revset",
     "ctrl-l": alias("edit-revset"),
