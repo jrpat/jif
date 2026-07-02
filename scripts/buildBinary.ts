@@ -50,7 +50,7 @@ export function createBuildConfig(options: BuildBinaryOptions = {}) {
   const bytecode = options.bytecode ?? true;
 
   return {
-    entrypoints: ["./index.ts"],
+    entrypoints: ["./index.ts", "./src/opentuiParserWorker.ts"],
     target: "bun" as const,
     format: "esm" as const,
     sourcemap: "linked" as const,

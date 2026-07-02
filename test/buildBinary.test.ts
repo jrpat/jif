@@ -40,3 +40,15 @@ test("createBuildConfig disables Bun autoloads for standalone binaries", () => {
   expect(config.compile?.autoloadBunfig).toBeFalse();
   expect(config.compile?.autoloadDotenv).toBeFalse();
 });
+
+test("createBuildConfig embeds the OpenTUI parser worker in the standalone binary", () => {
+  const config = createBuildConfig({
+    target: "bun-darwin-arm64",
+    outfile: "/tmp/jif",
+  });
+
+  expect(config.entrypoints).toEqual([
+    "./index.ts",
+    "./src/opentuiParserWorker.ts",
+  ]);
+});

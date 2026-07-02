@@ -5,6 +5,7 @@ import { initProjectConfig, initUserConfig, refreshUserConfigTypes } from "./con
 import { loadAppConfig } from "./config/loadConfig.ts";
 import { logShortcutDebug } from "./debug.ts";
 import { materializeSampleRepoCachedViaCli } from "./dev/sampleRepoLauncher.ts";
+import { configureOpenTUITreeSitterWorker } from "./opentuiTreeSitterWorker.ts";
 
 export async function main(argv: readonly string[]) {
   const command = parseCommand(argv);
@@ -44,6 +45,8 @@ async function runInitConfig(options: InitConfigOptions): Promise<void> {
 }
 
 async function runApp(argv: readonly string[], options: RunOptions): Promise<void> {
+  configureOpenTUITreeSitterWorker();
+
   const fixturePath = options.sampleName !== undefined
     ? resolve(`test/fixtures/${options.sampleName || "sample-repo"}.jsonl`)
     : undefined;
