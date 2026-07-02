@@ -1,7 +1,8 @@
-import { createEffect } from "solid-js";
+import { createEffect, createMemo } from "solid-js";
 import type { ScrollBoxRenderable } from "@opentui/core";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import { parseAnsiToStyledText } from "./ansiToStyledText.ts";
+import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 
 export function ScrollableAnsiBody(props: Readonly<{
   text: string;
@@ -13,6 +14,9 @@ export function ScrollableAnsiBody(props: Readonly<{
   onMouseScroll?: () => void;
 }>) {
   const colors = () => props.config.colorScheme.semanticColors;
+  const scrollAcceleration = createMemo(() =>
+    makeScrollAcceleration(props.config.scroll.step, props.config.scroll.acceleration)
+  );
   let textRef: any;
 
   createEffect(() => {
@@ -30,6 +34,7 @@ export function ScrollableAnsiBody(props: Readonly<{
       scrollX
       scrollY
       backgroundColor={props.backgroundColor}
+      scrollAcceleration={scrollAcceleration()}
       scrollbarOptions={{
         trackOptions: {
           backgroundColor: colors().chromeFillThree,

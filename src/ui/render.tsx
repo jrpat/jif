@@ -111,6 +111,7 @@ import {
   startInitialRepositoryLoad,
 } from "./startup.ts";
 import { executeShellCommand as executeShellTextCommand } from "../jj/process.ts";
+import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 
 const EXTRA_EMPTY_MESSAGE = "No extra bindings defined. Bind keys under `keymap.extra` in your config.";
 const FILE_FILTER_CHIP_LABEL = "file";
@@ -154,6 +155,9 @@ export function JifView(props: {
     previewPosition() === "below"
       ? Math.max(1, terminalSize().width - 1)
       : Math.max(1, previewCols() - 2);
+  const logScrollAcceleration = createMemo(() =>
+    makeScrollAcceleration(config.scroll.step, config.scroll.acceleration)
+  );
   const persistence = createPersistenceService();
   const refreshRepository = createRepositoryRefresher({
     client,
@@ -907,6 +911,7 @@ export function JifView(props: {
               width="100%"
               flexGrow={1}
               scrollY
+              scrollAcceleration={logScrollAcceleration()}
               scrollbarOptions={buildScrollbarTrackOptions(
                 config.colorScheme.semanticColors.chromeFillThree,
                 config.colorScheme.semanticColors.chromeScrollbarThumb,

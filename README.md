@@ -496,6 +496,24 @@ export default {
 </details>
 
 <details>
+<summary>Mouse Wheel Scrolling</summary>
+
+Mouse-wheel scrolling defaults to two lines per wheel notch. On macOS, jif also enables OpenTUI's macOS-style acceleration so quick wheel bursts move farther while slow gestures stay precise:
+
+```ts
+export default {
+	scroll: {
+		step: 2,
+		acceleration: true,
+	},
+} satisfies Jif.Config;
+```
+
+`scroll.step` is floored and clamped to at least `1`. `scroll.acceleration` only changes wheel scrolling on macOS; other platforms use the configured linear step.
+
+</details>
+
+<details>
 <summary>Preview Pane</summary>
 
 The [preview pane](#preview) shows the diff of the focused item beside the log. These are its defaults:

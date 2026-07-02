@@ -154,6 +154,10 @@ export default {
     // scrollMargin: 1,
     // revisionIdAdditionalChars: 0,
   },
+  scroll: {
+    // step: 2,
+    // acceleration: true,
+  },
   refresh: {
     // intervalMs: 0,
   },
@@ -432,6 +436,10 @@ namespace Jif {
     log?: Readonly<{
       scrollMargin?: number;
       revisionIdAdditionalChars?: number;
+    }>;
+    scroll?: Readonly<{
+      step?: number;
+      acceleration?: boolean;
     }>;
     refresh?: Readonly<{
       intervalMs?: number;

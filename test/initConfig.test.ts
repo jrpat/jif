@@ -27,6 +27,7 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(configText).toContain("colorScheme: {");
   expect(configText).toContain("colors: {");
   expect(configText).toContain("log: {");
+  expect(configText).toContain("scroll: {");
   expect(configText).toContain("refresh: {");
   expect(configText).toContain("commands: {");
   expect(configText).toContain("keymap: {");
@@ -36,6 +37,8 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
     `// previewPaneFill: { source: "foreground", opacity: ${DEFAULT_PREVIEW_PANE_FILL_OPACITY} },`,
   );
   expect(configText).toContain('// scrollMargin: 1,');
+  expect(configText).toContain("// step: 2,");
+  expect(configText).toContain("// acceleration: true,");
   expect(configText).toContain("// intervalMs: 0,");
   expect(configText).toContain('// layout: "normal",');
   expect(configText).toContain("if (!app.rev) return;");
@@ -45,6 +48,9 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(typesText).toContain("type Config = Readonly<{");
   expect(typesText).toContain('"promptSuggestionFocusedFill"');
   expect(typesText).toContain('"previewPaneFill"');
+  expect(typesText).toContain("scroll?: Readonly<{");
+  expect(typesText).toContain("step?: number");
+  expect(typesText).toContain("acceleration?: boolean");
   expect(typesText).toContain("intervalMs?: number");
   expect(typesText).toContain("rev: string");
   expect(typesText).toContain("file: string");

@@ -6,6 +6,7 @@ import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { ShortcutGrid, ShortcutPanelLayout, ShortcutSummarySegment } from "./shortcutPanel.ts";
 import { ScrollableAnsiBody } from "./scrollableAnsiBody.tsx";
 import { observeScrollboxInteraction } from "./scroll.ts";
+import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 import {
   getHelpToastBorderColor,
   getStatusColor,
@@ -39,6 +40,9 @@ export function StatusArea(props: {
     props.loadingIndicatorText
       ? formatSpinnerText(props.loadingIndicatorText, loadingFrameIndex())
       : null
+  );
+  const scrollAcceleration = createMemo(() =>
+    makeScrollAcceleration(props.config.scroll.step, props.config.scroll.acceleration)
   );
 
   createEffect(() => {
@@ -154,6 +158,7 @@ export function StatusArea(props: {
           height={props.panelBodyHeight}
           scrollY
           backgroundColor={colors.chromeFillTwo}
+          scrollAcceleration={scrollAcceleration()}
           scrollbarOptions={{
             trackOptions: {
               backgroundColor: colors.chromeFillThree,

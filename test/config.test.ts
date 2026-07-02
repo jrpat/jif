@@ -206,6 +206,32 @@ test("resolveAppConfig defaults log.revisionIdAdditionalChars to 0", () => {
   expect(resolved.log.revisionIdAdditionalChars).toBe(0);
 });
 
+test("resolveAppConfig defaults scroll settings", () => {
+  const resolved = resolveAppConfig(defaultAppConfig);
+
+  expect(resolved.scroll).toEqual({
+    step: 2,
+    acceleration: true,
+  });
+});
+
+test("resolveAppConfig floors and clamps scroll.step", () => {
+  expect(resolveAppConfig({ scroll: { step: 3.9 } }).scroll.step).toBe(3);
+  expect(resolveAppConfig({ scroll: { step: 0 } }).scroll.step).toBe(1);
+  expect(resolveAppConfig({ scroll: { step: -5 } }).scroll.step).toBe(1);
+  expect(resolveAppConfig({ scroll: { step: Number.NaN } }).scroll.step).toBe(1);
+});
+
+test("resolveAppConfig applies scroll.acceleration", () => {
+  const resolved = resolveAppConfig({
+    scroll: {
+      acceleration: false,
+    },
+  });
+
+  expect(resolved.scroll.acceleration).toBeFalse();
+});
+
 test("resolveAppConfig defaults refresh.intervalMs to 0", () => {
   const resolved = resolveAppConfig(defaultAppConfig);
 

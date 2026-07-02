@@ -4,6 +4,7 @@ import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { DiffViewerState } from "../domain/types.ts";
 import { parseAnsiToStyledText } from "./ansiToStyledText.ts";
 import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
+import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 
 type DiffLineViewModel = Readonly<{
   styledText: StyledText;
@@ -25,6 +26,9 @@ export function DiffViewer(props: {
   const contentWidth = createMemo(() =>
     measureStyledTextWidth(parseAnsiToStyledText(props.state.content, props.config.terminalPalette)),
   );
+  const scrollAcceleration = createMemo(() =>
+    makeScrollAcceleration(props.config.scroll.step, props.config.scroll.acceleration)
+  );
 
   return (
     <scrollbox
@@ -34,6 +38,7 @@ export function DiffViewer(props: {
       scrollX
       scrollY
       backgroundColor={colors.chromeFillOne}
+      scrollAcceleration={scrollAcceleration()}
       contentOptions={{
         width: contentWidth(),
         maxWidth: undefined,

@@ -79,6 +79,10 @@ export type AppConfig = Readonly<{
     scrollMargin?: number;
     revisionIdAdditionalChars?: number;
   }>;
+  scroll?: Readonly<{
+    step?: number;
+    acceleration?: boolean;
+  }>;
   refresh?: Readonly<{
     intervalMs?: number;
   }>;
@@ -115,6 +119,10 @@ export type ResolvedAppConfig = Readonly<{
   log: Readonly<{
     scrollMargin: number;
     revisionIdAdditionalChars: number;
+  }>;
+  scroll: Readonly<{
+    step: number;
+    acceleration: boolean;
   }>;
   refresh: Readonly<{
     intervalMs: number;
@@ -319,6 +327,10 @@ export function resolveAppConfig(
       scrollMargin: config.log?.scrollMargin ?? 1,
       revisionIdAdditionalChars: config.log?.revisionIdAdditionalChars ?? 0,
     },
+    scroll: {
+      step: resolveScrollStep(config.scroll?.step),
+      acceleration: config.scroll?.acceleration ?? true,
+    },
     refresh: {
       intervalMs: resolveRefreshIntervalMs(config.refresh?.intervalMs),
     },
@@ -355,6 +367,17 @@ function resolveRefreshIntervalMs(value: number | undefined): number {
   }
 
   return Math.max(1000, Math.floor(value));
+}
+
+function resolveScrollStep(value: number | undefined): number {
+  if (value === undefined) {
+    return 2;
+  }
+  if (!Number.isFinite(value)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.floor(value));
 }
 
 // Pre-palette fallback: resolve against the dark xterm fallback palette

@@ -2,6 +2,7 @@ import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core";
 import { For, createMemo, createRenderEffect } from "solid-js";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { AutocompleteFlow } from "./autocomplete.ts";
+import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 
 export type AutocompleteListItem = Readonly<{
   id: string;
@@ -33,6 +34,9 @@ export function AutocompleteList(props: {
 
   const visibleHeight = createMemo(() =>
     Math.min(props.items.length, props.maxVisibleItems ?? 10)
+  );
+  const scrollAcceleration = createMemo(() =>
+    makeScrollAcceleration(props.config.scroll.step, props.config.scroll.acceleration)
   );
 
   const scrollToSelection = () => {
@@ -78,6 +82,7 @@ export function AutocompleteList(props: {
         stickyScroll={props.flow !== "top-to-bottom"}
         stickyStart={props.flow !== "top-to-bottom" ? "bottom" : undefined}
         backgroundColor={colors.chromeFillTwo}
+        scrollAcceleration={scrollAcceleration()}
         scrollbarOptions={{
           trackOptions: {
             backgroundColor: colors.chromeFillThree,

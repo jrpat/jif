@@ -9,6 +9,7 @@ import {
 } from "../domain/previewDiff.ts";
 import { buildPreviewSyntaxStyle } from "./previewSyntaxStyle.ts";
 import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
+import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 
 /**
  * The preview pane. It renders a git-format diff (from `jj … --git`) using
@@ -48,6 +49,9 @@ export function PreviewPane(props: {
   // readable without horizontal scrolling.
   const headerWidth = () => Math.max(1, props.viewportWidth - 2);
   const diffWrapMode = () => props.previewWordWrap ? "word" : "none";
+  const scrollAcceleration = createMemo(() =>
+    makeScrollAcceleration(props.config.scroll.step, props.config.scroll.acceleration)
+  );
 
   return (
     <box
@@ -64,6 +68,7 @@ export function PreviewPane(props: {
         scrollY
         viewportCulling
         backgroundColor={colors.previewPaneFill}
+        scrollAcceleration={scrollAcceleration()}
         scrollbarOptions={buildScrollbarTrackOptions(
           colors.chromeFillThree,
           colors.chromeScrollbarThumb,
