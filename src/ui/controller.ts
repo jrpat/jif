@@ -88,6 +88,7 @@ type RestoreLogRevsetFromFileFilter = () => Promise<void>;
 // Stable toast id so cycling the preview position refreshes one toast in place
 // instead of stacking a new one per press.
 const PREVIEW_POSITION_TOAST_ID = "preview-position";
+const PREVIEW_CONTEXT_TOAST_ID = "preview-context";
 
 export function createJifCommandController(args: Readonly<{
   store: AppStore;
@@ -690,6 +691,18 @@ export function createJifCommandController(args: Readonly<{
       store.actions.togglePreviewWordWrap();
       const preview = args.getPreviewViewport();
       preview?.scrollTo({ x: 0, y: preview.scrollTop });
+    },
+    togglePreviewFullFile() {
+      if (store.snapshot().focusMode !== "files") {
+        return;
+      }
+      store.actions.togglePreviewFullFile();
+      const enabled = store.snapshot().previewFullFile;
+      store.actions.upsertStatusMessage(
+        PREVIEW_CONTEXT_TOAST_ID,
+        `Preview context: ${enabled ? "full file" : "compact"}`,
+        "success",
+      );
     },
     expandPreview() {
       adjustPreviewSize(1);

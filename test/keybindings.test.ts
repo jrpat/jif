@@ -122,6 +122,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     togglePreview: () => calls.push("togglePreview"),
     cyclePreviewPosition: () => calls.push("cyclePreviewPosition"),
     togglePreviewWordWrap: () => calls.push("togglePreviewWordWrap"),
+    togglePreviewFullFile: () => calls.push("togglePreviewFullFile"),
     expandPreview: () => calls.push("expandPreview"),
     shrinkPreview: () => calls.push("shrinkPreview"),
     scrollPreview: (rowDelta) => calls.push(`scrollPreview(${rowDelta})`),
@@ -1935,5 +1936,32 @@ test("W routes to preview word wrap in browse modes", () => {
 
     expect(handled).toBeTrue();
     expect(calls).toEqual(["togglePreviewWordWrap"]);
+  }
+});
+
+test("ctrl-enter routes to full-file preview toggle only in files mode", () => {
+  const filesCalls: string[] = [];
+  const filesHandled = dispatchGlobalKey({
+    normalizedKey: "ctrl-enter",
+    state: { ...createState(), focusMode: "files" },
+    commands: commandDefinitions,
+    controller: createController(filesCalls),
+  });
+
+  expect(filesHandled).toBeTrue();
+  expect(filesCalls).toEqual(["togglePreviewFullFile"]);
+
+  const otherModes: AppState["focusMode"][] = ["revisions", "op-log", "evolog"];
+  for (const focusMode of otherModes) {
+    const calls: string[] = [];
+    const handled = dispatchGlobalKey({
+      normalizedKey: "ctrl-enter",
+      state: { ...createState(), focusMode },
+      commands: commandDefinitions,
+      controller: createController(calls),
+    });
+
+    expect(handled).toBeFalse();
+    expect(calls).toEqual([]);
   }
 });

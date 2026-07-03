@@ -71,12 +71,13 @@ By default the pane is placed automatically: on the right in wide terminals and 
 | `p` | toggle-preview | Show or hide the preview pane for this session |
 | `shift+p` | cycle-preview-position | Cycle the pane between auto, right, and below |
 | `shift+w` | toggle-preview-word-wrap | Wrap or unwrap long preview diff lines |
+| `ctrl+enter` | toggle-preview-full-file | In Files mode, toggle effectively full-file preview diffs using a large `jj --context` value |
 | `ctrl+[` | expand-preview | Grow the pane by `preview.resizeStepPercent` |
 | `ctrl+]` | shrink-preview | Shrink the pane by `preview.resizeStepPercent` |
 | `ctrl+j` | scroll-preview-down | Scroll the preview down (falls back to the help toast when the pane is hidden) |
 | `ctrl+k` | scroll-preview-up | Scroll the preview up (falls back to the help toast when the pane is hidden) |
 
-Diff bodies are syntax-highlighted for filetypes supported by OpenTUI's parser, with token foregrounds using indexed ANSI colors from the terminal palette. When unchanged context is omitted between hunks, the preview inserts a centered separator such as `⋮⋮⋮ 37 more lines ⋮⋮⋮` so non-contiguous source regions do not read as one block. When word wrap is off, the pane also scrolls **horizontally** with the mouse wheel / trackpad when a diff line is wider than the pane.
+Diff bodies are syntax-highlighted for filetypes supported by OpenTUI's parser, with token foregrounds using indexed ANSI colors from the terminal palette. When unchanged context is omitted between hunks, the preview inserts a centered separator such as `⋮⋮⋮ 37 more lines ⋮⋮⋮` so non-contiguous source regions do not read as one block. In Files mode, `ctrl+enter` toggles the focused file preview between jj's compact diff context and an effectively full-file diff (`--context 999999`). When word wrap is off, the pane also scrolls **horizontally** with the mouse wheel / trackpad when a diff line is wider than the pane.
 
 `ctrl+[` / `ctrl+]` require a terminal that distinguishes them from other keys via the Kitty keyboard protocol (kitty, Ghostty, WezTerm, recent iTerm2, Alacritty, foot). In terminals without it, `ctrl+[` is indistinguishable from Escape.
 
@@ -718,6 +719,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `suspend()` | Suspend jif and return to the shell |
 | `toggleFileSelection()` | Toggle the focused file selection |
 | `toggleInterdiffSwap()` | Swap interdiff `--from` and `--to` roles |
+| `togglePreviewFullFile()` | Toggle effectively full-file context for file preview diffs |
 | `togglePreviewWordWrap()` | Wrap or unwrap long preview diff lines |
 | `toggleRebaseSkipEmptied()` | Toggle `--skip-emptied` on a rebase draft |
 | `toggleSearchIdOnly()` | Toggle ID-only search |
@@ -772,6 +774,7 @@ The `app` argument is a read-only snapshot of jif state, plus the ergonomic `rev
 | `notificationHistoryLimit` | `number` | Maximum stored notification count |
 | `operationLogEntries` | `readonly OperationLogEntry[]` | Loaded operation log entries |
 | `operationLogLoading` | `boolean` | Whether the operation log is loading |
+| `previewFullFile` | `boolean` | Whether preview diffs use effectively full-file context for this session |
 | `previewWordWrap` | `boolean` | Whether preview diff word wrap is enabled for this session |
 | `repoPath` | `string` | Repository path jif is operating on |
 | `revisions` | `readonly RevisionSummary[]` | Visible revision rows |

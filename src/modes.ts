@@ -177,6 +177,7 @@ export const defaultKeymap: Keymap = {
     " ": "toggle-file-selection",
     a: "select-all-files",
     "?": "shortcut-panel",
+    "ctrl-enter": "toggle-preview-full-file",
     ...previewBindings,
   },
   "op-log": {

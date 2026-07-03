@@ -98,6 +98,7 @@ export type CommandController = Readonly<{
   togglePreview: () => void;
   cyclePreviewPosition: () => void;
   togglePreviewWordWrap: () => void;
+  togglePreviewFullFile: () => void;
   expandPreview: () => void;
   shrinkPreview: () => void;
   scrollPreview: (rowDelta: number) => void;
@@ -646,6 +647,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Wrap or unwrap long preview diff lines",
     run: (controller) => controller.togglePreviewWordWrap(),
     group: "global",
+  },
+  {
+    id: "toggle-preview-full-file",
+    title: "Full File Preview",
+    description: "Toggle effectively full-file context for file preview diffs",
+    canExecute: (state) => state.focusMode === "files",
+    run: (controller) => controller.togglePreviewFullFile(),
+    group: "mode",
   },
   {
     id: "expand-preview",

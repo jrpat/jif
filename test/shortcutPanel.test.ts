@@ -356,8 +356,10 @@ test("getShortcutPanelBindings narrows file mode shortcuts to file-relevant acti
   expect(ids).toContain("restore");
   expect(ids).toContain("toggle-file-selection");
   expect(ids).toContain("select-all-files");
+  expect(ids).toContain("toggle-preview-full-file");
   expect(ids).toContain("collapse");
   expect(ids).toContain("shortcut-panel");
+  expect(bindings.find(({ command }) => command.id === "toggle-preview-full-file")?.key).toBe("ctrl-enter");
   // files mode does not inherit Normal, so revision and global power commands are absent
   expect(ids).not.toContain("force-last-command");
   expect(ids).not.toContain("rebase");

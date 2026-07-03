@@ -468,6 +468,28 @@ test("loadOperationLog keeps jj graph output enabled", async () => {
   ]);
 });
 
+test("file preview diff loader can request effectively full-file context", async () => {
+  const client = new JjClient(REPO_PATH);
+  const calls: Array<{ args: readonly string[]; options?: { workingCopy?: string } }> = [];
+
+  (client as unknown as {
+    runJj(
+      args: readonly string[],
+      options?: { workingCopy?: string },
+    ): Promise<{ stdout: string; stderr: string; exitCode: number }>;
+  }).runJj = async (args, options) => {
+    calls.push({ args, options });
+    return { stdout: "", stderr: "", exitCode: 0 };
+  };
+
+  await client.loadFileDiff("abc", "/tmp/repo/src/app.ts", { fullFile: true });
+
+  expect(calls.map((call) => call.args)).toEqual([
+    ["diff", "-r", "abc", "--git", "--context", "999999", "/tmp/repo/src/app.ts"],
+  ]);
+  expect(calls.every((call) => call.options?.workingCopy === "read-only")).toBeTrue();
+});
+
 test("parseLogOutput defaults hasConflict to false when field is missing", () => {
   const output = [
     "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001ffirst\u001f\u001f\u001fabc\u001ffalse\u001f2026-03-30 07:22:39",

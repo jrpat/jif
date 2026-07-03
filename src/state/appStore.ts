@@ -106,6 +106,7 @@ import {
   setRebaseSourceKind,
   setRebaseTargetKind,
   toggleInterdiffSwap,
+  togglePreviewFullFile,
   togglePreviewWordWrap,
   toggleRebaseSkipEmptied,
   toggleRevisionSelection,
@@ -375,6 +376,9 @@ export function createAppStore(
       },
       togglePreviewWordWrap() {
         mutate((currentState) => togglePreviewWordWrap(currentState));
+      },
+      togglePreviewFullFile() {
+        mutate((currentState) => togglePreviewFullFile(currentState));
       },
       openShortcutPanel() {
         mutate((currentState) => openShortcutPanel(currentState));

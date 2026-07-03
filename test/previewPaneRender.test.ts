@@ -42,6 +42,7 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
     wideWrapped: Scenario;
     multiHunk: Scenario;
     wideMultiHunk: Scenario;
+    scrollingSingleFile: Scenario;
     themeColors: {
       darkAdded: RGB | null;
       darkRemoved: RGB | null;
@@ -140,6 +141,14 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
   expect(scrolling.lines.join("\n")).toContain("ZZHEADERZZ");
   expect(scrolling.scrollTopAfter ?? 0).toBeGreaterThan(0);
   expect((scrolling.linesAfterScrollDown ?? []).join("\n")).not.toContain("ZZHEADERZZ");
+
+  // A no-header single-file preview (Files mode) uses the same scrollbox and
+  // visible vertical scrollbar as revision previews when its contents overflow.
+  const singleScrolling = result.scrollingSingleFile;
+  expect(singleScrolling.lines.join("\n")).toContain("tall.txt");
+  expect(singleScrolling.lines.join("\n")).toContain("▀");
+  expect(singleScrolling.scrollTopAfter ?? 0).toBeGreaterThan(0);
+  expect((singleScrolling.linesAfterScrollDown ?? []).join("\n")).toContain("▀");
 
   // The diff body adapts to the terminal theme rather than using OpenTUI's
   // hardcoded dark-background line fills (#1a4d1a added / #4d1a1a removed).

@@ -83,6 +83,7 @@ import {
   clearLastFailedCommand,
   setLastFailedCommand,
   touchStatusMessage,
+  togglePreviewFullFile,
 } from "../src/state/store.ts";
 
 const FIRST_ROW_ID = createRowId("11111111", "aaaaaaaa");
@@ -2439,6 +2440,18 @@ test("openDiffViewer accepts empty content without crashing", () => {
 
   expect(state.focusMode).toBe("diff-viewer");
   expect(state.diffViewer?.content).toBe("");
+});
+
+test("togglePreviewFullFile toggles full-file preview diffs for the session", () => {
+  let state = createState();
+
+  expect(state.previewFullFile).toBeFalse();
+
+  state = togglePreviewFullFile(state);
+  expect(state.previewFullFile).toBeTrue();
+
+  state = togglePreviewFullFile(state);
+  expect(state.previewFullFile).toBeFalse();
 });
 
 test("createInitialState defaults searchIdOnly to false", () => {

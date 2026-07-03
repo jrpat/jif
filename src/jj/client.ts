@@ -21,6 +21,7 @@ const ROW_KIND_BODY = "body";
 const LOG_TEMPLATE = buildLogTemplate(getMaxRevisionBaseGraphRowCount());
 const FALLBACK_REPOSITORY_LOAD_LIMIT = 250;
 const FALLBACK_OPERATION_LOG_LIMIT = 200;
+const FULL_FILE_DIFF_CONTEXT_LINES = 999999;
 
 export type WorkingCopyRefreshMode = "snapshot" | "read-only";
 
@@ -32,6 +33,16 @@ type JjRunOptions = Readonly<{
   color?: boolean;
   cwd?: string;
 }> & WorkingCopyRefreshOptions;
+
+export type PreviewDiffOptions = Readonly<{
+  fullFile?: boolean;
+}>;
+
+function previewDiffArgs(args: readonly string[], options?: PreviewDiffOptions): string[] {
+  return options?.fullFile
+    ? [...args, "--context", String(FULL_FILE_DIFF_CONTEXT_LINES)]
+    : [...args];
+}
 
 export function resolveRepositoryLoadLimit(
   rawValue = process.env.JIF_REPOSITORY_LOAD_LIMIT,
@@ -232,9 +243,9 @@ export class JjClient {
     return result.stdout;
   }
 
-  async loadFileDiff(revisionArg: string, path: string): Promise<string> {
+  async loadFileDiff(revisionArg: string, path: string, options?: PreviewDiffOptions): Promise<string> {
     const result = await this.runJj(
-      ["diff", "-r", revisionArg, "--git", path],
+      [...previewDiffArgs(["diff", "-r", revisionArg, "--git"], options), path],
       { workingCopy: "read-only" },
     );
     return result.stdout;

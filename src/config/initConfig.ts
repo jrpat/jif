@@ -299,6 +299,7 @@ namespace Jif {
     searchStartIndex: number | null;
     searchIdOnly: boolean;
     searchMode: SearchMode;
+    previewFullFile: boolean;
     /** Focused revision's jj argument, or "" when nothing is focused. e.g. \`edit \${app.rev}\`. */
     rev: string;
     /** Focused file's path, or "" when nothing is focused. e.g. \`diff \${app.file}\`. */
@@ -364,6 +365,7 @@ namespace Jif {
     toggleSquashAnchor: () => void;
     toggleInterdiffSwap: () => void;
     togglePreviewWordWrap: () => void;
+    togglePreviewFullFile: () => void;
     selectAbsorbDescendants: () => void;
     undo: () => void;
     redo: () => void;

@@ -65,6 +65,7 @@ export function PreviewPane(props: {
       <scrollbox
         ref={(el: ScrollBoxRenderable) => props.registerScrollbox(el)}
         width="100%"
+        height="100%"
         flexGrow={1}
         scrollX={!props.previewWordWrap}
         scrollY

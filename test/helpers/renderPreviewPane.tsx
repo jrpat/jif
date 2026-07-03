@@ -227,6 +227,10 @@ const scrollingHeader = await capture("ZZHEADERZZ revision summary", tallDiff, {
   height: 8,
   scrollDownBy: 30,
 });
+const scrollingSingleFile = await capture(null, tallDiff, {
+  height: 8,
+  scrollDownBy: 30,
+});
 const singleFile = await capture(null, singleFileDiff);
 const headerSingle = await capture("A single-file revision preview", singleFileDiff);
 const wide = await capture(null, wideDiff, { width: 40, scrollX: true });
@@ -261,4 +265,4 @@ const themeColors = {
   configLightRemoved: lightConfig.colorScheme.semanticColors.diffRemovedFill,
 };
 
-console.log(JSON.stringify({ withHeader, singleFile, headerSingle, scrollingHeader, wide, wideWrapped, multiHunk, wideMultiHunk, themeColors }));
+console.log(JSON.stringify({ withHeader, singleFile, headerSingle, scrollingHeader, scrollingSingleFile, wide, wideWrapped, multiHunk, wideMultiHunk, themeColors }));

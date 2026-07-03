@@ -373,7 +373,11 @@ export function JifView(props: {
       const file = getExpandedRevision(store.state)?.files[store.state.focusedFileIndex];
       if (revArg && file) {
         const absolutePath = join(store.state.repoPath, file.path);
-        fetcher = async () => ({ diff: await client.loadFileDiff(revArg, absolutePath), header: null });
+        const fullFile = store.state.previewFullFile;
+        fetcher = async () => ({
+          diff: await client.loadFileDiff(revArg, absolutePath, { fullFile }),
+          header: null,
+        });
       }
     } else if (mode === "op-log") {
       const entry = getFocusedOperationLogEntry(store.state);

@@ -233,6 +233,7 @@ export function createInitialState(
     previewVisibleOverride: null,
     previewSizePercentOverride: null,
     previewWordWrap: false,
+    previewFullFile: false,
   };
 }
 
@@ -289,6 +290,10 @@ export function setPreviewSizePercentOverride(
 
 export function togglePreviewWordWrap(state: AppState): AppState {
   return { ...state, previewWordWrap: !state.previewWordWrap };
+}
+
+export function togglePreviewFullFile(state: AppState): AppState {
+  return { ...state, previewFullFile: !state.previewFullFile };
 }
 
 export function openShortcutPanel(state: AppState): AppState {
