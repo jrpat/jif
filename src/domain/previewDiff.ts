@@ -11,7 +11,12 @@ export type PreviewFilePatch = Readonly<{
   patch: string;
 }>;
 
+export type DiffSection =
+  | Readonly<{ kind: "hunk"; patch: string }>
+  | Readonly<{ kind: "omission"; omittedLineCount: number }>;
+
 const GIT_DIFF_PREFIX = "diff --git ";
+const HUNK_HEADER_PATTERN = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 
 // A line inside a hunk body: added (`+`), removed (`-`), or context (` `). The
 // `@@` header and `\ No newline…` marker are not body lines. OpenTUI's `<diff>`
@@ -88,6 +93,70 @@ export function countDiffRows(patch: string): number {
   return rows;
 }
 
+export function splitPatchIntoDiffSections(patch: string): DiffSection[] {
+  const lines = patch.split("\n");
+  const firstHunkIndex = lines.findIndex((line) => line.startsWith("@@"));
+  if (firstHunkIndex === -1) {
+    return [];
+  }
+
+  const headerLines = lines.slice(0, firstHunkIndex);
+  const hunks: Array<Readonly<{ header: HunkHeader; lines: string[] }>> = [];
+  let currentHeader: HunkHeader | null = null;
+  let currentLines: string[] = [];
+
+  const pushCurrent = () => {
+    if (currentHeader) {
+      hunks.push({ header: currentHeader, lines: currentLines });
+    }
+  };
+
+  for (let i = firstHunkIndex; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (line.startsWith("@@")) {
+      const header = parseHunkHeader(line);
+      if (!header) {
+        break;
+      }
+      pushCurrent();
+      currentHeader = header;
+      currentLines = [line];
+      continue;
+    }
+    if (!currentHeader) {
+      continue;
+    }
+    if (isDiffBodyLine(line) || line[0] === "\\") {
+      currentLines.push(line);
+      continue;
+    }
+    break;
+  }
+  pushCurrent();
+
+  const sections: DiffSection[] = [];
+  for (let i = 0; i < hunks.length; i++) {
+    const hunk = hunks[i]!;
+    const previous = hunks[i - 1];
+    if (previous) {
+      const omittedLineCount = countUnchangedLinesBetween(previous.header, hunk.header);
+      if (omittedLineCount > 0) {
+        sections.push({ kind: "omission", omittedLineCount });
+      }
+    }
+    sections.push({ kind: "hunk", patch: [...headerLines, ...hunk.lines].join("\n") });
+  }
+  return sections;
+}
+
+export function formatOmittedLineSeparator(omittedLineCount: number, width = 0): string {
+  const label = ` ${omittedLineCount} more lines `;
+  const ruleWidth = Math.max(6, width - label.length);
+  const leftWidth = Math.floor(ruleWidth / 2);
+  const rightWidth = ruleWidth - leftWidth;
+  return `${"⋮".repeat(leftWidth)}${label}${"⋮".repeat(rightWidth)}`;
+}
+
 // Extra columns a `<diff>` adds around content: the line-number gutter plus the
 // trailing `" +"`/`" -"` sign. Over-estimated so long lines never truncate.
 const DIFF_CHROME_WIDTH = 12;
@@ -101,17 +170,23 @@ export function estimateDiffWidth(files: readonly PreviewFilePatch[]): number {
   let max = 0;
   for (const file of files) {
     max = Math.max(max, file.path.length);
-    let inHunk = false;
-    for (const line of file.patch.split("\n")) {
-      if (line.startsWith("@@")) {
-        inHunk = true;
+    for (const section of splitPatchIntoDiffSections(file.patch)) {
+      if (section.kind === "omission") {
+        max = Math.max(max, formatOmittedLineSeparator(section.omittedLineCount).length + 2);
         continue;
       }
-      if (!inHunk) {
-        continue;
-      }
-      if (isDiffBodyLine(line)) {
-        max = Math.max(max, line.length - 1 + DIFF_CHROME_WIDTH);
+      let inHunk = false;
+      for (const line of section.patch.split("\n")) {
+        if (line.startsWith("@@")) {
+          inHunk = true;
+          continue;
+        }
+        if (!inHunk) {
+          continue;
+        }
+        if (isDiffBodyLine(line)) {
+          max = Math.max(max, line.length - 1 + DIFF_CHROME_WIDTH);
+        }
       }
     }
   }
@@ -162,4 +237,30 @@ function parseGitDiffPath(patch: string): string {
     return header[1];
   }
   return "";
+}
+
+type HunkHeader = Readonly<{
+  oldStart: number;
+  oldLines: number;
+  newStart: number;
+  newLines: number;
+}>;
+
+function parseHunkHeader(line: string): HunkHeader | null {
+  const match = line.match(HUNK_HEADER_PATTERN);
+  if (!match) {
+    return null;
+  }
+  return {
+    oldStart: Number.parseInt(match[1]!, 10),
+    oldLines: match[2] === undefined ? 1 : Number.parseInt(match[2], 10),
+    newStart: Number.parseInt(match[3]!, 10),
+    newLines: match[4] === undefined ? 1 : Number.parseInt(match[4], 10),
+  };
+}
+
+function countUnchangedLinesBetween(previous: HunkHeader, next: HunkHeader): number {
+  const oldGap = next.oldStart - (previous.oldStart + previous.oldLines);
+  const newGap = next.newStart - (previous.newStart + previous.newLines);
+  return Math.max(0, Math.min(oldGap, newGap));
 }

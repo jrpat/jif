@@ -76,7 +76,7 @@ By default the pane is placed automatically: on the right in wide terminals and 
 | `ctrl+j` | scroll-preview-down | Scroll the preview down (falls back to the help toast when the pane is hidden) |
 | `ctrl+k` | scroll-preview-up | Scroll the preview up (falls back to the help toast when the pane is hidden) |
 
-Diff bodies are syntax-highlighted for filetypes supported by OpenTUI's parser, with token foregrounds using indexed ANSI colors from the terminal palette. When word wrap is off, the pane also scrolls **horizontally** with the mouse wheel / trackpad when a diff line is wider than the pane.
+Diff bodies are syntax-highlighted for filetypes supported by OpenTUI's parser, with token foregrounds using indexed ANSI colors from the terminal palette. When unchanged context is omitted between hunks, the preview inserts a centered separator such as `⋮⋮⋮ 37 more lines ⋮⋮⋮` so non-contiguous source regions do not read as one block. When word wrap is off, the pane also scrolls **horizontally** with the mouse wheel / trackpad when a diff line is wider than the pane.
 
 `ctrl+[` / `ctrl+]` require a terminal that distinguishes them from other keys via the Kitty keyboard protocol (kitty, Ghostty, WezTerm, recent iTerm2, Alacritty, foot). In terminals without it, `ctrl+[` is indistinguishable from Escape.
 

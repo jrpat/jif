@@ -20,39 +20,68 @@ const darkConfig = resolveAppConfig({}, { palette: FALLBACK_PALETTE_DARK });
 const lightConfig = resolveAppConfig({}, { palette: FALLBACK_PALETTE_LIGHT });
 
 // A two-file git diff, as `jj diff --git` would produce for a revision.
-const multiFileDiff = `diff --git a/one.ts b/one.ts
+const multiFileDiff = `diff --git a/one.txt b/one.txt
 index 1111111..2222222 100644
---- a/one.ts
-+++ b/one.ts
+--- a/one.txt
++++ b/one.txt
 @@ -1,2 +1,2 @@
  context
 -old
 +new
-diff --git a/two.md b/two.md
+diff --git a/two.txt b/two.txt
 index 3333333..4444444 100644
---- a/two.md
-+++ b/two.md
+--- a/two.txt
++++ b/two.txt
 @@ -1 +1 @@
 -before
 +after
 `;
 
-const singleFileDiff = `diff --git a/solo.ts b/solo.ts
+const singleFileDiff = `diff --git a/solo.txt b/solo.txt
 index 1111111..2222222 100644
---- a/solo.ts
-+++ b/solo.ts
+--- a/solo.txt
++++ b/solo.txt
 @@ -1 +1 @@
 -x
 +y
 `;
 
-const wideDiff = `diff --git a/wide.ts b/wide.ts
+const wideDiff = `diff --git a/wide.txt b/wide.txt
 index 1111111..2222222 100644
---- a/wide.ts
-+++ b/wide.ts
+--- a/wide.txt
++++ b/wide.txt
 @@ -1 +1 @@
 -const short = 1;
 +const reallyLongVariableName = someFunctionCall(withLots, of, arguments, thatExceed, theViewport, widthEasily, forSure);
+`;
+
+const multiHunkDiff = `diff --git a/multi.txt b/multi.txt
+index 1111111..2222222 100644
+--- a/multi.txt
++++ b/multi.txt
+@@ -1,3 +1,3 @@
+ context
+-old
++new
+ after
+@@ -41,2 +41,2 @@
+ keep
+-before
++after
+`;
+
+const wideMultiHunkDiff = `diff --git a/wide-multi.txt b/wide-multi.txt
+index 1111111..2222222 100644
+--- a/wide-multi.txt
++++ b/wide-multi.txt
+@@ -1,2 +1,2 @@
+-const short = 1;
++const reallyLongVariableName = someFunctionCall(withLots, of, arguments, thatExceed, theViewport, widthEasily, forSure);
+ keep
+@@ -41,2 +41,2 @@
+ keep
+-before
++after
 `;
 
 async function capture(
@@ -118,6 +147,11 @@ async function capture(
     scrollTopAfter = scrollbox.scrollTop;
     linesAfterScrollDown = toLines(rendered.captureSpans());
   }
+  const settlePasses = options.waitForExactSpan ? 20 : 1;
+  for (let i = 0; i < settlePasses; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await rendered.renderOnce();
+  }
   rendered.renderer.destroy();
 
   const rgb = (color: RGBA): [number, number, number] => {
@@ -153,10 +187,10 @@ function fgOf(scenario: { coloredSpans: { text: string; fg: [number, number, num
 
 // Distinctive single-token added/removed lines so their rendered background
 // color can be located unambiguously in the captured spans.
-const themedDiff = `diff --git a/theme.ts b/theme.ts
+const themedDiff = `diff --git a/theme.txt b/theme.txt
 index 1111111..2222222 100644
---- a/theme.ts
-+++ b/theme.ts
+--- a/theme.txt
++++ b/theme.txt
 @@ -1,2 +1,2 @@
  keepcontext
 -removedtoken
@@ -176,10 +210,10 @@ index 1111111..2222222 100644
 // A diff tall enough to overflow a short viewport, so the header (top of the
 // scroll content) can be scrolled out of view.
 const tallDiffBody = Array.from({ length: 40 }, (_, i) => `+line ${i}`).join("\n");
-const tallDiff = `diff --git a/tall.ts b/tall.ts
+const tallDiff = `diff --git a/tall.txt b/tall.txt
 index 1111111..2222222 100644
---- a/tall.ts
-+++ b/tall.ts
+--- a/tall.txt
++++ b/tall.txt
 @@ -0,0 +1,40 @@
 ${tallDiffBody}
 `;
@@ -197,6 +231,8 @@ const singleFile = await capture(null, singleFileDiff);
 const headerSingle = await capture("A single-file revision preview", singleFileDiff);
 const wide = await capture(null, wideDiff, { width: 40, scrollX: true });
 const wideWrapped = await capture(null, wideDiff, { width: 40, scrollX: true, previewWordWrap: true });
+const multiHunk = await capture(null, multiHunkDiff);
+const wideMultiHunk = await capture(null, wideMultiHunkDiff, { width: 40 });
 
 const darkThemed = await capture(null, themedDiff, { config: darkConfig });
 const lightThemed = await capture(null, themedDiff, { config: lightConfig });
@@ -225,4 +261,4 @@ const themeColors = {
   configLightRemoved: lightConfig.colorScheme.semanticColors.diffRemovedFill,
 };
 
-console.log(JSON.stringify({ withHeader, singleFile, headerSingle, scrollingHeader, wide, wideWrapped, themeColors }));
+console.log(JSON.stringify({ withHeader, singleFile, headerSingle, scrollingHeader, wide, wideWrapped, multiHunk, wideMultiHunk, themeColors }));

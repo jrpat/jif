@@ -40,6 +40,8 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
     scrollingHeader: Scenario;
     wide: Scenario;
     wideWrapped: Scenario;
+    multiHunk: Scenario;
+    wideMultiHunk: Scenario;
     themeColors: {
       darkAdded: RGB | null;
       darkRemoved: RGB | null;
@@ -71,6 +73,8 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
     if (fileIndex < 0) return false;
     return lines.slice(0, fileIndex).some((line) => line.includes("─"));
   };
+  const brightness = ([r, g, b]: RGB) => (r * 299 + g * 587 + b * 114) / 1000;
+  const contrast = (fg: RGB, bg: RGB) => Math.abs(brightness(fg) - brightness(bg));
 
   // Multi-file with a header: word-wrapped header, a rule above each filename,
   // and both files' diffs rendered by the built-in component.
@@ -78,28 +82,28 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
   expect(withHeaderText).toContain("preview");
   expect(withHeaderText).toContain("description");
   expect(withHeaderText).toContain("─");
-  expect(withHeaderText).toContain("one.ts");
-  expect(withHeaderText).toContain("two.md");
+  expect(withHeaderText).toContain("one.txt");
+  expect(withHeaderText).toContain("two.txt");
   expect(withHeaderText).toContain("new");
   expect(withHeaderText).toContain("after");
   // The header preview shows a divider above the FIRST file too, separating the
   // header from the diff.
-  expect(hasDividerAbove(result.withHeader.lines, "one.ts")).toBe(true);
+  expect(hasDividerAbove(result.withHeader.lines, "one.txt")).toBe(true);
 
   // Single file with no header: the filename shows at the top with no separator
   // rule above it.
-  expect(singleText).toContain("solo.ts");
+  expect(singleText).toContain("solo.txt");
   expect(singleText).not.toContain("─");
   const firstNonEmpty = result.singleFile.lines.find((line) => line.trim().length > 0);
-  expect(firstNonEmpty).toContain("solo.ts");
+  expect(firstNonEmpty).toContain("solo.txt");
 
   // Single file WITH a header (revision preview of a one-file change): the
   // divider is restored above the first file because there is a header to
   // separate from.
   const headerSingleText = result.headerSingle.lines.join("\n");
-  expect(headerSingleText).toContain("solo.ts");
+  expect(headerSingleText).toContain("solo.txt");
   expect(headerSingleText).toContain("─");
-  expect(hasDividerAbove(result.headerSingle.lines, "solo.ts")).toBe(true);
+  expect(hasDividerAbove(result.headerSingle.lines, "solo.txt")).toBe(true);
 
   // A diff wider than the viewport can be scrolled horizontally.
   expect(result.wide.scrollWidth ?? 0).toBeGreaterThan(result.wide.viewportWidth ?? 0);
@@ -111,6 +115,25 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
   expect(result.wideWrapped.afterScrollLeft ?? 0).toBeLessThanOrEqual(0);
   expect(result.wideWrapped.lines.join("\n")).toContain("forSure");
 
+  // Compressed multi-hunk diffs show the omitted unchanged span explicitly
+  // instead of visually joining non-contiguous source regions.
+  const multiHunkText = result.multiHunk.lines.join("\n");
+  expect(multiHunkText).toContain("multi.txt");
+  expect(multiHunkText).toContain("old");
+  expect(multiHunkText).toContain("new");
+  expect(multiHunkText).toContain("before");
+  expect(multiHunkText).toContain("37 more lines");
+  const separatorRule = result.multiHunk.coloredSpans.find((span) => span.text.includes("⋮"));
+  const separatorLabel = result.multiHunk.coloredSpans.find((span) => span.text.includes("37 more lines"));
+  expect(separatorRule).toBeDefined();
+  expect(separatorLabel).toBeDefined();
+  expect(Math.abs(contrast(separatorRule!.fg, separatorRule!.bg) * 2 - contrast(separatorLabel!.fg, separatorLabel!.bg))).toBeLessThanOrEqual(1);
+
+  // The separator is centered in the visible pane, not in the full horizontal
+  // scroll width. Otherwise wide diffs show only the rule in the viewport.
+  const wideMultiHunkText = result.wideMultiHunk.lines.join("\n");
+  expect(wideMultiHunkText).toContain("38 more lines");
+
   // The header is part of the scrolled content, not pinned: it is visible at the
   // top, then scrolls out of view as the diff scrolls down.
   const scrolling = result.scrollingHeader;
@@ -121,7 +144,6 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
   // The diff body adapts to the terminal theme rather than using OpenTUI's
   // hardcoded dark-background line fills (#1a4d1a added / #4d1a1a removed).
   const { darkAdded, darkRemoved, lightAdded, lightRemoved } = result.themeColors;
-  const brightness = ([r, g, b]: RGB) => (r * 299 + g * 587 + b * 114) / 1000;
   const hexToRgb = (hex: string): RGB => {
     const n = Number.parseInt(hex.slice(1), 16);
     return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
