@@ -471,9 +471,9 @@ Auto-refresh is disabled by default. Set `refresh.intervalMs` to periodically re
 
 ```ts
 export default {
-	refresh: {
-		intervalMs: 5000,
-	},
+  refresh: {
+    intervalMs: 5000,
+  },
 } satisfies Jif.Config;
 ```
 
@@ -488,9 +488,9 @@ Revision IDs default to the longest unique prefix across the visible log. You ca
 
 ```ts
 export default {
-	log: {
-		revisionIdAdditionalChars: 0,
-	},
+  log: {
+    revisionIdAdditionalChars: 0,
+  },
 } satisfies Jif.Config;
 ```
 
@@ -521,16 +521,16 @@ The [preview pane](#preview) shows the diff of the focused item beside the log. 
 
 ```ts
 export default {
-	preview: {
-		position: "auto",         // "auto" | "right" | "below"; auto uses right on wide terminals, below/hidden on narrow
-		showByDefault: false,      // show the pane on startup (toggle in-session with `p`)
-		defaultWidthPercent: 50,   // initial size as a percent of the terminal
-		resizeStepPercent: 5,      // percent added/removed by ctrl+[ / ctrl+]
-		minSizePercent: 15,        // clamp for the size percent
-		maxSizePercent: 90,
-		narrowWidth: 100,          // in "auto", terminals narrower than this are "too narrow" for the right layout
-		whenNarrow: "below",       // in "auto", what to do when too narrow: "below" (relocate) or "hide"
-	},
+  preview: {
+    position: "auto",         // "auto" | "right" | "below"; auto uses right on wide terminals, below/hidden on narrow
+    showByDefault: false,      // show the pane on startup (toggle in-session with `p`)
+    defaultWidthPercent: 50,   // initial size as a percent of the terminal
+    resizeStepPercent: 5,      // percent added/removed by ctrl+[ / ctrl+]
+    minSizePercent: 15,        // clamp for the size percent
+    maxSizePercent: 90,
+    narrowWidth: 100,          // in "auto", terminals narrower than this are "too narrow" for the right layout
+    whenNarrow: "below",       // in "auto", what to do when too narrow: "below" (relocate) or "hide"
+  },
 } satisfies Jif.Config;
 ```
 
@@ -551,11 +551,11 @@ You can rebind an existing built-in command by id:
 
 ```ts
 export default {
-	keymap: {
-		normal: {
-			J: "move-down",
-		},
-	},
+  keymap: {
+    normal: {
+      J: "move-down",
+    },
+  },
 } satisfies Jif.Config;
 ```
 
@@ -563,28 +563,28 @@ Or define an inline command directly in the keymap:
 
 ```ts
 export default {
-	keymap: {
-		normal: {
-			"ctrl-g": {
-				id: "show-focused",  // command ids are optional
-				title: "Show Focused Revision",
-				run: (cmd, app) => {
-					if (!app.rev) return;
+  keymap: {
+    normal: {
+      "ctrl-g": {
+        id: "show-focused",  // command ids are optional
+        title: "Show Focused Revision",
+        run: (cmd, app) => {
+          if (!app.rev) return;
 
-					// app.rev is the focused revision's jj argument
-					return cmd.jji(`show -r ${app.rev}`);
-				},
-			},
-			"alt-e": {
-				title: "Edit Focused Revision",
-				run: (cmd, app) => {
-					if (!app.rev) return;
+          // app.rev is the focused revision's jj argument
+          return cmd.jji(`show -r ${app.rev}`);
+        },
+      },
+      "alt-e": {
+        title: "Edit Focused Revision",
+        run: (cmd, app) => {
+          if (!app.rev) return;
 
-					return cmd.jj(`edit ${app.rev}`);
-				},
-			},
-		},
-	},
+          return cmd.jj(`edit ${app.rev}`);
+        },
+      },
+    },
+  },
 } satisfies Jif.Config;
 ```
 
@@ -592,14 +592,14 @@ Pressing `;` from Normal mode enters Extra mode, a clean-slate scope for keys yo
 
 ```ts
 export default {
-	keymap: {
-		extra: {
-			d: {
-				title: "Deploy",
-				run: (cmd) => cmd.sh("./scripts/deploy.sh"),
-			},
-		},
-	},
+  keymap: {
+    extra: {
+      d: {
+        title: "Deploy",
+        run: (cmd) => cmd.sh("./scripts/deploy.sh"),
+      },
+    },
+  },
 } satisfies Jif.Config;
 ```
 
@@ -614,12 +614,12 @@ Every binding shows up in the shortcut panel by default. To bind an alias key th
 
 ```ts
 export default {
-	keymap: {
-		normal: {
-			// alias for `move-down`; works but stays out of the shortcut panel
-			x: { command: "move-down", canonical: false },
-		},
-	},
+  keymap: {
+    normal: {
+      // alias for `move-down`; works but stays out of the shortcut panel
+      x: { command: "move-down", canonical: false },
+    },
+  },
 } satisfies Jif.Config;
 ```
 
@@ -627,9 +627,9 @@ Inline commands accept the same flag:
 
 ```ts
 "ctrl-q": {
-	title: "Quick Action",
-	canonical: false,
-	run: (cmd, app) => { /* ... */ },
+  title: "Quick Action",
+  canonical: false,
+  run: (cmd, app) => { /* ... */ },
 },
 ```
 
