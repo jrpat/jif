@@ -7,6 +7,7 @@ import type { ShortcutGrid, ShortcutPanelLayout, ShortcutSummarySegment } from "
 import { ScrollableAnsiBody } from "./scrollableAnsiBody.tsx";
 import { observeScrollboxInteraction } from "./scroll.ts";
 import { makeScrollAcceleration } from "./scrollAcceleration.ts";
+import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
 import {
   getHelpToastBorderColor,
   getStatusColor,
@@ -159,12 +160,10 @@ export function StatusArea(props: {
           scrollY
           backgroundColor={colors.chromeFillTwo}
           scrollAcceleration={scrollAcceleration()}
-          scrollbarOptions={{
-            trackOptions: {
-              backgroundColor: colors.chromeFillThree,
-              foregroundColor: colors.chromeScrollbarThumb,
-            },
-          }}
+          scrollbarOptions={buildScrollbarTrackOptions(
+            colors.chromeFillThree,
+            colors.chromeScrollbarThumb,
+          )}
         >
           <Show
             when={!isLayoutEmpty(props.shortcutLayout)}

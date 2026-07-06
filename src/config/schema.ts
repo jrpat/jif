@@ -277,10 +277,12 @@ function blendColor(fgHex: string, bgHex: string, opacity: number): string {
 function resolveColorDef(
   def: PaletteColorDef,
   palette: TerminalColors,
-): string | undefined {
-  const color = lookupPaletteColor(def.source, palette);
-  const bg = palette.defaultBackground;
-  if (!color || !bg) return undefined;
+): string {
+  const color = lookupPaletteColor(def.source, palette) ??
+    lookupPaletteColor(def.source, FALLBACK_PALETTE_DARK) ??
+    FALLBACK_PALETTE_DARK.defaultForeground ??
+    "#e5e5e5";
+  const bg = palette.defaultBackground ?? FALLBACK_PALETTE_DARK.defaultBackground ?? "#000000";
   return blendColor(color, bg, def.opacity);
 }
 

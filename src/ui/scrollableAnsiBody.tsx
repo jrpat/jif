@@ -3,6 +3,7 @@ import type { ScrollBoxRenderable } from "@opentui/core";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import { parseAnsiToStyledText } from "./ansiToStyledText.ts";
 import { makeScrollAcceleration } from "./scrollAcceleration.ts";
+import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
 
 export function ScrollableAnsiBody(props: Readonly<{
   text: string;
@@ -35,12 +36,10 @@ export function ScrollableAnsiBody(props: Readonly<{
       scrollY
       backgroundColor={props.backgroundColor}
       scrollAcceleration={scrollAcceleration()}
-      scrollbarOptions={{
-        trackOptions: {
-          backgroundColor: colors().chromeFillThree,
-          foregroundColor: colors().chromeScrollbarThumb,
-        },
-      }}
+      scrollbarOptions={buildScrollbarTrackOptions(
+        colors().chromeFillThree,
+        colors().chromeScrollbarThumb,
+      )}
       onMouseScroll={props.onMouseScroll}
     >
       <text ref={textRef} fg={colors().textPrimary} wrapMode="none" />

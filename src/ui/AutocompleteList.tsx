@@ -3,6 +3,7 @@ import { For, createMemo, createRenderEffect } from "solid-js";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { AutocompleteFlow } from "./autocomplete.ts";
 import { makeScrollAcceleration } from "./scrollAcceleration.ts";
+import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
 
 export type AutocompleteListItem = Readonly<{
   id: string;
@@ -83,12 +84,10 @@ export function AutocompleteList(props: {
         stickyStart={props.flow !== "top-to-bottom" ? "bottom" : undefined}
         backgroundColor={colors.chromeFillTwo}
         scrollAcceleration={scrollAcceleration()}
-        scrollbarOptions={{
-          trackOptions: {
-            backgroundColor: colors.chromeFillThree,
-            foregroundColor: colors.chromeScrollbarThumb,
-          },
-        }}
+        scrollbarOptions={buildScrollbarTrackOptions(
+          colors.chromeFillThree,
+          colors.chromeScrollbarThumb,
+        )}
       >
         <box width="100%" flexDirection="column">
           <For each={visibleItems()}>

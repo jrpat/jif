@@ -33,6 +33,23 @@ test("resolveAppConfig resolves semantic colors from dark fallback palette", () 
   expect(typeof resolved.colorScheme.semanticColors.statusError).toBe("string");
 });
 
+test("resolveAppConfig falls back when a detected terminal palette is incomplete", () => {
+  const resolved = resolveAppConfig(defaultAppConfig, {
+    palette: {
+      ...FALLBACK_PALETTE_DARK,
+      palette: FALLBACK_PALETTE_DARK.palette.map(() => null),
+      defaultForeground: null,
+      defaultBackground: null,
+    },
+  });
+
+  for (const value of Object.values(resolved.colorScheme.semanticColors)) {
+    expect(typeof value).toBe("string");
+  }
+  expect(resolved.colorScheme.semanticColors.chromeFillThree).toBe("#1b1b1b");
+  expect(resolved.colorScheme.semanticColors.chromeScrollbarThumb).toBe("#373737");
+});
+
 test("resolveAppConfig produces different colors for light vs dark palettes", () => {
   const dark = resolveAppConfig(defaultAppConfig, {
     palette: FALLBACK_PALETTE_DARK,
