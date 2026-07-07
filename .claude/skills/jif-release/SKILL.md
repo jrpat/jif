@@ -6,10 +6,11 @@ description: Cut a jif release — run preflight, choose the version, draft rele
 # Cutting a jif release
 
 Releases are tag-driven with human-curated notes. This skill produces a **draft**
-GitHub Release; `release.yml` reacts to it, builds all binaries on a
-native-runner matrix, attests provenance, uploads everything, and flips the
-draft to published. You never create the tag yourself — GitHub creates it when
-the draft is published (the repo is jj-only, so tags cannot be pushed locally).
+GitHub Release and then dispatches `release.yml` (drafts cannot trigger Actions
+themselves), which builds all binaries on a native-runner matrix, attests
+provenance, uploads everything, and flips the draft to published. You never
+create the tag yourself — GitHub creates it when the draft is published (the
+repo is jj-only, so tags cannot be pushed locally).
 
 Work through the steps in order. Do not skip preflight and do not create the
 draft before the user has approved the notes.
@@ -92,11 +93,13 @@ jj bookmark set main -r @-
 jj git push --bookmark main
 ```
 
-Create the draft against the exact commit (add `--prerelease` for betas):
+Create the draft against the exact commit (add `--prerelease` for betas), then
+dispatch the pipeline — draft creation alone does not trigger it:
 
 ```bash
 TARGET=$(jj log --no-graph -r main -T commit_id)
 gh release create vX.Y.Z --draft --title "jif X.Y.Z" --notes-file .tmp/release-notes.md --target "$TARGET"
+gh workflow run release.yml -f version=vX.Y.Z -f dry-run=false
 ```
 
 ## 6. Watch CI

@@ -1,15 +1,13 @@
 # Release pipeline. The jif-release skill creates a DRAFT release with curated
-# notes (see .claude/skills/jif-release); the "release: created" event lands
-# here, which builds every artifact, uploads them to the draft, and publishes
-# it. Draft-first means /releases/latest and installers never see a
-# half-uploaded release. workflow_dispatch is the fallback/testing path: with
-# dry-run it builds everything without touching any release; without dry-run it
-# finishes an existing draft (e.g. after a failed run).
+# notes (see .claude/skills/jif-release) and then dispatches this workflow with
+# dry-run unchecked — Actions cannot trigger on draft-release events, so the
+# dispatch is the only entry point. The run builds every artifact, uploads them
+# to the draft, and publishes it. Draft-first means /releases/latest and
+# installers never see a half-uploaded release. With dry-run checked it builds
+# and summarizes without touching any release.
 name: Release
 
 on:
-  release:
-    types: [created]
   workflow_dispatch:
     inputs:
       version:
@@ -22,16 +20,13 @@ on:
         default: true
 
 concurrency:
-  group: release-${{ github.event.release.tag_name || inputs.version }}
+  group: release-${{ inputs.version }}
   cancel-in-progress: false
 
 permissions: {}
 
 jobs:
   plan:
-    # Publishing a draft fires "published", not "created", and GITHUB_TOKEN
-    # events never retrigger workflows, so this only runs for fresh drafts.
-    if: github.event_name == 'workflow_dispatch' || github.event.release.draft
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -55,7 +50,7 @@ jobs:
       - name: Normalize version
         id: norm
         env:
-          RAW_VERSION: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.version }}
+          RAW_VERSION: ${{ inputs.version }}
         run: bun run scripts/release/assets.ts normalize "$RAW_VERSION" | tee -a "$GITHUB_OUTPUT"
 
       - name: Resolve release target
@@ -66,22 +61,16 @@ jobs:
           PRERELEASE: ${{ steps.norm.outputs.prerelease }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "release" ]; then
-            [ "${{ github.event.release.tag_name }}" = "$TAG" ] \
-              || { echo "::error::Tag '${{ github.event.release.tag_name }}' is not in canonical vX.Y.Z form"; exit 1; }
-            [ "${{ github.event.release.prerelease }}" = "$PRERELEASE" ] \
-              || { echo "::error::Release prerelease flag does not match the tag suffix"; exit 1; }
-            echo "ref=${{ github.event.release.target_commitish }}" >> "$GITHUB_OUTPUT"
-            echo "release-id=${{ github.event.release.id }}" >> "$GITHUB_OUTPUT"
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-          elif [ "${{ inputs.dry-run }}" = "true" ]; then
+          if [ "${{ inputs.dry-run }}" = "true" ]; then
             echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
             echo "release-id=" >> "$GITHUB_OUTPUT"
             echo "publish=false" >> "$GITHUB_OUTPUT"
           else
             release=$(gh api "repos/${{ github.repository }}/releases" \
-              --jq ".[] | select(.tag_name == \"$TAG\" and .draft) | {id, target_commitish}" | head -n 1)
+              --jq ".[] | select(.tag_name == \"$TAG\" and .draft) | {id, target_commitish, prerelease}" | head -n 1)
             [ -n "$release" ] || { echo "::error::No draft release with tag $TAG to finish"; exit 1; }
+            [ "$(echo "$release" | jq -r .prerelease)" = "$PRERELEASE" ] \
+              || { echo "::error::Draft prerelease flag does not match the tag suffix"; exit 1; }
             echo "ref=$(echo "$release" | jq -r .target_commitish)" >> "$GITHUB_OUTPUT"
             echo "release-id=$(echo "$release" | jq -r .id)" >> "$GITHUB_OUTPUT"
             echo "publish=true" >> "$GITHUB_OUTPUT"
