@@ -16,7 +16,29 @@ And it's not just an ergonomic porcelain – it's also a better place to write `
 
 ## Install
 
-> TODO
+Prebuilt binaries are available for macOS, Linux, and Windows (arm64 and x64).
+
+**Homebrew** (macOS and Linux):
+
+```bash
+brew install jrpat/jif-tap/jif
+```
+
+**Shell installer** (installs to `$XDG_BIN_HOME` or `~/.local/bin`; set `JIF_VERSION` or `JIF_INSTALL_DIR` to override):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jrpat/jif/main/install.sh | sh
+```
+
+**mise** (via the [ubi](https://mise.jdx.dev/dev-tools/backends/ubi.html) backend):
+
+```bash
+mise use -g ubi:jrpat/jif
+```
+
+**Manual**: download an archive for your platform from the [releases page](https://github.com/jrpat/jif/releases) and put `jif` on your `PATH`. On Windows, use the `.zip` archives. Checksums are published in `SHA256SUMS`, and every asset carries build provenance you can check with `gh attestation verify <asset> --repo jrpat/jif`.
+
+To build from source instead, see [Developing](#developing).
 
 ## Run
 
@@ -881,7 +903,7 @@ bun run bin
 To install into a different location for one run:
 
 ```bash
-XDG_BIN_HOME=/some/bin bun run install:bin
+XDG_BIN_HOME=/some/bin bun run bin
 ```
 
 Build a standalone executable into `dist/`:
