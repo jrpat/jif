@@ -29,7 +29,9 @@ jobs:
   plan:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      # write, not read: the GitHub API only lists draft releases for tokens
+      # with push access, and this job must resolve the draft by tag.
+      contents: write
     outputs:
       tag: ${{ steps.norm.outputs.tag }}
       version: ${{ steps.norm.outputs.version }}
