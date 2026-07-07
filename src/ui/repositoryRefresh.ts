@@ -37,7 +37,7 @@ export function createRepositoryRefresher(args: {
 }) {
   let refreshInFlight: Promise<boolean> | null = null;
   let currentRevisionLimit = DEFAULT_REPOSITORY_LOAD_LIMIT;
-  let lastAppliedFingerprint: string | null = null;
+  let lastAppliedFingerprint: number | bigint | null = null;
 
   return async function refreshRepository(
     revset?: string,
@@ -60,7 +60,9 @@ export function createRepositoryRefresher(args: {
         // even when the repository is untouched. Skip the apply when the
         // loaded payload matches what was last applied; clearing the loading
         // flag is the only apply side effect that must survive the skip.
-        const fingerprint = JSON.stringify(repositoryData);
+        // A 64-bit hash stands in for the payload; a collision only skips a
+        // refresh that should have applied, and the next change repairs it.
+        const fingerprint = Bun.hash(JSON.stringify(repositoryData));
         if (fingerprint === lastAppliedFingerprint) {
           args.actions.setLoading(false);
         } else {
