@@ -43,6 +43,12 @@
 - When UI-specific testing is needed, start with narrow renderer/state coverage before broader interactive checks.
 
 
+# Releasing
+
+- Releases are cut with the `jif-release` skill (`.claude/skills/jif-release/SKILL.md`): preflight → human-approved notes drafted from `jj log` → CHANGELOG.md (stable only) → push → draft GitHub Release. CI (`.github/workflows/release.yml`) builds all targets, attests provenance, uploads assets, and publishes the draft.
+- Release tooling lives in `scripts/release/`. Version source of truth is the release tag; binaries learn it via a build-time define (`--app-version`).
+
+
 # JJ/Repo Setup Expectations
 
 - Deterministic sample data lives at `test/fixtures/sample-repo.jsonl`.
