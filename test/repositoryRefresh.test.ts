@@ -435,7 +435,7 @@ function createFakeDebounceScheduler() {
   return {
     scheduler: {
       setTimeout(callback: () => void, delayMs: number) {
-        expect(delayMs).toBe(100);
+        expect(delayMs).toBe(1000);
         const handle = nextHandle++;
         pending.push({ callback, handle });
         return handle as unknown as ReturnType<typeof globalThis.setTimeout>;

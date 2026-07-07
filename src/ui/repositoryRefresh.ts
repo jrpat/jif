@@ -155,7 +155,7 @@ const defaultOpHeadsWatchFactory: OpHeadsWatchFactory = (path, onChange) => {
 // A single jj operation touches the heads directory more than once (the new
 // head is written before the old one is removed), so changes are debounced
 // into one refresh.
-const OP_HEADS_DEBOUNCE_MS = 100;
+const OP_HEADS_DEBOUNCE_MS = 1000;
 
 export function bindOpHeadsWatcher(args: Readonly<{
   opHeadsPath: string;
