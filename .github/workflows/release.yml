@@ -1,0 +1,242 @@
+# Release pipeline. The jif-release skill creates a DRAFT release with curated
+# notes (see .claude/skills/jif-release); the "release: created" event lands
+# here, which builds every artifact, uploads them to the draft, and publishes
+# it. Draft-first means /releases/latest and installers never see a
+# half-uploaded release. workflow_dispatch is the fallback/testing path: with
+# dry-run it builds everything without touching any release; without dry-run it
+# finishes an existing draft (e.g. after a failed run).
+name: Release
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release (e.g. 0.2.0 or v0.2.0-beta.1)
+        required: true
+        type: string
+      dry-run:
+        description: Build and summarize without uploading or publishing
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.version }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  plan:
+    # Publishing a draft fires "published", not "created", and GITHUB_TOKEN
+    # events never retrigger workflows, so this only runs for fresh drafts.
+    if: github.event_name == 'workflow_dispatch' || github.event.release.draft
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.norm.outputs.tag }}
+      version: ${{ steps.norm.outputs.version }}
+      prerelease: ${{ steps.norm.outputs.prerelease }}
+      ref: ${{ steps.target.outputs.ref }}
+      release-id: ${{ steps.target.outputs.release-id }}
+      publish: ${{ steps.target.outputs.publish }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Normalize version
+        id: norm
+        env:
+          RAW_VERSION: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.version }}
+        run: bun run scripts/release/assets.ts normalize "$RAW_VERSION" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Resolve release target
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.norm.outputs.tag }}
+          PRERELEASE: ${{ steps.norm.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "release" ]; then
+            [ "${{ github.event.release.tag_name }}" = "$TAG" ] \
+              || { echo "::error::Tag '${{ github.event.release.tag_name }}' is not in canonical vX.Y.Z form"; exit 1; }
+            [ "${{ github.event.release.prerelease }}" = "$PRERELEASE" ] \
+              || { echo "::error::Release prerelease flag does not match the tag suffix"; exit 1; }
+            echo "ref=${{ github.event.release.target_commitish }}" >> "$GITHUB_OUTPUT"
+            echo "release-id=${{ github.event.release.id }}" >> "$GITHUB_OUTPUT"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ inputs.dry-run }}" = "true" ]; then
+            echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "release-id=" >> "$GITHUB_OUTPUT"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            release=$(gh api "repos/${{ github.repository }}/releases" \
+              --jq ".[] | select(.tag_name == \"$TAG\" and .draft) | {id, target_commitish}" | head -n 1)
+            [ -n "$release" ] || { echo "::error::No draft release with tag $TAG to finish"; exit 1; }
+            echo "ref=$(echo "$release" | jq -r .target_commitish)" >> "$GITHUB_OUTPUT"
+            echo "release-id=$(echo "$release" | jq -r .id)" >> "$GITHUB_OUTPUT"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  test:
+    needs: plan
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.plan.outputs.ref }}
+
+  build:
+    name: build (${{ matrix.target }})
+    needs: plan
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Each target builds on its native runner: bun install only fetches
+          # the host platform's @opentui/core-* native package, so
+          # cross-compiling would fail to resolve the target's dylib/so.
+          - os: macos-14
+            target: bun-darwin-arm64
+            binary: dist/jif
+          - os: macos-13
+            target: bun-darwin-x64
+            binary: dist/jif
+          - os: ubuntu-latest
+            target: bun-linux-x64
+            binary: dist/jif
+          - os: ubuntu-24.04-arm
+            target: bun-linux-arm64
+            binary: dist/jif
+          - os: windows-latest
+            target: bun-windows-x64
+            binary: dist/jif.exe
+          - os: windows-11-arm
+            target: bun-windows-arm64
+            binary: dist/jif.exe
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.plan.outputs.ref }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build binary
+        run: >
+          bun run scripts/build.ts
+          --target ${{ matrix.target }}
+          --outfile ${{ matrix.binary }}
+          --minify
+          --app-version ${{ needs.plan.outputs.version }}
+
+      - name: Smoke test
+        shell: bash
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          set -euo pipefail
+          reported="$(./${{ matrix.binary }} --version)"
+          [ "$reported" = "jif $VERSION" ] || { echo "::error::--version reported '$reported'"; exit 1; }
+          ./${{ matrix.binary }} --help > /dev/null
+
+      - name: Compute asset name
+        id: asset
+        shell: bash
+        run: echo "name=$(bun run scripts/release/assets.ts name ${{ matrix.target }} ${{ needs.plan.outputs.tag }})" >> "$GITHUB_OUTPUT"
+
+      - name: Archive (tar.gz)
+        if: runner.os != 'Windows'
+        run: tar -czf "${{ steps.asset.outputs.name }}" -C dist jif
+
+      - name: Archive (zip)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path dist/jif.exe -DestinationPath "${{ steps.asset.outputs.name }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: ${{ steps.asset.outputs.name }}
+          if-no-files-found: error
+
+  publish:
+    needs: [plan, test, build]
+    if: needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ needs.plan.outputs.tag }}
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Verify artifact completeness
+        run: |
+          set -euo pipefail
+          ls -l artifacts
+          archives=$(find artifacts -name 'jif-v*' | wc -l)
+          [ "$archives" -eq 6 ] || { echo "::error::Expected 6 binary archives, found $archives"; exit 1; }
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: artifacts/*
+
+      - name: Generate SHA256SUMS
+        run: cd artifacts && sha256sum * > SHA256SUMS
+
+      - name: Upload assets to draft
+        run: gh release upload "$TAG" artifacts/* --clobber --repo "${{ github.repository }}"
+
+      - name: Publish release
+        env:
+          RELEASE_ID: ${{ needs.plan.outputs.release-id }}
+        run: |
+          gh api --method PATCH "repos/${{ github.repository }}/releases/$RELEASE_ID" -F draft=false --jq .html_url
+
+  dry-run-summary:
+    needs: [plan, test, build]
+    if: needs.plan.outputs.publish == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Summarize
+        run: |
+          set -euo pipefail
+          {
+            echo "## Dry run for ${{ needs.plan.outputs.tag }}"
+            echo
+            echo '```'
+            (cd artifacts && sha256sum *)
+            echo '```'
+            echo
+            echo "Nothing was uploaded or published."
+          } >> "$GITHUB_STEP_SUMMARY"
