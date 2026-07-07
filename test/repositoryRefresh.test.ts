@@ -203,6 +203,78 @@ test("createRepositoryRefresher reports refresh metadata for lazy loading", asyn
   ]);
 });
 
+test("createRepositoryRefresher skips applying unchanged repository data", async () => {
+  const calls: string[] = [];
+  let refreshSuccessCount = 0;
+
+  const refreshRepository = createRepositoryRefresher({
+    client: {
+      async verifyRepository() {},
+      async loadRepository() {
+        return {
+          repoPath: "/tmp/repo",
+          revisions: [{ rowId: "r0", revisionId: "abc" }] as any,
+        };
+      },
+    },
+    actions: {
+      setLoading(loading) {
+        calls.push(`loading:${loading}`);
+      },
+      applyRepositoryData() {
+        calls.push("apply");
+      },
+      pushEvent() {
+        throw new Error("refresh should not fail");
+      },
+    },
+    getRevsetQuery: () => "",
+    onRefreshSuccess() {
+      refreshSuccessCount += 1;
+    },
+  });
+
+  expect(await refreshRepository()).toBe(true);
+  expect(await refreshRepository()).toBe(true);
+
+  expect(calls).toEqual(["apply", "loading:false"]);
+  expect(refreshSuccessCount).toBe(2);
+});
+
+test("createRepositoryRefresher applies repository data again once it changes", async () => {
+  const applied: string[] = [];
+  let description = "first";
+
+  const refreshRepository = createRepositoryRefresher({
+    client: {
+      async verifyRepository() {},
+      async loadRepository() {
+        return {
+          repoPath: "/tmp/repo",
+          revisions: [{ rowId: "r0", description }] as any,
+        };
+      },
+    },
+    actions: {
+      setLoading() {},
+      applyRepositoryData(repositoryData) {
+        applied.push((repositoryData.revisions[0] as any).description);
+      },
+      pushEvent() {
+        throw new Error("refresh should not fail");
+      },
+    },
+    getRevsetQuery: () => "",
+  });
+
+  await refreshRepository();
+  description = "second";
+  await refreshRepository();
+  await refreshRepository();
+
+  expect(applied).toEqual(["first", "second"]);
+});
+
 test("createRepositoryRefresher coalesces concurrent refresh requests", async () => {
   const loadDeferred = createDeferred<RepositoryData>();
   let loadCalls = 0;

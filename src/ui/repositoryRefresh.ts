@@ -36,6 +36,7 @@ export function createRepositoryRefresher(args: {
 }) {
   let refreshInFlight: Promise<boolean> | null = null;
   let currentRevisionLimit = DEFAULT_REPOSITORY_LOAD_LIMIT;
+  let lastAppliedFingerprint: string | null = null;
 
   return async function refreshRepository(
     revset?: string,
@@ -53,7 +54,18 @@ export function createRepositoryRefresher(args: {
         await args.client.verifyRepository(options);
         const repositoryData = await args.client.loadRepository(effectiveLimit, effectiveRevset, options);
         currentRevisionLimit = effectiveLimit;
-        args.actions.applyRepositoryData(repositoryData);
+        // Applying identical data still rebuilds every revision object and
+        // reconciles the whole store, so periodic refreshes would churn CPU
+        // even when the repository is untouched. Skip the apply when the
+        // loaded payload matches what was last applied; clearing the loading
+        // flag is the only apply side effect that must survive the skip.
+        const fingerprint = JSON.stringify(repositoryData);
+        if (fingerprint === lastAppliedFingerprint) {
+          args.actions.setLoading(false);
+        } else {
+          args.actions.applyRepositoryData(repositoryData);
+          lastAppliedFingerprint = fingerprint;
+        }
         args.onRefreshSuccess?.({
           repositoryData,
           requestedLimit: effectiveLimit,
