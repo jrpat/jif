@@ -467,17 +467,20 @@ The preview pane's background defaults to the terminal foreground blended at 3% 
 <details>
 <summary>Refresh Settings</summary>
 
-Auto-refresh is disabled by default. Set `refresh.intervalMs` to periodically reload the visible repository state:
+jif watches the repository's operation store (`.jj/repo/op_heads/heads`) and reloads the visible repository state whenever a jj operation completes — including operations run from another terminal or by a background agent. Watching uses filesystem events, so it costs nothing while the repository is untouched. Set `refresh.watch` to `false` to disable it:
 
 ```ts
 export default {
   refresh: {
+    watch: false,
     intervalMs: 5000,
   },
 } satisfies Jif.Config;
 ```
 
-Set `intervalMs` to `0` to disable auto-refresh. Positive values below `1000` are clamped to `1000` ms. Interval refreshes are passive: jif runs timer-based repository reads with `--ignore-working-copy` so multiple worktrees and background agents do not get their working copies snapshotted by the timer. Regaining terminal focus and pressing `ctrl-r` snapshot and refresh the current worktree.
+Interval-based auto-refresh is disabled by default; the watcher usually makes it unnecessary. Set `refresh.intervalMs` to also reload on a timer — useful on filesystems where watching is unreliable (e.g. some network mounts). Set `intervalMs` to `0` to disable it. Positive values below `1000` are clamped to `1000` ms.
+
+Watcher and interval refreshes are passive: jif reads the repository with `--ignore-working-copy` so multiple worktrees and background agents do not get their working copies snapshotted. Regaining terminal focus and pressing `ctrl-r` snapshot and refresh the current worktree. Refreshes that load unchanged data are skipped before touching the UI.
 
 </details>
 

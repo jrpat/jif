@@ -4,6 +4,7 @@ import { CliRenderEvents } from "@opentui/core";
 import type { RepositoryData, StatusLevel } from "../src/domain/types.ts";
 import {
   bindAutoRefresh,
+  bindOpHeadsWatcher,
   bindRefreshOnFocus,
   createRepositoryRefresher,
   type RepositoryRefreshOptions,
@@ -391,6 +392,123 @@ test("bindAutoRefresh schedules read-only refreshes and unsubscribes cleanly", a
   expect(refreshOptions).toEqual([{ workingCopy: "read-only" }]);
   dispose();
   expect(cleared).toEqual(["handle"]);
+});
+
+function createFakeDebounceScheduler() {
+  const pending: Array<{ callback: () => void; handle: number }> = [];
+  let nextHandle = 0;
+  const cleared: number[] = [];
+
+  return {
+    scheduler: {
+      setTimeout(callback: () => void, delayMs: number) {
+        expect(delayMs).toBe(100);
+        const handle = nextHandle++;
+        pending.push({ callback, handle });
+        return handle as unknown as ReturnType<typeof globalThis.setTimeout>;
+      },
+      clearTimeout(handle: ReturnType<typeof globalThis.setTimeout>) {
+        cleared.push(handle as unknown as number);
+        const index = pending.findIndex((entry) => entry.handle === (handle as unknown as number));
+        if (index !== -1) {
+          pending.splice(index, 1);
+        }
+      },
+    },
+    firePending() {
+      const entries = pending.splice(0);
+      for (const entry of entries) {
+        entry.callback();
+      }
+    },
+    get pendingCount() {
+      return pending.length;
+    },
+    cleared,
+  };
+}
+
+test("bindOpHeadsWatcher debounces change bursts into one read-only refresh", async () => {
+  const refreshOptions: RepositoryRefreshOptions[] = [];
+  let watchedPath: string | undefined;
+  let emitChange!: () => void;
+  const fake = createFakeDebounceScheduler();
+
+  const dispose = bindOpHeadsWatcher({
+    opHeadsPath: "/tmp/repo/.jj/repo/op_heads/heads",
+    refreshRepository: async (options) => {
+      refreshOptions.push(options ?? {});
+      return true;
+    },
+    watch: (path, onChange) => {
+      watchedPath = path;
+      emitChange = onChange;
+      return { close() {} };
+    },
+    scheduler: fake.scheduler,
+  });
+
+  expect(watchedPath).toBe("/tmp/repo/.jj/repo/op_heads/heads");
+
+  emitChange();
+  emitChange();
+  emitChange();
+  expect(fake.pendingCount).toBe(1);
+  expect(refreshOptions).toEqual([]);
+
+  fake.firePending();
+  await Promise.resolve();
+  expect(refreshOptions).toEqual([{ workingCopy: "read-only" }]);
+
+  emitChange();
+  fake.firePending();
+  await Promise.resolve();
+  expect(refreshOptions).toEqual([
+    { workingCopy: "read-only" },
+    { workingCopy: "read-only" },
+  ]);
+
+  dispose();
+});
+
+test("bindOpHeadsWatcher dispose closes the watcher and cancels pending refreshes", () => {
+  let closed = 0;
+  let emitChange!: () => void;
+  const fake = createFakeDebounceScheduler();
+
+  const dispose = bindOpHeadsWatcher({
+    opHeadsPath: "/tmp/heads",
+    refreshRepository: async () => {
+      throw new Error("disposed watcher should not refresh");
+    },
+    watch: (_path, onChange) => {
+      emitChange = onChange;
+      return {
+        close() {
+          closed += 1;
+        },
+      };
+    },
+    scheduler: fake.scheduler,
+  });
+
+  emitChange();
+  dispose();
+
+  expect(closed).toBe(1);
+  expect(fake.pendingCount).toBe(0);
+});
+
+test("bindOpHeadsWatcher tolerates a watch setup failure", () => {
+  const dispose = bindOpHeadsWatcher({
+    opHeadsPath: "/tmp/missing",
+    refreshRepository: async () => true,
+    watch: () => {
+      throw new Error("watch unavailable");
+    },
+  });
+
+  dispose();
 });
 
 test("bindAutoRefresh skips disabled intervals", () => {

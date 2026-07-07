@@ -250,6 +250,17 @@ test("resolveAppConfig applies refresh.intervalMs", () => {
   expect(resolved.refresh.intervalMs).toBe(5000);
 });
 
+test("resolveAppConfig defaults refresh.watch to true", () => {
+  const resolved = resolveAppConfig(defaultAppConfig);
+
+  expect(resolved.refresh.watch).toBeTrue();
+});
+
+test("resolveAppConfig applies refresh.watch", () => {
+  expect(resolveAppConfig({ refresh: { watch: false } }).refresh.watch).toBeFalse();
+  expect(resolveAppConfig({ refresh: { watch: true } }).refresh.watch).toBeTrue();
+});
+
 test("resolveAppConfig disables invalid refresh intervals", () => {
   expect(resolveAppConfig({ refresh: { intervalMs: 0 } }).refresh.intervalMs).toBe(0);
   expect(resolveAppConfig({ refresh: { intervalMs: -1 } }).refresh.intervalMs).toBe(0);

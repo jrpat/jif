@@ -160,6 +160,7 @@ export default {
   },
   refresh: {
     // intervalMs: 0,
+    // watch: true,
   },
   commands: {
     // shortFlags: true,
@@ -445,6 +446,7 @@ namespace Jif {
     }>;
     refresh?: Readonly<{
       intervalMs?: number;
+      watch?: boolean;
     }>;
     commands?: Readonly<{
       shortFlags?: boolean;

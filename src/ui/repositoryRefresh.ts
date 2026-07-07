@@ -1,3 +1,4 @@
+import { watch } from "node:fs";
 import { CliRenderEvents, type CliRenderer } from "@opentui/core";
 import type { RepositoryData, StatusLevel } from "../domain/types.ts";
 import {
@@ -116,6 +117,72 @@ export function bindAutoRefresh(args: Readonly<{
 
   return () => {
     scheduler.clearInterval(handle);
+  };
+}
+
+type OpHeadsWatchHandle = Readonly<{ close(): void }>;
+type OpHeadsWatchFactory = (path: string, onChange: () => void) => OpHeadsWatchHandle;
+
+type DebounceScheduler = Readonly<{
+  setTimeout(callback: () => void, delayMs: number): ReturnType<typeof globalThis.setTimeout>;
+  clearTimeout(handle: ReturnType<typeof globalThis.setTimeout>): void;
+}>;
+
+const defaultDebounceScheduler: DebounceScheduler = {
+  setTimeout(callback, delayMs) {
+    return globalThis.setTimeout(callback, delayMs);
+  },
+  clearTimeout(handle) {
+    globalThis.clearTimeout(handle);
+  },
+};
+
+const defaultOpHeadsWatchFactory: OpHeadsWatchFactory = (path, onChange) => {
+  const watcher = watch(path, onChange);
+  // Without a listener, a watch error (e.g. the directory disappearing during
+  // a repo GC) would crash the process; degrade to no watching instead.
+  watcher.on("error", () => watcher.close());
+  return watcher;
+};
+
+// A single jj operation touches the heads directory more than once (the new
+// head is written before the old one is removed), so changes are debounced
+// into one refresh.
+const OP_HEADS_DEBOUNCE_MS = 100;
+
+export function bindOpHeadsWatcher(args: Readonly<{
+  opHeadsPath: string;
+  refreshRepository(options?: RepositoryRefreshOptions): Promise<boolean>;
+  watch?: OpHeadsWatchFactory;
+  scheduler?: DebounceScheduler;
+}>): () => void {
+  const scheduler = args.scheduler ?? defaultDebounceScheduler;
+  const watchFactory = args.watch ?? defaultOpHeadsWatchFactory;
+  let pending: ReturnType<typeof globalThis.setTimeout> | null = null;
+
+  const handleChange = () => {
+    if (pending !== null) {
+      scheduler.clearTimeout(pending);
+    }
+    pending = scheduler.setTimeout(() => {
+      pending = null;
+      void args.refreshRepository({ workingCopy: "read-only" });
+    }, OP_HEADS_DEBOUNCE_MS);
+  };
+
+  let watcher: OpHeadsWatchHandle;
+  try {
+    watcher = watchFactory(args.opHeadsPath, handleChange);
+  } catch {
+    return () => {};
+  }
+
+  return () => {
+    if (pending !== null) {
+      scheduler.clearTimeout(pending);
+      pending = null;
+    }
+    watcher.close();
   };
 }
 

@@ -85,6 +85,7 @@ export type AppConfig = Readonly<{
   }>;
   refresh?: Readonly<{
     intervalMs?: number;
+    watch?: boolean;
   }>;
   commands?: Readonly<{
     shortFlags?: boolean;
@@ -126,6 +127,7 @@ export type ResolvedAppConfig = Readonly<{
   }>;
   refresh: Readonly<{
     intervalMs: number;
+    watch: boolean;
   }>;
   commands: Readonly<{
     shortFlags: boolean;
@@ -333,6 +335,7 @@ export function resolveAppConfig(
     },
     refresh: {
       intervalMs: resolveRefreshIntervalMs(config.refresh?.intervalMs),
+      watch: config.refresh?.watch ?? true,
     },
     commands: {
       shortFlags: config.commands?.shortFlags ?? true,

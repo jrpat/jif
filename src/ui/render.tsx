@@ -96,7 +96,8 @@ import {
   getActiveMode,
 } from "../modes.ts";
 import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
-import { bindAutoRefresh, bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
+import { resolveOpHeadsPath } from "../jj/opHeads.ts";
+import { bindAutoRefresh, bindOpHeadsWatcher, bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { createFocusClickGuard } from "./focusClickGuard.ts";
 import { suspendProcessToShell } from "./suspend.ts";
 import { openTextInEditor } from "./openTextInEditor.ts";
@@ -291,6 +292,33 @@ export function JifView(props: {
       refreshRepository: (options) => refreshRepository(undefined, undefined, options),
     });
     onCleanup(() => disposeAutoRefresh());
+  });
+
+  createEffect(() => {
+    if (!ready()) {
+      return;
+    }
+
+    const root = workspaceRoot();
+    if (!root || !config.refresh.watch) {
+      return;
+    }
+
+    let disposed = false;
+    let disposeWatcher: (() => void) | null = null;
+    void resolveOpHeadsPath(root).then((opHeadsPath) => {
+      if (!opHeadsPath || disposed) {
+        return;
+      }
+      disposeWatcher = bindOpHeadsWatcher({
+        opHeadsPath,
+        refreshRepository: (options) => refreshRepository(undefined, undefined, options),
+      });
+    });
+    onCleanup(() => {
+      disposed = true;
+      disposeWatcher?.();
+    });
   });
 
   const controller = createJifCommandController({
