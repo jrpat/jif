@@ -6,12 +6,18 @@ import { loadAppConfig } from "./config/loadConfig.ts";
 import { logShortcutDebug } from "./debug.ts";
 import { materializeSampleRepoCachedViaCli } from "./dev/sampleRepoLauncher.ts";
 import { configureOpenTUITreeSitterWorker } from "./opentuiTreeSitterWorker.ts";
+import { jifVersion } from "./version.ts";
 
 export async function main(argv: readonly string[]) {
   const command = parseCommand(argv);
 
   if (command.kind === "help") {
     console.log(formatUsageText());
+    return;
+  }
+
+  if (command.kind === "version") {
+    console.log(`jif ${jifVersion()}`);
     return;
   }
 

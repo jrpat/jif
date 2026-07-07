@@ -16,12 +16,17 @@ export type InitConfigOptions = Readonly<{
 
 export type Command =
   | { readonly kind: "help" }
+  | { readonly kind: "version" }
   | { readonly kind: "run"; readonly options: RunOptions }
   | { readonly kind: "init-config"; readonly options: InitConfigOptions };
 
 export function parseCommand(argv: readonly string[]): Command {
   if (argv.some(isHelpFlag)) {
     return { kind: "help" };
+  }
+
+  if (argv.includes("--version")) {
+    return { kind: "version" };
   }
 
   if (argv[0] === "init-config") {
@@ -37,6 +42,7 @@ export function formatUsageText(): string {
     "",
     "Options:",
     "  -h, --help                  Print this help message",
+    "      --version               Print the jif version",
     "      --repo PATH             Launch against PATH instead of the current directory",
     "      --long-flags            Compose jj commands with long flags by default",
     "      --config FILE           Replace the discovered user config with FILE",

@@ -26,9 +26,42 @@ test("usage text documents options and subcommands", () => {
 
   expect(usage).toContain("Usage: jif");
   expect(usage).toContain("-h, --help");
+  expect(usage).toContain("--version");
   expect(usage).not.toContain("--sample");
   expect(usage).toContain("Subcommands:");
   expect(usage).toContain("init-config");
+});
+
+test("--version dispatches to the version command", () => {
+  expect(parseCommand(["--version"])).toEqual({ kind: "version" });
+});
+
+test("help wins when both --help and --version are passed", () => {
+  expect(parseCommand(["--help", "--version"])).toEqual({ kind: "help" });
+  expect(parseCommand(["--version", "-h"])).toEqual({ kind: "help" });
+});
+
+test("main prints the version for --version", async () => {
+  const originalLog = console.log;
+  const originalVersion = process.env.JIF_VERSION;
+  const output: string[] = [];
+  console.log = (...args: unknown[]) => {
+    output.push(args.join(" "));
+  };
+  process.env.JIF_VERSION = "9.9.9";
+
+  try {
+    await main(["--version"]);
+  } finally {
+    console.log = originalLog;
+    if (originalVersion === undefined) {
+      delete process.env.JIF_VERSION;
+    } else {
+      process.env.JIF_VERSION = originalVersion;
+    }
+  }
+
+  expect(output.join("\n")).toBe("jif 9.9.9");
 });
 
 test("main prints usage for --help", async () => {

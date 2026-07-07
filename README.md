@@ -26,6 +26,12 @@ Launch the TUI against the current working directory:
 jif
 ```
 
+Print the installed version:
+
+```bash
+jif --version
+```
+
 
 ## Keybindings
 
