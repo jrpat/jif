@@ -52,3 +52,26 @@ test("createBuildConfig embeds the OpenTUI parser worker in the standalone binar
     "./src/opentuiParserWorker.ts",
   ]);
 });
+
+test("createBuildConfig defines the build version for jifVersion()", () => {
+  const config = createBuildConfig({
+    target: "bun-darwin-arm64",
+    outfile: "/tmp/jif",
+    version: "1.2.3",
+  });
+
+  expect(config.define).toEqual({
+    "process.env.JIF_VERSION": JSON.stringify("1.2.3"),
+  });
+});
+
+test("createBuildConfig defaults the build version to dev", () => {
+  const config = createBuildConfig({
+    target: "bun-darwin-arm64",
+    outfile: "/tmp/jif",
+  });
+
+  expect(config.define).toEqual({
+    "process.env.JIF_VERSION": JSON.stringify("dev"),
+  });
+});

@@ -21,6 +21,7 @@ type BuildBinaryOptions = {
   outfile?: string;
   minify?: boolean;
   bytecode?: boolean;
+  version?: string;
 };
 
 export async function buildBinary(options: BuildBinaryOptions = {}): Promise<{
@@ -56,6 +57,9 @@ export function createBuildConfig(options: BuildBinaryOptions = {}) {
     sourcemap: "linked" as const,
     minify,
     bytecode,
+    define: {
+      "process.env.JIF_VERSION": JSON.stringify(options.version ?? "dev"),
+    },
     plugins: [solidPlugin],
     compile: {
       target,
