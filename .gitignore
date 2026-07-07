@@ -1,16 +1,19 @@
 .DS_Store
 
-my/
 .my/
+.my
 
-tmp/
 .tmp/
+.tmp
 
+.plan/
+.plan
+
+.planning/
+.planning
 
 .home/
-.plan
-.plan/
-.planning/
+.home
 
 dist/
 node_modules/
