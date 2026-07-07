@@ -11,7 +11,8 @@
     "start": "bun run index.ts",
     "sample": "bun run index.ts --sample",
     "dev": "bun run scripts/dev.ts",
-    "bin": "bun run scripts/install-binary.ts"
+    "bin": "bun run scripts/install-binary.ts",
+    "release:preflight": "bun run scripts/release/preflight.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
