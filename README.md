@@ -365,6 +365,7 @@ Active in the command bar (`:`), revset prompt (`L`), file search prompt (`ctrl-
 | `ctrl-l` | (revset prompt `L`) Toggle the suggestion list between revset-function completions and previously applied revsets. (file search prompt `ctrl-f`) Open the revset prompt seeded with the selected `files("path")` revset before applying it |
 | `ctrl-'` | (`:` and `>` command bars) Insert the focused item's id at the cursor: the revision's shortest unique change-id prefix in Normal, the operation id in Op Log, the entry id in Evolog |
 | `enter` | Submit the current input (run the command, apply the revset, finalize the search). In the `:` jj command bar's complete-at-point, if you have moved to a suggestion, `Enter` accepts it instead (the same as `Tab`) |
+| `ctrl-c` | Cancel the active prompt, same as Escape |
 
 </details>
 

@@ -247,10 +247,17 @@ export const defaultKeymap: Keymap = {
   absorb: {
     s: "absorb-descendants",
   },
-  command: {},
-  revset: {},
-  "file-search": {},
+  command: {
+    "ctrl-c": alias("cancel"),
+  },
+  revset: {
+    "ctrl-c": alias("cancel"),
+  },
+  "file-search": {
+    "ctrl-c": alias("cancel"),
+  },
   search: {
+    "ctrl-c": alias("cancel"),
     tab: "search-toggle-id-only",
     "ctrl-i": alias("search-toggle-id-only"),
   },

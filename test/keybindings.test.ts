@@ -1482,6 +1482,44 @@ test("dispatchGlobalKey handles escape even in input modes", () => {
   expect(calls).toEqual(["cancelOrBlur"]);
 });
 
+test("dispatchGlobalKey treats ctrl-c as escape in prompt input modes", () => {
+  const states: readonly AppState[] = [
+    {
+      ...createState(),
+      focusMode: "command",
+      commandBar: { kind: "jj", text: "log", manual: true },
+    },
+    {
+      ...createState(),
+      focusMode: "revset",
+      revsetInputQuery: "mine()",
+    },
+    {
+      ...createState(),
+      focusMode: "file-search",
+    },
+    {
+      ...createState(),
+      focusMode: "search",
+      searchQuery: "needle",
+    },
+  ];
+
+  for (const state of states) {
+    const calls: string[] = [];
+
+    const handled = dispatchGlobalKey({
+      normalizedKey: "ctrl-c",
+      state,
+      commands: commandDefinitions,
+      controller: createController(calls),
+    });
+
+    expect(handled).toBeTrue();
+    expect(calls).toEqual(["cancelOrBlur"]);
+  }
+});
+
 test("dispatchGlobalKey routes / to openSearch in normal mode", () => {
   const calls: string[] = [];
   const state = createState();
