@@ -8,7 +8,7 @@ jif is meant to be lived in – I keep it open in a split pane all day. It comes
 
 It's also designed to be moldable, so you can shape it to fit how you work. The configuration system is vim- or emacs-esque: it's TypeScript executed at runtime, with all the app state and internal commands exposed. Nothing is intentionally hidden or artificially restricted.
 
-Even if you don’t want a TUI, it’s a pretty nice place for just writing jj commands: intelligent autocomplete of subcommands, flags, and context-sensitive argument types.
+Even if you don’t want a TUI, it’s a pretty nice place for just writing jj commands: intelligent autocomplete of subcommands, flags, and context-sensitive argument types – while the log is visible and scrollable above.
 
 ## Prerequisites
 
