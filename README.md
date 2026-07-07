@@ -4,11 +4,11 @@
 
 ## Jif's Worldview
 
-jif is meant to be lived in, kept open, reached for constantly – your home for Jujutsu in the terminal. It comes out-of-the box with thoughtful ergonomics, consistent shortcuts, creature comforts, and a polished fit and finish.
+jif is meant to be lived in – I keep it open in a split pane all day. It comes out-of-the box with thoughtful ergonomics and creature comforts, and tries hard to always do what you expect. And—leaning into Jujtusu's philosophy—everything is undoable.
 
-But it's also *yours*, designed from the start to be molded to how you work. The configuration system is TypeScript executed at runtime, with all the app state and internal commands exposed. Nothing is hidden or artificially restricted.
+It's also designed to be moldable, so you can shape it to fit how you work. The configuration system is vim- or emacs-esque: it's TypeScript executed at runtime, with all the app state and internal commands exposed. Nothing is intentionally hidden or artificially restricted.
 
-And it's not just an ergonomic porcelain – it's also a better place to write `jj` commands by hand. The command bar understands `jj`'s own help, so it can complete subcommands, flags, revisions, bookmarks, and the values each command expects.
+Even if you don’t want a TUI, it’s a pretty nice place for just writing jj commands: intelligent autocomplete of subcommands, flags, and context-sensitive argument types.
 
 ## Prerequisites
 
@@ -54,7 +54,6 @@ Print the installed version:
 jif --version
 ```
 
-
 ## Keybindings
 
 Press `?` in jif at any time to show keybindings for the current mode.
@@ -78,21 +77,14 @@ Available in every mode (mode-specific bindings can override these).
 | `ctrl-z` | suspend | Suspend the application and return to the shell |
 | `ctrl-n` | search-next | Jump to the next search match (no-op when no search is active) |
 | `ctrl-p` | search-prev | Jump to the previous search match (no-op when no search is active) |
-| `ctrl-j` | scroll-help-down | Scroll the visible help toast down one line (in Normal, Files, Operation Log, and Evolog this scrolls the [preview](#preview) instead when it is shown) |
-| `ctrl-k` | scroll-help-up | Scroll the visible help toast up one line (in Normal, Files, Operation Log, and Evolog this scrolls the [preview](#preview) instead when it is shown) |
+| `ctrl-j` | scroll-help-down | Scroll the visible help toast down one line (in Normal, Files, Operation Log, and Evolog this scrolls the [preview](#preview-pane) instead when it is shown) |
+| `ctrl-k` | scroll-help-up | Scroll the visible help toast up one line (in Normal, Files, Operation Log, and Evolog this scrolls the [preview](#preview-pane) instead when it is shown) |
 | `escape` | cancel | Cancel command composition, leave input mode, or return from a file filter to the log |
 | `~` | open-notifications | Open the notifications history panel |
 
 ### Preview
 
-A pane beside the log that shows the diff of whatever is focused, following your navigation. Active in Normal, Files, Operation Log, and Evolog.
-
-- **Normal** — the full diff of the focused revision (all files), with a change-id + description header.
-- **Files** — the diff of the focused file only.
-- **Operation Log** — the diff of the focused operation (`jj operation diff`).
-- **Evolog** — the diff of the focused evolution entry.
-
-By default the pane is placed automatically: on the right in wide terminals and below in narrow ones (narrower than `preview.narrowWidth` columns). Set `preview.whenNarrow` to `"hide"` to hide the pane on narrow terminals instead of relocating it below. See the [Preview Pane](#configuration) configuration for defaults, including whether it shows on startup and its size.
+Controls for the [preview pane](#preview-pane). Available in Normal, Files, Operation Log, and Evolog via the shared Log binding set.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -104,8 +96,6 @@ By default the pane is placed automatically: on the right in wide terminals and 
 | `ctrl+]` | shrink-preview | Shrink the pane by `preview.resizeStepPercent` |
 | `ctrl+j` | scroll-preview-down | Scroll the preview down (falls back to the help toast when the pane is hidden) |
 | `ctrl+k` | scroll-preview-up | Scroll the preview up (falls back to the help toast when the pane is hidden) |
-
-Diff bodies are syntax-highlighted for filetypes supported by OpenTUI's parser, with token foregrounds using indexed ANSI colors from the terminal palette. When unchanged context is omitted between hunks, the preview inserts a centered separator such as `⋮⋮⋮ 37 more lines ⋮⋮⋮` so non-contiguous source regions do not read as one block. In Files mode, `ctrl+enter` toggles the focused file preview between jj's compact diff context and an effectively full-file diff (`--context 999999`). When word wrap is off, the pane also scrolls **horizontally** with the mouse wheel / trackpad when a diff line is wider than the pane.
 
 `ctrl+[` / `ctrl+]` require a terminal that distinguishes them from other keys via the Kitty keyboard protocol (kitty, Ghostty, WezTerm, recent iTerm2, Alacritty, foot). In terminals without it, `ctrl+[` is indistinguishable from Escape.
 
@@ -399,7 +389,9 @@ Active in the command bar (`:`), revset prompt (`L`), file search prompt (`ctrl-
 
 ## Configuration
 
-jif configuration is TypeScript evaluated at runtime, so settings can be simple data or code that composes with the app state and command helpers. Configuration layers start with built-in defaults, then merge user, project-local, and CLI-provided files on top.
+jif configuration is TypeScript evaluated at runtime, so settings can be simple data or code that composes with the app state and command helpers, the API for which is installed as a `.d.ts` file alongside your user config.
+
+Configuration layers start with built-in defaults, then merge user, project-local, and CLI-provided files on top.
 
 <details>
 <summary>Init config</summary>
@@ -407,11 +399,11 @@ jif configuration is TypeScript evaluated at runtime, so settings can be simple 
 Run `jif init-config` to create a starter user config. The command creates:
 
 - `config.ts` with a placeholder `Jif.Config` shape and commented examples
-- `jif.d.ts` with editor-facing types for autocomplete and inline docs
+- `jif.d.ts` with editor-facing types for autocomplete and inline docs, updated every time jif starts
 
 If a config file already exists, `jif init-config` leaves it alone and only fills in missing support files.
 
-jif also rewrites the generated `jif.d.ts` on normal startup for your user config directory, or next to the file passed with `--config`, so editor type hints stay current after upgrades.
+jif updates the generated `jif.d.ts` on startup for your user config directory, or next to the file passed with `--config`, so editor type hints stay current after upgrades.
 Startup never rewrites your `config.ts`.
 
 To seed a project-local config instead, pass `--project` (or `-p`):
@@ -549,7 +541,7 @@ export default {
 <details>
 <summary>Preview Pane</summary>
 
-The [preview pane](#preview) shows the diff of the focused item beside the log. These are its defaults:
+The [preview pane](#preview-pane) shows the diff of the focused item beside the log. These are its defaults:
 
 ```ts
 export default {
@@ -572,7 +564,7 @@ Position, visibility, and size can also be changed for the current session with 
 
 ## Custom Keybindings
 
-Custom keybindings live under the top-level `keymap` field in your config. They can rebind built-in commands, define inline commands, or use Extra mode as a clean-slate space for your own shortcuts.
+Custom keybindings live under the top-level `keymap` field in your config. They can rebind built-in commands or run arbitrary code against the live app state.
 
 <details>
 <summary>Syntax</summary>
@@ -619,8 +611,12 @@ export default {
   },
 } satisfies Jif.Config;
 ```
+</details>
 
-Pressing `;` from Normal mode enters Extra mode, a clean-slate scope for keys you define yourself in `keymap.extra`. The shortcut panel opens automatically and lists exactly the keys bound under `extra` (plus globals: `escape`, `q`, `ctrl-r`, `~`). With no bindings configured, the panel shows a placeholder pointing to the config. Press Escape to leave Extra mode.
+<details>
+  <summary>‘Extra’ Mode</summary>
+
+Pressing `;` enters Extra mode, a clean-slate scope for keys you define yourself in `keymap.extra`. The shortcut panel opens automatically and lists these bindings in the same fashion as it does the built-in app bindings.
 
 ```ts
 export default {
@@ -636,34 +632,6 @@ export default {
 ```
 
 Unlike most modes, Extra does not inherit Normal-mode bindings, so the entire alphabetic keyspace is yours to bind without shadowing built-in commands.
-
-</details>
-
-<details>
-<summary>Aliases</summary>
-
-Every binding shows up in the shortcut panel by default. To bind an alias key that should *not* appear in the panel, write the binding as an object with `canonical: false`:
-
-```ts
-export default {
-  keymap: {
-    normal: {
-      // alias for `move-down`; works but stays out of the shortcut panel
-      x: { command: "move-down", canonical: false },
-    },
-  },
-} satisfies Jif.Config;
-```
-
-Inline commands accept the same flag:
-
-```ts
-"ctrl-q": {
-  title: "Quick Action",
-  canonical: false,
-  run: (cmd, app) => { /* ... */ },
-},
-```
 
 </details>
 
@@ -825,6 +793,71 @@ The `app` argument is a read-only snapshot of jif state, plus the ergonomic `rev
 
 </details>
 
+
+<details>
+<summary>Aliases</summary>
+
+Every binding shows up in the shortcut panel by default. To bind an alias key that should *not* appear in the panel, write the binding as an object with `canonical: false`:
+
+```ts
+export default {
+  keymap: {
+    normal: {
+      // alias for `move-down`; works but stays out of the shortcut panel
+      x: { command: "move-down", canonical: false },
+    },
+  },
+} satisfies Jif.Config;
+```
+
+Inline commands accept the same flag:
+
+```ts
+"ctrl-q": {
+  title: "Quick Action",
+  canonical: false,
+  run: (cmd, app) => { /* ... */ },
+},
+```
+
+</details>
+
+
+## Preview Pane
+
+A resizable pane beside the log shows the diff of whatever is focused, following your navigation.
+
+<details>
+<summary>What It Shows</summary>
+
+The pane is active in Normal, Files, Operation Log, and Evolog:
+
+- **Normal** — the full diff of the focused revision (all files), with a change-id + description header.
+- **Files** — the diff of the focused file only.
+- **Operation Log** — the diff of the focused operation (`jj operation diff`).
+- **Evolog** — the diff of the focused evolution entry.
+
+In Files mode, `ctrl+enter` toggles the focused file preview between jj's compact diff context and a full-file diff.
+
+</details>
+
+<details>
+<summary>Visibility and Placement</summary>
+
+Press `p` to show or hide the pane; whether it shows on startup is controlled by `preview.showByDefault`.
+
+By default the pane is placed automatically: on the right in wide terminals and below the log in narrow ones (narrower than `preview.narrowWidth` columns). Set `preview.whenNarrow` to `"hide"` to hide the pane on narrow terminals instead of relocating it below.
+
+</details>
+
+<details>
+<summary>Line Wrapping</summary>
+
+Line wrapping can be toggled in-app with `shift+w` and in config via `preview.wordWrap`. If not wrapped, the diff is horizontally scrollable via the mouse.
+
+</details>
+
+
 ## Miscellaneous
 
 <details>
@@ -940,5 +973,12 @@ Run typechecking:
 ```bash
 bunx tsc --noEmit
 ```
+
+</details>
+
+<details>
+<summary>Distribute</summary>
+
+Releases are tag-driven with curated notes, cut with the `jif-release` skill (`.claude/skills/jif-release/SKILL.md`): run `bun run release:preflight`, agree on a version (`0.MINOR.PATCH`, betas `-beta.N`), draft notes from `jj log`, update `CHANGELOG.md` for stable cuts, push `main`, and create a **draft** GitHub Release. `.github/workflows/release.yml` then builds every platform binary, verifies and checksums the assets, and publishes the draft; publishing creates the tag. Stable releases also bump the Homebrew tap (`jrpat/homebrew-jif-tap`).
 
 </details>
