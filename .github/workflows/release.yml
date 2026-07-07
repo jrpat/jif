@@ -1,5 +1,5 @@
 # Release pipeline. The jif-release skill creates a DRAFT release with curated
-# notes (see .claude/skills/jif-release) and then dispatches this workflow with
+# notes (see .agents/skills/jif-release) and then dispatches this workflow with
 # dry-run unchecked — Actions cannot trigger on draft-release events, so the
 # dispatch is the only entry point. The run builds every artifact, uploads them
 # to the draft, and publishes it. Draft-first means /releases/latest and

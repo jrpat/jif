@@ -979,6 +979,6 @@ bunx tsc --noEmit
 <details>
 <summary>Distribute</summary>
 
-Releases are tag-driven with curated notes, cut with the `jif-release` skill (`.claude/skills/jif-release/SKILL.md`): run `bun run release:preflight`, agree on a version (`0.MINOR.PATCH`, betas `-beta.N`), draft notes from `jj log`, update `CHANGELOG.md` for stable cuts, push `main`, create a **draft** GitHub Release, and dispatch `.github/workflows/release.yml`, which builds every platform binary, verifies and checksums the assets, and publishes the draft; publishing creates the tag. Stable releases also bump the Homebrew tap (`jrpat/homebrew-jif-tap`).
+Releases are tag-driven with curated notes, cut with the `jif-release` skill (`.agents/skills/jif-release/SKILL.md`): run `bun run release:preflight`, agree on a version (`0.MINOR.PATCH`, betas `-beta.N`), draft notes from `jj log`, update `CHANGELOG.md` for stable cuts, push `main`, create a **draft** GitHub Release, and dispatch `.github/workflows/release.yml`, which builds every platform binary, verifies and checksums the assets, and publishes the draft; publishing creates the tag. Stable releases also bump the Homebrew tap (`jrpat/homebrew-jif-tap`).
 
 </details>

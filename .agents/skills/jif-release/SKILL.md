@@ -86,11 +86,12 @@ this step — their notes live only on the GitHub prerelease.
 
 ## 5. Push main and create the draft
 
-Point `main` at the release commit and push:
+**Never move or push the `main` bookmark yourself** (see AGENTS.md). Ask the
+user to point `main` at the release commit and push it, then confirm the
+remote is where they expect:
 
 ```bash
-jj bookmark set main -r @-
-jj git push --bookmark main
+jj log -r 'main | main@origin' --no-graph -T 'bookmarks ++ " " ++ commit_id.short(8) ++ " " ++ description.first_line() ++ "\n"'
 ```
 
 Create the draft against the exact commit (add `--prerelease` for betas), then

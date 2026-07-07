@@ -14,6 +14,7 @@
 # Repository And Tooling
 
 - This is a Jujutsu repository. Use `jj`, not Git, for version-control operations.
+- Never move or push the `main` bookmark (`jj bookmark set main`, `jj git push`). The user controls where `main` points and when it is pushed; land commits and let him advance it.
 - Run `jj commit` outside the sandbox with escalation. The repository metadata lives outside the writable workspace root, so sandboxed commits cannot lock the Jujutsu store.
 - Default runtime and package manager is Bun.
 - Commit messages should use:
@@ -24,6 +25,7 @@
   - `bun run <script>` for entrypoints
   - `bun test` for tests
   - `bunx tsc --noEmit` for typechecking
+- Agent skills live canonically in `.agents/skills/<name>/`, with a relative symlink at `.claude/skills/<name>` pointing to the canonical folder. When creating a new skill, create it under `.agents/skills/` and add the symlink: `ln -s ../../.agents/skills/<name> .claude/skills/<name>`.
 
 
 # Working Style
@@ -45,7 +47,7 @@
 
 # Releasing
 
-- Releases are cut with the `jif-release` skill (`.claude/skills/jif-release/SKILL.md`): preflight → human-approved notes drafted from `jj log` → CHANGELOG.md (stable only) → push → draft GitHub Release. CI (`.github/workflows/release.yml`) builds all targets, attests provenance, uploads assets, and publishes the draft.
+- Releases are cut with the `jif-release` skill (`.agents/skills/jif-release/SKILL.md`): preflight → human-approved notes drafted from `jj log` → CHANGELOG.md (stable only) → push → draft GitHub Release. CI (`.github/workflows/release.yml`) builds all targets, attests provenance, uploads assets, and publishes the draft.
 - Release tooling lives in `scripts/release/`. Version source of truth is the release tag; binaries learn it via a build-time define (`--app-version`).
 
 
