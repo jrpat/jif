@@ -242,6 +242,39 @@ test("createRepositoryRefresher skips applying unchanged repository data", async
   expect(refreshSuccessCount).toBe(2);
 });
 
+test("createRepositoryRefresher applies unchanged repository data when forced", async () => {
+  let applied = 0;
+
+  const refreshRepository = createRepositoryRefresher({
+    client: {
+      async verifyRepository() {},
+      async loadRepository() {
+        return { repoPath: "/tmp/repo", revisions: [] };
+      },
+    },
+    actions: {
+      setLoading() {},
+      applyRepositoryData() {
+        applied += 1;
+      },
+      pushEvent() {
+        throw new Error("refresh should not fail");
+      },
+    },
+    getRevsetQuery: () => "",
+  });
+
+  await refreshRepository();
+  await refreshRepository();
+  expect(applied).toBe(1);
+
+  await refreshRepository(undefined, undefined, { force: true });
+  expect(applied).toBe(2);
+
+  await refreshRepository();
+  expect(applied).toBe(2);
+});
+
 test("createRepositoryRefresher applies repository data again once it changes", async () => {
   const applied: string[] = [];
   let description = "first";
@@ -354,12 +387,12 @@ test("bindRefreshOnFocus snapshots the working copy on focus and unsubscribes cl
 
   renderer.emit(CliRenderEvents.FOCUS);
   await Promise.resolve();
-  expect(refreshOptions).toEqual([{ workingCopy: "snapshot" }]);
+  expect(refreshOptions).toEqual([{ workingCopy: "snapshot", force: true }]);
 
   dispose();
   renderer.emit(CliRenderEvents.FOCUS);
   await Promise.resolve();
-  expect(refreshOptions).toEqual([{ workingCopy: "snapshot" }]);
+  expect(refreshOptions).toEqual([{ workingCopy: "snapshot", force: true }]);
 });
 
 test("bindAutoRefresh schedules read-only refreshes and unsubscribes cleanly", async () => {

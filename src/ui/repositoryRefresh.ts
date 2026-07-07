@@ -27,7 +27,12 @@ export type RepositoryRefreshSuccess = Readonly<{
   canLoadMore: boolean;
 }>;
 
-export type RepositoryRefreshOptions = WorkingCopyRefreshOptions;
+export type RepositoryRefreshOptions = WorkingCopyRefreshOptions & Readonly<{
+  // Apply the loaded data even when it matches the last applied payload.
+  // Explicit refreshes (ctrl-r, terminal focus) use this so the store —
+  // including the relative-time anchor lastRefreshedAt — always re-anchors.
+  force?: boolean;
+}>;
 
 export function createRepositoryRefresher(args: {
   client: RepositoryRefreshClient;
@@ -63,7 +68,7 @@ export function createRepositoryRefresher(args: {
         // A 64-bit hash stands in for the payload; a collision only skips a
         // refresh that should have applied, and the next change repairs it.
         const fingerprint = Bun.hash(JSON.stringify(repositoryData));
-        if (fingerprint === lastAppliedFingerprint) {
+        if (fingerprint === lastAppliedFingerprint && !options?.force) {
           args.actions.setLoading(false);
         } else {
           args.actions.applyRepositoryData(repositoryData);
@@ -198,7 +203,7 @@ export function bindRefreshOnFocus(
   refreshRepository: (options?: RepositoryRefreshOptions) => Promise<boolean>,
 ): () => void {
   const handleFocus = () => {
-    void refreshRepository({ workingCopy: "snapshot" });
+    void refreshRepository({ workingCopy: "snapshot", force: true });
   };
 
   renderer.on(CliRenderEvents.FOCUS, handleFocus);

@@ -107,7 +107,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   const expandElidedCalls: number[] = [];
   const appliedRevsetQueries: string[] = [];
   const restoredLogRevsetCalls: string[] = [];
-  const refreshOptions: Array<{ workingCopy?: string }> = [];
+  const refreshOptions: Array<{ workingCopy?: string; force?: boolean }> = [];
   const persistedLayouts: string[] = [];
   let suspendCalls = 0;
   let executeCurrentCommandCalls = 0;
@@ -278,7 +278,7 @@ test("manual refresh snapshots the working copy", () => {
 
   harness.controller.refreshRepository();
 
-  expect(harness.refreshOptions).toEqual([{ workingCopy: "snapshot" }]);
+  expect(harness.refreshOptions).toEqual([{ workingCopy: "snapshot", force: true }]);
   harness.store.dispose();
 });
 

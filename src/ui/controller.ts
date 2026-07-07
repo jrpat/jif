@@ -11,7 +11,8 @@ import type { AppLayout, BookmarkSuggestion, ChangedFile, FocusMode, OperationLo
 import { getChangeIdFromRevisionId, getRevisionArg } from "../domain/revisionIds.ts";
 import { buildBookmarkSuggestions, type BookmarkTarget } from "../state/bookmarkSuggestions.ts";
 import { buildForceRetryPlan } from "../jj/forceRetry.ts";
-import { tokenizeCommandText, type WorkingCopyRefreshOptions } from "../jj/client.ts";
+import { tokenizeCommandText } from "../jj/client.ts";
+import type { RepositoryRefreshOptions } from "./repositoryRefresh.ts";
 import { quoteCommand } from "../jj/process.ts";
 import { formatFilesRevset, isFilesOnlyRevset } from "../revset/files.ts";
 import { stripAnsi } from "../search/matching.ts";
@@ -104,7 +105,7 @@ export function createJifCommandController(args: Readonly<{
   applyRevsetQuery: ApplyRevsetQuery;
   restoreLogRevsetFromFileFilter: RestoreLogRevsetFromFileFilter;
   reloadConfig(): Promise<void> | void;
-  refreshRepository(options?: WorkingCopyRefreshOptions): Promise<boolean>;
+  refreshRepository(options?: RepositoryRefreshOptions): Promise<boolean>;
   expandElidedRevisions(elidedIndex: number): Promise<void>;
   persistLayout(layout: AppLayout): void | Promise<unknown>;
   getDiffViewport(): ScrollBoxRenderable | undefined;
@@ -897,7 +898,7 @@ export function createJifCommandController(args: Readonly<{
       });
     },
     refreshRepository() {
-      void args.refreshRepository({ workingCopy: "snapshot" });
+      void args.refreshRepository({ workingCopy: "snapshot", force: true });
     },
     startAbsorb() {
       const revision = getFocusedRevision(store.snapshot());
