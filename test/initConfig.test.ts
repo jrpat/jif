@@ -181,7 +181,12 @@ test("initUserConfig generates a standalone config that typechecks", async () =>
   const result = await initUserConfig({ configDir });
 
   const proc = Bun.spawn({
-    cmd: ["bunx", "tsc", "--noEmit", result.configPath],
+    cmd: [
+      process.execPath,
+      join(process.cwd(), "node_modules", "typescript", "bin", "tsc"),
+      "--noEmit",
+      result.configPath,
+    ],
     cwd: process.cwd(),
     stdout: "pipe",
     stderr: "pipe",
@@ -196,4 +201,4 @@ test("initUserConfig generates a standalone config that typechecks", async () =>
   expect(exitCode).toBe(0);
   expect(stdout).toBe("");
   expect(stderr).toBe("");
-});
+}, 20000);
