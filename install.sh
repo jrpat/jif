@@ -24,7 +24,7 @@ case "$os" in
   Darwin) os="darwin" ;;
   Linux) os="linux" ;;
   MINGW* | MSYS* | CYGWIN*)
-    fail "Windows is not supported by this script; download the .zip from https://github.com/$REPO/releases"
+    fail "Windows is not supported"
     ;;
   *) fail "unsupported operating system: $os" ;;
 esac

@@ -3,7 +3,7 @@ import type { CompileTarget } from "../buildBinary.ts";
 
 const REPO = "jrpat/jif";
 
-// The four platforms brew serves; windows archives are ignored here.
+// The four platforms brew serves: macOS and Linux, arm64 and x64.
 const BREW_TARGETS = {
   darwinArm: "bun-darwin-arm64",
   darwinIntel: "bun-darwin-x64",

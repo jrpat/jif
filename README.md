@@ -16,7 +16,7 @@ Even if you don’t want a TUI, it’s a pretty nice place for just writing jj c
 
 ## Install
 
-Prebuilt binaries are available for macOS, Linux, and Windows (arm64 and x64).
+Prebuilt binaries are available for macOS and Linux (arm64 and x64).
 
 **Homebrew** (macOS and Linux):
 
@@ -36,7 +36,7 @@ curl -fsSL https://raw.githubusercontent.com/jrpat/jif/main/install.sh | sh
 mise use -g ubi:jrpat/jif
 ```
 
-**Manual**: download an archive for your platform from the [releases page](https://github.com/jrpat/jif/releases) and put `jif` on your `PATH`. On Windows, use the `.zip` archives. Checksums are published in `SHA256SUMS`, and every asset carries build provenance you can check with `gh attestation verify <asset> --repo jrpat/jif`.
+**Manual**: download an archive for your platform from the [releases page](https://github.com/jrpat/jif/releases) and put `jif` on your `PATH`. Checksums are published in `SHA256SUMS`, and every asset carries build provenance you can check with `gh attestation verify <asset> --repo jrpat/jif`.
 
 To build from source instead, see [Developing](#developing).
 

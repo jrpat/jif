@@ -108,18 +108,10 @@ jobs:
           - os: ubuntu-latest
             target: bun-linux-x64
             binary: dist/jif
-          - os: windows-latest
-            target: bun-windows-x64
-            binary: dist/jif.exe
-          # ARM runner labels below are free for PUBLIC repos only; enable both
-          # legs at the public flip (and bump the archive count in the publish
-          # job's completeness check). Verify bun-windows-arm64 compiles first.
-          # - os: ubuntu-24.04-arm
-          #   target: bun-linux-arm64
-          #   binary: dist/jif
-          # - os: windows-11-arm
-          #   target: bun-windows-arm64
-          #   binary: dist/jif.exe
+          # The arm64 Linux runner label is free only for public repos.
+          - os: ubuntu-24.04-arm
+            target: bun-linux-arm64
+            binary: dist/jif
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -155,14 +147,8 @@ jobs:
         shell: bash
         run: echo "name=$(bun run scripts/release/assets.ts name ${{ matrix.target }} ${{ needs.plan.outputs.tag }})" >> "$GITHUB_OUTPUT"
 
-      - name: Archive (tar.gz)
-        if: runner.os != 'Windows'
+      - name: Archive
         run: tar -czf "${{ steps.asset.outputs.name }}" -C dist jif
-
-      - name: Archive (zip)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: Compress-Archive -Path dist/jif.exe -DestinationPath "${{ steps.asset.outputs.name }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -194,7 +180,7 @@ jobs:
           set -euo pipefail
           ls -l artifacts
           archives=$(find artifacts -name 'jif-v*' | wc -l)
-          # 4 while the ARM build legs are disabled; 6 after the public flip.
+          # macOS (arm64/x64) and Linux (arm64/x64); Windows is not built.
           [ "$archives" -eq 4 ] || { echo "::error::Expected 4 binary archives, found $archives"; exit 1; }
 
       - name: Attest build provenance
