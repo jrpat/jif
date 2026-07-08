@@ -63,7 +63,7 @@ test("startInitialRepositoryLoad awaits palette detection before refreshing", as
   });
   // palette.done must appear before refresh — it's awaited in Promise.all
   const paletteIndex = events.indexOf("palette.done");
-  const refreshIndex = events.indexOf("refresh:all():21:read-only");
+  const refreshIndex = events.indexOf("refresh:all():21:snapshot");
   expect(paletteIndex).toBeGreaterThanOrEqual(0);
   expect(refreshIndex).toBeGreaterThan(paletteIndex);
   // focus on the working-copy revision must run after the refresh lands
@@ -79,7 +79,7 @@ test("startInitialRepositoryLoad prefers saved revset over default revset", asyn
     loadDefaultRevset: async () => "default()",
     loadSavedRevset: async () => "mine()",
     refreshRepository: async (revset, limit, options) =>
-      revset === "mine()" && limit === 34 && options?.workingCopy === "read-only",
+      revset === "mine()" && limit === 34 && options?.workingCopy === "snapshot",
     setWorkspaceRoot: () => {},
     setRevsetQuery: () => {},
     focusWorkingCopy: () => {},

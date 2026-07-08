@@ -501,7 +501,7 @@ export default {
 
 Interval-based auto-refresh is disabled by default; the watcher usually makes it unnecessary. Set `refresh.intervalMs` to also reload on a timer — useful on filesystems where watching is unreliable (e.g. some network mounts). Set `intervalMs` to `0` to disable it. Positive values below `1000` are clamped to `1000` ms.
 
-Watcher and interval refreshes are passive: jif reads the repository with `--ignore-working-copy` so multiple worktrees and background agents do not get their working copies snapshotted, and they skip the UI update entirely when the loaded data is unchanged. Regaining terminal focus and pressing `ctrl-r` are full refreshes: they snapshot the current worktree and always re-apply, even when nothing changed.
+Watcher and interval refreshes are passive: jif reads the repository with `--ignore-working-copy` so multiple worktrees and background agents do not get their working copies snapshotted, and they skip the UI update entirely when the loaded data is unchanged. Startup, regaining terminal focus, and pressing `ctrl-r` are full refreshes: they snapshot the current worktree and always re-apply, even when nothing changed.
 
 </details>
 

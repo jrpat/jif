@@ -144,7 +144,7 @@ export function startInitialRepositoryLoad(args: {
       args.setRevsetQuery(initialRevset);
     }
 
-    await args.refreshRepository(initialRevset || undefined, args.initialRevisionLimit, { workingCopy: "read-only" });
+    await args.refreshRepository(initialRevset || undefined, args.initialRevisionLimit, { workingCopy: "snapshot" });
     args.focusWorkingCopy();
 
     return {
