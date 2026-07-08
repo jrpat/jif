@@ -151,6 +151,11 @@ describe("preview reducers", () => {
     expect(initial.previewWordWrap).toBeFalse();
   });
 
+  test("initial word wrap follows the startup option", () => {
+    expect(createInitialState("/repo", { previewWordWrap: true }).previewWordWrap).toBeTrue();
+    expect(createInitialState("/repo", { previewWordWrap: false }).previewWordWrap).toBeFalse();
+  });
+
   test("setters round-trip without mutating the input state", () => {
     const positioned = setPreviewPositionOverride(initial, "below");
     expect(positioned.previewPositionOverride).toBe("below");

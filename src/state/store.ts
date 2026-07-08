@@ -185,7 +185,12 @@ export function buildCommandSegments(
 
 export function createInitialState(
   repoPath: string,
-  options?: { useShortFlags?: boolean; layout?: AppLayout; notificationHistoryLimit?: number },
+  options?: {
+    useShortFlags?: boolean;
+    layout?: AppLayout;
+    notificationHistoryLimit?: number;
+    previewWordWrap?: boolean;
+  },
 ): AppState {
   return {
     repoPath,
@@ -232,7 +237,7 @@ export function createInitialState(
     previewPositionOverride: null,
     previewVisibleOverride: null,
     previewSizePercentOverride: null,
-    previewWordWrap: false,
+    previewWordWrap: options?.previewWordWrap ?? false,
     previewFullFile: false,
   };
 }

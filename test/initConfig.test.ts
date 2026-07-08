@@ -41,6 +41,7 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(configText).toContain("// acceleration: true,");
   expect(configText).toContain("// intervalMs: 0,");
   expect(configText).toContain('// layout: "normal",');
+  expect(configText).toContain("// wordWrap: false,");
   expect(configText).toContain("if (!app.rev) return;");
   expect(configText).toContain("return cmd.jji(`show -r ${app.rev}`);");
   expect(typesText).toContain("declare global {");
@@ -52,6 +53,7 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(typesText).toContain("step?: number");
   expect(typesText).toContain("acceleration?: boolean");
   expect(typesText).toContain("intervalMs?: number");
+  expect(typesText).toContain("wordWrap?: boolean");
   expect(typesText).toContain("rev: string");
   expect(typesText).toContain("file: string");
   expect(typesText).toContain("focusedRevision: RevisionSummary | null");

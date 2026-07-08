@@ -73,6 +73,14 @@ test("AppStore seeds layout from config options and cycles through all layouts",
   store.dispose();
 });
 
+test("AppStore seeds preview word wrap from config options", () => {
+  const store = createAppStore("/tmp/repo", { previewWordWrap: true });
+
+  expect(store.state.previewWordWrap).toBeTrue();
+
+  store.dispose();
+});
+
 test("AppStore exposes shortcut panel actions", () => {
   const store = createAppStore("/tmp/repo");
 

@@ -29,6 +29,7 @@ export async function runJifApplication(
     useShortFlags: config.commands.shortFlags,
     layout,
     notificationHistoryLimit: config.notifications.historyLimit,
+    previewWordWrap: config.preview.wordWrap,
   });
   const client = new JjClient(repoPath);
 

@@ -169,6 +169,9 @@ export default {
   notifications: {
     // historyLimit: 50,
   },
+  preview: {
+    // wordWrap: false,
+  },
   keymap: {
     normal: {
       // "ctrl-g": {
@@ -464,6 +467,7 @@ namespace Jif {
       maxSizePercent?: number;
       narrowWidth?: number;
       whenNarrow?: "below" | "hide";
+      wordWrap?: boolean;
     }>;
   }>;
 }

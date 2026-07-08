@@ -554,11 +554,12 @@ export default {
     maxSizePercent: 90,
     narrowWidth: 100,          // in "auto", terminals narrower than this are "too narrow" for the right layout
     whenNarrow: "below",       // in "auto", what to do when too narrow: "below" (relocate) or "hide"
+    wordWrap: false,           // wrap long preview diff lines by default
   },
 } satisfies Jif.Config;
 ```
 
-Position, visibility, and size can also be changed for the current session with `p`, `shift+p`, and `ctrl+[` / `ctrl+]`; those session changes are not persisted.
+Position, visibility, size, and word wrap can also be changed for the current session with `p`, `shift+p`, `ctrl+[` / `ctrl+]`, and `shift+w`; those session changes are not persisted.
 
 </details>
 

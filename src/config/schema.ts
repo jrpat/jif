@@ -103,6 +103,7 @@ export type AppConfig = Readonly<{
     maxSizePercent?: number;
     narrowWidth?: number;
     whenNarrow?: PreviewNarrowBehavior;
+    wordWrap?: boolean;
   }>;
 }>;
 
@@ -145,6 +146,7 @@ export type ResolvedAppConfig = Readonly<{
     maxSizePercent: number;
     narrowWidth: number;
     whenNarrow: PreviewNarrowBehavior;
+    wordWrap: boolean;
   }>;
 }>;
 
@@ -355,6 +357,7 @@ export function resolveAppConfig(
       maxSizePercent: clampPercent(config.preview?.maxSizePercent ?? 90),
       narrowWidth: Math.max(1, Math.floor(config.preview?.narrowWidth ?? 100)),
       whenNarrow: config.preview?.whenNarrow ?? "below",
+      wordWrap: config.preview?.wordWrap ?? false,
     },
   };
 }

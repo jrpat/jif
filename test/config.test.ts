@@ -278,6 +278,15 @@ test("resolveAppConfig applies refresh.watch", () => {
   expect(resolveAppConfig({ refresh: { watch: true } }).refresh.watch).toBeTrue();
 });
 
+test("resolveAppConfig defaults preview.wordWrap to false", () => {
+  expect(resolveAppConfig(defaultAppConfig).preview.wordWrap).toBeFalse();
+});
+
+test("resolveAppConfig applies preview.wordWrap", () => {
+  expect(resolveAppConfig({ preview: { wordWrap: true } }).preview.wordWrap).toBeTrue();
+  expect(resolveAppConfig({ preview: { wordWrap: false } }).preview.wordWrap).toBeFalse();
+});
+
 test("resolveAppConfig disables invalid refresh intervals", () => {
   expect(resolveAppConfig({ refresh: { intervalMs: 0 } }).refresh.intervalMs).toBe(0);
   expect(resolveAppConfig({ refresh: { intervalMs: -1 } }).refresh.intervalMs).toBe(0);

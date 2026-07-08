@@ -119,7 +119,12 @@ export type AppStore = ReturnType<typeof createAppStore>;
 
 export function createAppStore(
   repoPath: string,
-  options?: { useShortFlags?: boolean; layout?: AppLayout; notificationHistoryLimit?: number },
+  options?: {
+    useShortFlags?: boolean;
+    layout?: AppLayout;
+    notificationHistoryLimit?: number;
+    previewWordWrap?: boolean;
+  },
 ) {
   let state!: AppState;
   let setState!: ReturnType<typeof createStore<AppState>>[1];
