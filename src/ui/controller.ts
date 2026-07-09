@@ -500,6 +500,17 @@ export function createJifCommandController(args: Readonly<{
     toggleSetParentsPick() {
       store.actions.toggleSetParentsPick();
     },
+    startNewBetween() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (!revision) {
+        return;
+      }
+
+      store.actions.startNewBetween();
+    },
+    toggleNewBetweenBefore() {
+      store.actions.toggleNewBetweenBefore();
+    },
     startBookmarkCreate() {
       const state = store.snapshot();
       const revision = getFocusedRevision(state);

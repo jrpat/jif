@@ -148,6 +148,7 @@ When the active revset is only `files(...)`, the collapsed status bar shows a `f
 | `i` | interdiff | Show the interdiff between the focused revision and another |
 | `M` | set-parents | Change the focused revision's parents, toggling revisions to add or remove them as parents (megamerge) |
 | `n` | new-revision | Create a new revision from the focused revision |
+| `alt-n` | new-between | Create a new revision inserted between revisions (`jj new -A <selected> -B <focused>`) |
 | `r` | rebase | Start a rebase from the focused revision |
 | `R` | restore-revision | Restore the focused revision from another |
 | `y` | duplicate | Copy the focused revision to another location (same target picker as rebase) |
@@ -265,6 +266,12 @@ Active while composing an absorb. Inherits Normal. The source is the revision fo
 ### Set Parents
 
 Pressing `M` from Normal mode enters Set Parents mode against the focused revision — the **subject** of the operation, tagged with a `subject` chip and the command-target highlight. Inherits Normal, so navigate with the usual keys (and incremental search with `/`). Use `space` to toggle a revision into the working parent set: a revision that is already a parent of the subject is tagged `remove` and will be dropped, while any other revision is tagged `add` and will be joined in as a co-parent — this is how you build a "megamerge". The command bar previews `jj rebase -r <subject> -d <parent> …` with the resulting parent set; `enter` runs it, `escape` cancels. The preview reflects today's parents until you change something, and running is blocked while the change would leave the subject with no parents. If the rebase is refused as immutable, retry it with `!`.
+
+### New Between
+
+Pressing `alt-n` from Normal mode enters New Between mode. The revisions selected when you enter (or the focused revision if nothing is selected) become the `--insert-after` sources, each tagged with an `after` chip. The `--insert-before` target defaults to the focused revision — tagged `before` — and follows the cursor; navigate to place the new revision, then `enter` to run. Inherits Normal.
+
+Use `space` to pin one or more explicit `--insert-before` targets: pinned revisions keep their `before` chips wherever the cursor goes, and the cursor-following default is disabled until every pin is toggled off again. The composed command is `jj new -A <source>… -B <target>…`. When one revision would be both the insert-after and insert-before target — the initial state, since focus starts on the sole source — the insertion degenerates to creating a plain child, and jif falls back to `jj new <revision>`.
 
 ### Bookmark
 

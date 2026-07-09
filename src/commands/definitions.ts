@@ -55,6 +55,8 @@ export type CommandController = Readonly<{
   enterExtraMode: () => void;
   startSetParents: () => void;
   toggleSetParentsPick: () => void;
+  startNewBetween: () => void;
+  toggleNewBetweenBefore: () => void;
   startBookmarkCreate: () => void;
   startBookmarkMoveFrom: () => void;
   startBookmarkMoveTo: () => void;
@@ -893,6 +895,22 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Add the focused revision as a parent of the subject, or remove it if it already is one",
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.toggleSetParentsPick(),
+    group: "mode",
+  },
+  {
+    id: "new-between",
+    title: "New Between",
+    description: "Create a new revision inserted after the selected revisions and before the focused one",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.startNewBetween(),
+    group: "global",
+  },
+  {
+    id: "toggle-new-between-before",
+    title: "Pin --insert-before",
+    description: "Pin the focused revision as an explicit --insert-before target, or unpin it",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.toggleNewBetweenBefore(),
     group: "mode",
   },
   {

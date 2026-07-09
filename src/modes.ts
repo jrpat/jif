@@ -25,6 +25,7 @@ export type Mode =
   | "bookmark"
   | "bookmark-move"
   | "set-parents"
+  | "new-between"
   | "extra";
 
 export type ModeDefinition = Readonly<{
@@ -61,6 +62,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   bookmark: { id: "bookmark", parent: "normal", inputPassthrough: false, label: "Bookmark" },
   "bookmark-move": { id: "bookmark-move", parent: "normal", inputPassthrough: false, label: "Bookmark Move" },
   "set-parents": { id: "set-parents", parent: "normal", inputPassthrough: false, label: "Set Parents" },
+  "new-between": { id: "new-between", parent: "normal", inputPassthrough: false, label: "New Between" },
   extra: { id: "extra", inputPassthrough: false, label: "Extra" },
 };
 
@@ -149,6 +151,7 @@ export const defaultKeymap: Keymap = {
     i: "interdiff",
     "ctrl-d": "diff",
     n: "new-revision",
+    "alt-n": "new-between",
     e: "edit-revision",
     E: "diff-edit-revision",
     c: "commit",
@@ -289,6 +292,9 @@ export const defaultKeymap: Keymap = {
   "set-parents": {
     " ": "toggle-set-parents-pick",
   },
+  "new-between": {
+    " ": "toggle-new-between-before",
+  },
   extra: {},
 };
 
@@ -312,6 +318,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.commandDraft?.config.kind === "diff") return "diff";
   if (state.commandDraft?.config.kind === "absorb") return "absorb";
   if (state.commandDraft?.config.kind === "set-parents") return "set-parents";
+  if (state.commandDraft?.config.kind === "new-between") return "new-between";
   if (state.commandDraft?.config.kind === "bookmark-move") return "bookmark-move";
   if (state.focusMode === "bookmark") return "bookmark";
   if (state.focusMode === "extra") return "extra";

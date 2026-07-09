@@ -147,6 +147,7 @@ function cloneKeymap(source: Keymap): MutableKeymap {
     bookmark: { ...source.bookmark },
     "bookmark-move": { ...source["bookmark-move"] },
     "set-parents": { ...source["set-parents"] },
+    "new-between": { ...source["new-between"] },
     extra: { ...source.extra },
   };
 }
@@ -181,5 +182,6 @@ const KEYMAP_SCOPES: readonly KeymapScope[] = [
   "bookmark",
   "bookmark-move",
   "set-parents",
+  "new-between",
   "extra",
 ];

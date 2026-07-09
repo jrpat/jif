@@ -75,7 +75,7 @@ export type RepositoryData = Readonly<{
   revisions: readonly RevisionSummary[];
 }>;
 
-export type CommandDraftKind = "rebase" | "duplicate" | "revert" | "squash" | "bookmark-move" | "restore" | "interdiff" | "diff" | "absorb" | "set-parents";
+export type CommandDraftKind = "rebase" | "duplicate" | "revert" | "squash" | "bookmark-move" | "restore" | "interdiff" | "diff" | "absorb" | "set-parents" | "new-between";
 
 export type CommandDraftConfig = Readonly<{
   kind: CommandDraftKind;
@@ -115,6 +115,7 @@ export type CommandDraft = Readonly<{
   absorbDefaultRowIds?: readonly string[];
   absorbSourceRevisionId?: string;
   setParentsSubjectRevisionId?: string;
+  newBetweenBeforeRowIds?: readonly string[];
 }>;
 
 export type StatusLevel = "info" | "success" | "warning" | "error";

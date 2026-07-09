@@ -101,6 +101,14 @@ export const draftConfigs = {
     badgeText: "parent",
     sourceBadgeText: "parent",
   },
+  "new-between": {
+    kind: "new-between" as const,
+    // When one revision is both the insert-after and insert-before target the
+    // insertion degenerates to creating a plain child, so fall back to `new A`.
+    template: "new ${newBetweenFallback ? selected.join(' ') : `${selected.map(s => `${arg('-A --insert-after')} ${s}`).join(' ')} ${befores.map(b => `${arg('-B --insert-before')} ${b}`).join(' ')}`}",
+    badgeText: "before",
+    sourceBadgeText: "after",
+  },
 } satisfies Record<string, CommandDraftConfig>;
 
 // Rebase, duplicate, and revert all compose a destination with the same
@@ -116,6 +124,8 @@ export type TemplateContext = Readonly<{
   target: string | Tagged;
   subject: string | Tagged;
   destinations: readonly (string | Tagged)[];
+  befores: readonly (string | Tagged)[];
+  newBetweenFallback: boolean;
   anchorSuffix: string;
   arg: (pair: string) => string;
   sourceFlag: () => string;
@@ -1612,6 +1622,106 @@ function getSetParentsDestinationRevisionIds(state: AppState): readonly string[]
   return [...kept, ...added];
 }
 
+// New-between composes `jj new -A <selected> -B <target>`: every selected
+// revision (or the focused one when nothing is selected) becomes an
+// --insert-after source, while the --insert-before target follows the cursor
+// until picks are pinned with space. Focus deliberately stays put on entry so
+// the initial preview is the single-revision fallback (`jj new <focused>`)
+// rather than a cycle against the revision below.
+export function startNewBetween(state: AppState): AppState {
+  const focused = getFocusedRevision(state);
+  if (!focused) {
+    return state;
+  }
+
+  const hasPreSelection = state.selectedRowIds.length > 0;
+  const afterRowIds = hasPreSelection ? state.selectedRowIds : [focused.rowId];
+
+  return {
+    ...state,
+    commandBar: createEmptyCommandBar(),
+    inlineConfirmation: null,
+    selectedRowIds: afterRowIds,
+    markedRowIds: hasPreSelection ? state.markedRowIds : [],
+    commandDraft: {
+      config: draftConfigs["new-between"],
+    },
+  };
+}
+
+export function toggleNewBetweenBefore(state: AppState): AppState {
+  if (state.commandDraft?.config.kind !== "new-between") {
+    return state;
+  }
+
+  const focused = getFocusedRevision(state);
+  if (!focused || focused.marker === "elided") {
+    return state;
+  }
+
+  // An --insert-after revision cannot also be an --insert-before target; the
+  // single-revision fallback is reached by focusing it, not by pinning.
+  if (state.selectedRowIds.includes(focused.rowId)) {
+    return state;
+  }
+
+  const pinned = state.commandDraft.newBetweenBeforeRowIds ?? [];
+  const isPinned = pinned.includes(focused.rowId);
+  const nextPinned = isPinned
+    ? pinned.filter((rowId) => rowId !== focused.rowId)
+    : [...pinned, focused.rowId];
+
+  return {
+    ...state,
+    // Advance past a newly pinned row like normal multi-select; hold on unpin
+    // so the same row can be re-pinned without re-navigating.
+    focusedRevisionIndex: isPinned
+      ? state.focusedRevisionIndex
+      : clampIndex(state.focusedRevisionIndex + 1, state.revisions.length),
+    commandDraft: {
+      ...state.commandDraft,
+      newBetweenBeforeRowIds: nextPinned,
+    },
+  };
+}
+
+// The --insert-before targets are the pinned picks; while nothing is pinned the
+// focused revision serves as the default. Focusing one of the insert-afters is
+// only meaningful in the single-revision fallback (`jj new A`) — with several
+// insert-afters there is no valid default, so the target goes back to a
+// placeholder until the cursor moves off the sources.
+function getNewBetweenBeforeRevisionIds(state: AppState): readonly string[] {
+  const draft = state.commandDraft;
+  if (!draft || draft.config.kind !== "new-between") {
+    return [];
+  }
+
+  const pinnedRowIds = draft.newBetweenBeforeRowIds ?? [];
+  if (pinnedRowIds.length > 0) {
+    return pinnedRowIds
+      .map((rowId) => state.revisions.find((revision) => revision.rowId === rowId)?.revisionId ?? null)
+      .filter((revisionId): revisionId is string => revisionId !== null);
+  }
+
+  const focused = getFocusedRevision(state);
+  if (!focused || focused.marker === "elided") {
+    return [];
+  }
+
+  const afterIds = getSelectedRevisionIds(state);
+  if (afterIds.includes(focused.revisionId)) {
+    return afterIds.length === 1 ? [focused.revisionId] : [];
+  }
+
+  return [focused.revisionId];
+}
+
+function isNewBetweenFallback(state: AppState): boolean {
+  const afterIds = getSelectedRevisionIds(state);
+  const beforeIds = getNewBetweenBeforeRevisionIds(state);
+  return afterIds.length === 1 && beforeIds.length === 1 && afterIds[0] === beforeIds[0];
+}
+
 export function setRebaseSourceKind(
   state: AppState,
   kind: RebaseSourceKind,
@@ -2190,6 +2300,11 @@ export function getCommandTargetRevisionId(state: AppState): string | null {
     return getSetParentsSubject(state)?.revisionId ?? null;
   }
 
+  // Pinned insert-before picks replace the cursor-following default target.
+  if (state.commandDraft.config.kind === "new-between" && (state.commandDraft.newBetweenBeforeRowIds ?? []).length > 0) {
+    return null;
+  }
+
   const focusedRevision = getFocusedRevision(state);
   if (!focusedRevision || state.selectedRowIds.includes(focusedRevision.rowId)) {
     return null;
@@ -2235,6 +2350,12 @@ export function getCommandChipTextForRevision(
       return "default";
     }
     return null;
+  }
+
+  // Pinned insert-before picks keep their chip wherever the cursor goes; the
+  // cursor-following default is covered by the shared target branch below.
+  if (draft.config.kind === "new-between" && (draft.newBetweenBeforeRowIds ?? []).includes(rowId)) {
+    return "before";
   }
 
   const usesTargetModes = draftUsesTargetModes(draft.config.kind);
@@ -2285,6 +2406,11 @@ export function getCommandTargetRowId(state: AppState): string | null {
 
   if (state.commandDraft.config.kind === "set-parents") {
     return getSetParentsSubject(state)?.rowId ?? null;
+  }
+
+  // Pinned insert-before picks replace the cursor-following default target.
+  if (state.commandDraft.config.kind === "new-between" && (state.commandDraft.newBetweenBeforeRowIds ?? []).length > 0) {
+    return null;
   }
 
   const focusedRevision = getFocusedRevision(state);
@@ -2380,6 +2506,19 @@ function buildContext(
       ? [DRAFT_PLACEHOLDER]
       : [];
 
+  const isNewBetween = draft.config.kind === "new-between";
+  const newBetweenBeforeArgs = isNewBetween
+    ? getNewBetweenBeforeRevisionIds(state).map((revisionId) => revisionPrefix(state, revisionId))
+    : [];
+  // No resolvable target (e.g. the cursor sits on one of several insert-afters)
+  // is an incomplete state: show a single placeholder so the preview reads
+  // `-B ░░░░` rather than a dangling `new -A a`.
+  const newBetweenBefores = newBetweenBeforeArgs.length > 0
+    ? newBetweenBeforeArgs
+    : isNewBetween
+      ? [DRAFT_PLACEHOLDER]
+      : [];
+
   return {
     template: draft.config.template,
     context: {
@@ -2387,6 +2526,8 @@ function buildContext(
       target,
       subject: setParentsSubject,
       destinations: setParentsDestinations,
+      befores: newBetweenBefores,
+      newBetweenFallback: isNewBetween && isNewBetweenFallback(state),
       absorbConstrained,
       absorbTargets,
       absorbFromSource,
@@ -2447,6 +2588,9 @@ function buildTaggedContext(
   const taggedDestinations = (context.destinations as string[]).map(
     (destination) => new Tagged(destination === DRAFT_PLACEHOLDER ? "" : destination, "target"),
   );
+  const taggedBefores = (context.befores as string[]).map(
+    (before) => new Tagged(before === DRAFT_PLACEHOLDER ? "" : before, "target"),
+  );
 
   return {
     template: resolved.template,
@@ -2456,6 +2600,7 @@ function buildTaggedContext(
       target: taggedTarget,
       subject: taggedSubject,
       destinations: taggedDestinations,
+      befores: taggedBefores,
       absorbTargets: (context.selected as string[])
         .map((s) => new Tagged(s, "selected").toString())
         .join("|"),
@@ -2610,6 +2755,11 @@ export function commandCanExecute(state: AppState): boolean {
     // Require an actual change (a pick) that still leaves at least one parent.
     return state.selectedRowIds.length > 0 &&
       getSetParentsDestinationRevisionIds(state).length > 0;
+  }
+
+  if (state.commandDraft.config.kind === "new-between") {
+    return state.selectedRowIds.length > 0 &&
+      getNewBetweenBeforeRevisionIds(state).length > 0;
   }
 
   if (state.commandDraft.config.template.includes("${target}")) {

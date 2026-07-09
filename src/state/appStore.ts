@@ -78,6 +78,8 @@ import {
   startSquashOnto,
   startSetParents,
   toggleSetParentsPick,
+  startNewBetween,
+  toggleNewBetweenBefore,
   toggleFileSelection,
   toggleShortFlags,
   toggleShortcutPanel,
@@ -314,6 +316,12 @@ export function createAppStore(
       },
       toggleSetParentsPick() {
         mutate((currentState) => toggleSetParentsPick(currentState));
+      },
+      startNewBetween() {
+        mutate((currentState) => startNewBetween(currentState));
+      },
+      toggleNewBetweenBefore() {
+        mutate((currentState) => toggleNewBetweenBefore(currentState));
       },
       enterBookmarkLeader() {
         mutate((currentState) => enterBookmarkLeader(currentState));
