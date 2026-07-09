@@ -71,12 +71,12 @@ describe("splitGitDiff", () => {
   test("drops leading and trailing interleaved annotation (op-diff shape)", () => {
     const opDiff = `Changed commits:
 ○  + abc 123 (desc)
-diff --git a/x.ts b/x.ts
---- a/x.ts
-+++ b/x.ts
-@@ -1 +1 @@
--a
-+b
+   diff --git a/x.ts b/x.ts
+   --- a/x.ts
+   +++ b/x.ts
+   @@ -1 +1 @@
+   -a
+   +b
 Changed working copy:
 + abc 123
 `;

@@ -56,7 +56,8 @@ export function splitGitDiff(fullDiff: string): PreviewFilePatch[] {
   if (!fullDiff.trim()) {
     return [];
   }
-  const chunks = fullDiff.split(/\n(?=diff --git )/g);
+  const normalizedDiff = normalizeIndentedGitDiff(fullDiff);
+  const chunks = normalizedDiff.split(/\n(?=diff --git )/g);
   const result: PreviewFilePatch[] = [];
   for (const chunk of chunks) {
     if (!chunk.startsWith(GIT_DIFF_PREFIX)) {
@@ -67,6 +68,33 @@ export function splitGitDiff(fullDiff: string): PreviewFilePatch[] {
     result.push({ path: parseGitDiffPath(patch), patch });
   }
   return result;
+}
+
+function normalizeIndentedGitDiff(fullDiff: string): string {
+  const lines = fullDiff.split("\n");
+  const out: string[] = [];
+  let activeIndent: string | null = null;
+
+  for (const line of lines) {
+    if (activeIndent !== null) {
+      if (line.startsWith(activeIndent)) {
+        out.push(line.slice(activeIndent.length));
+        continue;
+      }
+      activeIndent = null;
+    }
+
+    const header = line.match(/^(\s*)diff --git /);
+    if (header) {
+      activeIndent = header[1] ?? "";
+      out.push(line.slice(activeIndent.length));
+      continue;
+    }
+
+    out.push(line);
+  }
+
+  return out.join("\n");
 }
 
 /**
