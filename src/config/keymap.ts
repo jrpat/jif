@@ -124,6 +124,7 @@ function isAliasBinding(
 function cloneKeymap(source: Keymap): MutableKeymap {
   return {
     _global: { ...source._global },
+    log: { ...source.log },
     normal: { ...source.normal },
     files: { ...source.files },
     "op-log": { ...source["op-log"] },
@@ -158,6 +159,7 @@ function toUserCommandId(value: string): string {
 
 const KEYMAP_SCOPES: readonly KeymapScope[] = [
   "_global",
+  "log",
   "normal",
   "files",
   "op-log",

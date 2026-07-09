@@ -414,6 +414,7 @@ namespace Jif {
 
   type KeymapScope =
     | "_global"
+    | "log"
     | "normal"
     | "files"
     | "op-log"

@@ -63,7 +63,7 @@ Press `?` in jif at any time to show keybindings for the current mode.
 
 Keybindings are per-mode. Global bindings are available in every mode and may be overridden by a mode-specific binding for the same key.
 
-Each mode is annotated below with whether it inherits Normal-mode bindings on top of its own.
+The three scrollable log views — Normal (revisions), Operation Log, and Evolog — share a common **Log** binding set (movement, the command bar, search, fast jump, help, and the preview controls) that each inherits on top of its own keys. Each mode is annotated below with what, if anything, it inherits.
 
 ### Global
 
@@ -302,7 +302,7 @@ Note: in terminals without enhanced keyboard support, `ctrl-i` and `tab` are ind
 
 ### Operation Log
 
-Active while the operation log panel is open. Does not inherit Normal.
+Active while the operation log panel is open. Inherits the shared **Log** bindings (movement, `:`, `/`, `f`, `?`, and the preview controls); it does **not** inherit Normal, so revision operations are unavailable. Only the operation-specific keys below are its own.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -319,7 +319,7 @@ Active while the operation log panel is open. Does not inherit Normal.
 
 ### Evolog
 
-Active while the evolog panel is open. Opened from Normal with `ctrl-e` for the focused revision. Does not inherit Normal.
+Active while the evolog panel is open. Opened from Normal with `ctrl-e` for the focused revision. Inherits the shared **Log** bindings (movement, `:`, `/`, `f`, `?`, and the preview controls); it does **not** inherit Normal. Every key below comes from the shared Log set — evolog has no keys of its own.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -583,6 +583,8 @@ export default {
   },
 } satisfies Jif.Config;
 ```
+
+Besides the per-mode scopes (`normal`, `files`, `op-log`, `evolog`, …) and `_global`, there is a `log` scope shared by the three scrollable log views (Normal, Operation Log, Evolog). Binding a key under `log` rebinds it once for all three; a same-key binding in one of those modes still overrides the shared `log` binding for that mode.
 
 Or define an inline command directly in the keymap:
 

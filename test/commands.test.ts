@@ -436,7 +436,8 @@ test("undo and redo resolve in normal mode", () => {
   expect(resolveForState("U", state)).toBeNull();
   expect(defaultKeymap.normal["alt-u"]).toBe("redo");
   expect(defaultKeymap.normal.U).toBeUndefined();
-  expect(defaultKeymap.normal.G).toBe("jump-to-bottom");
+  // `G` is inherited from the shared `log` parent, not bound directly on normal.
+  expect(defaultKeymap.log.G).toBe("jump-to-bottom");
 });
 
 test("absorb resolves on shift-a in normal mode", () => {

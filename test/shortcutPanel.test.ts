@@ -421,6 +421,77 @@ test("collectInheritedAndGlobalCanonicalBindings returns globals only when a mod
   expect(keys).not.toContain("a");
 });
 
+test("op-log direct bindings are operation-specific and defer shared log keys to the parent", () => {
+  const keys = collectDirectCanonicalBindingsForMode("op-log", defaultKeymap).map((b) => b.key);
+  // Operation-specific actions stay directly on op-log
+  expect(keys).toContain("@");
+  expect(keys).toContain("r");
+  expect(keys).toContain("R");
+  expect(keys).toContain("d");
+  // Shared list/preview/chrome keys now live on the `log` parent, not op-log itself
+  expect(keys).not.toContain(":");
+  expect(keys).not.toContain("?");
+  expect(keys).not.toContain("/");
+  expect(keys).not.toContain("f");
+  expect(keys).not.toContain("G");
+  expect(keys).not.toContain("j");
+  expect(keys).not.toContain("k");
+  expect(keys).not.toContain("p");
+  expect(keys).not.toContain("ctrl-[");
+});
+
+test("op-log inherits the shared log keys and globals below the divider", () => {
+  const keys = collectInheritedAndGlobalCanonicalBindings("op-log", defaultKeymap).map((b) => b.key);
+  // Shared log chrome, inherited from the `log` parent
+  expect(keys).toContain(":");
+  expect(keys).toContain("?");
+  expect(keys).toContain("/");
+  expect(keys).toContain("f");
+  expect(keys).toContain("G");
+  expect(keys).toContain("j");
+  expect(keys).toContain("k");
+  expect(keys).toContain("p");
+  expect(keys).toContain("ctrl-[");
+  // Globals
+  expect(keys).toContain("q");
+  expect(keys).toContain("ctrl-z");
+  // Operation-specific keys stay in the direct set, not here
+  expect(keys).not.toContain("@");
+  expect(keys).not.toContain("R");
+});
+
+test("evolog has no direct bindings and inherits everything from the log parent", () => {
+  const direct = collectDirectCanonicalBindingsForMode("evolog", defaultKeymap).map((b) => b.key);
+  expect(direct).toEqual([]);
+
+  const inherited = collectInheritedAndGlobalCanonicalBindings("evolog", defaultKeymap).map((b) => b.key);
+  expect(inherited).toContain(":");
+  expect(inherited).toContain("?");
+  expect(inherited).toContain("/");
+  expect(inherited).toContain("f");
+  expect(inherited).toContain("G");
+  expect(inherited).toContain("j");
+  expect(inherited).toContain("p");
+  expect(inherited).toContain("q");
+});
+
+test("normal still surfaces the shared log keys alongside its revision commands", () => {
+  const keys = collectCanonicalBindingsForMode("normal", defaultKeymap).map((b) => b.key);
+  // Shared log keys — inherited from the `log` parent, must still be present
+  expect(keys).toContain(":");
+  expect(keys).toContain("?");
+  expect(keys).toContain("/");
+  expect(keys).toContain("f");
+  expect(keys).toContain("G");
+  expect(keys).toContain("j");
+  expect(keys).toContain("p");
+  expect(keys).toContain("ctrl-[");
+  // Revision-specific keys remain directly on normal
+  expect(keys).toContain("s");
+  expect(keys).toContain("n");
+  expect(keys).toContain("c");
+});
+
 test("collectCanonicalBindingsForMode excludes alias bindings (canonical: false)", () => {
   const resolved = resolveConfiguredKeymap({
     normal: {

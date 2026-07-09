@@ -2,6 +2,7 @@ import type { AppState } from "./domain/types.ts";
 import type { CommandDefinition } from "./commands/definitions.ts";
 
 export type Mode =
+  | "log"
   | "normal"
   | "files"
   | "op-log"
@@ -34,10 +35,14 @@ export type ModeDefinition = Readonly<{
 }>;
 
 export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
-  normal: { id: "normal", inputPassthrough: false, label: "Revisions" },
+  // Abstract parent for the scrollable log views (revisions/op-log/evolog). It is
+  // never itself the active mode; it only exists so those three modes can share a
+  // single copy of the list-navigation, search, and preview bindings.
+  log: { id: "log", inputPassthrough: false, label: "Log" },
+  normal: { id: "normal", parent: "log", inputPassthrough: false, label: "Revisions" },
   files: { id: "files", inputPassthrough: false, label: "Files" },
-  "op-log": { id: "op-log", inputPassthrough: false, label: "Op Log" },
-  evolog: { id: "evolog", inputPassthrough: false, label: "Evolog" },
+  "op-log": { id: "op-log", parent: "log", inputPassthrough: false, label: "Op Log" },
+  evolog: { id: "evolog", parent: "log", inputPassthrough: false, label: "Evolog" },
   "inline-confirmation": { id: "inline-confirmation", inputPassthrough: false, label: "Confirm" },
   rebase: { id: "rebase", parent: "normal", inputPassthrough: false, label: "Rebase" },
   duplicate: { id: "duplicate", parent: "normal", inputPassthrough: false, label: "Duplicate" },
@@ -99,12 +104,23 @@ export const defaultKeymap: Keymap = {
     q: "quit",
     "~": "open-notifications",
   },
-  normal: {
+  // Shared by the scrollable log views. `normal`, `op-log`, and `evolog` inherit
+  // these via `parent: "log"`, so movement, the command bar, search, fast jump,
+  // help, and the preview controls live in exactly one place.
+  log: {
     j: "move-down",
     down: alias("move-down"),
     k: "move-up",
     up: alias("move-up"),
     G: "jump-to-bottom",
+    ":": "command-bar",
+    "ctrl-;": alias("command-bar"),
+    "/": "search",
+    f: "fast-jump",
+    "?": "shortcut-panel",
+    ...previewBindings,
+  },
+  normal: {
     J: "move-parent",
     K: "move-child",
     "alt-j": "jump-to-next-divergent",
@@ -117,13 +133,10 @@ export const defaultKeymap: Keymap = {
     right: alias("expand"),
     h: "collapse",
     left: alias("collapse"),
-    ":": "command-bar",
-    "ctrl-;": alias("command-bar"),
     ">": "shell-command-bar",
     "ctrl-.": alias("shell-command-bar"),
     g: "git-command-bar",
     "!": "force-last-command",
-    "?": "shortcut-panel",
     enter: "confirm",
     r: "rebase",
     R: "restore-revision",
@@ -150,8 +163,6 @@ export const defaultKeymap: Keymap = {
     L: "edit-revset",
     "ctrl-l": alias("edit-revset"),
     "ctrl-f": "find-file",
-    "/": "search",
-    f: "fast-jump",
     A: "absorb",
     a: "abandon",
     "ctrl-o": "open-operation-log",
@@ -159,7 +170,6 @@ export const defaultKeymap: Keymap = {
     b: "enter-bookmark-mode",
     M: "set-parents",
     ";": "enter-extra-mode",
-    ...previewBindings,
   },
   files: {
     j: "move-down",
@@ -180,36 +190,16 @@ export const defaultKeymap: Keymap = {
     "ctrl-enter": "toggle-preview-full-file",
     ...previewBindings,
   },
+  // Inherits movement/search/preview from `log`; only the operation-specific
+  // actions live here.
   "op-log": {
-    j: "move-down",
-    down: alias("move-down"),
-    k: "move-up",
-    up: alias("move-up"),
-    G: "jump-to-bottom",
     "@": "jump-to-current-operation",
     r: "restore-operation",
     R: "revert-operation",
     d: "show-operation-diff",
-    ":": "command-bar",
-    "ctrl-;": alias("command-bar"),
-    "/": "search",
-    f: "fast-jump",
-    "?": "shortcut-panel",
-    ...previewBindings,
   },
-  evolog: {
-    j: "move-down",
-    down: alias("move-down"),
-    k: "move-up",
-    up: alias("move-up"),
-    G: "jump-to-bottom",
-    ":": "command-bar",
-    "ctrl-;": alias("command-bar"),
-    "/": "search",
-    f: "fast-jump",
-    "?": "shortcut-panel",
-    ...previewBindings,
-  },
+  // Fully covered by the shared `log` bindings — it has no keys of its own.
+  evolog: {},
   "inline-confirmation": {
     h: "inline-confirmation-prev-option",
     left: alias("inline-confirmation-prev-option"),

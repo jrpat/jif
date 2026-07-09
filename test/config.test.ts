@@ -358,7 +358,7 @@ test("resolveConfiguredKeymap preserves built-in bindings while adding inline co
     },
   });
 
-  expect(resolved.keymap.normal.j).toBe("move-down");
+  expect(resolved.keymap.log.j).toBe("move-down");
   expect(resolved.keymap.normal.g).toBe("user:normal:g");
 
   const command = resolved.commands.find((entry) => entry.id === "user:normal:g");
@@ -398,7 +398,7 @@ test("resolveConfiguredKeymap accepts alias bindings with canonical: false", () 
   });
 
   expect(resolved.keymap.normal.x).toEqual({ command: "move-down", canonical: false });
-  expect(resolved.keymap.normal.j).toBe("move-down");
+  expect(resolved.keymap.log.j).toBe("move-down");
 });
 
 test("resolveConfiguredKeymap respects canonical: false on inline commands", () => {
@@ -442,7 +442,7 @@ test("resolveConfiguredKeymap lets users rebind built-in commands by id", () => 
   });
 
   expect(resolved.keymap.normal.j).toBe("move-up");
-  expect(resolved.keymap.normal.k).toBe("move-up");
+  expect(resolved.keymap.log.k).toBe("move-up");
 });
 
 test("resolveConfiguredKeymap deep-merges user bindings into the default keymap", () => {
@@ -459,7 +459,7 @@ test("resolveConfiguredKeymap deep-merges user bindings into the default keymap"
   });
 
   expect(resolved.keymap._global.escape).toBe("cancel");
-  expect(resolved.keymap.normal.j).toBe("move-down");
+  expect(resolved.keymap.log.j).toBe("move-down");
   expect(resolved.keymap.normal.g).toBe("user:normal:g");
   expect(resolved.keymap.files["ctrl-s"]).toBe("split");
   expect(resolved.keymap.files.x).toBe("restore");

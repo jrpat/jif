@@ -269,6 +269,8 @@ export function computeShortcutPanelHeight(terminalHeight: number): number {
 
 export function shortcutModeLabel(mode: Mode): string {
   switch (mode) {
+    case "log":
+      return "Log";
     case "normal":
       return "Revisions";
     case "files":
