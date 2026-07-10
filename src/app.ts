@@ -13,7 +13,7 @@ export async function runJifApplication(
   config: ResolvedAppConfig,
   rawConfig: AppConfig,
   options: Readonly<{
-    reloadConfig: () => Promise<{ raw: AppConfig; resolved: ResolvedAppConfig }>;
+    reloadConfig: (projectStartDir: string) => Promise<{ raw: AppConfig; resolved: ResolvedAppConfig }>;
     refreshConfigTypes?: () => Promise<unknown>;
   }>,
 ): Promise<void> {
@@ -32,7 +32,7 @@ export async function runJifApplication(
     notificationHistoryLimit: config.notifications.historyLimit,
     previewWordWrap: config.preview.wordWrap,
   });
-  const client = new JjClient(repoPath);
+  const client = new JjClient(() => store.state.repoPath);
 
   await render(
     () => JifView({

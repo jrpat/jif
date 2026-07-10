@@ -17,6 +17,7 @@ import type {
   StatusMessageVariant,
 } from "../domain/types.ts";
 import {
+  activateWorkspace,
   applyRepositoryData,
   cancelOrBlurState,
   closeInlineConfirmation,
@@ -190,6 +191,9 @@ export function createAppStore(
       },
       applyRepositoryData(repositoryData: RepositoryData) {
         mutate((currentState) => applyRepositoryData(currentState, repositoryData));
+      },
+      activateWorkspace(repoPath: string) {
+        mutate((currentState) => activateWorkspace(currentState, repoPath));
       },
       setRevisionFiles(rowId: string, files: readonly ChangedFile[]) {
         mutate((currentState) => setRevisionFiles(currentState, rowId, files));

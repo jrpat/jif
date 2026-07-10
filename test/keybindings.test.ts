@@ -60,6 +60,12 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     moveFocusToChild: () => calls.push("moveFocusToChild"),
     moveFocusToNextDivergentSibling: () => calls.push("moveFocusToNextDivergentSibling"),
     moveFocusToWorkspace: (direction: 1 | -1) => calls.push(`moveFocusToWorkspace:${direction}`),
+    switchWorkspace: async (workspaceName: string) => {
+      calls.push(`switchWorkspace:${workspaceName}`);
+    },
+    switchToFocusedWorkspace: async () => {
+      calls.push("switchToFocusedWorkspace");
+    },
     moveFocusToBookmark: (direction: 1 | -1) => calls.push(`moveFocusToBookmark:${direction}`),
     focusLogBottom: () => calls.push("focusLogBottom"),
     focusCurrentOperation: () => calls.push("focusCurrentOperation"),
@@ -357,6 +363,29 @@ test("dispatchGlobalKey passes the full app state values to inline configured ha
     repoPath: state.repoPath,
     focusedRevisionIndex: state.focusedRevisionIndex,
   });
+});
+
+test("inline configured handlers can switch to an arbitrary workspace by name", () => {
+  const calls: string[] = [];
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      g: {
+        title: "Switch Workspace",
+        run: (controller) => controller.switchWorkspace("review"),
+      },
+    },
+  });
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "g",
+    state: createState(),
+    commands: resolved.commands,
+    controller: createController(calls),
+    keymap: resolved.keymap,
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["switchWorkspace:review"]);
 });
 
 test("dispatchGlobalKey exposes the focused revision object on app.focusedRevision", () => {
@@ -1210,6 +1239,28 @@ test("dispatchGlobalKey routes { at the first workspace so it can fall back to @
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["moveFocusToWorkspace:-1"]);
+});
+
+test("dispatchGlobalKey routes tab to active workspace switching on workspace rows", () => {
+  const calls: string[] = [];
+  const base = createState();
+  const state: AppState = {
+    ...base,
+    focusedRevisionIndex: 1,
+    revisions: base.revisions.map((revision, index) =>
+      index === 1 ? { ...revision, workspaces: ["review"] } : revision
+    ),
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "tab",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["switchToFocusedWorkspace"]);
 });
 
 test("dispatchGlobalKey ignores ? in revset mode", () => {

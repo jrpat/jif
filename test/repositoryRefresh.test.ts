@@ -10,9 +10,9 @@ import {
   type RepositoryRefreshOptions,
 } from "../src/ui/repositoryRefresh.ts";
 
-function createRepositoryData(): RepositoryData {
+function createRepositoryData(repoPath = "/tmp/repo"): RepositoryData {
   return {
-    repoPath: "/tmp/repo",
+    repoPath,
     revisions: [],
   };
 }
@@ -339,6 +339,47 @@ test("createRepositoryRefresher coalesces concurrent refresh requests", async ()
 
   loadDeferred.resolve(createRepositoryData());
   await Promise.all([firstRefresh, secondRefresh]);
+});
+
+test("createRepositoryRefresher does not coalesce or apply stale refreshes across scopes", async () => {
+  const firstLoad = createDeferred<RepositoryData>();
+  const secondLoad = createDeferred<RepositoryData>();
+  const applied: string[] = [];
+  let activeScope = "/repo/one";
+  let loadCalls = 0;
+
+  const refreshRepository = createRepositoryRefresher({
+    client: {
+      async verifyRepository() {},
+      loadRepository() {
+        loadCalls += 1;
+        return loadCalls === 1 ? firstLoad.promise : secondLoad.promise;
+      },
+    },
+    actions: {
+      setLoading() {},
+      applyRepositoryData(repositoryData) {
+        applied.push(repositoryData.repoPath);
+      },
+      pushEvent() {
+        throw new Error("refresh should not fail");
+      },
+    },
+    getRevsetQuery: () => "",
+    getRefreshScope: () => activeScope,
+  });
+
+  const firstRefresh = refreshRepository();
+  activeScope = "/repo/two";
+  const secondRefresh = refreshRepository();
+
+  secondLoad.resolve(createRepositoryData("/repo/two"));
+  firstLoad.resolve(createRepositoryData("/repo/one"));
+
+  expect(await secondRefresh).toBe(true);
+  expect(await firstRefresh).toBe(false);
+  expect(loadCalls).toBe(2);
+  expect(applied).toEqual(["/repo/two"]);
 });
 
 test("createRepositoryRefresher reports refresh failures and clears loading", async () => {

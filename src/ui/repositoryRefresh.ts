@@ -38,28 +38,36 @@ export function createRepositoryRefresher(args: {
   client: RepositoryRefreshClient;
   actions: RepositoryRefreshActions;
   getRevsetQuery: () => string;
+  getRefreshScope?: () => string;
   onRefreshSuccess?: (details: RepositoryRefreshSuccess) => void;
 }) {
-  let refreshInFlight: Promise<boolean> | null = null;
-  let currentRevisionLimit = DEFAULT_REPOSITORY_LOAD_LIMIT;
-  let lastAppliedFingerprint: number | bigint | null = null;
+  const refreshInFlightByScope = new Map<string, Promise<boolean>>();
+  const currentRevisionLimitByScope = new Map<string, number>();
+  const lastAppliedFingerprintByScope = new Map<string, number | bigint>();
 
   return async function refreshRepository(
     revset?: string,
     limit?: number,
     options?: RepositoryRefreshOptions,
   ): Promise<boolean> {
+    const refreshScope = args.getRefreshScope?.() ?? "";
+    const refreshInFlight = refreshInFlightByScope.get(refreshScope);
     if (refreshInFlight) {
       return refreshInFlight;
     }
 
     const effectiveRevset = revset || args.getRevsetQuery() || undefined;
-    const effectiveLimit = limit ?? currentRevisionLimit;
-    refreshInFlight = (async () => {
+    const effectiveLimit = limit ?? currentRevisionLimitByScope.get(refreshScope) ?? DEFAULT_REPOSITORY_LOAD_LIMIT;
+    let refreshPromise!: Promise<boolean>;
+    refreshPromise = (async () => {
       try {
         await args.client.verifyRepository(options);
         const repositoryData = await args.client.loadRepository(effectiveLimit, effectiveRevset, options);
-        currentRevisionLimit = effectiveLimit;
+        if ((args.getRefreshScope?.() ?? "") !== refreshScope) {
+          return false;
+        }
+
+        currentRevisionLimitByScope.set(refreshScope, effectiveLimit);
         // Applying identical data still rebuilds every revision object and
         // reconciles the whole store, so periodic refreshes would churn CPU
         // even when the repository is untouched. Skip the apply when the
@@ -68,11 +76,12 @@ export function createRepositoryRefresher(args: {
         // A 64-bit hash stands in for the payload; a collision only skips a
         // refresh that should have applied, and the next change repairs it.
         const fingerprint = Bun.hash(JSON.stringify(repositoryData));
+        const lastAppliedFingerprint = lastAppliedFingerprintByScope.get(refreshScope) ?? null;
         if (fingerprint === lastAppliedFingerprint && !options?.force) {
           args.actions.setLoading(false);
         } else {
           args.actions.applyRepositoryData(repositoryData);
-          lastAppliedFingerprint = fingerprint;
+          lastAppliedFingerprintByScope.set(refreshScope, fingerprint);
         }
         args.onRefreshSuccess?.({
           repositoryData,
@@ -86,11 +95,14 @@ export function createRepositoryRefresher(args: {
         args.actions.setLoading(false);
         return false;
       } finally {
-        refreshInFlight = null;
+        if (refreshInFlightByScope.get(refreshScope) === refreshPromise) {
+          refreshInFlightByScope.delete(refreshScope);
+        }
       }
     })();
 
-    return refreshInFlight;
+    refreshInFlightByScope.set(refreshScope, refreshPromise);
+    return refreshPromise;
   };
 }
 

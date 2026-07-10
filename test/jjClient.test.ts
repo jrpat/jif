@@ -8,6 +8,7 @@ import {
   parseLogOutput,
   parseEvolutionLogOutput,
   parseOperationLogOutput,
+  parseWorkspaceRefsOutput,
   resolveRepositoryLoadLimit,
   tokenizeCommandText,
 } from "../src/jj/client.ts";
@@ -108,6 +109,19 @@ test("parseLogOutput preserves hybrid graph rows in emission order", () => {
   expect(revisions[1]?.graphRows).toEqual(["○  ", "│"]);
   expect(revisions[1]?.changeIdPrefixLength).toBe(3);
   expect(revisions[1]?.hasConflict).toBeFalse();
+});
+
+test("parseWorkspaceRefsOutput parses workspace names and roots", () => {
+  const refs = parseWorkspaceRefsOutput([
+    `default\u001f/tmp/repo`,
+    `review\u001f/tmp/review`,
+    "",
+  ].join("\n"));
+
+  expect(refs).toEqual([
+    { name: "default", rootPath: "/tmp/repo" },
+    { name: "review", rootPath: "/tmp/review" },
+  ]);
 });
 
 test("parseLogOutput captures parent revision ids", () => {
@@ -437,8 +451,10 @@ test("loadEvolog passes --color and --ignore-working-copy with -r", async () => 
 
 test("loadRepository can ignore the working copy for passive refreshes", async () => {
   const client = new JjClient(REPO_PATH);
-  let capturedArgs: readonly string[] = [];
-  let capturedOptions: { workingCopy?: string } | undefined;
+  const capturedCalls: Array<{
+    args: readonly string[];
+    options?: { workingCopy?: string };
+  }> = [];
 
   (client as unknown as {
     runJj(
@@ -446,18 +462,18 @@ test("loadRepository can ignore the working copy for passive refreshes", async (
       options?: { workingCopy?: string },
     ): Promise<{ stdout: string; stderr: string; exitCode: number }>;
   }).runJj = async (args, options) => {
-    capturedArgs = args;
-    capturedOptions = options;
+    capturedCalls.push({ args, options });
     return { stdout: "", stderr: "", exitCode: 0 };
   };
 
   await client.loadRepository(7, "mine()", { workingCopy: "read-only" });
 
-  expect(capturedArgs).toContain("log");
-  expect(capturedArgs).toContain("--limit");
-  expect(capturedArgs).toContain("7");
-  expect(capturedArgs).toContain("mine()");
-  expect(capturedOptions?.workingCopy).toBe("read-only");
+  expect(capturedCalls.map((call) => call.args[0])).toEqual(["log", "workspace"]);
+  const logCall = capturedCalls[0]!;
+  expect(logCall.args).toContain("--limit");
+  expect(logCall.args).toContain("7");
+  expect(logCall.args).toContain("mine()");
+  expect(capturedCalls.every((call) => call.options?.workingCopy === "read-only")).toBeTrue();
 });
 
 test("verifyRepository can ignore the working copy for passive refreshes", async () => {
@@ -565,6 +581,12 @@ test("JjClient loads a real sample repository", async () => {
   expect(repository.revisions.length).toBeGreaterThan(30);
   expect(repository.revisions.some((revision) => revision.bookmarks.length > 0)).toBeTrue();
   expect(repository.revisions.some((revision) => revision.workspaces.length > 0)).toBeTrue();
+  expect(repository.workspaceRefs).toEqual(
+    expect.arrayContaining([
+      { name: "default", rootPath: repo.repoPath },
+      { name: "review", rootPath: repo.workspacePaths.review },
+    ]),
+  );
 
   const firstChangedRevision = repository.revisions.find((revision) => !revision.isEmpty);
   expect(firstChangedRevision).toBeDefined();

@@ -109,6 +109,7 @@ import {
 } from "./startup.ts";
 import { executeShellCommand as executeShellTextCommand } from "../jj/process.ts";
 import { makeScrollAcceleration } from "./scrollAcceleration.ts";
+import { switchWorkspace } from "./workspaceSwitch.ts";
 
 const EXTRA_EMPTY_MESSAGE = "No extra bindings defined. Bind keys under `keymap.extra` in your config.";
 const FILE_FILTER_CHIP_LABEL = "file";
@@ -147,7 +148,7 @@ export function JifView(props: {
   client: JjClient;
   config: ResolvedAppConfig;
   rawConfig: AppConfig;
-  reloadConfig: () => Promise<{ raw: AppConfig; resolved: ResolvedAppConfig }>;
+  reloadConfig: (projectStartDir: string) => Promise<{ raw: AppConfig; resolved: ResolvedAppConfig }>;
   refreshConfigTypes?: () => Promise<unknown>;
 }) {
   const { store, client } = props;
@@ -155,7 +156,6 @@ export function JifView(props: {
   const [rawConfig, setRawConfig] = createSignal<AppConfig>(props.rawConfig);
   const [config, setConfig] = createStore<ResolvedAppConfig>(props.config);
   const [ready, setReady] = createSignal(false);
-  const [workspaceRoot, setWorkspaceRoot] = createSignal<string | null>(null);
   const [currentRevisionLoadLimit, setCurrentRevisionLoadLimit] = createSignal(DEFAULT_REPOSITORY_LOAD_LIMIT);
   const [canLoadMoreRevisions, setCanLoadMoreRevisions] = createSignal(true);
   const [loadingMoreRevisions, setLoadingMoreRevisions] = createSignal(false);
@@ -190,6 +190,7 @@ export function JifView(props: {
     client,
     actions: store.actions,
     getRevsetQuery: () => store.snapshot().revsetQuery,
+    getRefreshScope: () => store.state.repoPath,
     onRefreshSuccess: (details) => {
       setCurrentRevisionLoadLimit(details.requestedLimit);
       setCanLoadMoreRevisions(details.canLoadMore);
@@ -199,18 +200,12 @@ export function JifView(props: {
     actions: store.actions,
     executeCommandArgs: (commandArgs, options) => client.executeCommandArgs(commandArgs, options),
     executeShellCommand: async (commandText, options) => {
-      const root = options?.cwd ?? workspaceRoot();
-      if (!root) {
-        throw new Error("Workspace root is unavailable.");
-      }
+      const root = options?.cwd ?? store.state.repoPath;
 
       return await executeShellTextCommand(root, commandText, { color: true });
     },
     executeInteractiveCommandArgs: async (commandArgs, options) => {
-      const root = options?.cwd ?? workspaceRoot();
-      if (!root) {
-        throw new Error("Workspace root is unavailable.");
-      }
+      const root = options?.cwd ?? store.state.repoPath;
 
       renderer.suspend();
       try {
@@ -220,10 +215,7 @@ export function JifView(props: {
       }
     },
     executeInteractiveShellCommand: async (commandText, options) => {
-      const root = options?.cwd ?? workspaceRoot();
-      if (!root) {
-        throw new Error("Workspace root is unavailable.");
-      }
+      const root = options?.cwd ?? store.state.repoPath;
 
       renderer.suspend();
       try {
@@ -239,8 +231,8 @@ export function JifView(props: {
     client,
     commandRunner,
     persistence,
-    getWorkspaceRoot: workspaceRoot,
-    getShellCwd: () => process.cwd(),
+    getWorkspaceRoot: () => store.state.repoPath,
+    getShellCwd: () => store.state.repoPath,
     refreshRepository: (revset, options) => refreshRepository(revset, undefined, options),
   });
   const configuredKeymap = createMemo(() => resolveConfiguredKeymap(rawConfig().keymap));
@@ -257,13 +249,34 @@ export function JifView(props: {
       setConfig(reconcile(nextConfig));
     },
   });
-  const reloadConfig = async () => {
-    const next = await props.reloadConfig();
+  const applyRuntimeConfig = async (projectStartDir: string) => {
+    const next = await props.reloadConfig(projectStartDir);
     setRawConfig(next.raw);
     setConfig(reconcile(next.resolved));
     await detectAndApplyPalette();
+  };
+  const reloadConfig = async () => {
+    await applyRuntimeConfig(store.state.repoPath);
     store.actions.pushEvent("Config reloaded.", "success");
   };
+  const switchWorkspaceByName = (workspaceName: string) => switchWorkspace({
+    workspaceName,
+    getWorkspaceState: () => store.snapshot(),
+    actions: store.actions,
+    resetViewState: () => {
+      previewSeq += 1;
+      setPreviewHeader(null);
+      setPreviewDiff("");
+      setPreviewLoading(false);
+      setCurrentRevisionLoadLimit(DEFAULT_REPOSITORY_LOAD_LIMIT);
+      setCanLoadMoreRevisions(true);
+      setLoadingMoreRevisions(false);
+    },
+    applyRuntimeConfig,
+    loadDefaultRevset: () => client.loadDefaultRevset({ workingCopy: "read-only" }),
+    loadActiveRevset: (rootPath) => persistence.loadActiveRevset(rootPath),
+    refreshRepository,
+  });
 
   onMount(() => {
     void (async () => {
@@ -275,7 +288,11 @@ export function JifView(props: {
         loadDefaultRevset: () => client.loadDefaultRevset({ workingCopy: "read-only" }),
         loadSavedRevset: (resolvedWorkspaceRoot) => persistence.loadActiveRevset(resolvedWorkspaceRoot),
         refreshRepository,
-        setWorkspaceRoot,
+        setWorkspaceRoot: (workspaceRoot) => {
+          if (workspaceRoot) {
+            store.actions.activateWorkspace(workspaceRoot);
+          }
+        },
         setRevsetQuery: (query) => {
           store.actions.setRevsetQuery(query);
         },
@@ -335,7 +352,7 @@ export function JifView(props: {
       return;
     }
 
-    const root = workspaceRoot();
+    const root = store.state.repoPath;
     if (!root || !config.refresh.watch) {
       return;
     }
@@ -369,6 +386,7 @@ export function JifView(props: {
     runInteractiveShellCommand: runtime.runInteractiveShellCommand,
     applyRevsetQuery: runtime.applyRevsetQuery,
     restoreLogRevsetFromFileFilter: runtime.restoreLogRevsetFromFileFilter,
+    switchWorkspace: switchWorkspaceByName,
     openTextInEditor: (text) => openTextInEditor({
       text,
       runInteractive: async (cwd, command) => {
@@ -404,6 +422,7 @@ export function JifView(props: {
   createEffect(() => {
     const mode = store.state.focusMode;
     const visible = previewVisible();
+    const activeRoot = store.state.repoPath;
 
     if (
       !visible ||
@@ -475,18 +494,18 @@ export function JifView(props: {
       void (async () => {
         try {
           const result = await runFetch();
-          if (seq === previewSeq) {
+          if (seq === previewSeq && store.state.repoPath === activeRoot) {
             setPreviewDiff(result.diff);
             setPreviewHeader(result.header);
             previewViewport?.scrollTo({ x: 0, y: 0 });
           }
         } catch (error) {
-          if (seq === previewSeq) {
+          if (seq === previewSeq && store.state.repoPath === activeRoot) {
             setPreviewDiff("");
             store.actions.reportError(error);
           }
         } finally {
-          if (seq === previewSeq) {
+          if (seq === previewSeq && store.state.repoPath === activeRoot) {
             setPreviewLoading(false);
           }
         }
@@ -1146,7 +1165,7 @@ export function JifView(props: {
             helpCache={helpCache}
             composeEnabled={store.state.commandBar.kind === "jj"}
             startInCompose={store.state.commandBar.startInCompose ?? false}
-            workspaceRoot={workspaceRoot()}
+            workspaceRoot={store.state.repoPath}
             loadHistory={(root) => store.state.commandBar.kind === "shell"
               ? persistence.loadShellHistory(root)
               : persistence.loadCommandHistory(root)}
@@ -1175,7 +1194,7 @@ export function JifView(props: {
             initialQuery={store.state.revsetInputQuery}
             client={client}
             config={config}
-            workspaceRoot={workspaceRoot()}
+            workspaceRoot={store.state.repoPath}
             loadHistory={(root) => persistence.loadRevsetHistory(root)}
             removeHistory={(root, entry) => persistence.removeRevsetHistory(root, entry)}
             onApply={runtime.applyRevsetQuery}

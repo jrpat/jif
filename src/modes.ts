@@ -142,6 +142,7 @@ export const defaultKeymap: Keymap = {
     "[": "move-to-prev-bookmark",
     "}": "move-to-next-workspace",
     "{": "move-to-prev-workspace",
+    tab: "switch-active-workspace",
     Z: alias("suspend"),
     l: "expand",
     right: alias("expand"),

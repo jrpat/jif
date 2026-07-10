@@ -205,6 +205,7 @@ export function createInitialState(
 ): AppState {
   return {
     repoPath,
+    workspaceRefs: [],
     revisions: [],
     operationLogEntries: [],
     operationLogLoading: false,
@@ -251,6 +252,32 @@ export function createInitialState(
     previewWordWrap: options?.previewWordWrap ?? false,
     previewFullFile: false,
   };
+}
+
+export function activateWorkspace(
+  state: AppState,
+  repoPath: string,
+): AppState {
+  const nextState = createInitialState(repoPath, {
+    useShortFlags: state.useShortFlags,
+    layout: state.layout,
+    notificationHistoryLimit: state.notificationHistoryLimit,
+    previewWordWrap: state.previewWordWrap,
+  });
+
+  return normalizeFocusState({
+    ...nextState,
+    workspaceRefs: state.workspaceRefs,
+    statusMessages: state.statusMessages,
+    eventLog: state.eventLog,
+    focusedNotificationIndex: clampIndex(state.focusedNotificationIndex, state.eventLog.length),
+    expandedNotificationIds: state.expandedNotificationIds,
+    shortcutPanelExpanded: state.shortcutPanelExpanded,
+    previewPositionOverride: state.previewPositionOverride,
+    previewVisibleOverride: state.previewVisibleOverride,
+    previewSizePercentOverride: state.previewSizePercentOverride,
+    previewFullFile: state.previewFullFile,
+  });
 }
 
 export function openDiffViewer(state: AppState, content: string): AppState {
@@ -424,6 +451,7 @@ export function applyRepositoryData(
   return normalizeFocusState({
     ...state,
     repoPath: repositoryData.repoPath,
+    workspaceRefs: repositoryData.workspaceRefs ?? state.workspaceRefs,
     revisions,
     inlineConfirmation,
     focusedRevisionIndex,
@@ -599,6 +627,28 @@ export function getAdjacentWorkspaceRevisionIndex(
   direction: 1 | -1,
 ): number | null {
   return getAdjacentRevisionIndex(state, direction, (revision) => revision.workspaces.length > 0);
+}
+
+export function getFocusedWorkspaceSwitchTargetName(state: AppState): string | null {
+  const focusedRevision = getFocusedRevision(state);
+  if (!focusedRevision || focusedRevision.workspaces.length === 0) {
+    return null;
+  }
+
+  const activeWorkspaceName = state.workspaceRefs.find((workspace) =>
+    workspace.rootPath === state.repoPath
+  )?.name;
+  const activeWorkspaceIndex = activeWorkspaceName === undefined
+    ? -1
+    : focusedRevision.workspaces.indexOf(activeWorkspaceName);
+  const targetWorkspaceName = activeWorkspaceIndex === -1
+    ? focusedRevision.workspaces[0]
+    : focusedRevision.workspaces[(activeWorkspaceIndex + 1) % focusedRevision.workspaces.length];
+  if (!targetWorkspaceName || targetWorkspaceName === activeWorkspaceName) {
+    return null;
+  }
+
+  return targetWorkspaceName;
 }
 
 export function getAdjacentBookmarkRevisionIndex(

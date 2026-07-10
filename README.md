@@ -125,8 +125,11 @@ Viewing and navigating the revision log.
 | `[` | move-to-prev-bookmark | Jump up to the previous visible revision that has a bookmark, falling back to `@` when there is none |
 | `}` | move-to-next-workspace | Jump down to the next visible revision that has a workspace, without wrapping |
 | `{` | move-to-prev-workspace | Jump up to the previous visible revision that has a workspace, falling back to `@` when there is none |
+| `tab` | switch-active-workspace | Make the focused workspace marker the active workspace |
 | `@` | jump-to-working-copy | Jump to the working-copy revision |
 | `G` | jump-to-bottom | Jump to the last revision in the log |
+
+When the focused revision has multiple workspace chips, `tab` switches to the first one if none is active; otherwise it moves to the chip after the active workspace, wrapping to the first.
 
 #### View
 
@@ -710,6 +713,8 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `moveFocusToNextDivergentSibling()` | Cycle to another visible divergent sibling |
 | `moveFocusToParent()` | Focus the nearest visible parent revision |
 | `moveFocusToWorkspace(direction)` | Move to the next (`1`) or previous (`-1`) visible workspace marker; previous falls back to the working copy |
+| `switchWorkspace(workspaceName)` | Switch to any known JJ workspace by name, for example `cmd.switchWorkspace("review")` |
+| `switchToFocusedWorkspace()` | Switch the active workspace to the focused workspace marker |
 | `nextSearchMatch()` | Jump to the next search match |
 | `openEvolog()` | Open the evolution log for the focused revision |
 | `openFocusedRevision()` | Expand the focused revision details |
@@ -817,7 +822,7 @@ The `app` argument is a read-only snapshot of jif state, plus the ergonomic `rev
 | `operationLogLoading` | `boolean` | Whether the operation log is loading |
 | `previewFullFile` | `boolean` | Whether preview diffs use effectively full-file context for this session |
 | `previewWordWrap` | `boolean` | Whether preview diff word wrap is enabled for this session |
-| `repoPath` | `string` | Repository path jif is operating on |
+| `repoPath` | `string` | Active workspace root jif is operating on |
 | `revisions` | `readonly RevisionSummary[]` | Visible revision rows |
 | `revsetQuery` | `string` | Current applied revset |
 | `revsetInputQuery` | `string \| null` | Seed text for the active revset prompt, or `null` |
@@ -831,6 +836,7 @@ The `app` argument is a read-only snapshot of jif state, plus the ergonomic `rev
 | `shortcutPanelExpanded` | `boolean` | Whether the shortcut panel is expanded |
 | `statusMessages` | `readonly StatusMessage[]` | Visible status messages |
 | `useShortFlags` | `boolean` | Whether composed commands prefer short flags |
+| `workspaceRefs` | `readonly WorkspaceRef[]` | Known workspaces and their root paths |
 
 </details>
 
@@ -911,7 +917,7 @@ Most successful commands surface a short toast that fades on its own after a few
 <details>
 <summary>Shell Commands</summary>
 
-Shell commands invoked via `>` run in your login shell (`$SHELL -lc`) with the cwd jif was launched from. `cmd.sh()` and `cmd.shi()` from custom keybindings use the repository path by default, or `options.cwd` when provided. Login shells source `.zprofile` / `.bash_profile` / `.profile`, but **not** `.zshrc` / `.bashrc`, so aliases and functions defined only in your interactive rc files will not be available.
+Shell commands invoked via `>` run in your login shell (`$SHELL -lc`) with the active workspace root as cwd. `cmd.sh()` and `cmd.shi()` from custom keybindings use the active workspace root by default, or `options.cwd` when provided. Login shells source `.zprofile` / `.bash_profile` / `.profile`, but **not** `.zshrc` / `.bashrc`, so aliases and functions defined only in your interactive rc files will not be available.
 
 If you want an alias to work from `>`, define it somewhere a non-interactive shell will see it — for zsh, that's `.zshenv` (sourced for every invocation) or `.zprofile` (sourced for login shells); for bash, `.bash_profile` or `.profile`.
 

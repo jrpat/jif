@@ -23,6 +23,8 @@ export type CommandController = Readonly<{
   moveFocusToChild: () => void;
   moveFocusToNextDivergentSibling: () => void;
   moveFocusToWorkspace: (direction: 1 | -1) => void;
+  switchWorkspace: (workspaceName: string) => Promise<void>;
+  switchToFocusedWorkspace: () => Promise<void>;
   moveFocusToBookmark: (direction: 1 | -1) => void;
   focusLogBottom: () => void;
   focusCurrentOperation: () => void;
@@ -270,6 +272,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
       getAdjacentWorkspaceRevisionIndex(state, -1) !== null ||
       state.revisions.some((revision) => revision.marker === "working-copy"),
     run: (controller) => controller.moveFocusToWorkspace(-1),
+  },
+  {
+    id: "switch-active-workspace",
+    title: "Switch Workspace",
+    description: "Make the focused workspace marker the active workspace",
+    canExecute: (state) => (state.revisions[state.focusedRevisionIndex]?.workspaces.length ?? 0) > 0,
+    run: (controller) => controller.switchToFocusedWorkspace(),
   },
   {
     id: "move-to-next-bookmark",

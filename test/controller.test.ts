@@ -107,6 +107,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   const expandElidedCalls: number[] = [];
   const appliedRevsetQueries: string[] = [];
   const restoredLogRevsetCalls: string[] = [];
+  const switchedWorkspaceNames: string[] = [];
   const refreshOptions: Array<{ workingCopy?: string; force?: boolean }> = [];
   const persistedLayouts: string[] = [];
   let suspendCalls = 0;
@@ -202,6 +203,9 @@ function createControllerHarness(harnessOptions: Readonly<{
     restoreLogRevsetFromFileFilter: async () => {
       restoredLogRevsetCalls.push("restore");
     },
+    switchWorkspace: async (workspaceName) => {
+      switchedWorkspaceNames.push(workspaceName);
+    },
     expandElidedRevisions: async (index) => {
       expandElidedCalls.push(index);
     },
@@ -240,6 +244,7 @@ function createControllerHarness(harnessOptions: Readonly<{
     expandElidedCalls,
     appliedRevsetQueries,
     restoredLogRevsetCalls,
+    switchedWorkspaceNames,
     refreshOptions,
     persistedLayouts,
     editorTexts,
@@ -271,6 +276,40 @@ test("reloadConfig delegates to the injected config reload hook", () => {
   harness.controller.reloadConfig();
 
   expect(harness.reloadConfigCalls).toBe(1);
+  harness.store.dispose();
+});
+
+test("switchWorkspace delegates an arbitrary workspace name", async () => {
+  const harness = createControllerHarness({ revisions: [] });
+
+  await harness.controller.switchWorkspace("review");
+
+  expect(harness.switchedWorkspaceNames).toEqual(["review"]);
+  harness.store.dispose();
+});
+
+test("switchToFocusedWorkspace delegates to the focused workspace target", async () => {
+  const harness = createControllerHarness({ revisions: [] });
+  harness.store.actions.applyRepositoryData({
+    repoPath: REPO_PATH,
+    workspaceRefs: [
+      { name: "default", rootPath: REPO_PATH },
+      { name: "review", rootPath: "/tmp/review" },
+    ],
+    revisions: [
+      createRevision({
+        rowId: "working-copy",
+        revisionId: "working-copy",
+        description: "working copy",
+        workspaces: ["default", "review"],
+        marker: "working-copy",
+      }),
+    ],
+  });
+
+  await harness.controller.switchToFocusedWorkspace();
+
+  expect(harness.switchedWorkspaceNames).toEqual(["review"]);
   harness.store.dispose();
 });
 

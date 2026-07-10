@@ -3,6 +3,7 @@ import type { AppState, OperationLogEntry, RevisionSummary } from "../src/domain
 import { createRowId } from "../src/domain/rowIds.ts";
 import { getActiveMode } from "../src/modes.ts";
 import {
+  activateWorkspace,
   applyRepositoryData,
   cancelOrBlurState,
   cancelCommandDraft,
@@ -23,6 +24,7 @@ import {
   focusOperationLogEntryAt,
   focusRevisionAt,
   getFocusedRevisionArg,
+  getFocusedWorkspaceSwitchTargetName,
   getFocusedInsertArg,
   focusWorkingCopy,
   getCommandChipTextForRevision,
@@ -729,6 +731,102 @@ test("moveFocusToWorkspace skips elided revisions even if they carry a workspace
   const after = moveFocusToWorkspace(state, 1);
 
   expect(after.focusedRevisionIndex).toBe(3);
+});
+
+test("getFocusedWorkspaceSwitchTargetName chooses the first workspace when none is active", () => {
+  const base = createWorkspaceNavigationState();
+  const state: AppState = {
+    ...base,
+    repoPath: "/repo/default",
+    workspaceRefs: [
+      { name: "alpha", rootPath: "/repo/alpha" },
+      { name: "beta", rootPath: "/repo/beta" },
+    ],
+    focusedRevisionIndex: 1,
+    revisions: base.revisions.map((revision, index) =>
+      index === 1 ? { ...revision, workspaces: ["alpha", "beta"] } : revision
+    ),
+  };
+
+  expect(getFocusedWorkspaceSwitchTargetName(state)).toBe("alpha");
+});
+
+test("getFocusedWorkspaceSwitchTargetName chooses after the active workspace with wraparound", () => {
+  const base = createWorkspaceNavigationState();
+  const state: AppState = {
+    ...base,
+    repoPath: "/repo/beta",
+    workspaceRefs: [
+      { name: "alpha", rootPath: "/repo/alpha" },
+      { name: "beta", rootPath: "/repo/beta" },
+      { name: "gamma", rootPath: "/repo/gamma" },
+    ],
+    focusedRevisionIndex: 1,
+    revisions: base.revisions.map((revision, index) =>
+      index === 1 ? { ...revision, workspaces: ["alpha", "beta", "gamma"] } : revision
+    ),
+  };
+
+  expect(getFocusedWorkspaceSwitchTargetName(state)).toBe("gamma");
+
+  const wrapped: AppState = { ...state, repoPath: "/repo/gamma" };
+  expect(getFocusedWorkspaceSwitchTargetName(wrapped)).toBe("alpha");
+});
+
+test("getFocusedWorkspaceSwitchTargetName returns null when only the active workspace is focused", () => {
+  const base = createWorkspaceNavigationState();
+  const state: AppState = {
+    ...base,
+    repoPath: "/repo/alpha",
+    workspaceRefs: [{ name: "alpha", rootPath: "/repo/alpha" }],
+    focusedRevisionIndex: 1,
+    revisions: base.revisions.map((revision, index) =>
+      index === 1 ? { ...revision, workspaces: ["alpha"] } : revision
+    ),
+  };
+
+  expect(getFocusedWorkspaceSwitchTargetName(state)).toBeNull();
+});
+
+test("activateWorkspace resets repo-scoped state and preserves session preferences", () => {
+  let state = createState();
+  state = {
+    ...state,
+    repoPath: "/repo/default",
+    workspaceRefs: [{ name: "review", rootPath: "/repo/review" }],
+    focusedRevisionIndex: 1,
+    expandedRowId: FIRST_ROW_ID,
+    selectedRowIds: [FIRST_ROW_ID],
+    selectedFilePaths: ["src/a.ts"],
+    operationLogEntries: OP_LOG_ENTRIES,
+    operationLogLoading: true,
+    revsetQuery: "mine()",
+    commandDraft: { config: draftConfigs.rebase },
+    statusMessages: pushStatusMessage(state, "status", "kept", "info").statusMessages,
+    eventLog: pushEvent(state, "event", "info").eventLog,
+    layout: "tight",
+    useShortFlags: false,
+    previewWordWrap: true,
+    previewFullFile: true,
+  };
+
+  const next = activateWorkspace(state, "/repo/review");
+
+  expect(next.repoPath).toBe("/repo/review");
+  expect(next.workspaceRefs).toEqual([{ name: "review", rootPath: "/repo/review" }]);
+  expect(next.revisions).toEqual([]);
+  expect(next.selectedRowIds).toEqual([]);
+  expect(next.selectedFilePaths).toEqual([]);
+  expect(next.operationLogEntries).toEqual([]);
+  expect(next.operationLogLoading).toBeFalse();
+  expect(next.revsetQuery).toBe("");
+  expect(next.commandDraft).toBeNull();
+  expect(next.statusMessages).toHaveLength(1);
+  expect(next.eventLog).toHaveLength(1);
+  expect(next.layout).toBe("tight");
+  expect(next.useShortFlags).toBeFalse();
+  expect(next.previewWordWrap).toBeTrue();
+  expect(next.previewFullFile).toBeTrue();
 });
 
 test("moveFocusToWorkspace exits file navigation when jumping", () => {

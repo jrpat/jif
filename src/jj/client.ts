@@ -5,6 +5,7 @@ import type {
   RepositoryData,
   RevisionMarker,
   RevisionSummary,
+  WorkspaceRef,
 } from "../domain/types.ts";
 import { createRowId, createSyntheticRowId } from "../domain/rowIds.ts";
 import { getChangeIdFromRevisionId } from "../domain/revisionIds.ts";
@@ -22,6 +23,7 @@ const LOG_TEMPLATE = buildLogTemplate(getMaxRevisionBaseGraphRowCount());
 const FALLBACK_REPOSITORY_LOAD_LIMIT = 250;
 const FALLBACK_OPERATION_LOG_LIMIT = 200;
 const FULL_FILE_DIFF_CONTEXT_LINES = 999999;
+const WORKSPACE_LIST_TEMPLATE = `self.name() ++ "${FIELD_SEPARATOR}" ++ self.root() ++ "\\n"`;
 
 export type WorkingCopyRefreshMode = "snapshot" | "read-only";
 
@@ -60,13 +62,25 @@ export const DEFAULT_REPOSITORY_LOAD_LIMIT = resolveRepositoryLoadLimit();
 export const DEFAULT_OPERATION_LOG_LIMIT = FALLBACK_OPERATION_LOG_LIMIT;
 
 export class JjClient {
-  constructor(readonly repoPath: string) {}
+  private readonly repoPathSource: string | (() => string);
+
+  constructor(repoPath: string | (() => string)) {
+    this.repoPathSource = repoPath;
+  }
+
+  get repoPath(): string {
+    return typeof this.repoPathSource === "function"
+      ? this.repoPathSource()
+      : this.repoPathSource;
+  }
 
   async loadRepository(
     limit = DEFAULT_REPOSITORY_LOAD_LIMIT,
     revset?: string,
     options?: WorkingCopyRefreshOptions,
   ): Promise<RepositoryData> {
+    const repoPath = this.repoPath;
+    const runOptions = { ...options, cwd: repoPath };
     const args = [
       "log",
       "--limit",
@@ -79,12 +93,16 @@ export class JjClient {
     if (revset) {
       args.push("-r", revset);
     }
-    const logOutput = await this.runJj(args, options);
+    const [logOutput, workspaceRefs] = await Promise.all([
+      this.runJj(args, runOptions),
+      this.loadWorkspaceRefs(runOptions),
+    ]);
 
     const revisions = parseLogOutput(logOutput.stdout);
 
     return {
-      repoPath: this.repoPath,
+      repoPath,
+      workspaceRefs,
       revisions,
     };
   }
@@ -328,6 +346,18 @@ export class JjClient {
   async loadWorkspaceRoot(options?: WorkingCopyRefreshOptions): Promise<string> {
     const result = await this.runJj(["workspace", "root"], options);
     return result.stdout.trim();
+  }
+
+  async loadWorkspaceRefs(options?: WorkingCopyRefreshOptions & { cwd?: string }): Promise<readonly WorkspaceRef[]> {
+    const result = await this.runJj([
+      "workspace",
+      "list",
+      "--color",
+      "never",
+      "-T",
+      WORKSPACE_LIST_TEMPLATE,
+    ], options);
+    return parseWorkspaceRefsOutput(result.stdout);
   }
 
   async loadDefaultRevset(options?: WorkingCopyRefreshOptions): Promise<string> {
@@ -594,6 +624,30 @@ export function parseLogOutput(
   }
 
   return revisions;
+}
+
+export function parseWorkspaceRefsOutput(output: string): readonly WorkspaceRef[] {
+  const workspaceRefs: WorkspaceRef[] = [];
+  for (const rawLine of output.split("\n")) {
+    if (rawLine.length === 0) {
+      continue;
+    }
+
+    const separatorIndex = rawLine.indexOf(FIELD_SEPARATOR);
+    if (separatorIndex < 0) {
+      continue;
+    }
+
+    const name = rawLine.slice(0, separatorIndex).trim();
+    const rootPath = rawLine.slice(separatorIndex + FIELD_SEPARATOR.length).trim();
+    if (name.length === 0 || rootPath.length === 0) {
+      continue;
+    }
+
+    workspaceRefs.push({ name, rootPath });
+  }
+
+  return workspaceRefs;
 }
 
 export function parseOperationLogOutput(output: string): readonly OperationLogEntry[] {

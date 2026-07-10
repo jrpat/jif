@@ -68,12 +68,16 @@ async function runApp(argv: readonly string[], options: RunOptions): Promise<voi
       })).repoPath
     : process.cwd();
 
-  const loadRuntimeConfig = async () => {
+  await refreshUserConfigTypes(
+    options.configReplacement === undefined ? {} : { configPath: options.configReplacement },
+  );
+
+  const loadRuntimeConfig = async (projectStartDir = repoPath) => {
     const { raw, resolved: loadedConfig } = await loadAppConfig({
       replaceUserConfigPath: options.configReplacement,
       baseLayerPaths: options.configBaseLayers,
       overrideLayerPaths: options.configOverrideLayers,
-      projectStartDir: repoPath,
+      projectStartDir,
     });
     const resolved = options.useLongFlags
       ? { ...loadedConfig, commands: { ...loadedConfig.commands, shortFlags: false } }

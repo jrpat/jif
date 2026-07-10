@@ -61,6 +61,11 @@ export type RevisionSummary = Readonly<{
   files: readonly ChangedFile[];
 }>;
 
+export type WorkspaceRef = Readonly<{
+  name: string;
+  rootPath: string;
+}>;
+
 export type OperationLogEntry = Readonly<{
   id: string;
   lines: readonly string[];
@@ -77,6 +82,7 @@ export type PreviewPositionPreference = PreviewPosition | "auto";
 
 export type RepositoryData = Readonly<{
   repoPath: string;
+  workspaceRefs?: readonly WorkspaceRef[];
   revisions: readonly RevisionSummary[];
 }>;
 
@@ -178,6 +184,7 @@ export type DiffViewerState = Readonly<{
 
 export type AppState = Readonly<{
   repoPath: string;
+  workspaceRefs: readonly WorkspaceRef[];
   revisions: readonly RevisionSummary[];
   operationLogEntries: readonly OperationLogEntry[];
   operationLogLoading: boolean;

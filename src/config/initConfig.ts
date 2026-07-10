@@ -250,6 +250,11 @@ namespace Jif {
     files: readonly ChangedFile[];
   }>;
 
+  type WorkspaceRef = Readonly<{
+    name: string;
+    rootPath: string;
+  }>;
+
   type StatusMessage = Readonly<{
     id: string;
     text: string;
@@ -274,6 +279,7 @@ namespace Jif {
 
   type AppState = Readonly<{
     repoPath: string;
+    workspaceRefs: readonly WorkspaceRef[];
     revisions: readonly RevisionSummary[];
     focusMode: FocusMode;
     focusModeStack: readonly FocusMode[];
@@ -337,6 +343,8 @@ namespace Jif {
     moveFocusToChild: () => void;
     moveFocusToNextDivergentSibling: () => void;
     moveFocusToWorkspace: (direction: 1 | -1) => void;
+    switchWorkspace: (workspaceName: string) => Promise<void>;
+    switchToFocusedWorkspace: () => Promise<void>;
     moveFocusToBookmark: (direction: 1 | -1) => void;
     focusLogBottom: () => void;
     focusCurrentOperation: () => void;

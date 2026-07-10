@@ -33,6 +33,7 @@ import {
   getFocusedOperationLogEntry,
   getFocusedRevision,
   getFocusedRevisionArg,
+  getFocusedWorkspaceSwitchTargetName,
   getInlineConfirmation,
   getInlineConfirmationActualCommand,
   getRebaseSelectionKind,
@@ -86,6 +87,7 @@ type OpenTextInEditor = (text: string) => Promise<void>;
 
 type ApplyRevsetQuery = (query: string) => Promise<void>;
 type RestoreLogRevsetFromFileFilter = () => Promise<void>;
+type SwitchWorkspace = (workspaceName: string) => Promise<void>;
 
 // Stable toast id so cycling the preview position refreshes one toast in place
 // instead of stacking a new one per press.
@@ -106,6 +108,7 @@ export function createJifCommandController(args: Readonly<{
   openTextInEditor: OpenTextInEditor;
   applyRevsetQuery: ApplyRevsetQuery;
   restoreLogRevsetFromFileFilter: RestoreLogRevsetFromFileFilter;
+  switchWorkspace: SwitchWorkspace;
   reloadConfig(): Promise<void> | void;
   refreshRepository(options?: RepositoryRefreshOptions): Promise<boolean>;
   expandElidedRevisions(elidedIndex: number): Promise<void>;
@@ -195,6 +198,24 @@ export function createJifCommandController(args: Readonly<{
     },
     moveFocusToWorkspace(direction: 1 | -1) {
       store.actions.moveFocusToWorkspace(direction);
+    },
+    switchWorkspace(workspaceName: string) {
+      return args.switchWorkspace(workspaceName);
+    },
+    async switchToFocusedWorkspace() {
+      const state = store.snapshot();
+      const focusedRevision = getFocusedRevision(state);
+      if (!focusedRevision || focusedRevision.workspaces.length === 0) {
+        return;
+      }
+
+      const targetName = getFocusedWorkspaceSwitchTargetName(state);
+      if (!targetName) {
+        store.actions.pushEvent("No other workspace on the focused revision.", "warning");
+        return;
+      }
+
+      await args.switchWorkspace(targetName);
     },
     moveFocusToBookmark(direction: 1 | -1) {
       store.actions.moveFocusToBookmark(direction);
