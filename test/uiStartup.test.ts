@@ -6,6 +6,7 @@ import {
   bindViewRendererEvents,
   createPaletteDetector,
   estimateInitialRevisionLoadLimit,
+  queuePostReadyBackgroundTask,
   queueDeferredRepositoryLoad,
   startInitialRepositoryLoad,
 } from "../src/ui/startup.ts";
@@ -134,6 +135,37 @@ test("queueDeferredRepositoryLoad skips the follow-up refresh when the initial l
   });
 
   expect(queued).toBe(false);
+});
+
+test("queuePostReadyBackgroundTask defers fire-and-forget work", async () => {
+  const scheduled: Array<() => void> = [];
+  const errors: unknown[] = [];
+  let calls = 0;
+
+  const queued = queuePostReadyBackgroundTask({
+    task: async () => {
+      calls += 1;
+      throw new Error("background failure");
+    },
+    schedule(task) {
+      scheduled.push(task);
+    },
+    onError(error) {
+      errors.push(error);
+    },
+  });
+
+  expect(queued).toBe(true);
+  expect(calls).toBe(0);
+  expect(scheduled).toHaveLength(1);
+
+  scheduled[0]!();
+  await Promise.resolve();
+
+  expect(calls).toBe(1);
+  expect(errors).toHaveLength(1);
+  expect(errors[0]).toBeInstanceOf(Error);
+  expect((errors[0] as Error).message).toBe("background failure");
 });
 
 test("createPaletteDetector resolves config from the renderer palette", async () => {

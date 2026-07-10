@@ -66,10 +66,6 @@ async function runApp(argv: readonly string[], options: RunOptions): Promise<voi
       })).repoPath
     : process.cwd();
 
-  await refreshUserConfigTypes(
-    options.configReplacement === undefined ? {} : { configPath: options.configReplacement },
-  );
-
   const loadRuntimeConfig = async () => {
     const { raw, resolved: loadedConfig } = await loadAppConfig({
       replaceUserConfigPath: options.configReplacement,
@@ -93,6 +89,9 @@ async function runApp(argv: readonly string[], options: RunOptions): Promise<voi
   const { runJifApplication } = await import("./app.ts");
   await runJifApplication(repoPath, config, rawConfig, {
     reloadConfig: loadRuntimeConfig,
+    refreshConfigTypes: () => refreshUserConfigTypes(
+      options.configReplacement === undefined ? {} : { configPath: options.configReplacement },
+    ),
   });
 }
 

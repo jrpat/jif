@@ -406,11 +406,11 @@ Configuration layers start with built-in defaults, then merge user, project-loca
 Run `jif init-config` to create a starter user config. The command creates:
 
 - `config.ts` with a placeholder `Jif.Config` shape and commented examples
-- `jif.d.ts` with editor-facing types for autocomplete and inline docs, updated every time jif starts
+- `jif.d.ts` with editor-facing types for autocomplete and inline docs, updated in the background after jif starts
 
 If a config file already exists, `jif init-config` leaves it alone and only fills in missing support files.
 
-jif updates the generated `jif.d.ts` on startup for your user config directory, or next to the file passed with `--config`, so editor type hints stay current after upgrades.
+jif updates the generated `jif.d.ts` in the background after the initial UI is ready for your user config directory, or next to the file passed with `--config`, so editor type hints stay current after upgrades.
 Startup never rewrites your `config.ts`.
 
 To seed a project-local config instead, pass `--project` (or `-p`):

@@ -115,6 +115,33 @@ export function queueDeferredRepositoryLoad(args: Readonly<{
   return true;
 }
 
+export function queuePostReadyBackgroundTask(args: Readonly<{
+  task?: (() => Promise<unknown>) | undefined;
+  schedule?: (task: () => void) => unknown;
+  onError?: (error: unknown) => void;
+}>): boolean {
+  const task = args.task;
+  if (task === undefined) {
+    return false;
+  }
+
+  const schedule = args.schedule ?? ((task: () => void) => {
+    setTimeout(task, 0);
+  });
+
+  schedule(() => {
+    try {
+      void task().catch((error) => {
+        args.onError?.(error);
+      });
+    } catch (error) {
+      args.onError?.(error);
+    }
+  });
+
+  return true;
+}
+
 export function startInitialRepositoryLoad(args: {
   initialRevisionLimit: number;
   detectAndApplyPalette: () => Promise<void>;

@@ -108,6 +108,7 @@ import {
   bindViewRendererEvents,
   createPaletteDetector,
   estimateInitialRevisionLoadLimit,
+  queuePostReadyBackgroundTask,
   queueDeferredRepositoryLoad,
   startInitialRepositoryLoad,
 } from "./startup.ts";
@@ -123,6 +124,7 @@ export function JifView(props: {
   config: ResolvedAppConfig;
   rawConfig: AppConfig;
   reloadConfig: () => Promise<{ raw: AppConfig; resolved: ResolvedAppConfig }>;
+  refreshConfigTypes?: () => Promise<unknown>;
 }) {
   const { store, client } = props;
   const helpCache = new JjHelpCache(client);
@@ -258,6 +260,13 @@ export function JifView(props: {
         },
       });
       setReady(true);
+      queuePostReadyBackgroundTask({
+        task: props.refreshConfigTypes,
+        onError: (error) => {
+          const message = error instanceof Error ? error.message : String(error);
+          store.actions.pushEvent(`Could not refresh jif.d.ts: ${message}`, "warning");
+        },
+      });
       const disposeFocusRefresh = bindRefreshOnFocus(
         renderer,
         (options) => refreshRepository(undefined, undefined, options),

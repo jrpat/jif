@@ -14,6 +14,7 @@ export async function runJifApplication(
   rawConfig: AppConfig,
   options: Readonly<{
     reloadConfig: () => Promise<{ raw: AppConfig; resolved: ResolvedAppConfig }>;
+    refreshConfigTypes?: () => Promise<unknown>;
   }>,
 ): Promise<void> {
   const persistence = createPersistenceService();
@@ -34,7 +35,14 @@ export async function runJifApplication(
   const client = new JjClient(repoPath);
 
   await render(
-    () => JifView({ store, client, config, rawConfig, reloadConfig: options.reloadConfig }),
+    () => JifView({
+      store,
+      client,
+      config,
+      rawConfig,
+      reloadConfig: options.reloadConfig,
+      refreshConfigTypes: options.refreshConfigTypes,
+    }),
     {
       exitOnCtrlC: true,
     },
