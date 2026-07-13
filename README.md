@@ -2,6 +2,15 @@
 
 `jif` is a Jujutsu porcelain — highly-tuned out of the box, but *deeply* configurable. Built to make the underlying model more accessible, not to hide it.
 
+> [!IMPORTANT]
+> **Project Status**
+> 
+> I've been using jif as my daily driver for a while, but it's almost certainly tailored to me and has some blind spots to other workflows.
+>
+> It has a relatively coherent philosophy, but is still messy and contradictory in places.
+>
+> Thoughtful PRs are welcome and encouraged!
+
 ## Jif's Worldview
 
 jif is meant to be lived in – I keep it open in a split pane all day. It comes out-of-the box with thoughtful ergonomics and creature comforts, and tries hard to always do what you expect. And—leaning into Jujtusu's philosophy—everything is undoable.
