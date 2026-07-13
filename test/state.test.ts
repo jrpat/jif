@@ -1648,6 +1648,24 @@ test("focusRevisionAt sets focusedRevisionIndex when index changes", () => {
   expect(state.focusedFileIndex).toBe(0);
 });
 
+test("focusRevisionAt collapses another expanded revision", () => {
+  let state = createState();
+  state = openFocusedRevision(state);
+  state = toggleFileSelection(state);
+  expect(state.focusMode).toBe("files");
+  expect(state.expandedRowId).toBe(FIRST_ROW_ID);
+  expect(state.selectedFilePaths).toEqual(["src/a.ts"]);
+
+  state = focusRevisionAt(state, 1);
+
+  expect(state.focusedRevisionIndex).toBe(1);
+  expect(state.focusMode).toBe("revisions");
+  expect(state.focusModeStack).toEqual(["revisions"]);
+  expect(state.expandedRowId).toBeNull();
+  expect(state.focusedFileIndex).toBe(0);
+  expect(state.selectedFilePaths).toEqual([]);
+});
+
 test("focusRevisionAt clamps out-of-range indexes", () => {
   let state = createState();
 

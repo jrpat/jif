@@ -636,15 +636,24 @@ export function focusRevisionAt(state: AppState, index: number): AppState {
   }
 
   const clamped = clampIndex(index, state.revisions.length);
-  if (clamped === state.focusedRevisionIndex) {
+  const focusedRowId = state.revisions[clamped]?.rowId ?? null;
+  const collapseExpandedRevision = state.expandedRowId !== null && state.expandedRowId !== focusedRowId;
+  if (clamped === state.focusedRevisionIndex && !collapseExpandedRevision) {
     return state;
   }
 
-  return {
+  const nextState = {
     ...state,
+    inlineConfirmation: collapseExpandedRevision ? null : state.inlineConfirmation,
+    expandedRowId: collapseExpandedRevision ? null : state.expandedRowId,
     focusedRevisionIndex: clamped,
     focusedFileIndex: 0,
+    selectedFilePaths: collapseExpandedRevision ? [] : state.selectedFilePaths,
   };
+
+  return collapseExpandedRevision
+    ? replaceFocusModeStack(nextState, state.focusModeStack)
+    : nextState;
 }
 
 export function focusOperationLogEntryAt(state: AppState, index: number): AppState {
