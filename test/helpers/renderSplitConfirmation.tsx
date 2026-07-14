@@ -161,6 +161,10 @@ async function renderRevisionItemWithConfirmation() {
 
   try {
     await rendered.renderOnce();
+    // RevisionItem loads InlineConfirmation through a deferred import; give
+    // the module a tick to resolve, then render the swapped-in component.
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await rendered.renderOnce();
     return {
       frame: rendered.captureCharFrame(),
     };

@@ -31,18 +31,13 @@ import { runInteractiveCommand, runInteractiveShellCommand } from "../jj/process
 import { isFilesOnlyRevset } from "../revset/files.ts";
 import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/types.ts";
 import { createJifCommandController, loadRevisionFiles } from "./controller.ts";
-import { DiffViewer } from "./DiffViewer.tsx";
-import { PreviewPane } from "./PreviewPane.tsx";
+import { lazyComponent } from "./lazyComponent.ts";
 import {
   effectivePreviewCols,
   effectivePreviewPosition,
   effectivePreviewRows,
   effectivePreviewVisible,
 } from "../domain/preview.ts";
-import { InlineConfirmation } from "./InlineConfirmation.tsx";
-import { NotificationsOverlay } from "./NotificationsOverlay.tsx";
-import { OperationLogEntryItem } from "./OperationLogEntryItem.tsx";
-import { CommandPreview, CommandPrompt, FileSearchPrompt, RevsetPrompt, SearchPrompt } from "./prompts.tsx";
 import {
   getRevisionBorderPolicy,
   type RevisionRowState,
@@ -102,7 +97,6 @@ import { createFocusClickGuard } from "./focusClickGuard.ts";
 import { suspendProcessToShell } from "./suspend.ts";
 import { openTextInEditor } from "./openTextInEditor.ts";
 import { hasVisibleSearchHighlights, hasVisibleSearchScope, stripAnsi } from "../search/matching.ts";
-import { SearchHighlightLayer } from "./searchOverlay.tsx";
 import { getStatusHelpToastMaxBodyHeight, getStatusToastMaxBodyHeight } from "./statusMessages.ts";
 import {
   bindViewRendererEvents,
@@ -117,6 +111,35 @@ import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 
 const EXTRA_EMPTY_MESSAGE = "No extra bindings defined. Bind keys under `keymap.extra` in your config.";
 const FILE_FILTER_CHIP_LABEL = "file";
+
+// Deferred UI: these components only render for interactions that cannot
+// happen on the first painted frame, so their modules stay off the startup
+// critical path and are preloaded right after the UI becomes ready.
+const DiffViewer = lazyComponent(() => import("./DiffViewer.tsx").then((m) => m.DiffViewer));
+const PreviewPane = lazyComponent(() => import("./PreviewPane.tsx").then((m) => m.PreviewPane));
+const InlineConfirmation = lazyComponent(() => import("./InlineConfirmation.tsx").then((m) => m.InlineConfirmation));
+const NotificationsOverlay = lazyComponent(() => import("./NotificationsOverlay.tsx").then((m) => m.NotificationsOverlay));
+const OperationLogEntryItem = lazyComponent(() => import("./OperationLogEntryItem.tsx").then((m) => m.OperationLogEntryItem));
+const CommandPrompt = lazyComponent(() => import("./prompts.tsx").then((m) => m.CommandPrompt));
+const CommandPreview = lazyComponent(() => import("./prompts.tsx").then((m) => m.CommandPreview));
+const RevsetPrompt = lazyComponent(() => import("./prompts.tsx").then((m) => m.RevsetPrompt));
+const SearchPrompt = lazyComponent(() => import("./prompts.tsx").then((m) => m.SearchPrompt));
+const FileSearchPrompt = lazyComponent(() => import("./prompts.tsx").then((m) => m.FileSearchPrompt));
+const SearchHighlightLayer = lazyComponent(() => import("./searchOverlay.tsx").then((m) => m.SearchHighlightLayer));
+
+const DEFERRED_UI_COMPONENTS = [
+  DiffViewer,
+  PreviewPane,
+  InlineConfirmation,
+  NotificationsOverlay,
+  OperationLogEntryItem,
+  CommandPrompt,
+  CommandPreview,
+  RevsetPrompt,
+  SearchPrompt,
+  FileSearchPrompt,
+  SearchHighlightLayer,
+] as const;
 
 export function JifView(props: {
   store: AppStore;
@@ -260,6 +283,9 @@ export function JifView(props: {
         },
       });
       setReady(true);
+      queuePostReadyBackgroundTask({
+        task: () => Promise.all(DEFERRED_UI_COMPONENTS.map((component) => component.preload())),
+      });
       queuePostReadyBackgroundTask({
         task: props.refreshConfigTypes,
         onError: (error) => {
