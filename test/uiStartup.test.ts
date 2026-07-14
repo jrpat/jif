@@ -23,12 +23,21 @@ test("estimateInitialRevisionLoadLimit clamps to the configured maximum", () => 
   ).toBe(250);
 });
 
-test("startInitialRepositoryLoad awaits palette detection before refreshing", async () => {
+test("startInitialRepositoryLoad refreshes concurrently with palette detection but is ready only after both", async () => {
   const events: string[] = [];
+  let resolvePalette!: () => void;
+  const paletteReleased = new Promise<void>((resolve) => {
+    resolvePalette = resolve;
+  });
+  let signalRefreshDone!: () => void;
+  const refreshDone = new Promise<void>((resolve) => {
+    signalRefreshDone = resolve;
+  });
 
-  const result = await startInitialRepositoryLoad({
+  const load = startInitialRepositoryLoad({
     initialRevisionLimit: 21,
     detectAndApplyPalette: async () => {
+      await paletteReleased;
       events.push("palette.done");
     },
     loadWorkspaceRoot: async () => {
@@ -45,6 +54,7 @@ test("startInitialRepositoryLoad awaits palette detection before refreshing", as
     },
     refreshRepository: async (revset, limit, options) => {
       events.push(`refresh:${revset}:${limit}:${options?.workingCopy ?? "snapshot"}`);
+      signalRefreshDone();
       return true;
     },
     setWorkspaceRoot: (workspaceRoot) => {
@@ -58,17 +68,31 @@ test("startInitialRepositoryLoad awaits palette detection before refreshing", as
     },
   });
 
+  // The initial refresh must not wait for palette detection.
+  await refreshDone;
+  expect(events).toContain("refresh:all():21:snapshot");
+  expect(events).not.toContain("palette.done");
+
+  // Readiness must still wait for palette detection, so the first painted
+  // frame keeps using the detected colors rather than the dark fallback.
+  let settled = false;
+  void load.then(() => {
+    settled = true;
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(settled).toBe(false);
+  expect(events).not.toContain("focus-working-copy");
+
+  resolvePalette();
+  const result = await load;
+
   expect(result).toEqual({
     workspaceRoot: "/repo",
     initialRevset: "all()",
   });
-  // palette.done must appear before refresh — it's awaited in Promise.all
-  const paletteIndex = events.indexOf("palette.done");
   const refreshIndex = events.indexOf("refresh:all():21:snapshot");
-  expect(paletteIndex).toBeGreaterThanOrEqual(0);
-  expect(refreshIndex).toBeGreaterThan(paletteIndex);
-  // focus on the working-copy revision must run after the refresh lands
   const focusIndex = events.indexOf("focus-working-copy");
+  expect(events).toContain("palette.done");
   expect(focusIndex).toBeGreaterThan(refreshIndex);
 });
 

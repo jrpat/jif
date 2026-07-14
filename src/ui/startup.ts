@@ -154,8 +154,14 @@ export function startInitialRepositoryLoad(args: {
   focusWorkingCopy: () => void;
 }): Promise<InitialRepositoryLoad> {
   return (async (): Promise<InitialRepositoryLoad> => {
-    const [, workspaceRoot, defaultRevset] = await Promise.all([
-      args.detectAndApplyPalette(),
+    // Palette detection can stall for hundreds of milliseconds on terminals
+    // that leave some of OpenTUI's color queries unanswered, so the repository
+    // load must not queue behind it. Readiness still requires both: nothing is
+    // painted until this function resolves, which keeps the first visible
+    // frame on detected colors instead of the dark fallback.
+    const paletteDetection = args.detectAndApplyPalette();
+
+    const [workspaceRoot, defaultRevset] = await Promise.all([
       args.loadWorkspaceRoot(),
       args.loadDefaultRevset(),
     ]);
@@ -171,7 +177,10 @@ export function startInitialRepositoryLoad(args: {
       args.setRevsetQuery(initialRevset);
     }
 
-    await args.refreshRepository(initialRevset || undefined, args.initialRevisionLimit, { workingCopy: "snapshot" });
+    await Promise.all([
+      args.refreshRepository(initialRevset || undefined, args.initialRevisionLimit, { workingCopy: "snapshot" }),
+      paletteDetection,
+    ]);
     args.focusWorkingCopy();
 
     return {

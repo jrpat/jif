@@ -5,6 +5,7 @@ import { initProjectConfig, initUserConfig, refreshUserConfigTypes } from "./con
 import { loadAppConfig } from "./config/loadConfig.ts";
 import { logShortcutDebug } from "./debug.ts";
 import { materializeSampleRepoCachedViaCli } from "./dev/sampleRepoLauncher.ts";
+import { configureOpenTUIPaletteIdleTimeout } from "./opentuiPaletteIdleTimeout.ts";
 import { configureOpenTUITreeSitterWorker } from "./opentuiTreeSitterWorker.ts";
 import { jifVersion } from "./version.ts";
 
@@ -52,6 +53,7 @@ async function runInitConfig(options: InitConfigOptions): Promise<void> {
 
 async function runApp(argv: readonly string[], options: RunOptions): Promise<void> {
   configureOpenTUITreeSitterWorker();
+  configureOpenTUIPaletteIdleTimeout();
 
   const fixturePath = options.sampleName !== undefined
     ? resolve(`test/fixtures/${options.sampleName || "sample-repo"}.jsonl`)

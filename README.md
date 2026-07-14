@@ -495,6 +495,8 @@ jif --config-base ~/work/team.jif.ts --config-override ~/.config/jif/personal-ov
 
 The color configuration supports `light`, `dark`, and `auto` theme mode. In `auto`, startup queries the terminal background color and picks the light or dark theme accordingly. jif also re-queries when the terminal regains focus (and when it reports a color-scheme change), so switching your system between light and dark while jif is in the background takes effect as soon as you focus the terminal again.
 
+Palette detection waits 50ms after the last color answer before falling back for anything the terminal left unanswered. If your terminal needs longer (for example over a slow SSH connection), set the `OTUI_PALETTE_IDLE_TIMEOUT_MS` environment variable to a higher value.
+
 Autocomplete suggestion focus is controlled separately from revision-row focus. Override `colorScheme.colors.promptSuggestionFocusedFill` to change the highlighted suggestion background without changing `rowFocusedFill`.
 
 The preview pane's background defaults to the terminal foreground blended at 3% opacity against the terminal background. Override `colorScheme.colors.previewPaneFill` to tune it. The diff adapts to the terminal theme too: added and removed lines are blended from the palette's green and red against the terminal background, and syntax tokens use indexed ANSI foreground colors from the terminal palette. Override `colorScheme.colors.diffFileName`, `diffAddedFill`, `diffRemovedFill`, `diffAddedSign`, or `diffLineNumber` to tune the diff colors.
