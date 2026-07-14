@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
+import { mkdir, rename } from "node:fs/promises";
 import { join } from "node:path";
 import { materializeSampleRepoCached } from "../src/dev/sampleRepo.ts";
 import {
   JjClient,
+  parseChangedFile,
   parseLogOutput,
   parseEvolutionLogOutput,
   parseOperationLogOutput,
@@ -30,6 +32,36 @@ test("tokenizeCommandText keeps quoted segments together", () => {
     "-o",
     "bookmark main",
   ]);
+});
+
+test("parseChangedFile keeps a plain status/path pair as-is", () => {
+  expect(parseChangedFile("M src/app.ts")).toEqual({ status: "M", path: "src/app.ts" });
+});
+
+test("parseChangedFile expands a renamed file's compressed path to the new path", () => {
+  const file = parseChangedFile("R src/foo/{old_name.ext => new_name.ext}");
+  expect(file.status).toBe("R");
+  // `path` must be a real path jj accepts, not the `{old => new}` display form.
+  expect(file.path).toBe("src/foo/new_name.ext");
+  expect(file.displayPath).toBe("src/foo/{old_name.ext => new_name.ext}");
+});
+
+test("parseChangedFile expands a rename with no shared prefix or suffix", () => {
+  const file = parseChangedFile("R {alpha.txt => beta.txt}");
+  expect(file.path).toBe("beta.txt");
+  expect(file.displayPath).toBe("{alpha.txt => beta.txt}");
+});
+
+test("parseChangedFile expands a rename that only shares a trailing segment", () => {
+  const file = parseChangedFile("R {deep => sub}/keep.txt");
+  expect(file.path).toBe("sub/keep.txt");
+  expect(file.displayPath).toBe("{deep => sub}/keep.txt");
+});
+
+test("parseChangedFile expands a copied file's compressed path to the new path", () => {
+  const file = parseChangedFile("C {orig.txt => dup.txt}");
+  expect(file.path).toBe("dup.txt");
+  expect(file.displayPath).toBe("{orig.txt => dup.txt}");
 });
 
 test("parseLogOutput preserves hybrid graph rows in emission order", () => {
@@ -521,6 +553,34 @@ test("JjClient loads a real sample repository", async () => {
   const knownFiles = await client.loadKnownFiles();
   expect(knownFiles).toContain("src/app.ts");
   expect(knownFiles).toContain("src/revset.ts");
+}, 20000);
+
+test("JjClient resolves a renamed file to a path its single-file diff accepts", async () => {
+  const baseDir = await createTempDir("client-rename-preview");
+  const repo = join(baseDir, "repo");
+  await runCommand(baseDir, ["jj", "git", "init", repo]);
+  await mkdir(join(repo, "src"), { recursive: true });
+  await Bun.write(join(repo, "src/old_name.ext"), "line1\nline2\nline3\n");
+  await runCommand(repo, ["jj", "describe", "-m", "base"]);
+  await runCommand(repo, ["jj", "new", "-m", "rename"]);
+  await rename(join(repo, "src/old_name.ext"), join(repo, "src/new_name.ext"));
+  await Bun.write(join(repo, "src/new_name.ext"), "line1\nCHANGED\nline3\n");
+
+  const client = new JjClient(repo);
+
+  const files = await client.loadChangedFiles("@");
+  expect(files).toHaveLength(1);
+  const file = files[0]!;
+  expect(file.status).toBe("R");
+  expect(file.path).toBe("src/new_name.ext");
+  expect(file.displayPath).toBe("src/{old_name.ext => new_name.ext}");
+
+  // The resolved `path` (not the `{old => new}` display form) is what the
+  // preview pane feeds to jj; jj must accept it and return the rename diff.
+  const diff = await client.loadFileDiff("@", join(repo, file.path));
+  expect(diff).toContain("rename from src/old_name.ext");
+  expect(diff).toContain("rename to src/new_name.ext");
+  expect(diff).toContain("+CHANGED");
 }, 20000);
 
 test("JjClient marks a real empty revision without loading changed files", async () => {

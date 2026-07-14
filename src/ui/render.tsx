@@ -1958,7 +1958,7 @@ function ChangedFileRowContent(props: {
         fg={rowState().selected || rowState().focused ? colors.textPrimary : colors.textSecondary}
         truncate
       >
-        {row.file.path}
+        {row.file.displayPath ?? row.file.path}
       </text>
       <Show when={row.file.hasConflict}>
         <text fg={colors.statusError} attributes={TextAttributes.BOLD}> conflict</text>

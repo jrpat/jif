@@ -769,10 +769,52 @@ function deriveRevisionMarker(graphRow: string): RevisionMarker {
   return "plain";
 }
 
-function parseChangedFile(line: string): ChangedFile {
+export function parseChangedFile(line: string): ChangedFile {
   const status = line.slice(0, 1);
-  const path = line.slice(2).trim();
-  return { status, path };
+  const rawPath = line.slice(2).trim();
+  // Renames and copies print a compressed `src/{old => new}.ext` path that is
+  // not a valid jj fileset. Resolve it to the concrete new path for commands,
+  // and keep the compressed form for the file-list display.
+  if (status === "R" || status === "C") {
+    const expanded = expandRenameSummaryPath(rawPath);
+    if (expanded) {
+      return { status, path: expanded.newPath, displayPath: rawPath };
+    }
+  }
+  return { status, path: rawPath };
+}
+
+const RENAME_ARROW = " => ";
+
+// Expand jj's git-style compressed rename/copy path (as emitted by
+// `jj diff --summary`) into its old and new paths. The differing segment is
+// wrapped in braces, with any shared prefix/suffix outside them:
+// `src/{old.ts => new.ts}`, `{a.txt => b.txt}`, and `{dir => dir2}/keep.txt`
+// all round-trip. Returns null when the path has no such brace group.
+function expandRenameSummaryPath(
+  rawPath: string,
+): Readonly<{ oldPath: string; newPath: string }> | null {
+  const open = rawPath.indexOf("{");
+  if (open === -1) {
+    return null;
+  }
+  const close = rawPath.indexOf("}", open);
+  if (close === -1) {
+    return null;
+  }
+  const inner = rawPath.slice(open + 1, close);
+  const arrow = inner.indexOf(RENAME_ARROW);
+  if (arrow === -1) {
+    return null;
+  }
+  const prefix = rawPath.slice(0, open);
+  const suffix = rawPath.slice(close + 1);
+  const oldPart = inner.slice(0, arrow);
+  const newPart = inner.slice(arrow + RENAME_ARROW.length);
+  return {
+    oldPath: prefix + oldPart + suffix,
+    newPath: prefix + newPart + suffix,
+  };
 }
 
 export function tokenizeCommandText(commandText: string): string[] {

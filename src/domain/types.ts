@@ -33,7 +33,12 @@ export type SearchScopeId = "revision-log" | "operation-log" | "evolog";
 export type SearchMode = "search" | "fast-jump";
 
 export type ChangedFile = Readonly<{
+  // A real repository path jj accepts as a fileset argument. For a rename/copy
+  // this is the post-change (new) path — never the `{old => new}` display form.
   path: string;
+  // The compressed `src/{old => new}.ext` form jj prints for a rename/copy, kept
+  // only for display in the file list. Absent for ordinary add/modify/delete.
+  displayPath?: string;
   status: string;
   hasConflict?: boolean;
 }>;
