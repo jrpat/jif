@@ -3,6 +3,25 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.1.1 — 2026-07-14
+
+### Highlights
+
+This release is all about startup speed and polish:
+
+- **Much faster startup.** The repository now loads concurrently with terminal palette detection instead of queuing behind it, and jif caps the palette idle wait at 50ms. Warm startup to visible log content drops from roughly 700–850ms to about 410ms — with no fallback-color flash on the first frame.
+- **Leaner first paint.** UI that isn't needed for the first frame (diff viewer, preview pane, prompts, overlays) now loads lazily and is preloaded right after the UI is ready, trimming more module evaluation off the critical path.
+- **Renamed files preview correctly.** Renames print as `src/{old => new}.ext`, which jj rejects as a fileset — previewing a renamed file showed nothing, and the diff shortcut, restore, and untrack were similarly broken. jif now resolves the concrete post-rename path while still displaying the compressed form in the file list.
+- **No more stale expanded rows.** Focusing a revision directly (e.g. by mouse click) now collapses another row's open file list instead of leaving the app focused on one revision with a different row expanded.
+
+### All changes
+
+- Defer non-first-paint UI components behind lazy imports
+- Load the repository concurrently with terminal palette detection
+- Resolve renamed file paths for single-file preview
+- Collapse expanded revisions on direct focus
+- Add project status to readme
+
 ## v0.1.0 — 2026-07-10
 
 ### Highlights
