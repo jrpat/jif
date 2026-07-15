@@ -68,17 +68,23 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
 
 export type KeymapBinding =
   | string
-  | Readonly<{ command: string; canonical: false }>;
+  | Readonly<{ command: string; canonical: false }>
+  | null;
 
 export type Keymap = Readonly<Record<"_global" | Mode, Readonly<Record<string, KeymapBinding>>>>;
 
-export const bindingCommand = (binding: KeymapBinding): string =>
+export const bindingCommand = (binding: NonNullable<KeymapBinding>): string =>
   typeof binding === "string" ? binding : binding.command;
 
-export const isCanonicalBinding = (binding: KeymapBinding): boolean =>
+export const isCanonicalBinding = (binding: KeymapBinding): binding is string =>
   typeof binding === "string";
 
 const alias = (command: string): KeymapBinding => ({ command, canonical: false });
+
+const splitBindingsDisabled = {
+  "ctrl-s": null,
+  "alt-s": null,
+} satisfies Readonly<Record<string, KeymapBinding>>;
 
 // Preview-pane controls, shared by every mode that can show a preview
 // (revisions/files/op-log/evolog). Kept in one place so a key change lands in
@@ -181,8 +187,7 @@ export const defaultKeymap: Keymap = {
     up: alias("move-up"),
     h: "collapse",
     left: alias("collapse"),
-    "ctrl-s": "split",
-    "alt-s": "split-parallel",
+    ...splitBindingsDisabled,
     r: "restore",
     d: "show-file-diff",
     "ctrl-u": "untrack",
@@ -211,6 +216,7 @@ export const defaultKeymap: Keymap = {
     enter: "confirm",
   },
   rebase: {
+    ...splitBindingsDisabled,
     s: "rebase-descendants",
     B: "rebase-source-branch",
     b: "rebase-target-before",
@@ -221,25 +227,30 @@ export const defaultKeymap: Keymap = {
     "ctrl-space": "rebase-toggle-selection-kind",
   },
   duplicate: {
+    ...splitBindingsDisabled,
     b: "rebase-target-before",
     a: "rebase-target-after",
     i: "rebase-target-insert-between",
   },
   revert: {
+    ...splitBindingsDisabled,
     b: "rebase-target-before",
     a: "rebase-target-after",
     i: "rebase-target-insert-between",
   },
-  restore: {},
+  restore: { ...splitBindingsDisabled },
   squash: {
+    ...splitBindingsDisabled,
     s: "squash-from-anchor",
     S: alias("squash-from-anchor"),
   },
   interdiff: {
+    ...splitBindingsDisabled,
     "=": "interdiff-swap",
   },
-  diff: {},
+  diff: { ...splitBindingsDisabled },
   absorb: {
+    ...splitBindingsDisabled,
     s: "absorb-descendants",
   },
   command: {
@@ -281,6 +292,7 @@ export const defaultKeymap: Keymap = {
     "?": "shortcut-panel",
   },
   bookmark: {
+    ...splitBindingsDisabled,
     c: "bookmark-create",
     m: "bookmark-move-from",
     M: "bookmark-move-to",
@@ -290,11 +302,13 @@ export const defaultKeymap: Keymap = {
     t: "bookmark-track",
     u: "bookmark-untrack",
   },
-  "bookmark-move": {},
+  "bookmark-move": { ...splitBindingsDisabled },
   "set-parents": {
+    ...splitBindingsDisabled,
     " ": "toggle-set-parents-pick",
   },
   "new-between": {
+    ...splitBindingsDisabled,
     " ": "toggle-new-between-before",
   },
   extra: {},
@@ -333,7 +347,15 @@ export function resolveCommand(
   keymap: Keymap = defaultKeymap,
 ): string | null {
   const binding = getModeBindings(mode, keymap)[key];
-  return binding === undefined ? null : bindingCommand(binding);
+  return binding == null ? null : bindingCommand(binding);
+}
+
+export function isKeyExplicitlyUnbound(
+  mode: Mode,
+  key: string,
+  keymap: Keymap = defaultKeymap,
+): boolean {
+  return getModeBindings(mode, keymap)[key] === null;
 }
 
 export function getCommandsForMode(
@@ -350,7 +372,11 @@ export function getDirectCommandsForMode(
   keymap: Keymap,
   definitions: readonly CommandDefinition[],
 ): readonly CommandDefinition[] {
-  const ids = new Set(Object.values(keymap[mode] ?? {}).map(bindingCommand));
+  const ids = new Set(
+    Object.values(keymap[mode] ?? {})
+      .filter((binding): binding is NonNullable<KeymapBinding> => binding !== null)
+      .map(bindingCommand),
+  );
   return definitions.filter((def) => ids.has(def.id));
 }
 
@@ -377,6 +403,7 @@ export function collectInheritedAndGlobalCanonicalBindings(
   const results: CanonicalKeyBinding[] = [];
   for (const [key, binding] of Object.entries(parentBindings)) {
     if (key in directBindings) continue;
+    if (binding === null) continue;
     if (isCanonicalBinding(binding)) {
       results.push({ key, commandId: bindingCommand(binding) });
     }
@@ -384,6 +411,7 @@ export function collectInheritedAndGlobalCanonicalBindings(
   for (const [key, binding] of Object.entries(keymap._global ?? {})) {
     if (key in directBindings) continue;
     if (key in parentBindings) continue;
+    if (binding === null) continue;
     if (isCanonicalBinding(binding)) {
       results.push({ key, commandId: bindingCommand(binding) });
     }
@@ -397,6 +425,7 @@ export function collectDirectCanonicalBindingsForMode(
 ): readonly CanonicalKeyBinding[] {
   const results: CanonicalKeyBinding[] = [];
   for (const [key, binding] of Object.entries(keymap[mode] ?? {})) {
+    if (binding === null) continue;
     if (isCanonicalBinding(binding)) {
       results.push({ key, commandId: bindingCommand(binding) });
     }
@@ -411,12 +440,13 @@ function collectBoundCommandIds(
 ): ReadonlySet<string> {
   const modeBindings = getModeBindings(mode, keymap);
   for (const binding of Object.values(modeBindings)) {
+    if (binding === null) continue;
     collected.add(bindingCommand(binding));
   }
 
   if (keymap._global) {
     for (const [key, binding] of Object.entries(keymap._global)) {
-      if (!(key in modeBindings)) {
+      if (!(key in modeBindings) && binding !== null) {
         collected.add(bindingCommand(binding));
       }
     }

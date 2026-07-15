@@ -58,6 +58,7 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(typesText).toContain("file: string");
   expect(typesText).toContain("focusedRevision: RevisionSummary | null");
   expect(typesText).toContain("focusedFile: ChangedFile | null");
+  expect(typesText).toContain("type UserKeyBinding = string | UserAliasBinding | UserKeybindingCommand | null");
 });
 
 test("initUserConfig does not overwrite an existing config.ts", async () => {

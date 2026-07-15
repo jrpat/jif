@@ -20,7 +20,7 @@ export type UserKeybindingCommand = Readonly<{
   group?: CommandDefinition["group"];
 }>;
 
-export type UserKeyBinding = string | UserAliasBinding | UserKeybindingCommand;
+export type UserKeyBinding = string | UserAliasBinding | UserKeybindingCommand | null;
 
 export type UserKeyMap = Partial<Record<KeymapScope, Readonly<Record<string, UserKeyBinding>>>>;
 
@@ -83,6 +83,11 @@ export function resolveConfiguredKeymap(userKeymap?: UserKeyMap): ResolvedConfig
     }
 
     for (const [key, binding] of Object.entries(bindings)) {
+      if (binding === null) {
+        keymap[scope][key] = null;
+        continue;
+      }
+
       if (typeof binding === "string") {
         keymap[scope][key] = binding;
         continue;

@@ -7,6 +7,7 @@ import {
   bindingCommand,
   defaultKeymap,
   getActiveMode,
+  isKeyExplicitlyUnbound,
   modeDefinitions,
   resolveCommand,
 } from "../modes.ts";
@@ -54,6 +55,10 @@ export function dispatchGlobalKey(options: {
     onBeforeCommandRun?.({ commandId, mode });
     runCommand(command, controller, userState);
     return true;
+  }
+
+  if (isKeyExplicitlyUnbound(mode, normalizedKey, keymap)) {
+    return false;
   }
 
   if (modeDefinitions[mode].inputPassthrough && normalizedKey.length === 1) {

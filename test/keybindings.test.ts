@@ -4,7 +4,7 @@ import { commandDefinitions, type CommandController } from "../src/commands/defi
 import type { AppState } from "../src/domain/types.ts";
 import { getRevisionArg } from "../src/domain/revisionIds.ts";
 import { createInitialState, draftConfigs, enterExtraMode, startCommandDraft } from "../src/state/store.ts";
-import { defaultKeymap } from "../src/modes.ts";
+import { defaultKeymap, type Keymap } from "../src/modes.ts";
 import {
   dispatchGlobalKey,
   shouldDismissShortcutContextBeforeCommand,
@@ -1285,6 +1285,35 @@ test("dispatchGlobalKey routes s to rebase-descendants in rebase mode", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["setRebaseSourceKind(source)"]);
+});
+
+test("a null mode binding suppresses the inherited and global binding", () => {
+  const calls: string[] = [];
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+
+  const keymap: Keymap = {
+    ...defaultKeymap,
+    _global: {
+      ...defaultKeymap._global,
+      "ctrl-s": "quit",
+    },
+    rebase: {
+      ...defaultKeymap.rebase,
+      "ctrl-s": null,
+    },
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "ctrl-s",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+    keymap,
+  });
+
+  expect(handled).toBeFalse();
+  expect(calls).toEqual([]);
 });
 
 test("dispatchGlobalKey routes s to squash-from-anchor in squash mode", () => {

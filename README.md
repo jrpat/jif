@@ -164,11 +164,13 @@ When the active revset is only `files(...)`, the collapsed status bar shows a `f
 | `alt-r` | revert | Create a new revision that undoes the focused revision (same target picker as rebase) |
 | `s` | squash | Squash the focused revision into another |
 | `S` | squash-onto | Keep the focused revision as the target and select the branch above it (the revision directly above and its descendants) as the source |
-| `ctrl-s` | split | Split the focused revision, or use the current file selection |
+| `ctrl-s` | split | Split the focused revision |
 | `alt-s` | split-parallel | Split the focused revision into sibling commits sharing its parent (`jj split --parallel`) |
 | `u` | undo | Undo the last operation |
 | `alt-u` | redo | Redo the last undone operation |
 | `space` | toggle-revision-selection | Add or remove the focused revision from the selection |
+
+The split bindings are available only in the revision log, not while composing another operation or focusing an expanded file.
 
 #### Miscellaneous
 
@@ -198,9 +200,7 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 | `d` | show-file-diff | Show the diff for the focused file |
 | `r` | restore | Restore selected files to their state before this change |
 | `ctrl-u` | untrack | Stop tracking the focused file, or all selected files (`jj file untrack <paths>`) |
-| `ctrl-s` | split | Split using the current file selection |
 | `ctrl-f` | restrict-revset-to-focused-file | Show revisions that changed the focused file |
-| `alt-s` | split-parallel | Split using the current file selection into sibling commits (`jj split --parallel`) |
 
 ### Rebase
 
@@ -601,6 +601,18 @@ export default {
   keymap: {
     normal: {
       J: "move-down",
+    },
+  },
+} satisfies Jif.Config;
+```
+
+Set a binding to `null` to disable that key in a scope. A null binding overrides inherited and global bindings and is omitted from the shortcut panel:
+
+```ts
+export default {
+  keymap: {
+    normal: {
+      "ctrl-o": null,
     },
   },
 } satisfies Jif.Config;

@@ -412,7 +412,7 @@ namespace Jif {
     group?: CommandGroup;
   }>;
 
-  type UserKeyBinding = string | UserAliasBinding | UserKeybindingCommand;
+  type UserKeyBinding = string | UserAliasBinding | UserKeybindingCommand | null;
 
   type KeymapScope =
     | "_global"

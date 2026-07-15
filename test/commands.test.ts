@@ -17,6 +17,9 @@ import {
   getActiveMode,
   getDirectCommandsForMode,
   defaultKeymap,
+  modeDefinitions,
+  type Keymap,
+  type Mode,
 } from "../src/modes.ts";
 
 function createState(): AppState {
@@ -197,6 +200,26 @@ test("rebase-descendants resolves in rebase mode but not normal mode", () => {
   expect(resolveForState("s", rebaseState)).toBe("rebase-descendants");
 });
 
+test("a null mode binding overrides an inherited command", () => {
+  const keymap: Keymap = {
+    ...defaultKeymap,
+    rebase: {
+      ...defaultKeymap.rebase,
+      "ctrl-s": null,
+    },
+  };
+
+  expect(resolveCommand("normal", "ctrl-s", keymap)).toBe("split");
+  expect(resolveCommand("rebase", "ctrl-s", keymap)).toBeNull();
+});
+
+test("split bindings resolve only in revision-log mode", () => {
+  for (const mode of Object.keys(modeDefinitions) as Mode[]) {
+    expect(resolveCommand(mode, "ctrl-s")).toBe(mode === "normal" ? "split" : null);
+    expect(resolveCommand(mode, "alt-s")).toBe(mode === "normal" ? "split-parallel" : null);
+  }
+});
+
 test("rebase mode binds source, target, and modifier keys", () => {
   const rebaseState = startCommandDraft(createState(), draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
 
@@ -341,7 +364,8 @@ test("files mode does not inherit Normal revision commands", () => {
   expect(resolveForState("h", state)).toBe("collapse");
   expect(resolveForState(" ", state)).toBe("toggle-file-selection");
   expect(resolveForState("s", state)).toBeNull();
-  expect(resolveForState("ctrl-s", state)).toBe("split");
+  expect(resolveForState("ctrl-s", state)).toBeNull();
+  expect(resolveForState("alt-s", state)).toBeNull();
   expect(resolveForState("ctrl-f", state)).toBe("restrict-revset-to-focused-file");
 });
 
@@ -541,21 +565,23 @@ test("canExecute blocks commands on elided revisions", () => {
   expect(resolveForState("l", state)).toBe("expand");
 });
 
-test("mode inheritance lets files mode use normal keys", () => {
+test("files mode keeps its self-contained file bindings", () => {
   const state: AppState = {
     ...createState(),
     focusMode: "files",
     expandedRowId: "aaaaaaaa",
   };
 
-  // Inherited from normal
+  // Shared navigation bindings are defined directly in files mode.
   expect(resolveForState("j", state)).toBe("move-down");
   expect(resolveForState("k", state)).toBe("move-up");
   expect(resolveForState("?", state)).toBe("shortcut-panel");
 
   // Mode-local in files
-  expect(defaultKeymap.files["ctrl-s"]).toBe("split");
-  expect(resolveForState("ctrl-s", state)).toBe("split");
+  expect(defaultKeymap.files["ctrl-s"]).toBeNull();
+  expect(defaultKeymap.files["alt-s"]).toBeNull();
+  expect(resolveForState("ctrl-s", state)).toBeNull();
+  expect(resolveForState("alt-s", state)).toBeNull();
   expect(resolveForState("r", state)).toBe("restore");
   expect(resolveForState(" ", state)).toBe("toggle-file-selection");
 });

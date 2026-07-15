@@ -336,9 +336,8 @@ test("getShortcutPanelBindings narrows rebase draft shortcuts to draft-relevant 
   expect(ids).toContain("force-last-command");
   expect(ids).toContain("rebase-descendants");
   expect(ids).toContain("shortcut-panel");
-  // split is a mode-group action reachable via the inherited `ctrl-s`, like in the
-  // other normal-derived draft modes (restore/diff/absorb)
-  expect(ids).toContain("split");
+  expect(ids).not.toContain("split");
+  expect(ids).not.toContain("split-parallel");
   expect(ids).not.toContain("quit");
   expect(ids).not.toContain("undo");
   expect(ids).not.toContain("cycle-layout");
@@ -352,7 +351,8 @@ test("getShortcutPanelBindings narrows file mode shortcuts to file-relevant acti
   const bindings = getShortcutPanelBindings(state, bindingsForMode(state));
   const ids = bindings.map(({ command }) => command.id);
 
-  expect(ids).toContain("split");
+  expect(ids).not.toContain("split");
+  expect(ids).not.toContain("split-parallel");
   expect(ids).toContain("restore");
   expect(ids).toContain("toggle-file-selection");
   expect(ids).toContain("select-all-files");
@@ -388,7 +388,8 @@ test("getShortcutPanelBindings includes inline configured commands from the merg
 test("collectDirectCanonicalBindingsForMode is mode-specific and excludes parents and globals", () => {
   const keys = collectDirectCanonicalBindingsForMode("files", defaultKeymap).map((b) => b.key);
   // files mode is self-contained: it binds its own navigation and file actions directly
-  expect(keys).toContain("ctrl-s");
+  expect(keys).not.toContain("ctrl-s");
+  expect(keys).not.toContain("alt-s");
   expect(keys).toContain("r");
   expect(keys).toContain("d");
   expect(keys).toContain(" ");
@@ -504,4 +505,16 @@ test("collectCanonicalBindingsForMode excludes alias bindings (canonical: false)
   expect(keys).toContain("j");
   expect(keys).not.toContain("x");
   expect(keys).not.toContain("down");
+});
+
+test("collectCanonicalBindingsForMode excludes null bindings and their inherited commands", () => {
+  const resolved = resolveConfiguredKeymap({
+    rebase: {
+      "ctrl-s": null,
+    },
+  });
+
+  const keys = collectCanonicalBindingsForMode("rebase", resolved.keymap).map((binding) => binding.key);
+
+  expect(keys).not.toContain("ctrl-s");
 });

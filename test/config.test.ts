@@ -445,6 +445,16 @@ test("resolveConfiguredKeymap lets users rebind built-in commands by id", () => 
   expect(resolved.keymap.log.k).toBe("move-up");
 });
 
+test("resolveConfiguredKeymap accepts null to unbind a key", () => {
+  const resolved = resolveConfiguredKeymap({
+    normal: {
+      j: null,
+    },
+  });
+
+  expect(resolved.keymap.normal.j).toBeNull();
+});
+
 test("resolveConfiguredKeymap deep-merges user bindings into the default keymap", () => {
   const resolved = resolveConfiguredKeymap({
     normal: {
@@ -461,7 +471,8 @@ test("resolveConfiguredKeymap deep-merges user bindings into the default keymap"
   expect(resolved.keymap._global.escape).toBe("cancel");
   expect(resolved.keymap.log.j).toBe("move-down");
   expect(resolved.keymap.normal.g).toBe("user:normal:g");
-  expect(resolved.keymap.files["ctrl-s"]).toBe("split");
+  expect(resolved.keymap.files["ctrl-s"]).toBeNull();
+  expect(resolved.keymap.files["alt-s"]).toBeNull();
   expect(resolved.keymap.files.x).toBe("restore");
 });
 
