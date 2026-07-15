@@ -110,6 +110,8 @@ import {
   toggleInterdiffSwap,
   togglePreviewFullFile,
   togglePreviewWordWrap,
+  toggleRebaseSelection,
+  toggleRebaseSelectionKind,
   toggleRebaseSkipEmptied,
   toggleRevisionSelection,
   toggleSquashAnchor,
@@ -410,6 +412,12 @@ export function createAppStore(
       },
       toggleRebaseSkipEmptied() {
         mutate((currentState) => toggleRebaseSkipEmptied(currentState));
+      },
+      toggleRebaseSelection() {
+        mutate((currentState) => toggleRebaseSelection(currentState));
+      },
+      toggleRebaseSelectionKind() {
+        mutate((currentState) => toggleRebaseSelectionKind(currentState));
       },
       toggleSquashAnchor(anchorIds: readonly string[]) {
         mutate((currentState) => toggleSquashAnchor(currentState, anchorIds));

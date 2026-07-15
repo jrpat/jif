@@ -215,7 +215,7 @@ namespace Jif {
     | "chromeFillOne" | "chromeFillTwo" | "chromeFillThree" | "chromeScrollbarThumb"
     | "chromeBorderIdle" | "chromeBorderFocus"
     | "promptSuggestionFocusedFill" | "previewPaneFill"
-    | "rowFocusedFill" | "rowSelectedFill" | "rowSelectedAccent" | "rowAffectedFill"
+    | "rowFocusedFill" | "rowSelectedFill" | "rowSelectedAccent" | "rowPinnedTargetFill" | "rowPinnedTargetAccent" | "rowAffectedFill"
     | "rowCommandTargetBorder" | "rowBorderIdle" | "rowBorderFocus" | "rowBorderSelected" | "rowBorderCommandTarget"
     | "graphWorkingCopy" | "graphPlain" | "graphImmutable" | "graphBookmark"
     | "bookmarkTagFill" | "bookmarkTagText" | "workspaceTagFill" | "workspaceTagText"
@@ -366,6 +366,8 @@ namespace Jif {
     setRebaseSourceKind: (kind: "revisions" | "source" | "branch") => void;
     setRebaseTargetKind: (kind: "destination" | "insert-before" | "insert-after" | "insert-between") => void;
     toggleRebaseSkipEmptied: () => void;
+    toggleRebaseSelection: () => void;
+    toggleRebaseSelectionKind: () => void;
     toggleSquashAnchor: () => void;
     toggleInterdiffSwap: () => void;
     togglePreviewWordWrap: () => void;

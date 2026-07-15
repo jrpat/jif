@@ -5,8 +5,9 @@ type SemanticColors = ResolvedAppConfig["colorScheme"]["semanticColors"];
 export function getRevisionRowBackgroundColor(options: Readonly<{
   focused: boolean;
   selected: boolean;
+  pinnedTarget: boolean;
   affected: boolean;
-  colors: Pick<SemanticColors, "rowFocusedFill" | "rowSelectedFill" | "rowAffectedFill">;
+  colors: Pick<SemanticColors, "rowFocusedFill" | "rowSelectedFill" | "rowPinnedTargetFill" | "rowAffectedFill">;
 }>): string | undefined {
   if (options.focused) {
     return options.colors.rowFocusedFill;
@@ -14,6 +15,10 @@ export function getRevisionRowBackgroundColor(options: Readonly<{
 
   if (options.selected) {
     return options.colors.rowSelectedFill;
+  }
+
+  if (options.pinnedTarget) {
+    return options.colors.rowPinnedTargetFill;
   }
 
   if (options.affected) {

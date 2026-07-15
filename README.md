@@ -206,6 +206,8 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 
 Active while previewing a rebase. Inherits Normal. The default composition is `jj rebase -r <source> -d <target>`; each key below switches one knob of that composition and can be pressed again to toggle back to the default.
 
+`space` selects either additional **subjects** (more `-r` sources, the Normal-mode behavior) or additional **targets** (more destinations, e.g. `-d a -d b` to rebase onto a merge). The default follows the source kind: plain `-r` selects subjects, while `--source`/`--branch` — whose subjects are already fixed — select targets; `ctrl-space` toggles between the two behaviors (switching the source kind resets the toggle). Pinned targets keep their `onto`/`before`/`after` chips wherever the cursor goes, and the cursor-following default target is disabled until every pin is toggled off again. Pinned rows are tinted blue (chip and row background — `rowPinnedTargetAccent`/`rowPinnedTargetFill`), while the cursor-following focus keeps its usual magenta.
+
 | Key | Command | Description |
 |-----|---------|-------------|
 | `s` | rebase-descendants | Toggle `--source` (move the focused revision and its descendants) |
@@ -214,6 +216,8 @@ Active while previewing a rebase. Inherits Normal. The default composition is `j
 | `a` | rebase-target-after | Toggle `--insert-after` on the target |
 | `i` | rebase-target-insert-between | Pin the focused revision as `--insert-after`; navigate to pick `--insert-before` |
 | `e` | rebase-toggle-skip-emptied | Toggle `--skip-emptied` |
+| `space` | rebase-toggle-selection | Select an additional rebase subject or target, per the current spacebar behavior |
+| `ctrl-space` | rebase-toggle-selection-kind | Toggle whether `space` selects additional subjects or additional targets |
 
 ### Duplicate
 
@@ -742,6 +746,8 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `toggleInterdiffSwap()` | Swap interdiff `--from` and `--to` roles |
 | `togglePreviewFullFile()` | Toggle effectively full-file context for file preview diffs |
 | `togglePreviewWordWrap()` | Wrap or unwrap long preview diff lines |
+| `toggleRebaseSelection()` | Toggle the focused revision as a rebase subject or additional target, per the current spacebar behavior |
+| `toggleRebaseSelectionKind()` | Toggle whether rebase selection adds subjects or additional targets |
 | `toggleRebaseSkipEmptied()` | Toggle `--skip-emptied` on a rebase draft |
 | `toggleSearchIdOnly()` | Toggle ID-only search |
 | `toggleSelection()` | Toggle the focused revision selection |

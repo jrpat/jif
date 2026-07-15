@@ -217,6 +217,8 @@ export const defaultKeymap: Keymap = {
     a: "rebase-target-after",
     i: "rebase-target-insert-between",
     e: "rebase-toggle-skip-emptied",
+    " ": "rebase-toggle-selection",
+    "ctrl-space": "rebase-toggle-selection-kind",
   },
   duplicate: {
     b: "rebase-target-before",

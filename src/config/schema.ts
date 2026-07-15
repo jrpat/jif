@@ -27,6 +27,8 @@ export type SemanticColorScheme = Readonly<{
   rowFocusedFill: SemanticColorValue;
   rowSelectedFill: SemanticColorValue;
   rowSelectedAccent: SemanticColorValue;
+  rowPinnedTargetFill: SemanticColorValue;
+  rowPinnedTargetAccent: SemanticColorValue;
   rowAffectedFill: SemanticColorValue;
   rowCommandTargetBorder: SemanticColorValue;
   rowBorderIdle: SemanticColorValue;
@@ -167,6 +169,8 @@ const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   rowFocusedFill:         { source: "magenta",     opacity: 0.09 },
   rowSelectedFill:        { source: "green",       opacity: 0.12 },
   rowSelectedAccent:      { source: "green",       opacity: 1.0  },
+  rowPinnedTargetFill:    { source: "blue",        opacity: 0.12 },
+  rowPinnedTargetAccent:  { source: "blue",        opacity: 1.0  },
   rowAffectedFill:        { source: "green",       opacity: 0.12 },
   rowCommandTargetBorder: { source: "yellow",      opacity: 1.0  },
   rowBorderIdle:          { source: "foreground",  opacity: 0.20 },

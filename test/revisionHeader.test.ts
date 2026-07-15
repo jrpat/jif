@@ -300,8 +300,10 @@ test("getRevisionSelectionMarker fills the one-character slot after the change i
 test("getRevisionCommandChipBgColor matches selected row accent", () => {
   const color = getRevisionCommandChipBgColor({
     rowState: "selected",
+    pinnedTarget: false,
     colors: {
       rowSelectedAccent: "selected",
+      rowPinnedTargetAccent: "pinned",
       revsetPrefix: "prefix",
     },
   });
@@ -312,11 +314,24 @@ test("getRevisionCommandChipBgColor matches selected row accent", () => {
 test("getRevisionCommandChipBgColor uses the focused revision accent for target rows", () => {
   const color = getRevisionCommandChipBgColor({
     rowState: "focused",
+    pinnedTarget: false,
     colors: {
       rowSelectedAccent: "selected",
+      rowPinnedTargetAccent: "pinned",
       revsetPrefix: "prefix",
     },
   });
 
   expect(color).toBe("prefix");
+});
+
+test("getRevisionCommandChipBgColor uses the pinned accent for pinned targets, even focused ones", () => {
+  const colors = {
+    rowSelectedAccent: "selected",
+    rowPinnedTargetAccent: "pinned",
+    revsetPrefix: "prefix",
+  };
+
+  expect(getRevisionCommandChipBgColor({ rowState: "default", pinnedTarget: true, colors })).toBe("pinned");
+  expect(getRevisionCommandChipBgColor({ rowState: "focused", pinnedTarget: true, colors })).toBe("pinned");
 });

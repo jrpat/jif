@@ -106,6 +106,7 @@ export type CommandBarBookmarkContext = Readonly<{
 
 export type RebaseSourceKind = "revisions" | "source" | "branch";
 export type RebaseTargetKind = "destination" | "insert-before" | "insert-after" | "insert-between";
+export type RebaseSelectionKind = "subject" | "target";
 
 export type CommandDraft = Readonly<{
   config: CommandDraftConfig;
@@ -116,6 +117,12 @@ export type CommandDraft = Readonly<{
   rebaseTargetKind?: RebaseTargetKind;
   rebaseSkipEmptied?: boolean;
   rebaseInsertAfterRevisionId?: string;
+  // Explicit override of what the spacebar selects; undefined derives the
+  // default from the source kind (subjects for -r, targets for -s/-b).
+  rebaseSelectionKind?: RebaseSelectionKind;
+  // Pinned additional target rows; while non-empty they replace the
+  // cursor-following target.
+  rebaseTargetRowIds?: readonly string[];
   interdiffSwapped?: boolean;
   absorbDefaultRowIds?: readonly string[];
   absorbSourceRevisionId?: string;

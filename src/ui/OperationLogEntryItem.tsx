@@ -42,6 +42,7 @@ export function OperationLogEntryItem(props: Readonly<{
     getRevisionRowBackgroundColor({
       focused: props.focused,
       selected: false,
+      pinnedTarget: false,
       affected: false,
       colors: props.config.colorScheme.semanticColors,
     })

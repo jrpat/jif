@@ -58,8 +58,11 @@ import {
   selectAbsorbDescendants,
   toggleFileSelection,
   getOperationAffectedRowIds,
+  getRebaseSelectionKind,
   setRebaseSourceKind,
   setRebaseTargetKind,
+  toggleRebaseSelection,
+  toggleRebaseSelectionKind,
   toggleRebaseSkipEmptied,
   toggleRevisionSelection,
   toggleSquashAnchor,
@@ -1067,6 +1070,177 @@ test("rebase force-apply override appends --ignore-immutable without mutating dr
     "rebase -r a -d b --ignore-immutable",
   );
   expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+});
+
+// Three-revision variant of createState for exercising multiple rebase
+// targets: a (@, focused) → b → c, all in one column.
+function createThreeRevisionState(): AppState {
+  const base = createState();
+  return {
+    ...base,
+    revisions: [
+      ...base.revisions,
+      {
+        rowId: createRowId("33333333", "cccccccc"),
+        revisionId: "cccccccc",
+        parentRevisionIds: [],
+        changeIdPrefixLength: 1,
+        commitId: "33333333",
+        description: "third",
+        localTimestamp: "2026-03-30 07:22:41",
+        bookmarks: [],
+        workspaces: [],
+        graphRows: ["○  "],
+        isEmpty: false,
+        hasConflict: false,
+        marker: "plain",
+        filesLoaded: true,
+        files: [],
+      },
+    ],
+  };
+}
+
+test("rebase space selection defaults to subjects with -r and targets with -s/-b", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+  expect(getRebaseSelectionKind(state)).toBe("subject");
+
+  state = setRebaseSourceKind(state, "source", ["aaaaaaaa"]);
+  expect(getRebaseSelectionKind(state)).toBe("target");
+
+  state = setRebaseSourceKind(state, "source", ["aaaaaaaa"]);
+  expect(getRebaseSelectionKind(state)).toBe("subject");
+
+  state = setRebaseSourceKind(state, "branch");
+  expect(getRebaseSelectionKind(state)).toBe("target");
+});
+
+test("getRebaseSelectionKind is null outside a rebase draft", () => {
+  expect(getRebaseSelectionKind(createState())).toBeNull();
+
+  const duplicated = startCommandDraft(createState(), draftConfigs.duplicate);
+  expect(getRebaseSelectionKind(duplicated)).toBeNull();
+  expect(toggleRebaseSelectionKind(duplicated)).toBe(duplicated);
+});
+
+test("toggleRebaseSelectionKind flips the kind and source-kind changes reset the override", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+
+  state = toggleRebaseSelectionKind(state);
+  expect(getRebaseSelectionKind(state)).toBe("target");
+  state = toggleRebaseSelectionKind(state);
+  expect(getRebaseSelectionKind(state)).toBe("subject");
+
+  // An explicit override does not survive a source-kind change: the
+  // per-source-kind default applies again.
+  state = toggleRebaseSelectionKind(state);
+  state = setRebaseSourceKind(state, "branch");
+  expect(getRebaseSelectionKind(state)).toBe("target");
+
+  state = toggleRebaseSelectionKind(state);
+  expect(getRebaseSelectionKind(state)).toBe("subject");
+  state = setRebaseSourceKind(state, "branch");
+  expect(getRebaseSelectionKind(state)).toBe("subject");
+});
+
+test("toggleRebaseSelection adds subjects while the selection kind is subject", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+
+  state = toggleRebaseSelection(state);
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -r b -d ░░░░");
+});
+
+test("toggleRebaseSelection pins additional destinations in target mode", () => {
+  let state = createThreeRevisionState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+
+  state = toggleRebaseSelectionKind(state);
+  state = toggleRebaseSelection(state);
+  // Pinning b disables the cursor-following default; the cursor advanced to c
+  // but c is not a target until it is pinned too.
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+
+  state = toggleRebaseSelection(state);
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b -d c");
+});
+
+test("unpinning every rebase target restores the cursor-following destination", () => {
+  let state = createThreeRevisionState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
+  state = toggleRebaseSelectionKind(state);
+  state = toggleRebaseSelection(state);
+  state = toggleRebaseSelection(state);
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b -d c");
+
+  // Unpin c (focus holds on unpin), then move up and unpin b.
+  state = toggleRebaseSelection(state);
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+  state = moveFocus(state, -1);
+  state = toggleRebaseSelection(state);
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d b");
+
+  state = moveFocus(state, 1);
+  expect(getDisplayedCommandText(state)).toBe("rebase -r a -d c");
+});
+
+test("pinned rebase targets keep chips that follow the target kind", () => {
+  let state = createThreeRevisionState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
+  state = toggleRebaseSelectionKind(state);
+  state = toggleRebaseSelection(state);
+
+  expect(getCommandChipTextForRevision(state, SECOND_ROW_ID)).toBe("onto");
+  expect(getCommandTargetRowId(state)).toBeNull();
+
+  state = setRebaseTargetKind(state, "insert-before");
+  expect(getCommandChipTextForRevision(state, SECOND_ROW_ID)).toBe("before");
+
+  state = setRebaseTargetKind(state, "insert-after");
+  expect(getCommandChipTextForRevision(state, SECOND_ROW_ID)).toBe("after");
+});
+
+test("rebase target picking skips subjects and subject selection skips pinned targets", () => {
+  let state = createThreeRevisionState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: [] });
+  state = toggleRebaseSelectionKind(state);
+
+  // The focused subject cannot become a target.
+  state = moveFocus(state, -1);
+  const beforeSubjectPick = state;
+  state = toggleRebaseSelection(state);
+  expect(state).toBe(beforeSubjectPick);
+
+  // Pin b as a target, then a subject toggle on it must not select it.
+  state = moveFocus(state, 1);
+  state = toggleRebaseSelection(state);
+  state = toggleRebaseSelectionKind(state);
+  state = moveFocus(state, -1);
+  const beforeTargetSelect = state;
+  state = toggleRebaseSelection(state);
+  expect(state).toBe(beforeTargetSelect);
+  expect(state.selectedRowIds).toEqual([FIRST_ROW_ID]);
+});
+
+test("pinned targets compose with -s defaults and insert-before/insert-after flags", () => {
+  let state = createThreeRevisionState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+  state = setRebaseSourceKind(state, "source", ["aaaaaaaa"]);
+
+  // Descendants mode defaults the spacebar to picking targets.
+  state = toggleRebaseSelection(state);
+  state = toggleRebaseSelection(state);
+  expect(getDisplayedCommandText(state)).toBe("rebase -s a -d b -d c");
+
+  state = setRebaseTargetKind(state, "insert-before");
+  expect(getDisplayedCommandText(state)).toBe("rebase -s a -B b -B c");
+
+  state = setRebaseTargetKind(state, "insert-after");
+  expect(getDisplayedCommandText(state)).toBe("rebase -s a -A b -A c");
 });
 
 test("restore composes -f / -t and advances focus to the next revision", () => {

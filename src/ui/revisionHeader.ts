@@ -45,11 +45,19 @@ export function getRevisionChangeIdDisplayLength(
 
 export function getRevisionCommandChipBgColor(options: Readonly<{
   rowState: RevisionRowState;
+  pinnedTarget: boolean;
   colors: Readonly<{
     rowSelectedAccent: string | undefined;
+    rowPinnedTargetAccent: string | undefined;
     revsetPrefix: string | undefined;
   }>;
 }>): string | undefined {
+  // A pinned target stays blue even under the focus cursor, so a pinned row
+  // never reads as the cursor-following (magenta) target.
+  if (options.pinnedTarget) {
+    return options.colors.rowPinnedTargetAccent;
+  }
+
   switch (options.rowState) {
     case "selected":
       return options.colors.rowSelectedAccent;

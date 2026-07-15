@@ -216,8 +216,21 @@ test("getDirectCommandsForMode returns only rebase-local bindings", () => {
     "rebase-target-after",
     "rebase-target-before",
     "rebase-target-insert-between",
+    "rebase-toggle-selection",
+    "rebase-toggle-selection-kind",
     "rebase-toggle-skip-emptied",
   ]);
+});
+
+test("space and ctrl-space resolve to the rebase selection commands in rebase mode", () => {
+  const rebaseState = startCommandDraft(createState(), draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+  expect(resolveForState(" ", rebaseState)).toBe("rebase-toggle-selection");
+  expect(resolveForState("ctrl-space", rebaseState)).toBe("rebase-toggle-selection-kind");
+
+  // Duplicate and revert share the target picker but keep plain subject selection.
+  const duplicated = startCommandDraft(createState(), draftConfigs.duplicate);
+  expect(resolveForState(" ", duplicated)).toBe("toggle-revision-selection");
+  expect(resolveForState("ctrl-space", duplicated)).toBeNull();
 });
 
 test("R triggers restore-revision in normal mode", () => {

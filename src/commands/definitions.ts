@@ -79,6 +79,8 @@ export type CommandController = Readonly<{
   setRebaseSourceKind: (kind: RebaseSourceKind) => void;
   setRebaseTargetKind: (kind: RebaseTargetKind) => void;
   toggleRebaseSkipEmptied: () => void;
+  toggleRebaseSelection: () => void;
+  toggleRebaseSelectionKind: () => void;
   toggleSquashAnchor: () => void;
   toggleInterdiffSwap: () => void;
   undo: () => void;
@@ -746,6 +748,21 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Toggle --skip-emptied",
     description: "Skip revisions that become empty after the rebase",
     run: (controller) => controller.toggleRebaseSkipEmptied(),
+    group: "mode",
+  },
+  {
+    id: "rebase-toggle-selection",
+    title: "Select",
+    description: "Add or remove the focused revision as a rebase subject or an additional target, per the current spacebar behavior",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.toggleRebaseSelection(),
+    group: "mode",
+  },
+  {
+    id: "rebase-toggle-selection-kind",
+    title: "Select Subjects/Targets",
+    description: "Toggle whether space selects additional rebase subjects or additional targets",
+    run: (controller) => controller.toggleRebaseSelectionKind(),
     group: "mode",
   },
   {

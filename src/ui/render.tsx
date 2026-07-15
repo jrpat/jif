@@ -1443,10 +1443,14 @@ export function RevisionItem(props: {
       colors: colors(),
     })
   );
+  const isPinnedTarget = createMemo(() =>
+    (props.state.commandDraft?.rebaseTargetRowIds ?? []).includes(props.revision.rowId)
+  );
   const rowBackgroundColor = createMemo(() =>
     getRevisionRowBackgroundColor({
       focused: isFocused(),
       selected: isSelected(),
+      pinnedTarget: isPinnedTarget(),
       affected: isAffected(),
       colors: colors(),
     })
@@ -1467,6 +1471,7 @@ export function RevisionItem(props: {
       ? colors().chromeFillThree
       : getRevisionCommandChipBgColor({
         rowState: isCommandSource() ? "selected" : effectiveRowState(),
+        pinnedTarget: isPinnedTarget(),
         colors: colors(),
       })
   );

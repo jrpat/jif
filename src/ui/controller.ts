@@ -35,6 +35,7 @@ import {
   getFocusedRevisionArg,
   getInlineConfirmation,
   getInlineConfirmationActualCommand,
+  getRebaseSelectionKind,
   getSelectedRevisionIds,
   getSquashAnchorArg,
 } from "../state/store.ts";
@@ -90,6 +91,7 @@ type RestoreLogRevsetFromFileFilter = () => Promise<void>;
 // instead of stacking a new one per press.
 const PREVIEW_POSITION_TOAST_ID = "preview-position";
 const PREVIEW_CONTEXT_TOAST_ID = "preview-context";
+const REBASE_SELECTION_KIND_TOAST_ID = "rebase-selection-kind";
 
 export function createJifCommandController(args: Readonly<{
   store: AppStore;
@@ -850,6 +852,22 @@ export function createJifCommandController(args: Readonly<{
     },
     toggleRebaseSkipEmptied() {
       store.actions.toggleRebaseSkipEmptied();
+    },
+    toggleRebaseSelection() {
+      store.actions.toggleRebaseSelection();
+    },
+    toggleRebaseSelectionKind() {
+      store.actions.toggleRebaseSelectionKind();
+      // The spacebar behavior has no other visible indicator, so announce it.
+      // "success" (not "info") so it auto-dismisses and escape can clear it.
+      const kind = getRebaseSelectionKind(store.snapshot());
+      if (kind !== null) {
+        store.actions.upsertStatusMessage(
+          REBASE_SELECTION_KIND_TOAST_ID,
+          `Space selects: additional ${kind === "target" ? "targets" : "subjects"}`,
+          "success",
+        );
+      }
     },
     toggleInterdiffSwap() {
       store.actions.toggleInterdiffSwap();

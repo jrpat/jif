@@ -14,6 +14,7 @@ import type {
   InlineConfirmationOptionId,
   OperationLogEntry,
   PreviewPositionPreference,
+  RebaseSelectionKind,
   RebaseSourceKind,
   RebaseTargetKind,
   RepositoryData,
@@ -1748,11 +1749,107 @@ export function setRebaseSourceKind(
     commandDraft: {
       ...state.commandDraft,
       rebaseSourceKind: nextKind === "revisions" ? undefined : nextKind,
+      // A source-kind change discards any explicit spacebar override so the
+      // per-source-kind default (subjects for -r, targets for -s/-b) applies.
+      rebaseSelectionKind: undefined,
       descendantRevisionIds: nextKind === "source"
         ? descendantIds ?? state.commandDraft.descendantRevisionIds
         : state.commandDraft.descendantRevisionIds,
     },
   };
+}
+
+// What the spacebar selects in rebase mode. Moving a subtree (-s) or branch
+// (-b) already fixes the subjects, so those source kinds default the spacebar
+// to picking additional targets; plain -r defaults to picking more subjects.
+// Ctrl-space stores an explicit override until the source kind changes.
+export function getRebaseSelectionKind(state: AppState): RebaseSelectionKind | null {
+  const draft = state.commandDraft;
+  if (draft?.config.kind !== "rebase") {
+    return null;
+  }
+  if (draft.rebaseSelectionKind) {
+    return draft.rebaseSelectionKind;
+  }
+  return (draft.rebaseSourceKind ?? "revisions") === "revisions" ? "subject" : "target";
+}
+
+export function toggleRebaseSelectionKind(state: AppState): AppState {
+  const currentKind = getRebaseSelectionKind(state);
+  if (currentKind === null) {
+    return state;
+  }
+
+  return {
+    ...state,
+    commandDraft: {
+      ...state.commandDraft!,
+      rebaseSelectionKind: currentKind === "subject" ? "target" : "subject",
+    },
+  };
+}
+
+export function toggleRebaseSelection(state: AppState): AppState {
+  const selectionKind = getRebaseSelectionKind(state);
+  if (selectionKind === "target") {
+    return toggleRebaseTargetPick(state);
+  }
+
+  // A row pinned as a target cannot also become a subject.
+  const focused = getFocusedRevision(state);
+  if (focused && (state.commandDraft?.rebaseTargetRowIds ?? []).includes(focused.rowId)) {
+    return state;
+  }
+  return toggleRevisionSelection(state);
+}
+
+function toggleRebaseTargetPick(state: AppState): AppState {
+  if (state.commandDraft?.config.kind !== "rebase") {
+    return state;
+  }
+
+  const focused = getFocusedRevision(state);
+  if (!focused || focused.marker === "elided") {
+    return state;
+  }
+
+  // A subject cannot also be a target.
+  if (state.selectedRowIds.includes(focused.rowId)) {
+    return state;
+  }
+
+  const pinned = state.commandDraft.rebaseTargetRowIds ?? [];
+  const isPinned = pinned.includes(focused.rowId);
+  const nextPinned = isPinned
+    ? pinned.filter((rowId) => rowId !== focused.rowId)
+    : [...pinned, focused.rowId];
+
+  return {
+    ...state,
+    // Advance past a newly pinned row like normal multi-select; hold on unpin
+    // so the same row can be re-pinned without re-navigating.
+    focusedRevisionIndex: isPinned
+      ? state.focusedRevisionIndex
+      : clampIndex(state.focusedRevisionIndex + 1, state.revisions.length),
+    commandDraft: {
+      ...state.commandDraft,
+      rebaseTargetRowIds: nextPinned,
+    },
+  };
+}
+
+// The rebase targets are the pinned picks; while nothing is pinned the
+// cursor-following target serves as the default (see getCommandTargetRevisionId).
+function getPinnedRebaseTargetArgs(state: AppState): readonly string[] {
+  const draft = state.commandDraft;
+  if (!draft || !draftUsesTargetModes(draft.config.kind)) {
+    return [];
+  }
+
+  return (draft.rebaseTargetRowIds ?? [])
+    .map((rowId) => state.revisions.find((revision) => revision.rowId === rowId))
+    .filter((revision): revision is RevisionSummary => revision !== undefined)
+    .map((revision) => getRevisionArg(revision.revisionId, revision.changeIdPrefixLength));
 }
 
 export function setRebaseTargetKind(
@@ -2314,6 +2411,11 @@ export function getCommandTargetRevisionId(state: AppState): string | null {
     return null;
   }
 
+  // Likewise for pinned rebase targets.
+  if ((state.commandDraft.rebaseTargetRowIds ?? []).length > 0) {
+    return null;
+  }
+
   const focusedRevision = getFocusedRevision(state);
   if (!focusedRevision || state.selectedRowIds.includes(focusedRevision.rowId)) {
     return null;
@@ -2383,6 +2485,16 @@ export function getCommandChipTextForRevision(
     }
   }
 
+  // Pinned rebase targets keep their chips wherever the cursor goes.
+  if (usesTargetModes && (draft.rebaseTargetRowIds ?? []).includes(rowId)) {
+    switch (targetKind) {
+      case "insert-before": return "before";
+      case "insert-after": return "after";
+      case "insert-between": return "before";
+    }
+    return targetBadge;
+  }
+
   if (getCommandTargetRowId(state) === rowId) {
     if (usesTargetModes) {
       switch (targetKind) {
@@ -2419,6 +2531,11 @@ export function getCommandTargetRowId(state: AppState): string | null {
 
   // Pinned insert-before picks replace the cursor-following default target.
   if (state.commandDraft.config.kind === "new-between" && (state.commandDraft.newBetweenBeforeRowIds ?? []).length > 0) {
+    return null;
+  }
+
+  // Likewise for pinned rebase targets.
+  if ((state.commandDraft.rebaseTargetRowIds ?? []).length > 0) {
     return null;
   }
 
@@ -2472,6 +2589,10 @@ function buildContext(
   const target = revisionPrefix(state, getCommandTargetRevisionId(state) ?? "") || DRAFT_PLACEHOLDER;
   const sourceKind: RebaseSourceKind = draft.rebaseSourceKind ?? "revisions";
   const targetKind: RebaseTargetKind = draft.rebaseTargetKind ?? "destination";
+  // Pinned targets replace the cursor-following default; with no pins the
+  // singular target (or its placeholder) is the whole list.
+  const pinnedTargetArgs = getPinnedRebaseTargetArgs(state);
+  const targets: readonly string[] = pinnedTargetArgs.length > 0 ? pinnedTargetArgs : [target];
   const anchorRaw = draft.rebaseInsertAfterRevisionId
     ? revisionPrefix(state, draft.rebaseInsertAfterRevisionId)
     : "";
@@ -2550,15 +2671,16 @@ function buildContext(
         }
       },
       targetFlags: () => {
+        const flagged = (flag: string) => targets.map((t) => `${flag} ${t}`).join(" ");
         switch (targetKind) {
           case "insert-before":
-            return `${arg("-B --insert-before")} ${target}`;
+            return flagged(arg("-B --insert-before"));
           case "insert-after":
-            return `${arg("-A --insert-after")} ${target}`;
+            return flagged(arg("-A --insert-after"));
           case "insert-between":
-            return `${arg("-A --insert-after")} ${anchor} ${arg("-B --insert-before")} ${target}`;
+            return `${arg("-A --insert-after")} ${anchor} ${flagged(arg("-B --insert-before"))}`;
           default:
-            return `${arg("-d --destination")} ${target}`;
+            return flagged(arg("-d --destination"));
         }
       },
       skipEmptied: draft.rebaseSkipEmptied ?? false,
@@ -2591,6 +2713,10 @@ function buildTaggedContext(
     ? revisionPrefix(state, draft.rebaseInsertAfterRevisionId)
     : "";
   const taggedTarget = new Tagged(targetRaw === DRAFT_PLACEHOLDER ? "" : targetRaw, "target");
+  const pinnedTargetArgs = getPinnedRebaseTargetArgs(state);
+  const taggedTargets = pinnedTargetArgs.length > 0
+    ? pinnedTargetArgs.map((pinnedTarget) => new Tagged(pinnedTarget, "target"))
+    : [taggedTarget];
   const taggedAnchor = new Tagged(anchorRaw, "target");
   const subjectRaw = context.subject as string;
   const taggedSubject = new Tagged(subjectRaw === DRAFT_PLACEHOLDER ? "" : subjectRaw, "selected");
@@ -2615,15 +2741,16 @@ function buildTaggedContext(
         .join("|"),
       absorbSource: new Tagged(context.absorbSource as string, "target"),
       targetFlags: () => {
+        const flagged = (flag: string) => taggedTargets.map((t) => `${flag} ${t}`).join(" ");
         switch (targetKind) {
           case "insert-before":
-            return `${arg("-B --insert-before")} ${taggedTarget}`;
+            return flagged(arg("-B --insert-before"));
           case "insert-after":
-            return `${arg("-A --insert-after")} ${taggedTarget}`;
+            return flagged(arg("-A --insert-after"));
           case "insert-between":
-            return `${arg("-A --insert-after")} ${taggedAnchor} ${arg("-B --insert-before")} ${taggedTarget}`;
+            return `${arg("-A --insert-after")} ${taggedAnchor} ${flagged(arg("-B --insert-before"))}`;
           default:
-            return `${arg("-d --destination")} ${taggedTarget}`;
+            return flagged(arg("-d --destination"));
         }
       },
       sourceFlag: () => {
