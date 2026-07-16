@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { JjHelp } from "../src/jj/help.ts";
 import type { ComposeContext } from "../src/commands/compose-context.ts";
+import { resolveComposeContext } from "../src/commands/compose-context.ts";
 import {
   buildComposeItems,
   computeComposeAccept,
@@ -56,6 +57,22 @@ const BOOKMARK_SET: JjHelp = {
   subcommands: [],
   flags: [{ short: "-r", long: "--revision", valueToken: "REVSET", description: "Target" }],
   positionals: [{ token: "NAMES", optional: false, variadic: true, description: "The bookmarks" }],
+};
+
+const GIT: JjHelp = {
+  kind: "group",
+  hasSubcommands: true,
+  subcommands: [{ name: "push", aliases: [], description: "Push to a Git remote" }],
+  flags: [],
+  positionals: [],
+};
+
+const GIT_PUSH: JjHelp = {
+  kind: "leaf",
+  hasSubcommands: false,
+  subcommands: [],
+  flags: [{ short: "-b", long: "--bookmark", valueToken: "BOOKMARK", description: "Push only this bookmark" }],
+  positionals: [],
 };
 
 const REVSET_ITEMS: CompletionItem[] = [
@@ -180,6 +197,27 @@ describe("buildComposeItems", () => {
     expect(items.find((i) => i.id === "flag:--revision")).toBeDefined();
   });
 
+  test.each([
+    ["bookmark track", "BOOKMARK[@REMOTE]", "Bookmark name patterns or remote bookmark symbols to track"],
+    ["bookmark untrack", "BOOKMARK[@REMOTE]", "Bookmark name patterns or remote bookmark symbols to untrack"],
+    ["bookmark rename", "OLD", "The old name of the bookmark"],
+  ])("%s positional offers bookmark names", (command, token, description) => {
+    const items = buildComposeItems({
+      context: ctx({ kind: "flag-or-subcommand", path: command.split(" ") }),
+      help: {
+        kind: "leaf",
+        hasSubcommands: false,
+        subcommands: [],
+        flags: [],
+        positionals: [{ token, optional: false, variadic: true, description }],
+      },
+      revsetItems: [],
+      bookmarks: ["main", "feature/ui"],
+    });
+
+    expect(items.map((item) => item.id)).toEqual(["bmname:main", "bmname:feature/ui"]);
+  });
+
   test("revset value offers @, @- literals plus revset items", () => {
     const items = buildComposeItems({
       context: ctx({ kind: "value", token: "REVSETS", path: ["log"] } as Partial<ComposeContext> &
@@ -193,6 +231,31 @@ describe("buildComposeItems", () => {
     expect(items.find((i) => i.id === "fn:author:1")).toBeDefined();
     expect(items.find((i) => i.id === "rev:main")).toMatchObject({ tag: "bm", text: "main" });
   });
+
+  test.each(["git push -b ", "git push --bookmark "])(
+    "%s offers bookmark names for its value",
+    (text) => {
+      const helpFor = (path: readonly string[]) => {
+        if (path.length === 0) return TOP;
+        if (path.join(" ") === "git") return GIT;
+        if (path.join(" ") === "git push") return GIT_PUSH;
+        return undefined;
+      };
+      const context = resolveComposeContext(text, text.length, helpFor);
+      const items = buildComposeItems({
+        context,
+        help: GIT_PUSH,
+        revsetItems: [],
+        bookmarks: ["main", "feature/ui"],
+      });
+
+      expect(context).toMatchObject({ kind: "value", token: "BOOKMARK", path: ["git", "push"] });
+      expect(items).toEqual([
+        { id: "bmname:main", tag: "bm", text: "main" },
+        { id: "bmname:feature/ui", tag: "bm", text: "feature/ui" },
+      ]);
+    },
+  );
 
   test("enum value offers possible values", () => {
     const items = buildComposeItems({

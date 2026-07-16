@@ -61,11 +61,21 @@ function completionKindLabel(kind: CompletionKind): string {
   }
 }
 
+function isBookmarkToken(token: string): boolean {
+  return /^BOOKMARKS?(?:\[.*\])?$/.test(token);
+}
+
 // Bookmark subcommands whose positional argument is a bookmark name we can
-// complete (e.g. `jj bookmark set <NAMES>`, `delete`, `forget`, `move`).
+// complete. Older commands use generic NAME(S) tokens, while newer commands
+// such as track/untrack expose BOOKMARK[@REMOTE]. Rename uses OLD/NEW, so its
+// positional description is the only semantic marker available from JJ help.
 function isBookmarkNamePositional(help: JjHelp | undefined): boolean {
   if (!help) return false;
-  return help.positionals.some((positional) => /NAMES?/.test(positional.token));
+  return help.positionals.some((positional) =>
+    /NAMES?/.test(positional.token) ||
+    isBookmarkToken(positional.token) ||
+    /\bbookmarks?\b/i.test(positional.description)
+  );
 }
 
 type CommandCandidate =
@@ -195,8 +205,15 @@ function buildValueItems(
     return items;
   }
 
+  if (isBookmarkToken(context.token)) {
+    return fuzzyFilter(context.partial, bookmarks, (bookmark) => bookmark).map((bookmark) => ({
+      id: `bmname:${bookmark}`,
+      tag: "bm",
+      text: bookmark,
+    }));
+  }
+
   // Deferred tokens (FILESETS, TEMPLATE, REMOTE, MESSAGE, ...): no completion.
-  void bookmarks;
   return [];
 }
 

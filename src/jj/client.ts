@@ -341,11 +341,19 @@ export class JjClient {
 
   async loadBookmarks(): Promise<string[]> {
     try {
-      const result = await this.runJj(["bookmark", "list", "--color", "never"]);
+      const template = 'if(remote, "", name ++ "\\n")';
+      const result = await this.runJj([
+        "bookmark",
+        "list",
+        "--color",
+        "never",
+        "--template",
+        template,
+      ]);
       return result.stdout
         .split("\n")
-        .map((line) => line.match(/^(\S+)/)?.[1])
-        .filter((name): name is string => !!name);
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0);
     } catch {
       return [];
     }

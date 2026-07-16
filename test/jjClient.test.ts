@@ -24,6 +24,28 @@ test("resolveRepositoryLoadLimit accepts positive integer overrides and rejects 
   expect(resolveRepositoryLoadLimit(undefined, 250)).toBe(250);
 });
 
+test("loadBookmarks returns structured bookmark names without display punctuation", async () => {
+  const client = new JjClient(REPO_PATH);
+  const calls: readonly string[][] = [];
+
+  (client as unknown as {
+    runJj(args: readonly string[]): Promise<{ stdout: string; stderr: string; exitCode: number }>;
+  }).runJj = async (args) => {
+    (calls as string[][]).push([...args]);
+    return { stdout: "main\nfeature/ui\n", stderr: "", exitCode: 0 };
+  };
+
+  expect(await client.loadBookmarks()).toEqual(["main", "feature/ui"]);
+  expect(calls).toEqual([[
+    "bookmark",
+    "list",
+    "--color",
+    "never",
+    "--template",
+    'if(remote, "", name ++ "\\n")',
+  ]]);
+});
+
 test("tokenizeCommandText keeps quoted segments together", () => {
   expect(tokenizeCommandText('rebase -r abc123 -o "bookmark main"')).toEqual([
     "rebase",
