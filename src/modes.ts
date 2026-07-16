@@ -3,6 +3,7 @@ import type { CommandDefinition } from "./commands/definitions.ts";
 
 export type Mode =
   | "log"
+  | "revision-draft"
   | "normal"
   | "files"
   | "op-log"
@@ -36,33 +37,39 @@ export type ModeDefinition = Readonly<{
 }>;
 
 export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
-  // Abstract parent for the scrollable log views (revisions/op-log/evolog). It is
-  // never itself the active mode; it only exists so those three modes can share a
-  // single copy of the list-navigation, search, and preview bindings.
+  // Abstract parent for scrollable log modes. It is never itself active.
   log: { id: "log", inputPassthrough: false, label: "Log" },
+  // Abstract parent for revision operation composers. It keeps draft mechanics
+  // separate from both the shared log controls and revision-log-only commands.
+  "revision-draft": {
+    id: "revision-draft",
+    parent: "log",
+    inputPassthrough: false,
+    label: "Revision Draft",
+  },
   normal: { id: "normal", parent: "log", inputPassthrough: false, label: "Revisions" },
   files: { id: "files", inputPassthrough: false, label: "Files" },
   "op-log": { id: "op-log", parent: "log", inputPassthrough: false, label: "Op Log" },
   evolog: { id: "evolog", parent: "log", inputPassthrough: false, label: "Evolog" },
   "inline-confirmation": { id: "inline-confirmation", inputPassthrough: false, label: "Confirm" },
-  rebase: { id: "rebase", parent: "normal", inputPassthrough: false, label: "Rebase" },
-  duplicate: { id: "duplicate", parent: "normal", inputPassthrough: false, label: "Duplicate" },
-  revert: { id: "revert", parent: "normal", inputPassthrough: false, label: "Revert" },
-  restore: { id: "restore", parent: "normal", inputPassthrough: false, label: "Restore" },
-  squash: { id: "squash", parent: "normal", inputPassthrough: false, label: "Squash" },
-  interdiff: { id: "interdiff", parent: "normal", inputPassthrough: false, label: "Interdiff" },
-  diff: { id: "diff", parent: "normal", inputPassthrough: false, label: "Diff" },
-  absorb: { id: "absorb", parent: "normal", inputPassthrough: false, label: "Absorb" },
+  rebase: { id: "rebase", parent: "revision-draft", inputPassthrough: false, label: "Rebase" },
+  duplicate: { id: "duplicate", parent: "revision-draft", inputPassthrough: false, label: "Duplicate" },
+  revert: { id: "revert", parent: "revision-draft", inputPassthrough: false, label: "Revert" },
+  restore: { id: "restore", parent: "revision-draft", inputPassthrough: false, label: "Restore" },
+  squash: { id: "squash", parent: "revision-draft", inputPassthrough: false, label: "Squash" },
+  interdiff: { id: "interdiff", parent: "revision-draft", inputPassthrough: false, label: "Interdiff" },
+  diff: { id: "diff", parent: "revision-draft", inputPassthrough: false, label: "Diff" },
+  absorb: { id: "absorb", parent: "revision-draft", inputPassthrough: false, label: "Absorb" },
   command: { id: "command", inputPassthrough: true, label: "Command" },
   revset: { id: "revset", inputPassthrough: true, label: "Revset" },
   "file-search": { id: "file-search", inputPassthrough: true, label: "File Search" },
   search: { id: "search", inputPassthrough: true, label: "Search" },
   "diff-viewer": { id: "diff-viewer", inputPassthrough: false, label: "Diff" },
   notifications: { id: "notifications", inputPassthrough: false, label: "Notifications" },
-  bookmark: { id: "bookmark", parent: "normal", inputPassthrough: false, label: "Bookmark" },
-  "bookmark-move": { id: "bookmark-move", parent: "normal", inputPassthrough: false, label: "Bookmark Move" },
-  "set-parents": { id: "set-parents", parent: "normal", inputPassthrough: false, label: "Set Parents" },
-  "new-between": { id: "new-between", parent: "normal", inputPassthrough: false, label: "New Between" },
+  bookmark: { id: "bookmark", parent: "log", inputPassthrough: false, label: "Bookmark" },
+  "bookmark-move": { id: "bookmark-move", parent: "revision-draft", inputPassthrough: false, label: "Bookmark Move" },
+  "set-parents": { id: "set-parents", parent: "revision-draft", inputPassthrough: false, label: "Set Parents" },
+  "new-between": { id: "new-between", parent: "revision-draft", inputPassthrough: false, label: "New Between" },
   extra: { id: "extra", inputPassthrough: false, label: "Extra" },
 };
 
@@ -80,11 +87,6 @@ export const isCanonicalBinding = (binding: KeymapBinding): binding is string =>
   typeof binding === "string";
 
 const alias = (command: string): KeymapBinding => ({ command, canonical: false });
-
-const splitBindingsDisabled = {
-  "ctrl-s": null,
-  "alt-s": null,
-} satisfies Readonly<Record<string, KeymapBinding>>;
 
 // Preview-pane controls, shared by every mode that can show a preview
 // (revisions/files/op-log/evolog). Kept in one place so a key change lands in
@@ -112,9 +114,7 @@ export const defaultKeymap: Keymap = {
     q: "quit",
     "~": "open-notifications",
   },
-  // Shared by the scrollable log views. `normal`, `op-log`, and `evolog` inherit
-  // these via `parent: "log"`, so movement, the command bar, search, fast jump,
-  // help, and the preview controls live in exactly one place.
+  // Shared by scrollable log modes, including revision operation drafts.
   log: {
     j: "move-down",
     down: alias("move-down"),
@@ -126,7 +126,13 @@ export const defaultKeymap: Keymap = {
     "/": "search",
     f: "fast-jump",
     "?": "shortcut-panel",
+    "!": "force-last-command",
+    "-": "toggle-flags",
     ...previewBindings,
+  },
+  "revision-draft": {
+    enter: "confirm",
+    " ": "toggle-revision-selection",
   },
   normal: {
     J: "move-parent",
@@ -144,7 +150,6 @@ export const defaultKeymap: Keymap = {
     ">": "shell-command-bar",
     "ctrl-.": alias("shell-command-bar"),
     g: "git-command-bar",
-    "!": "force-last-command",
     enter: "confirm",
     r: "rebase",
     R: "restore-revision",
@@ -164,7 +169,6 @@ export const defaultKeymap: Keymap = {
     D: "describe",
     d: "show-revision-diff",
     " ": "toggle-revision-selection",
-    "-": "toggle-flags",
     _: "cycle-layout",
     u: "undo",
     "alt-u": "redo",
@@ -187,7 +191,6 @@ export const defaultKeymap: Keymap = {
     up: alias("move-up"),
     h: "collapse",
     left: alias("collapse"),
-    ...splitBindingsDisabled,
     r: "restore",
     d: "show-file-diff",
     "ctrl-u": "untrack",
@@ -216,7 +219,6 @@ export const defaultKeymap: Keymap = {
     enter: "confirm",
   },
   rebase: {
-    ...splitBindingsDisabled,
     s: "rebase-descendants",
     B: "rebase-source-branch",
     b: "rebase-target-before",
@@ -227,30 +229,25 @@ export const defaultKeymap: Keymap = {
     "ctrl-space": "rebase-toggle-selection-kind",
   },
   duplicate: {
-    ...splitBindingsDisabled,
     b: "rebase-target-before",
     a: "rebase-target-after",
     i: "rebase-target-insert-between",
   },
   revert: {
-    ...splitBindingsDisabled,
     b: "rebase-target-before",
     a: "rebase-target-after",
     i: "rebase-target-insert-between",
   },
-  restore: { ...splitBindingsDisabled },
+  restore: {},
   squash: {
-    ...splitBindingsDisabled,
     s: "squash-from-anchor",
     S: alias("squash-from-anchor"),
   },
   interdiff: {
-    ...splitBindingsDisabled,
     "=": "interdiff-swap",
   },
-  diff: { ...splitBindingsDisabled },
+  diff: {},
   absorb: {
-    ...splitBindingsDisabled,
     s: "absorb-descendants",
   },
   command: {
@@ -292,7 +289,6 @@ export const defaultKeymap: Keymap = {
     "?": "shortcut-panel",
   },
   bookmark: {
-    ...splitBindingsDisabled,
     c: "bookmark-create",
     m: "bookmark-move-from",
     M: "bookmark-move-to",
@@ -302,13 +298,11 @@ export const defaultKeymap: Keymap = {
     t: "bookmark-track",
     u: "bookmark-untrack",
   },
-  "bookmark-move": { ...splitBindingsDisabled },
+  "bookmark-move": {},
   "set-parents": {
-    ...splitBindingsDisabled,
     " ": "toggle-set-parents-pick",
   },
   "new-between": {
-    ...splitBindingsDisabled,
     " ": "toggle-new-between-before",
   },
   extra: {},

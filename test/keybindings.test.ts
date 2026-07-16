@@ -1296,16 +1296,16 @@ test("a null mode binding suppresses the inherited and global binding", () => {
     ...defaultKeymap,
     _global: {
       ...defaultKeymap._global,
-      "ctrl-s": "quit",
+      j: "quit",
     },
     rebase: {
       ...defaultKeymap.rebase,
-      "ctrl-s": null,
+      j: null,
     },
   };
 
   const handled = dispatchGlobalKey({
-    normalizedKey: "ctrl-s",
+    normalizedKey: "j",
     state,
     commands: commandDefinitions,
     controller: createController(calls),

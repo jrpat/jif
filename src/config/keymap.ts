@@ -130,6 +130,7 @@ function cloneKeymap(source: Keymap): MutableKeymap {
   return {
     _global: { ...source._global },
     log: { ...source.log },
+    "revision-draft": { ...source["revision-draft"] },
     normal: { ...source.normal },
     files: { ...source.files },
     "op-log": { ...source["op-log"] },
@@ -166,6 +167,7 @@ function toUserCommandId(value: string): string {
 const KEYMAP_SCOPES: readonly KeymapScope[] = [
   "_global",
   "log",
+  "revision-draft",
   "normal",
   "files",
   "op-log",

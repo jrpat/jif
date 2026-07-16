@@ -203,20 +203,80 @@ test("rebase-descendants resolves in rebase mode but not normal mode", () => {
 test("a null mode binding overrides an inherited command", () => {
   const keymap: Keymap = {
     ...defaultKeymap,
-    rebase: {
-      ...defaultKeymap.rebase,
-      "ctrl-s": null,
+    normal: {
+      ...defaultKeymap.normal,
+      j: null,
     },
   };
 
-  expect(resolveCommand("normal", "ctrl-s", keymap)).toBe("split");
-  expect(resolveCommand("rebase", "ctrl-s", keymap)).toBeNull();
+  expect(resolveCommand("log", "j", keymap)).toBe("move-down");
+  expect(resolveCommand("normal", "j", keymap)).toBeNull();
 });
 
 test("split bindings resolve only in revision-log mode", () => {
   for (const mode of Object.keys(modeDefinitions) as Mode[]) {
     expect(resolveCommand(mode, "ctrl-s")).toBe(mode === "normal" ? "split" : null);
     expect(resolveCommand(mode, "alt-s")).toBe(mode === "normal" ? "split-parallel" : null);
+  }
+});
+
+test("revision draft modes inherit Revision Draft instead of Normal", () => {
+  expect(modeDefinitions["revision-draft"].parent).toBe("log");
+
+  const modes = [
+    "rebase",
+    "duplicate",
+    "revert",
+    "restore",
+    "squash",
+    "interdiff",
+    "diff",
+    "absorb",
+    "bookmark-move",
+    "set-parents",
+    "new-between",
+  ] satisfies Mode[];
+
+  for (const mode of modes) {
+    expect(modeDefinitions[mode].parent).toBe("revision-draft");
+    expect(resolveCommand(mode, "j")).toBe("move-down");
+    expect(resolveCommand(mode, "n")).toBeNull();
+  }
+
+  expect(modeDefinitions.bookmark.parent).toBe("log");
+});
+
+test("Log owns retry and flag bindings while Revision Draft owns draft mechanics", () => {
+  expect(defaultKeymap.log["!"]).toBe("force-last-command");
+  expect(defaultKeymap.log["-"]).toBe("toggle-flags");
+  expect(defaultKeymap.normal["!"]).toBeUndefined();
+  expect(defaultKeymap.normal["-"]).toBeUndefined();
+  expect(defaultKeymap["revision-draft"].enter).toBe("confirm");
+  expect(defaultKeymap["revision-draft"][" "]).toBe("toggle-revision-selection");
+
+  for (const mode of ["normal", "op-log", "evolog", "revision-draft"] satisfies Mode[]) {
+    expect(resolveCommand(mode, "!")).toBe("force-last-command");
+    expect(resolveCommand(mode, "-")).toBe("toggle-flags");
+  }
+
+  const modes = [
+    "rebase",
+    "duplicate",
+    "revert",
+    "restore",
+    "squash",
+    "interdiff",
+    "diff",
+    "absorb",
+    "bookmark-move",
+    "set-parents",
+    "new-between",
+  ] satisfies Mode[];
+
+  for (const mode of modes) {
+    expect(resolveCommand(mode, "enter")).toBe("confirm");
+    expect(resolveCommand(mode, "!")).toBe("force-last-command");
+    expect(resolveCommand(mode, "-")).toBe("toggle-flags");
   }
 });
 
@@ -230,7 +290,7 @@ test("rebase mode binds source, target, and modifier keys", () => {
   expect(resolveForState("e", rebaseState)).toBe("rebase-toggle-skip-emptied");
 });
 
-test("getDirectCommandsForMode returns only rebase-local bindings", () => {
+test("getDirectCommandsForMode returns only rebase-specific bindings", () => {
   const commands = getDirectCommandsForMode("rebase", defaultKeymap, commandDefinitions);
 
   expect(commands.map((command) => command.id).sort()).toEqual([
@@ -482,7 +542,7 @@ test("absorb resolves on shift-a in normal mode", () => {
   expect(resolveForState("A", state)).toBe("absorb");
 });
 
-test("absorb draft activates absorb mode and keeps normal navigation", () => {
+test("absorb draft activates absorb mode with Log navigation and draft actions", () => {
   const drafted = startCommandDraft(createState(), draftConfigs.absorb, {
     presetRevisionIds: ["bbbbbbbb"],
   });
@@ -578,8 +638,8 @@ test("files mode keeps its self-contained file bindings", () => {
   expect(resolveForState("?", state)).toBe("shortcut-panel");
 
   // Mode-local in files
-  expect(defaultKeymap.files["ctrl-s"]).toBeNull();
-  expect(defaultKeymap.files["alt-s"]).toBeNull();
+  expect(defaultKeymap.files["ctrl-s"]).toBeUndefined();
+  expect(defaultKeymap.files["alt-s"]).toBeUndefined();
   expect(resolveForState("ctrl-s", state)).toBeNull();
   expect(resolveForState("alt-s", state)).toBeNull();
   expect(resolveForState("r", state)).toBe("restore");

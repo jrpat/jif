@@ -72,7 +72,7 @@ Press `?` in jif at any time to show keybindings for the current mode.
 
 Keybindings are per-mode. Global bindings are available in every mode and may be overridden by a mode-specific binding for the same key.
 
-The three scrollable log views — Normal (revisions), Operation Log, and Evolog — share a common **Log** binding set (movement, the command bar, search, fast jump, help, and the preview controls) that each inherits on top of its own keys. Each mode is annotated below with what, if anything, it inherits.
+Log-oriented modes share a common **Log** binding set: movement, the command bar, search, fast jump, help, preview, retry, and flag controls. Normal, Operation Log, Evolog, and Bookmark inherit Log directly. Revision operation composers such as Rebase and Squash inherit an abstract **Revision Draft** mode, which adds `enter` to confirm and `space` to select revisions on top of Log without inheriting revision-log-only commands from Normal. Each mode is annotated below with what, if anything, it inherits.
 
 ### Global
 
@@ -93,7 +93,7 @@ Available in every mode (mode-specific bindings can override these).
 
 ### Preview
 
-Controls for the [preview pane](#preview-pane). Available in Normal, Files, Operation Log, and Evolog via the shared Log binding set.
+Controls for the [preview pane](#preview-pane). Available in Normal, secondary revision modes, Operation Log, and Evolog through the shared Log bindings; Files defines the same controls directly.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -204,7 +204,7 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 
 ### Rebase
 
-Active while previewing a rebase. Inherits Normal. The default composition is `jj rebase -r <source> -d <target>`; each key below switches one knob of that composition and can be pressed again to toggle back to the default.
+Active while previewing a rebase. Inherits Revision Draft, not Normal revision operations. The default composition is `jj rebase -r <source> -d <target>`; each key below switches one knob of that composition and can be pressed again to toggle back to the default.
 
 `space` selects either additional **subjects** (more `-r` sources, the Normal-mode behavior) or additional **targets** (more destinations, e.g. `-d a -d b` to rebase onto a merge). The default follows the source kind: plain `-r` selects subjects, while `--source`/`--branch` — whose subjects are already fixed — select targets; `ctrl-space` toggles between the two behaviors (switching the source kind resets the toggle). Pinned targets keep their `onto`/`before`/`after` chips wherever the cursor goes, and the cursor-following default target is disabled until every pin is toggled off again. Pinned rows are tinted blue (chip and row background — `rowPinnedTargetAccent`/`rowPinnedTargetFill`), while the cursor-following focus keeps its usual magenta.
 
@@ -221,7 +221,7 @@ Active while previewing a rebase. Inherits Normal. The default composition is `j
 
 ### Duplicate
 
-Pressing `y` from Normal mode enters Duplicate mode against the focused revision. Inherits Normal. Composes `jj duplicate <source> -d <target>`; the source is tagged with a `copy` chip and the destination with an `onto` chip. Navigate to choose the target (or select more sources with `space`), then `enter` to run. Duplicate copies the revisions to the new location without touching the originals, so it has no `--source`/`--branch` knobs — only the destination picker below.
+Pressing `y` from Normal mode enters Duplicate mode against the focused revision. Inherits Revision Draft, not Normal. Composes `jj duplicate <source> -d <target>`; the source is tagged with a `copy` chip and the destination with an `onto` chip. Navigate to choose the target (or select more sources with `space`), then `enter` to run. Duplicate copies the revisions to the new location without touching the originals, so it has no `--source`/`--branch` knobs — only the destination picker below.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -231,7 +231,7 @@ Pressing `y` from Normal mode enters Duplicate mode against the focused revision
 
 ### Revert
 
-Pressing `alt-r` from Normal mode enters Revert mode against the focused revision. Inherits Normal. Composes `jj revert -r <source> -d <target>`, which creates a *new* revision undoing the source's changes at the chosen location — distinct from `revert-operation`, which targets the op log. The source is tagged with a `revert` chip and the destination with an `onto` chip; navigate to choose the target, then `enter` to run. Shares the same destination picker as Rebase and Duplicate.
+Pressing `alt-r` from Normal mode enters Revert mode against the focused revision. Inherits Revision Draft, not Normal. Composes `jj revert -r <source> -d <target>`, which creates a *new* revision undoing the source's changes at the chosen location — distinct from `revert-operation`, which targets the op log. The source is tagged with a `revert` chip and the destination with an `onto` chip; navigate to choose the target, then `enter` to run. Shares the same destination picker as Rebase and Duplicate.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -241,7 +241,7 @@ Pressing `alt-r` from Normal mode enters Revert mode against the focused revisio
 
 ### Squash
 
-Active while previewing a squash. Inherits Normal. Composes `jj squash -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run.
+Active while previewing a squash. Inherits Revision Draft, not Normal. Composes `jj squash -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run.
 
 Two keys from Normal mode enter squash mode:
 
@@ -254,11 +254,11 @@ Two keys from Normal mode enter squash mode:
 
 ### Restore
 
-Active while previewing a restore. Inherits Normal. Composes `jj restore -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run.
+Active while previewing a restore. Inherits Revision Draft, not Normal. Composes `jj restore -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run.
 
 ### Interdiff
 
-Active while previewing an interdiff. Inherits Normal. Composes `jj interdiff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run. The output opens in the diff viewer.
+Active while previewing an interdiff. Inherits Revision Draft, not Normal. Composes `jj interdiff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run. The output opens in the diff viewer.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -266,11 +266,11 @@ Active while previewing an interdiff. Inherits Normal. Composes `jj interdiff -f
 
 ### Diff
 
-Active while previewing a diff between two revisions. Inherits Normal. Composes `jj diff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run. The output opens in the diff viewer.
+Active while previewing a diff between two revisions. Inherits Revision Draft, not Normal. Composes `jj diff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run. The output opens in the diff viewer.
 
 ### Absorb
 
-Active while composing an absorb. Inherits Normal. The source is the revision focused when you pressed `A`, tagged with an `absorb` chip, and its mutable ancestors (the revisions `jj absorb` would consider by default) are preselected, each tagged with an `into` chip. Use `space` to toggle candidate targets — like selecting in Normal mode, the focus advances to the next revision on each toggle — then `enter` to apply, or `escape` to cancel. Leaving the preselected set unchanged runs plain `jj absorb` (with `--from <source>` when the source is not the working copy); changing it constrains the operation with `--into <selected revisions>`.
+Active while composing an absorb. Inherits Revision Draft, not Normal. The source is the revision focused when you pressed `A`, tagged with an `absorb` chip, and its mutable ancestors (the revisions `jj absorb` would consider by default) are preselected, each tagged with an `into` chip. Use `space` to toggle candidate targets — like selecting in Normal mode, the focus advances to the next revision on each toggle — then `enter` to apply, or `escape` to cancel. Leaving the preselected set unchanged runs plain `jj absorb` (with `--from <source>` when the source is not the working copy); changing it constrains the operation with `--into <selected revisions>`.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -278,17 +278,17 @@ Active while composing an absorb. Inherits Normal. The source is the revision fo
 
 ### Set Parents
 
-Pressing `M` from Normal mode enters Set Parents mode against the focused revision — the **subject** of the operation, tagged with a `subject` chip and the command-target highlight. Inherits Normal, so navigate with the usual keys (and incremental search with `/`). Use `space` to toggle a revision into the working parent set: a revision that is already a parent of the subject is tagged `remove` and will be dropped, while any other revision is tagged `add` and will be joined in as a co-parent — this is how you build a "megamerge". The command bar previews `jj rebase -r <subject> -d <parent> …` with the resulting parent set; `enter` runs it, `escape` cancels. The preview reflects today's parents until you change something, and running is blocked while the change would leave the subject with no parents. If the rebase is refused as immutable, retry it with `!`.
+Pressing `M` from Normal mode enters Set Parents mode against the focused revision — the **subject** of the operation, tagged with a `subject` chip and the command-target highlight. Inherits Revision Draft, not Normal, so navigate with the shared log keys (and incremental search with `/`). Use `space` to toggle a revision into the working parent set: a revision that is already a parent of the subject is tagged `remove` and will be dropped, while any other revision is tagged `add` and will be joined in as a co-parent — this is how you build a "megamerge". The command bar previews `jj rebase -r <subject> -d <parent> …` with the resulting parent set; `enter` runs it, `escape` cancels. The preview reflects today's parents until you change something, and running is blocked while the change would leave the subject with no parents. If the rebase is refused as immutable, retry it with `!`.
 
 ### New Between
 
-Pressing `alt-n` from Normal mode enters New Between mode. The revisions selected when you enter (or the focused revision if nothing is selected) become the `--insert-after` sources, each tagged with an `after` chip. The `--insert-before` target defaults to the focused revision — tagged `before` — and follows the cursor; navigate to place the new revision, then `enter` to run. Inherits Normal.
+Pressing `alt-n` from Normal mode enters New Between mode. The revisions selected when you enter (or the focused revision if nothing is selected) become the `--insert-after` sources, each tagged with an `after` chip. The `--insert-before` target defaults to the focused revision — tagged `before` — and follows the cursor; navigate to place the new revision, then `enter` to run. Inherits Revision Draft, not Normal.
 
 Use `space` to pin one or more explicit `--insert-before` targets: pinned revisions keep their `before` chips wherever the cursor goes, and the cursor-following default is disabled until every pin is toggled off again. The composed command is `jj new -A <source>… -B <target>…`. When one revision would be both the insert-after and insert-before target — the initial state, since focus starts on the sole source — the insertion degenerates to creating a plain child, and jif falls back to `jj new <revision>`.
 
 ### Bookmark
 
-Pressing `b` from Normal mode enters Bookmark mode and waits for the next keystroke. Each sub-key opens a `jj bookmark` flow scoped to the focused revision. Press Escape to leave Bookmark mode without doing anything.
+Pressing `b` from Normal mode enters Bookmark mode and waits for the next keystroke. It inherits Log, not Normal. Each sub-key opens a `jj bookmark` flow scoped to the focused revision. Press Escape to leave Bookmark mode without doing anything.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -618,7 +618,7 @@ export default {
 } satisfies Jif.Config;
 ```
 
-Besides the per-mode scopes (`normal`, `files`, `op-log`, `evolog`, …) and `_global`, there is a `log` scope shared by the three scrollable log views (Normal, Operation Log, Evolog). Binding a key under `log` rebinds it once for all three; a same-key binding in one of those modes still overrides the shared `log` binding for that mode.
+Besides the concrete per-mode scopes (`normal`, `files`, `op-log`, `evolog`, …) and `_global`, there are two shared scopes. `log` is inherited by Normal, Operation Log, Evolog, Bookmark, and Revision Draft. `revision-draft` inherits `log` and is itself inherited by operation composers such as Rebase and Squash. Binding a key under either shared scope rebinds it for every descendant; a same-key binding in a child mode still overrides the inherited binding there.
 
 Or define an inline command directly in the keymap:
 
@@ -668,7 +668,7 @@ export default {
 } satisfies Jif.Config;
 ```
 
-Unlike most modes, Extra does not inherit Normal-mode bindings, so the entire alphabetic keyspace is yours to bind without shadowing built-in commands.
+Extra inherits neither Log nor Normal bindings, so the entire alphabetic keyspace is yours to bind without shadowing built-in commands.
 
 </details>
 

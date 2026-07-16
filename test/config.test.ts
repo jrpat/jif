@@ -13,6 +13,7 @@ import {
   type AppConfig,
 } from "../src/config/index.ts";
 import { runCommand } from "../src/jj/process.ts";
+import { resolveCommand } from "../src/modes.ts";
 
 async function initJjWorkspace(parentDir: string, name = "repo"): Promise<string> {
   await runCommand(parentDir, ["jj", "git", "init", name]);
@@ -455,6 +456,17 @@ test("resolveConfiguredKeymap accepts null to unbind a key", () => {
   expect(resolved.keymap.normal.j).toBeNull();
 });
 
+test("resolveConfiguredKeymap supports bindings shared by revision drafts", () => {
+  const resolved = resolveConfiguredKeymap({
+    "revision-draft": {
+      x: "confirm",
+    },
+  });
+
+  expect(resolved.keymap["revision-draft"].x).toBe("confirm");
+  expect(resolveCommand("rebase", "x", resolved.keymap)).toBe("confirm");
+});
+
 test("resolveConfiguredKeymap deep-merges user bindings into the default keymap", () => {
   const resolved = resolveConfiguredKeymap({
     normal: {
@@ -471,8 +483,8 @@ test("resolveConfiguredKeymap deep-merges user bindings into the default keymap"
   expect(resolved.keymap._global.escape).toBe("cancel");
   expect(resolved.keymap.log.j).toBe("move-down");
   expect(resolved.keymap.normal.g).toBe("user:normal:g");
-  expect(resolved.keymap.files["ctrl-s"]).toBeNull();
-  expect(resolved.keymap.files["alt-s"]).toBeNull();
+  expect(resolved.keymap.files["ctrl-s"]).toBeUndefined();
+  expect(resolved.keymap.files["alt-s"]).toBeUndefined();
   expect(resolved.keymap.files.x).toBe("restore");
 });
 

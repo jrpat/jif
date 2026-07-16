@@ -290,6 +290,7 @@ test("computeShortcutPanelHeight follows the adaptive terminal-height rule", () 
 
 test("shortcutModeLabel formats the current mode for the panel header", () => {
   expect(shortcutModeLabel("normal")).toBe("Revisions");
+  expect(shortcutModeLabel("revision-draft")).toBe("Revision Draft");
   expect(shortcutModeLabel("files")).toBe("Files");
   expect(shortcutModeLabel("command")).toBe("Command");
   expect(shortcutModeLabel("rebase")).toBe("Rebase");
@@ -453,6 +454,8 @@ test("op-log inherits the shared log keys and globals below the divider", () => 
   expect(keys).toContain("k");
   expect(keys).toContain("p");
   expect(keys).toContain("ctrl-[");
+  expect(keys).toContain("!");
+  expect(keys).toContain("-");
   // Globals
   expect(keys).toContain("q");
   expect(keys).toContain("ctrl-z");
@@ -473,6 +476,8 @@ test("evolog has no direct bindings and inherits everything from the log parent"
   expect(inherited).toContain("G");
   expect(inherited).toContain("j");
   expect(inherited).toContain("p");
+  expect(inherited).toContain("!");
+  expect(inherited).toContain("-");
   expect(inherited).toContain("q");
 });
 
@@ -487,6 +492,8 @@ test("normal still surfaces the shared log keys alongside its revision commands"
   expect(keys).toContain("j");
   expect(keys).toContain("p");
   expect(keys).toContain("ctrl-[");
+  expect(keys).toContain("!");
+  expect(keys).toContain("-");
   // Revision-specific keys remain directly on normal
   expect(keys).toContain("s");
   expect(keys).toContain("n");
@@ -510,11 +517,11 @@ test("collectCanonicalBindingsForMode excludes alias bindings (canonical: false)
 test("collectCanonicalBindingsForMode excludes null bindings and their inherited commands", () => {
   const resolved = resolveConfiguredKeymap({
     rebase: {
-      "ctrl-s": null,
+      j: null,
     },
   });
 
   const keys = collectCanonicalBindingsForMode("rebase", resolved.keymap).map((binding) => binding.key);
 
-  expect(keys).not.toContain("ctrl-s");
+  expect(keys).not.toContain("j");
 });

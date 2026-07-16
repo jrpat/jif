@@ -218,7 +218,7 @@ test("escape cancels set-parents and clears the working pick set", () => {
 test("M enters set-parents from normal and space toggles a parent pick inside it", () => {
   expect(resolveCommand("normal", "M")).toBe("set-parents");
   expect(resolveCommand("set-parents", " ")).toBe("toggle-set-parents-pick");
-  // Navigation and confirmation are inherited from normal.
+  // Navigation comes from Log; confirmation comes from Revision Draft.
   expect(resolveCommand("set-parents", "j")).toBe("move-down");
   expect(resolveCommand("set-parents", "enter")).toBe("confirm");
 });
