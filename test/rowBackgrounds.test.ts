@@ -4,7 +4,6 @@ import { getChangedFileRowBackgroundColor, getRevisionRowBackgroundColor } from 
 const colors = {
   rowFocusedFill: "focused",
   rowSelectedFill: "selected",
-  rowPinnedTargetFill: "pinned",
   rowAffectedFill: "affected",
 };
 
@@ -12,7 +11,7 @@ test("getRevisionRowBackgroundColor lets focus override selection", () => {
   expect(getRevisionRowBackgroundColor({
     focused: true,
     selected: true,
-    pinnedTarget: false,
+    commandRoleFill: undefined,
     affected: false,
     colors,
   })).toBe("focused");
@@ -22,30 +21,30 @@ test("getRevisionRowBackgroundColor falls back to selection before affected", ()
   expect(getRevisionRowBackgroundColor({
     focused: false,
     selected: true,
-    pinnedTarget: false,
+    commandRoleFill: undefined,
     affected: true,
     colors,
   })).toBe("selected");
 });
 
-test("getRevisionRowBackgroundColor fills pinned targets ahead of affected rows", () => {
+test("getRevisionRowBackgroundColor lets a command role fill win over every other state", () => {
+  expect(getRevisionRowBackgroundColor({
+    focused: true,
+    selected: true,
+    commandRoleFill: "role",
+    affected: true,
+    colors,
+  })).toBe("role");
+});
+
+test("getRevisionRowBackgroundColor tints unfocused chip rows with their role fill", () => {
   expect(getRevisionRowBackgroundColor({
     focused: false,
     selected: false,
-    pinnedTarget: true,
+    commandRoleFill: "role",
     affected: true,
     colors,
-  })).toBe("pinned");
-});
-
-test("getRevisionRowBackgroundColor keeps the focus fill on a focused pinned target", () => {
-  expect(getRevisionRowBackgroundColor({
-    focused: true,
-    selected: false,
-    pinnedTarget: true,
-    affected: false,
-    colors,
-  })).toBe("focused");
+  })).toBe("role");
 });
 
 test("getChangedFileRowBackgroundColor lets focus override selection", () => {

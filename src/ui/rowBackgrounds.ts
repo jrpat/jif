@@ -5,20 +5,23 @@ type SemanticColors = ResolvedAppConfig["colorScheme"]["semanticColors"];
 export function getRevisionRowBackgroundColor(options: Readonly<{
   focused: boolean;
   selected: boolean;
-  pinnedTarget: boolean;
+  commandRoleFill: string | undefined;
   affected: boolean;
-  colors: Pick<SemanticColors, "rowFocusedFill" | "rowSelectedFill" | "rowPinnedTargetFill" | "rowAffectedFill">;
+  colors: Pick<SemanticColors, "rowFocusedFill" | "rowSelectedFill" | "rowAffectedFill">;
 }>): string | undefined {
+  // A chip-bearing row is tinted with the dim version of its chip color; that
+  // pairing wins even under the focus cursor so chip and background never
+  // disagree.
+  if (options.commandRoleFill !== undefined) {
+    return options.commandRoleFill;
+  }
+
   if (options.focused) {
     return options.colors.rowFocusedFill;
   }
 
   if (options.selected) {
     return options.colors.rowSelectedFill;
-  }
-
-  if (options.pinnedTarget) {
-    return options.colors.rowPinnedTargetFill;
   }
 
   if (options.affected) {

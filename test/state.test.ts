@@ -58,6 +58,7 @@ import {
   selectAbsorbDescendants,
   toggleFileSelection,
   getOperationAffectedRowIds,
+  getFocusTone,
   getRebaseSelectionKind,
   setRebaseSourceKind,
   setRebaseTargetKind,
@@ -1243,6 +1244,26 @@ test("pinned targets compose with -s defaults and insert-before/insert-after fla
 
   state = setRebaseTargetKind(state, "insert-after");
   expect(getDisplayedCommandText(state)).toBe("rebase -s a -A b -A c");
+});
+
+test("getFocusTone is browse without a draft and draft for non-rebase drafts", () => {
+  expect(getFocusTone(createState())).toBe("browse");
+  expect(getFocusTone(startCommandDraft(createState(), draftConfigs.squash))).toBe("draft");
+  expect(getFocusTone(startCommandDraft(createState(), draftConfigs.duplicate))).toBe("draft");
+});
+
+test("getFocusTone stays draft while rebase space selects subjects and is target when it pins targets", () => {
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+  expect(getFocusTone(state)).toBe("draft");
+
+  state = toggleRebaseSelectionKind(state);
+  expect(getFocusTone(state)).toBe("target");
+  state = toggleRebaseSelectionKind(state);
+  expect(getFocusTone(state)).toBe("draft");
+
+  state = setRebaseSourceKind(state, "source", ["aaaaaaaa"]);
+  expect(getFocusTone(state)).toBe("target");
 });
 
 test("restore composes -f / -t and advances focus to the next revision", () => {

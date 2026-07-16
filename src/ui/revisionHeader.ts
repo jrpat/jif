@@ -43,27 +43,53 @@ export function getRevisionChangeIdDisplayLength(
   return Math.min(maxChangeIdLength, longestUniquePrefix + Math.max(0, additionalChars));
 }
 
-export function getRevisionCommandChipBgColor(options: Readonly<{
+export type RevisionCommandRoleColors = Readonly<{
+  chipBg: string | undefined;
+  rowFill: string | undefined;
+  border: string | undefined;
+}>;
+
+// Chip color, row fill, and border travel together as one triple keyed by the
+// row's role in the composed command, so a chip-bearing row can never show a
+// background that disagrees with its chip. A pinned target stays blue even
+// under the focus cursor, so a pinned row never reads as the cursor-following
+// (magenta) target.
+export function getRevisionCommandRoleColors(options: Readonly<{
   rowState: RevisionRowState;
   pinnedTarget: boolean;
   colors: Readonly<{
     rowSelectedAccent: string | undefined;
+    rowSelectedFill: string | undefined;
+    rowBorderSelected: string | undefined;
     rowPinnedTargetAccent: string | undefined;
+    rowPinnedTargetFill: string | undefined;
+    rowBorderPinnedTarget: string | undefined;
     revsetPrefix: string | undefined;
+    rowDraftFocusedFill: string | undefined;
+    rowBorderDraftFocus: string | undefined;
   }>;
-}>): string | undefined {
-  // A pinned target stays blue even under the focus cursor, so a pinned row
-  // never reads as the cursor-following (magenta) target.
+}>): RevisionCommandRoleColors {
   if (options.pinnedTarget) {
-    return options.colors.rowPinnedTargetAccent;
+    return {
+      chipBg: options.colors.rowPinnedTargetAccent,
+      rowFill: options.colors.rowPinnedTargetFill,
+      border: options.colors.rowBorderPinnedTarget,
+    };
   }
 
-  switch (options.rowState) {
-    case "selected":
-      return options.colors.rowSelectedAccent;
-    default:
-      return options.colors.revsetPrefix;
+  if (options.rowState === "selected") {
+    return {
+      chipBg: options.colors.rowSelectedAccent,
+      rowFill: options.colors.rowSelectedFill,
+      border: options.colors.rowBorderSelected,
+    };
   }
+
+  return {
+    chipBg: options.colors.revsetPrefix,
+    rowFill: options.colors.rowDraftFocusedFill,
+    border: options.colors.rowBorderDraftFocus,
+  };
 }
 
 export function buildRevisionChangeIdSegments(

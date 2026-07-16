@@ -1797,6 +1797,25 @@ export function toggleRebaseSelectionKind(state: AppState): AppState {
   };
 }
 
+// What a chip-less focused row's highlight should communicate. A row carrying
+// a command chip tints itself from the chip color instead (see
+// getRevisionCommandRoleColors), so this tone covers the rest: while browsing,
+// focus is a neutral cursor; while composing a command it takes the draft's
+// magenta accent; in rebase's target-picking spacebar mode it turns blue to
+// preview the pin that space would add once pins have replaced the
+// cursor-following target.
+export type FocusTone = "browse" | "draft" | "target";
+
+export function getFocusTone(state: AppState): FocusTone {
+  if (!state.commandDraft) {
+    return "browse";
+  }
+  if (state.commandDraft.config.kind === "rebase" && getRebaseSelectionKind(state) === "target") {
+    return "target";
+  }
+  return "draft";
+}
+
 export function toggleRebaseSelection(state: AppState): AppState {
   const selectionKind = getRebaseSelectionKind(state);
   if (selectionKind === "target") {

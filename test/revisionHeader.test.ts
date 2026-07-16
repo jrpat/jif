@@ -4,7 +4,7 @@ import {
   buildRevisionChangeIdSegments,
   formatRelativeAgo,
   getRevisionChangeIdDisplayLength,
-  getRevisionCommandChipBgColor,
+  getRevisionCommandRoleColors,
   getRevisionChangeIdColors,
   getRevisionSelectionMarker,
   getRevisionDescriptionColor,
@@ -297,41 +297,44 @@ test("getRevisionSelectionMarker fills the one-character slot after the change i
   expect(getRevisionSelectionMarker("default")).toBe(" ");
 });
 
-test("getRevisionCommandChipBgColor matches selected row accent", () => {
-  const color = getRevisionCommandChipBgColor({
-    rowState: "selected",
-    pinnedTarget: false,
-    colors: {
-      rowSelectedAccent: "selected",
-      rowPinnedTargetAccent: "pinned",
-      revsetPrefix: "prefix",
-    },
-  });
+const roleColors = {
+  rowSelectedAccent: "selected-accent",
+  rowSelectedFill: "selected-fill",
+  rowBorderSelected: "selected-border",
+  rowPinnedTargetAccent: "pinned-accent",
+  rowPinnedTargetFill: "pinned-fill",
+  rowBorderPinnedTarget: "pinned-border",
+  revsetPrefix: "target-accent",
+  rowDraftFocusedFill: "target-fill",
+  rowBorderDraftFocus: "target-border",
+};
 
-  expect(color).toBe("selected");
+test("getRevisionCommandRoleColors pairs the selected chip with the selection fill and border", () => {
+  expect(getRevisionCommandRoleColors({ rowState: "selected", pinnedTarget: false, colors: roleColors })).toEqual({
+    chipBg: "selected-accent",
+    rowFill: "selected-fill",
+    border: "selected-border",
+  });
 });
 
-test("getRevisionCommandChipBgColor uses the focused revision accent for target rows", () => {
-  const color = getRevisionCommandChipBgColor({
-    rowState: "focused",
-    pinnedTarget: false,
-    colors: {
-      rowSelectedAccent: "selected",
-      rowPinnedTargetAccent: "pinned",
-      revsetPrefix: "prefix",
-    },
-  });
-
-  expect(color).toBe("prefix");
-});
-
-test("getRevisionCommandChipBgColor uses the pinned accent for pinned targets, even focused ones", () => {
-  const colors = {
-    rowSelectedAccent: "selected",
-    rowPinnedTargetAccent: "pinned",
-    revsetPrefix: "prefix",
+test("getRevisionCommandRoleColors pairs the target chip with the draft fill and border, focused or not", () => {
+  const expected = {
+    chipBg: "target-accent",
+    rowFill: "target-fill",
+    border: "target-border",
   };
 
-  expect(getRevisionCommandChipBgColor({ rowState: "default", pinnedTarget: true, colors })).toBe("pinned");
-  expect(getRevisionCommandChipBgColor({ rowState: "focused", pinnedTarget: true, colors })).toBe("pinned");
+  expect(getRevisionCommandRoleColors({ rowState: "focused", pinnedTarget: false, colors: roleColors })).toEqual(expected);
+  expect(getRevisionCommandRoleColors({ rowState: "default", pinnedTarget: false, colors: roleColors })).toEqual(expected);
+});
+
+test("getRevisionCommandRoleColors keeps pinned targets blue even under the cursor", () => {
+  const expected = {
+    chipBg: "pinned-accent",
+    rowFill: "pinned-fill",
+    border: "pinned-border",
+  };
+
+  expect(getRevisionCommandRoleColors({ rowState: "default", pinnedTarget: true, colors: roleColors })).toEqual(expected);
+  expect(getRevisionCommandRoleColors({ rowState: "focused", pinnedTarget: true, colors: roleColors })).toEqual(expected);
 });

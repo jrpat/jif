@@ -193,8 +193,12 @@ test("resolveAppConfig keeps the focused row fill subtle", () => {
     palette: FALLBACK_PALETTE_LIGHT,
   });
 
-  expect(dark.colorScheme.semanticColors.rowFocusedFill).toBe("#120012");
-  expect(light.colorScheme.semanticColors.rowFocusedFill).toBe("#fbe8fb");
+  // Browse focus is a neutral foreground-derived grey; the magenta accent
+  // moved to the draft-composing focus fill.
+  expect(dark.colorScheme.semanticColors.rowFocusedFill).toBe("#151515");
+  expect(light.colorScheme.semanticColors.rowFocusedFill).toBe("#e8e8e8");
+  expect(dark.colorScheme.semanticColors.rowDraftFocusedFill).toBe("#120012");
+  expect(light.colorScheme.semanticColors.rowDraftFocusedFill).toBe("#fbe8fb");
 });
 
 test("resolveAppConfig keeps prompt suggestion focus on the old blue fill", () => {

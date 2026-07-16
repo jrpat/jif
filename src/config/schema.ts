@@ -25,6 +25,7 @@ export type SemanticColorScheme = Readonly<{
   promptSuggestionFocusedFill: SemanticColorValue;
   previewPaneFill: SemanticColorValue;
   rowFocusedFill: SemanticColorValue;
+  rowDraftFocusedFill: SemanticColorValue;
   rowSelectedFill: SemanticColorValue;
   rowSelectedAccent: SemanticColorValue;
   rowPinnedTargetFill: SemanticColorValue;
@@ -33,7 +34,9 @@ export type SemanticColorScheme = Readonly<{
   rowCommandTargetBorder: SemanticColorValue;
   rowBorderIdle: SemanticColorValue;
   rowBorderFocus: SemanticColorValue;
+  rowBorderDraftFocus: SemanticColorValue;
   rowBorderSelected: SemanticColorValue;
+  rowBorderPinnedTarget: SemanticColorValue;
   rowBorderCommandTarget: SemanticColorValue;
   graphWorkingCopy: SemanticColorValue;
   graphPlain: SemanticColorValue;
@@ -165,8 +168,12 @@ const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   promptSuggestionFocusedFill: { source: "blue",   opacity: 0.15 },
   previewPaneFill:        { source: "foreground",  opacity: DEFAULT_PREVIEW_PANE_FILL_OPACITY },
 
-  // Row states
-  rowFocusedFill:         { source: "magenta",     opacity: 0.09 },
+  // Row states. Browsing focus is a neutral grey; while composing a command a
+  // chip-bearing row is tinted with the dim fill paired to its chip color
+  // (draft magenta, selected green, pinned-target blue), and a chip-less
+  // focused row takes the draft accent (`rowDraftFocusedFill`).
+  rowFocusedFill:         { source: "foreground",  opacity: 0.09 },
+  rowDraftFocusedFill:    { source: "magenta",     opacity: 0.09 },
   rowSelectedFill:        { source: "green",       opacity: 0.12 },
   rowSelectedAccent:      { source: "green",       opacity: 1.0  },
   rowPinnedTargetFill:    { source: "blue",        opacity: 0.12 },
@@ -174,8 +181,10 @@ const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   rowAffectedFill:        { source: "green",       opacity: 0.12 },
   rowCommandTargetBorder: { source: "yellow",      opacity: 1.0  },
   rowBorderIdle:          { source: "foreground",  opacity: 0.20 },
-  rowBorderFocus:         { source: "magenta",     opacity: 0.50 },
+  rowBorderFocus:         { source: "foreground",  opacity: 0.50 },
+  rowBorderDraftFocus:    { source: "magenta",     opacity: 0.50 },
   rowBorderSelected:      { source: "green",       opacity: 0.50 },
+  rowBorderPinnedTarget:  { source: "blue",        opacity: 0.50 },
   rowBorderCommandTarget: { source: "yellow",      opacity: 0.50 },
 
   // Graph markers

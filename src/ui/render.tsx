@@ -16,6 +16,7 @@ import {
   getDisplayedCommandSegments,
   getDisplayedCommandText,
   getExpandedRevision,
+  getFocusTone,
   getFocusedRevision,
   getFocusedOperationLogEntry,
   getFocusedRevisionArg,
@@ -55,7 +56,7 @@ import {
   buildRevisionChangeIdSegments,
   formatRelativeAgo,
   getRevisionChangeIdDisplayLength,
-  getRevisionCommandChipBgColor,
+  getRevisionCommandRoleColors,
   getRevisionChangeIdColors,
   getRevisionDescriptionColor,
   getRevisionSelectionMarker,
@@ -1426,34 +1427,8 @@ export function RevisionItem(props: {
   const connectedPrevLeftCol = () => sharesTopBorder() ? prevLeftCol() : null;
   const nextLeftCol = () => nextBoxedGraphWidth() !== null ? nextBoxedGraphWidth()! + 1 : null;
   const connectedNextLeftCol = () => sharesBottomBorder() ? nextLeftCol() : null;
-  const borderColor = createMemo(() =>
-    rowState() === "selected"
-      ? colors().rowBorderSelected
-      : rowState() === "focused"
-        ? colors().rowBorderFocus
-        : isCommandTarget()
-        ? colors().rowBorderCommandTarget
-        : colors().rowBorderIdle
-  );
-  const titleGraphColor = createMemo(() => markerColor(props.revision, colors()));
-  const continuationGraphColor = createMemo(() => colors().textTertiary);
-  const descriptionColor = createMemo(() =>
-    getRevisionDescriptionColor(props.revision, {
-      rowState: effectiveRowState(),
-      colors: colors(),
-    })
-  );
   const isPinnedTarget = createMemo(() =>
     (props.state.commandDraft?.rebaseTargetRowIds ?? []).includes(props.revision.rowId)
-  );
-  const rowBackgroundColor = createMemo(() =>
-    getRevisionRowBackgroundColor({
-      focused: isFocused(),
-      selected: isSelected(),
-      pinnedTarget: isPinnedTarget(),
-      affected: isAffected(),
-      colors: colors(),
-    })
   );
   const isCommandSource = createMemo(() =>
     props.state.commandDraft !== null &&
@@ -1466,14 +1441,66 @@ export function RevisionItem(props: {
       (draft.absorbDefaultRowIds ?? []).includes(props.revision.rowId) &&
       !props.state.selectedRowIds.includes(props.revision.rowId);
   });
-  const commandChipBackgroundColor = createMemo(() =>
-    isAbsorbDefaultDeselected()
-      ? colors().chromeFillThree
-      : getRevisionCommandChipBgColor({
+  // A row carrying a command chip takes its chip color, row fill, and border
+  // as one inseparable triple, so the background is always the dim version of
+  // the chip. The muted absorb "default" reminder is the one chip without a
+  // role; it keeps its chrome styling below.
+  const commandRoleColors = createMemo(() =>
+    commandChipText() === null || isAbsorbDefaultDeselected()
+      ? null
+      : getRevisionCommandRoleColors({
         rowState: isCommandSource() ? "selected" : effectiveRowState(),
         pinnedTarget: isPinnedTarget(),
         colors: colors(),
       })
+  );
+  const focusTone = createMemo(() => getFocusTone(props.state));
+  // Focus tone styles only chip-less focused rows; a chip-bearing row keeps
+  // its role colors under the cursor.
+  const focusFillColor = createMemo(() => {
+    switch (focusTone()) {
+      case "browse": return colors().rowFocusedFill;
+      case "draft": return colors().rowDraftFocusedFill;
+      case "target": return colors().rowPinnedTargetFill;
+    }
+  });
+  const focusBorderColor = createMemo(() => {
+    switch (focusTone()) {
+      case "browse": return colors().rowBorderFocus;
+      case "draft": return colors().rowBorderDraftFocus;
+      case "target": return colors().rowBorderPinnedTarget;
+    }
+  });
+  const borderColor = createMemo(() =>
+    rowState() === "selected"
+      ? colors().rowBorderSelected
+      : rowState() === "focused"
+        ? (commandRoleColors()?.border ?? focusBorderColor())
+        : isCommandTarget()
+        ? colors().rowBorderCommandTarget
+        : (commandRoleColors()?.border ?? colors().rowBorderIdle)
+  );
+  const titleGraphColor = createMemo(() => markerColor(props.revision, colors()));
+  const continuationGraphColor = createMemo(() => colors().textTertiary);
+  const descriptionColor = createMemo(() =>
+    getRevisionDescriptionColor(props.revision, {
+      rowState: effectiveRowState(),
+      colors: colors(),
+    })
+  );
+  const rowBackgroundColor = createMemo(() =>
+    getRevisionRowBackgroundColor({
+      focused: isFocused(),
+      selected: isSelected(),
+      commandRoleFill: commandRoleColors()?.rowFill,
+      affected: isAffected(),
+      colors: { ...colors(), rowFocusedFill: focusFillColor() },
+    })
+  );
+  const commandChipBackgroundColor = createMemo(() =>
+    isAbsorbDefaultDeselected()
+      ? colors().chromeFillThree
+      : commandRoleColors()?.chipBg
   );
   // The dim "default" chip needs foreground-derived text to stay legible on the
   // faint track-colored fill; other chips keep the high-contrast background tone.
