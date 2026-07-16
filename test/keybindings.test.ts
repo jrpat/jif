@@ -1124,6 +1124,28 @@ test("dispatchGlobalKey routes [ to the previous bookmark", () => {
   expect(calls).toEqual(["moveFocusToBookmark:-1"]);
 });
 
+test("dispatchGlobalKey routes [ at the first bookmark so it can fall back to @", () => {
+  const calls: string[] = [];
+  const base = createState();
+  const state: AppState = {
+    ...base,
+    focusedRevisionIndex: 1,
+    revisions: base.revisions.map((revision, index) =>
+      index === 1 ? { ...revision, bookmarks: ["feature"] } : revision
+    ),
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "[",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["moveFocusToBookmark:-1"]);
+});
+
 test("dispatchGlobalKey routes } to the next workspace", () => {
   const calls: string[] = [];
   const base = createState();
@@ -1154,6 +1176,28 @@ test("dispatchGlobalKey routes { to the previous workspace", () => {
     focusedRevisionIndex: 1,
     revisions: base.revisions.map((revision, index) =>
       index === 0 ? { ...revision, workspaces: ["default"] } : revision
+    ),
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "{",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["moveFocusToWorkspace:-1"]);
+});
+
+test("dispatchGlobalKey routes { at the first workspace so it can fall back to @", () => {
+  const calls: string[] = [];
+  const base = createState();
+  const state: AppState = {
+    ...base,
+    focusedRevisionIndex: 1,
+    revisions: base.revisions.map((revision, index) =>
+      index === 1 ? { ...revision, workspaces: ["default"] } : revision
     ),
   };
 

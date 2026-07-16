@@ -624,11 +624,19 @@ function moveFocusToIndex(state: AppState, nextIndex: number | null): AppState {
 }
 
 export function moveFocusToWorkspace(state: AppState, direction: 1 | -1): AppState {
-  return moveFocusToIndex(state, getAdjacentWorkspaceRevisionIndex(state, direction));
+  const nextIndex = getAdjacentWorkspaceRevisionIndex(state, direction);
+  if (direction === -1 && nextIndex === null) {
+    return focusWorkingCopy(state);
+  }
+  return moveFocusToIndex(state, nextIndex);
 }
 
 export function moveFocusToBookmark(state: AppState, direction: 1 | -1): AppState {
-  return moveFocusToIndex(state, getAdjacentBookmarkRevisionIndex(state, direction));
+  const nextIndex = getAdjacentBookmarkRevisionIndex(state, direction);
+  if (direction === -1 && nextIndex === null) {
+    return focusWorkingCopy(state);
+  }
+  return moveFocusToIndex(state, nextIndex);
 }
 
 export function focusRevisionAt(state: AppState, index: number): AppState {

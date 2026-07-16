@@ -122,9 +122,9 @@ Viewing and navigating the revision log.
 | `K` | move-child | Follow the graph to the nearest visible child, skipping branches |
 | `alt-j` | jump-to-next-divergent | When the focused revision is divergent (showing the `/N` suffix), cycle to the next visible sibling sharing its change-id |
 | `]` | move-to-next-bookmark | Jump down to the next visible revision that has a bookmark, without wrapping |
-| `[` | move-to-prev-bookmark | Jump up to the previous visible revision that has a bookmark, without wrapping |
+| `[` | move-to-prev-bookmark | Jump up to the previous visible revision that has a bookmark, falling back to `@` when there is none |
 | `}` | move-to-next-workspace | Jump down to the next visible revision that has a workspace, without wrapping |
-| `{` | move-to-prev-workspace | Jump up to the previous visible revision that has a workspace, without wrapping |
+| `{` | move-to-prev-workspace | Jump up to the previous visible revision that has a workspace, falling back to `@` when there is none |
 | `@` | jump-to-working-copy | Jump to the working-copy revision |
 | `G` | jump-to-bottom | Jump to the last revision in the log |
 
@@ -691,11 +691,11 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `focusWorkingCopy()` | Focus the working-copy revision |
 | `forceLastCommand()` | Retry the last retryable failed command with the requested override flag |
 | `moveFocus(delta)` | Move focus by `delta` rows in the active list |
-| `moveFocusToBookmark(direction)` | Move to the next (`1`) or previous (`-1`) visible bookmark |
+| `moveFocusToBookmark(direction)` | Move to the next (`1`) or previous (`-1`) visible bookmark; previous falls back to the working copy |
 | `moveFocusToChild()` | Focus the nearest visible child revision |
 | `moveFocusToNextDivergentSibling()` | Cycle to another visible divergent sibling |
 | `moveFocusToParent()` | Focus the nearest visible parent revision |
-| `moveFocusToWorkspace(direction)` | Move to the next (`1`) or previous (`-1`) visible workspace marker |
+| `moveFocusToWorkspace(direction)` | Move to the next (`1`) or previous (`-1`) visible workspace marker; previous falls back to the working copy |
 | `nextSearchMatch()` | Jump to the next search match |
 | `openEvolog()` | Open the evolution log for the focused revision |
 | `openFocusedRevision()` | Expand the focused revision details |

@@ -695,7 +695,7 @@ test("moveFocusToWorkspace does not wrap past the last workspace revision", () =
   expect(after.focusedRevisionIndex).toBe(3);
 });
 
-test("moveFocusToWorkspace jumps backward in the opposite direction without wrapping", () => {
+test("moveFocusToWorkspace jumps backward, then falls back to the working copy", () => {
   let state = createWorkspaceNavigationState();
   state = focusRevisionAt(state, 4);
 
@@ -705,9 +705,10 @@ test("moveFocusToWorkspace jumps backward in the opposite direction without wrap
   state = moveFocusToWorkspace(state, -1);
   expect(state.focusedRevisionIndex).toBe(1);
 
+  const beforeRequest = state.revisionScrollRequest;
   const after = moveFocusToWorkspace(state, -1);
-  expect(after).toBe(state);
-  expect(after.focusedRevisionIndex).toBe(1);
+  expect(after.focusedRevisionIndex).toBe(0);
+  expect(after.revisionScrollRequest).toBe(beforeRequest + 1);
 });
 
 test("moveFocusToWorkspace skips elided revisions even if they carry a workspace", () => {
@@ -799,7 +800,7 @@ test("moveFocusToBookmark does not wrap past the last bookmark revision", () => 
   expect(after.focusedRevisionIndex).toBe(3);
 });
 
-test("moveFocusToBookmark jumps backward in the opposite direction without wrapping", () => {
+test("moveFocusToBookmark jumps backward, then falls back to the working copy", () => {
   let state = createBookmarkNavigationState();
   state = focusRevisionAt(state, 4);
 
@@ -809,9 +810,10 @@ test("moveFocusToBookmark jumps backward in the opposite direction without wrapp
   state = moveFocusToBookmark(state, -1);
   expect(state.focusedRevisionIndex).toBe(1);
 
+  const beforeRequest = state.revisionScrollRequest;
   const after = moveFocusToBookmark(state, -1);
-  expect(after).toBe(state);
-  expect(after.focusedRevisionIndex).toBe(1);
+  expect(after.focusedRevisionIndex).toBe(0);
+  expect(after.revisionScrollRequest).toBe(beforeRequest + 1);
 });
 
 test("moveFocusToBookmark skips elided revisions even if they carry a bookmark", () => {

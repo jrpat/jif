@@ -265,8 +265,10 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   {
     id: "move-to-prev-workspace",
     title: "Previous Workspace",
-    description: "Focus the previous visible revision that has a workspace",
-    canExecute: (state) => getAdjacentWorkspaceRevisionIndex(state, -1) !== null,
+    description: "Focus the previous visible workspace revision, or the working copy",
+    canExecute: (state) =>
+      getAdjacentWorkspaceRevisionIndex(state, -1) !== null ||
+      state.revisions.some((revision) => revision.marker === "working-copy"),
     run: (controller) => controller.moveFocusToWorkspace(-1),
   },
   {
@@ -279,8 +281,10 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   {
     id: "move-to-prev-bookmark",
     title: "Previous Bookmark",
-    description: "Focus the previous visible revision that has a bookmark",
-    canExecute: (state) => getAdjacentBookmarkRevisionIndex(state, -1) !== null,
+    description: "Focus the previous visible bookmark revision, or the working copy",
+    canExecute: (state) =>
+      getAdjacentBookmarkRevisionIndex(state, -1) !== null ||
+      state.revisions.some((revision) => revision.marker === "working-copy"),
     run: (controller) => controller.moveFocusToBookmark(-1),
   },
   {
