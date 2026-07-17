@@ -41,7 +41,7 @@ jobs:
       publish: ${{ steps.target.outputs.publish }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -114,7 +114,7 @@ jobs:
             binary: dist/jif
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.plan.outputs.ref }}
 
@@ -215,7 +215,7 @@ jobs:
       TAG: ${{ needs.plan.outputs.tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.plan.outputs.ref }}
 
