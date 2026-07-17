@@ -5,6 +5,7 @@ import { initProjectConfig, initUserConfig, refreshUserConfigTypes } from "./con
 import { loadAppConfig } from "./config/loadConfig.ts";
 import { logShortcutDebug } from "./debug.ts";
 import { materializeSampleRepoCachedViaCli } from "./dev/sampleRepoLauncher.ts";
+import { CommandExecutionError } from "./jj/process.ts";
 import { configureOpenTUIPaletteIdleTimeout } from "./opentuiPaletteIdleTimeout.ts";
 import { configureOpenTUITreeSitterWorker } from "./opentuiTreeSitterWorker.ts";
 import { jifVersion } from "./version.ts";
@@ -52,9 +53,6 @@ async function runInitConfig(options: InitConfigOptions): Promise<void> {
 }
 
 async function runApp(argv: readonly string[], options: RunOptions): Promise<void> {
-  configureOpenTUITreeSitterWorker();
-  configureOpenTUIPaletteIdleTimeout();
-
   const fixturePath = options.sampleName !== undefined
     ? resolve(`test/fixtures/${options.sampleName || "sample-repo"}.jsonl`)
     : undefined;
@@ -67,6 +65,9 @@ async function runApp(argv: readonly string[], options: RunOptions): Promise<voi
         fixturePath,
       })).repoPath
     : process.cwd();
+
+  configureOpenTUITreeSitterWorker();
+  configureOpenTUIPaletteIdleTimeout();
 
   await refreshUserConfigTypes(
     options.configReplacement === undefined ? {} : { configPath: options.configReplacement },
@@ -98,7 +99,22 @@ async function runApp(argv: readonly string[], options: RunOptions): Promise<voi
     refreshConfigTypes: () => refreshUserConfigTypes(
       options.configReplacement === undefined ? {} : { configPath: options.configReplacement },
     ),
+    onStartupError: (error) => {
+      console.error(formatStartupError(error, repoPath));
+      process.exitCode = 1;
+    },
   });
+}
+
+function formatStartupError(error: unknown, repoPath: string): string {
+  if (
+    error instanceof CommandExecutionError &&
+    error.command.includes("log") &&
+    error.stderr.includes("There is no jj repo")
+  ) {
+    return `jif: ${repoPath} is not a Jujutsu repository`;
+  }
+  return error instanceof Error ? error.message : String(error);
 }
 
 async function ensureRuntimeTempDir(): Promise<string> {

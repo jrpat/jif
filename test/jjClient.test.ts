@@ -476,26 +476,22 @@ test("loadRepository can ignore the working copy for passive refreshes", async (
   expect(capturedCalls.every((call) => call.options?.workingCopy === "read-only")).toBeTrue();
 });
 
-test("verifyRepository can ignore the working copy for passive refreshes", async () => {
+test("loadRepository prefers the jj log error when all startup reads fail", async () => {
   const client = new JjClient(REPO_PATH);
-  let capturedArgs: readonly string[] = [];
-  let capturedOptions: { workingCopy?: string } | undefined;
 
   (client as unknown as {
     runJj(
       args: readonly string[],
-      options?: { workingCopy?: string },
     ): Promise<{ stdout: string; stderr: string; exitCode: number }>;
-  }).runJj = async (args, options) => {
-    capturedArgs = args;
-    capturedOptions = options;
-    return { stdout: "", stderr: "", exitCode: 0 };
+  }).runJj = async (args) => {
+    if (args[0] === "log") {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      throw new Error("jj log says there is no repo");
+    }
+    throw new Error("workspace list failed first");
   };
 
-  await client.verifyRepository({ workingCopy: "read-only" });
-
-  expect(capturedArgs).toEqual(["root"]);
-  expect(capturedOptions?.workingCopy).toBe("read-only");
+  await expect(client.loadRepository()).rejects.toThrow("jj log says there is no repo");
 });
 
 test("loadOperationLog keeps jj graph output enabled", async () => {

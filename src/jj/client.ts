@@ -93,10 +93,20 @@ export class JjClient {
     if (revset) {
       args.push("-r", revset);
     }
-    const [logOutput, workspaceRefs] = await Promise.all([
+    const [logResult, workspaceRefsResult] = await Promise.allSettled([
       this.runJj(args, runOptions),
       this.loadWorkspaceRefs(runOptions),
     ]);
+    // A failed `jj log` is the startup repository-validity signal. Prefer its
+    // diagnostic when both startup reads fail (as they do outside a repo).
+    if (logResult.status === "rejected") {
+      throw logResult.reason;
+    }
+    if (workspaceRefsResult.status === "rejected") {
+      throw workspaceRefsResult.reason;
+    }
+    const logOutput = logResult.value;
+    const workspaceRefs = workspaceRefsResult.value;
 
     const revisions = parseLogOutput(logOutput.stdout);
 
@@ -337,10 +347,6 @@ export class JjClient {
     const stderr = result.stderr.trim();
     const stdout = result.stdout.trim();
     return stderr || stdout || `Executed: jj ${quoteCommand(args)}`;
-  }
-
-  async verifyRepository(options?: WorkingCopyRefreshOptions): Promise<void> {
-    await this.runJj(["root"], options);
   }
 
   async loadWorkspaceRoot(options?: WorkingCopyRefreshOptions): Promise<string> {

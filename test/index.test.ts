@@ -1,6 +1,37 @@
 import { expect, test } from "bun:test";
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { formatUsageText, parseCommand } from "../src/cliOptions.ts";
 import { main } from "../src/index.ts";
+
+async function runJif(args: readonly string[], cwd: string, useImplicitCwd = false) {
+  const proc = Bun.spawn({
+    cmd: useImplicitCwd
+      ? [process.execPath, "test/helpers/runJifFromCwd.ts", cwd, ...args]
+      : [process.execPath, join(process.cwd(), "index.ts"), ...args],
+    cwd: useImplicitCwd ? process.cwd() : cwd,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    proc.kill();
+  }, 3000);
+
+  try {
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    return { stdout, stderr, exitCode, timedOut };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 test("default command is run with no flags", () => {
   expect(parseCommand([])).toEqual({
@@ -79,6 +110,26 @@ test("main prints usage for --help", async () => {
 
   expect(output.join("\n")).toContain("Subcommands:");
 });
+
+test("implicit non-repository cwd exits 1 with an error on stderr", async () => {
+  const nonRepo = await mkdtemp(join(tmpdir(), "jif-non-repo-cwd-"));
+  const result = await runJif([], nonRepo, true);
+
+  expect(result.timedOut).toBeFalse();
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain(nonRepo);
+  expect(result.stderr).toContain("not a Jujutsu repository");
+}, 10000);
+
+test("explicit non-repository --repo exits 1 with an error on stderr", async () => {
+  const nonRepo = await mkdtemp(join(tmpdir(), "jif-non-repo-flag-"));
+  const result = await runJif(["--repo", nonRepo], process.cwd());
+
+  expect(result.timedOut).toBeFalse();
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain(nonRepo);
+  expect(result.stderr).toContain("not a Jujutsu repository");
+}, 10000);
 
 test("run command parses startup flags", () => {
   expect(parseCommand(["--long-flags", "--repo", "../repo"])).toEqual({

@@ -7,7 +7,6 @@ import {
 } from "../jj/client.ts";
 
 type RepositoryRefreshClient = {
-  verifyRepository(options?: WorkingCopyRefreshOptions): Promise<void>;
   loadRepository(
     limit?: number,
     revset?: string,
@@ -32,6 +31,10 @@ export type RepositoryRefreshOptions = WorkingCopyRefreshOptions & Readonly<{
   // Explicit refreshes (ctrl-r, terminal focus) use this so the store —
   // including the relative-time anchor lastRefreshedAt — always re-anchors.
   force?: boolean;
+  // Startup has no usable UI to recover into, so its initial load propagates
+  // failures to the process entrypoint. Interactive refreshes keep reporting
+  // failures as toast events.
+  throwOnError?: boolean;
 }>;
 
 export function createRepositoryRefresher(args: {
@@ -61,7 +64,6 @@ export function createRepositoryRefresher(args: {
     let refreshPromise!: Promise<boolean>;
     refreshPromise = (async () => {
       try {
-        await args.client.verifyRepository(options);
         const repositoryData = await args.client.loadRepository(effectiveLimit, effectiveRevset, options);
         if ((args.getRefreshScope?.() ?? "") !== refreshScope) {
           return false;
@@ -91,8 +93,11 @@ export function createRepositoryRefresher(args: {
         return true;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        args.actions.pushEvent(message, "error");
         args.actions.setLoading(false);
+        if (options?.throwOnError) {
+          throw error;
+        }
+        args.actions.pushEvent(message, "error");
         return false;
       } finally {
         if (refreshInFlightByScope.get(refreshScope) === refreshPromise) {

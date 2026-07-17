@@ -35,9 +35,6 @@ test("createRepositoryRefresher reloads using the active revset", async () => {
 
   const refreshRepository = createRepositoryRefresher({
     client: {
-      async verifyRepository() {
-        calls.push("verify");
-      },
       async loadRepository(_limit, revset) {
         calls.push(`load:${revset ?? ""}`);
         return repositoryData;
@@ -60,10 +57,7 @@ test("createRepositoryRefresher reloads using the active revset", async () => {
   const result = await refreshRepository();
 
   expect(result).toBe(true);
-  expect(calls).toEqual([
-    "verify",
-    "load:mine()",
-  ]);
+  expect(calls).toEqual(["load:mine()"]);
   expect(appliedRepositoryData).toEqual(repositoryData);
 });
 
@@ -72,9 +66,6 @@ test("createRepositoryRefresher forwards the working-copy refresh mode", async (
 
   const refreshRepository = createRepositoryRefresher({
     client: {
-      async verifyRepository(options) {
-        calls.push(`verify:${options?.workingCopy ?? "snapshot"}`);
-      },
       async loadRepository(_limit, _revset, options) {
         calls.push(`load:${options?.workingCopy ?? "snapshot"}`);
         return createRepositoryData();
@@ -94,9 +85,7 @@ test("createRepositoryRefresher forwards the working-copy refresh mode", async (
   await refreshRepository(undefined, undefined, { workingCopy: "snapshot" });
 
   expect(calls).toEqual([
-    "verify:read-only",
     "load:read-only",
-    "verify:snapshot",
     "load:snapshot",
   ]);
 });
@@ -106,9 +95,6 @@ test("createRepositoryRefresher forwards an explicit revision load limit", async
 
   const refreshRepository = createRepositoryRefresher({
     client: {
-      async verifyRepository() {
-        calls.push("verify");
-      },
       async loadRepository(limit, revset) {
         calls.push(`load:${revset ?? ""}:${limit ?? ""}`);
         return createRepositoryData();
@@ -127,10 +113,7 @@ test("createRepositoryRefresher forwards an explicit revision load limit", async
   const result = await refreshRepository(undefined, 21);
 
   expect(result).toBe(true);
-  expect(calls).toEqual([
-    "verify",
-    "load:mine():21",
-  ]);
+  expect(calls).toEqual(["load:mine():21"]);
 });
 
 test("createRepositoryRefresher reuses the last explicit revision load limit", async () => {
@@ -138,9 +121,6 @@ test("createRepositoryRefresher reuses the last explicit revision load limit", a
 
   const refreshRepository = createRepositoryRefresher({
     client: {
-      async verifyRepository() {
-        calls.push("verify");
-      },
       async loadRepository(limit) {
         calls.push(`load:${limit ?? ""}`);
         return createRepositoryData();
@@ -160,9 +140,7 @@ test("createRepositoryRefresher reuses the last explicit revision load limit", a
   await refreshRepository();
 
   expect(calls).toEqual([
-    "verify",
     "load:21",
-    "verify",
     "load:21",
   ]);
 });
@@ -172,7 +150,6 @@ test("createRepositoryRefresher reports refresh metadata for lazy loading", asyn
 
   const refreshRepository = createRepositoryRefresher({
     client: {
-      async verifyRepository() {},
       async loadRepository() {
         return {
           repoPath: "/tmp/repo",
@@ -210,7 +187,6 @@ test("createRepositoryRefresher skips applying unchanged repository data", async
 
   const refreshRepository = createRepositoryRefresher({
     client: {
-      async verifyRepository() {},
       async loadRepository() {
         return {
           repoPath: "/tmp/repo",
@@ -247,7 +223,6 @@ test("createRepositoryRefresher applies unchanged repository data when forced", 
 
   const refreshRepository = createRepositoryRefresher({
     client: {
-      async verifyRepository() {},
       async loadRepository() {
         return { repoPath: "/tmp/repo", revisions: [] };
       },
@@ -281,7 +256,6 @@ test("createRepositoryRefresher applies repository data again once it changes", 
 
   const refreshRepository = createRepositoryRefresher({
     client: {
-      async verifyRepository() {},
       async loadRepository() {
         return {
           repoPath: "/tmp/repo",
@@ -315,7 +289,6 @@ test("createRepositoryRefresher coalesces concurrent refresh requests", async ()
 
   const refreshRepository = createRepositoryRefresher({
     client: {
-      async verifyRepository() {},
       loadRepository() {
         loadCalls += 1;
         return loadDeferred.promise;
@@ -350,7 +323,6 @@ test("createRepositoryRefresher does not coalesce or apply stale refreshes acros
 
   const refreshRepository = createRepositoryRefresher({
     client: {
-      async verifyRepository() {},
       loadRepository() {
         loadCalls += 1;
         return loadCalls === 1 ? firstLoad.promise : secondLoad.promise;
@@ -388,11 +360,8 @@ test("createRepositoryRefresher reports refresh failures and clears loading", as
 
   const refreshRepository = createRepositoryRefresher({
     client: {
-      async verifyRepository() {
-        throw new Error("Not a jj workspace");
-      },
       async loadRepository() {
-        throw new Error("should not load");
+        throw new Error("Not a jj workspace");
       },
     },
     actions: {
@@ -414,6 +383,32 @@ test("createRepositoryRefresher reports refresh failures and clears loading", as
   expect(result).toBe(false);
   expect(loadingStates).toEqual([false]);
   expect(events).toEqual([{ text: "Not a jj workspace", level: "error" }]);
+});
+
+test("createRepositoryRefresher propagates initial load failures without creating a toast", async () => {
+  const events: string[] = [];
+  const refreshRepository = createRepositoryRefresher({
+    client: {
+      async loadRepository() {
+        throw new Error("There is no jj repo");
+      },
+    },
+    actions: {
+      setLoading() {},
+      applyRepositoryData() {
+        throw new Error("refresh should not succeed");
+      },
+      pushEvent(text) {
+        events.push(text);
+      },
+    },
+    getRevsetQuery: () => "",
+  });
+
+  await expect(
+    refreshRepository(undefined, undefined, { workingCopy: "snapshot", throwOnError: true }),
+  ).rejects.toThrow("There is no jj repo");
+  expect(events).toEqual([]);
 });
 
 test("bindRefreshOnFocus snapshots the working copy on focus and unsubscribes cleanly", async () => {

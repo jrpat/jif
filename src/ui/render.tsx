@@ -150,6 +150,7 @@ export function JifView(props: {
   rawConfig: AppConfig;
   reloadConfig: (projectStartDir: string) => Promise<{ raw: AppConfig; resolved: ResolvedAppConfig }>;
   refreshConfigTypes?: () => Promise<unknown>;
+  onStartupError?: (error: unknown) => void;
 }) {
   const { store, client } = props;
   const helpCache = new JjHelpCache(client);
@@ -325,7 +326,10 @@ export function JifView(props: {
           refreshRepository,
         });
       }
-    })();
+    })().catch((error) => {
+      renderer.destroy();
+      props.onStartupError?.(error);
+    });
 
     const disposeRendererEvents = bindViewRendererEvents({
       renderer,

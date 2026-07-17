@@ -53,7 +53,9 @@ test("startInitialRepositoryLoad refreshes concurrently with palette detection b
       return "";
     },
     refreshRepository: async (revset, limit, options) => {
-      events.push(`refresh:${revset}:${limit}:${options?.workingCopy ?? "snapshot"}`);
+      events.push(
+        `refresh:${revset}:${limit}:${options?.workingCopy ?? "snapshot"}:${options?.throwOnError ?? false}`,
+      );
       signalRefreshDone();
       return true;
     },
@@ -70,7 +72,7 @@ test("startInitialRepositoryLoad refreshes concurrently with palette detection b
 
   // The initial refresh must not wait for palette detection.
   await refreshDone;
-  expect(events).toContain("refresh:all():21:snapshot");
+  expect(events).toContain("refresh:all():21:snapshot:true");
   expect(events).not.toContain("palette.done");
 
   // Readiness must still wait for palette detection, so the first painted
@@ -90,7 +92,7 @@ test("startInitialRepositoryLoad refreshes concurrently with palette detection b
     workspaceRoot: "/repo",
     initialRevset: "all()",
   });
-  const refreshIndex = events.indexOf("refresh:all():21:snapshot");
+  const refreshIndex = events.indexOf("refresh:all():21:snapshot:true");
   const focusIndex = events.indexOf("focus-working-copy");
   expect(events).toContain("palette.done");
   expect(focusIndex).toBeGreaterThan(refreshIndex);

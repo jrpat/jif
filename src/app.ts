@@ -15,6 +15,7 @@ export async function runJifApplication(
   options: Readonly<{
     reloadConfig: (projectStartDir: string) => Promise<{ raw: AppConfig; resolved: ResolvedAppConfig }>;
     refreshConfigTypes?: () => Promise<unknown>;
+    onStartupError: (error: unknown) => void;
   }>,
 ): Promise<void> {
   const persistence = createPersistenceService();
@@ -42,6 +43,7 @@ export async function runJifApplication(
       rawConfig,
       reloadConfig: options.reloadConfig,
       refreshConfigTypes: options.refreshConfigTypes,
+      onStartupError: options.onStartupError,
     }),
     {
       exitOnCtrlC: true,

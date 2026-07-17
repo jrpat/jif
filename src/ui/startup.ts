@@ -178,7 +178,10 @@ export function startInitialRepositoryLoad(args: {
     }
 
     await Promise.all([
-      args.refreshRepository(initialRevset || undefined, args.initialRevisionLimit, { workingCopy: "snapshot" }),
+      args.refreshRepository(initialRevset || undefined, args.initialRevisionLimit, {
+        workingCopy: "snapshot",
+        throwOnError: true,
+      }),
       paletteDetection,
     ]);
     args.focusWorkingCopy();
