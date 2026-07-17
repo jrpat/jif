@@ -55,6 +55,14 @@ Write the notes to `.tmp/release-notes.md`:
 - `## Highlights` — a few sentences or bullets of curated prose covering the
   user-facing changes that matter. Read the actual commits (`jj show`) when a
   subject line is not enough. Skip internal churn.
+
+  Write from the reader's point of view: describe what a user of the app can
+  now do or will notice, not how it was built. Lead with the capability or the
+  observable behavior; name the keys, commands, and config a user actually
+  touches. Leave out implementation detail — refactors, internal data flow,
+  the mechanism behind a fix, why a bug happened — unless a user must know it
+  to use the feature. If a bullet only makes sense to someone reading the
+  code, it belongs in `## All changes` (or nowhere), not in Highlights.
 - `## All changes` — one bullet per commit subject, newest first. Omit empty
   and dead-end commits.
 - Footer, verbatim:
