@@ -38,6 +38,10 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     resizedLongTight,
     divergentFocused,
     looseChipsInline,
+    oversizedBookmarkChipNormal,
+    oversizedBookmarkChipTight,
+    oversizedWorkspaceChipNormal,
+    oversizedWorkspaceChipTight,
     looseBookmarkChipRefresh,
     rebaseCommandChips,
     rebaseCommandChipsNormal,
@@ -68,6 +72,10 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     };
     divergentFocused: string;
     looseChipsInline: string;
+    oversizedBookmarkChipNormal: string;
+    oversizedBookmarkChipTight: string;
+    oversizedWorkspaceChipNormal: string;
+    oversizedWorkspaceChipTight: string;
     looseBookmarkChipRefresh: {
       initialFrame: string;
       refreshedFrame: string;
@@ -148,6 +156,18 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
   expect(looseChipLine).toBeDefined();
   expect(looseChipLine!.indexOf("review")).toBeLessThan(looseChipLine!.indexOf("main"));
   expect(looseChipLine!.indexOf("main")).toBeLessThan(looseChipLine!.indexOf("branch"));
+
+  for (const [layout, kind, frame] of [
+    ["normal", "bookmark", oversizedBookmarkChipNormal],
+    ["tight", "bookmark", oversizedBookmarkChipTight],
+    ["normal", "workspace", oversizedWorkspaceChipNormal],
+    ["tight", "workspace", oversizedWorkspaceChipTight],
+  ] as const) {
+    expect(
+      frame,
+      `${kind} chip should keep a separator after the revision id in ${layout} layout`,
+    ).toMatch(/cu  very/);
+  }
 
   const initialBookmarkLine = looseBookmarkChipRefresh.initialFrame
     .trimEnd()

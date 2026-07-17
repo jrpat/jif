@@ -367,6 +367,45 @@ async function renderExpandedRevisionWithChips() {
   return frame;
 }
 
+async function renderOversizedSideChip(
+  layout: Extract<AppLayout, "normal" | "tight">,
+  kind: "bookmark" | "workspace",
+) {
+  const revisions = [
+    createRevision("curr", "branch", ["@  ", "│  "], {
+      bookmarks: kind === "bookmark" ? ["very-wide-chip"] : [],
+      workspaces: kind === "workspace" ? ["very-wide-chip"] : [],
+    }),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+
+  const rendered = await testRender(() => (
+    <box width={20} flexDirection="column">
+      <RevisionItem
+        state={store.state}
+        revision={store.state.revisions[0]!}
+        index={0}
+        previousRowId={null}
+        nextRowId={null}
+        config={resolveAppConfig({ commands: { layout } })}
+        focusedRowId={null}
+        selectedRowIds={new Set()}
+        expandedRowId={null}
+        commandTargetRowId={null}
+      />
+    </box>
+  ), { width: 20, height: 4 });
+
+  await rendered.renderOnce();
+  const frame = rendered.captureCharFrame();
+  rendered.renderer.destroy();
+  return frame;
+}
+
 async function renderBookmarkChipAfterRefresh(layout: AppLayout) {
   const initialRevisions = [
     createRevision("src", "source revision", ["│ ○  ", "│ │  "], {
@@ -487,6 +526,10 @@ const longTight = await renderLongSuperCondensedDescription();
 const resizedLongTight = await renderLongSuperCondensedDescriptionAfterResize();
 const divergentFocused = await renderDivergentFocusedRevision();
 const looseChipsInline = await renderExpandedRevisionWithChips();
+const oversizedBookmarkChipNormal = await renderOversizedSideChip("normal", "bookmark");
+const oversizedBookmarkChipTight = await renderOversizedSideChip("tight", "bookmark");
+const oversizedWorkspaceChipNormal = await renderOversizedSideChip("normal", "workspace");
+const oversizedWorkspaceChipTight = await renderOversizedSideChip("tight", "workspace");
 const looseBookmarkChipRefresh = await renderBookmarkChipAfterRefresh("loose");
 const rebaseCommandChips = await renderCommandDraftChips("loose", "rebase");
 const rebaseCommandChipsNormal = await renderCommandDraftChips("normal", "rebase");
@@ -509,6 +552,10 @@ console.log(JSON.stringify({
   resizedLongTight,
   divergentFocused,
   looseChipsInline,
+  oversizedBookmarkChipNormal,
+  oversizedBookmarkChipTight,
+  oversizedWorkspaceChipNormal,
+  oversizedWorkspaceChipTight,
   looseBookmarkChipRefresh,
   rebaseCommandChips,
   rebaseCommandChipsNormal,

@@ -1629,7 +1629,7 @@ export function RevisionItem(props: {
                           rowState={effectiveRowState()}
                           colors={colors()}
                         />
-                        <text fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
+                        <text flexShrink={0} fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
                           {getRevisionSelectionMarker(effectiveRowState())}
                         </text>
                         <box flexGrow={1} />
@@ -1679,7 +1679,7 @@ export function RevisionItem(props: {
                         rowState={effectiveRowState()}
                         colors={colors()}
                       />
-                      <text fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
+                      <text flexShrink={0} fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
                         {getRevisionSelectionMarker(effectiveRowState())}
                       </text>
                       <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
@@ -1781,7 +1781,7 @@ export function RevisionItem(props: {
                 rowState={effectiveRowState()}
                 colors={colors()}
               />
-              <text fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
+              <text flexShrink={0} fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
                 {getRevisionSelectionMarker(effectiveRowState())}
               </text>
               <Show when={layoutSpec().sideChips.length > 0}>
