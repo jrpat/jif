@@ -3,6 +3,28 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.2.0 — 2026-07-17
+
+### Highlights
+
+- **Rebase onto merges.** Rebase mode can now pick multiple destinations, not just multiple sources. `Ctrl-Space` toggles the spacebar between selecting additional revisions to move and additional targets to land on, so you can rebase onto a merge. Pinned targets show in blue.
+- **Switch workspaces from the log.** Press `Tab` on a workspace row to switch jif to that workspace. Previews and the shell follow along, and your session preferences and status history carry over.
+- **Bookmark name completion.** `git push` and `bookmark track`/`untrack`/`rename` now complete your local bookmark names.
+- **Context-aware focus colors.** The focused row now changes color to match what you're doing: neutral grey while browsing, magenta while composing a command, and blue while picking a rebase target.
+- **Unbind keys with `null`.** Setting a keybinding to `null` now explicitly unbinds an inherited or global key and hides it from the shortcut panel.
+- **Reverse navigation reaches the working copy.** `previous-bookmark` and `previous-workspace` now jump to the working copy when there's no earlier match, instead of stopping at the boundary.
+
+### All changes
+
+- Preserve spacing before oversized revision chips
+- Switch active workspaces from workspace rows
+- Tie command chip colors to row backgrounds via one role triple
+- Introduce a shared revision draft mode
+- Support null keybindings for mode-specific unbinding
+- Fall back to working copy in reverse marker navigation
+- Add dual spacebar selection of subjects or targets in rebase mode
+- Complete bookmark arguments from structured JJ data
+
 ## v0.1.1 — 2026-07-14
 
 ### Highlights
