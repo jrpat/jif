@@ -37,6 +37,7 @@ import {
   getInlineConfirmation,
   getInlineConfirmationActualCommand,
   getRebaseSelectionKind,
+  getSelectedRevisionArgs,
   getSelectedRevisionIds,
   getSquashAnchorArg,
 } from "../state/store.ts";
@@ -969,9 +970,11 @@ export function createJifCommandController(args: Readonly<{
       })();
     },
     abandonRevision() {
-      const revisionArg = getFocusedRevisionArg(store.snapshot());
-      if (!revisionArg) return;
-      void args.runJjCommand(`abandon ${revisionArg}`);
+      const state = store.snapshot();
+      const revisionArgs = getSelectedRevisionArgs(state);
+      const targets = revisionArgs.length > 0 ? revisionArgs : [getFocusedRevisionArg(state)];
+      if (!targets[0]) return;
+      void args.runJjCommand(`abandon ${targets.join(" ")}`);
     },
     jj(commandText, options) {
       return args.runJjCommand(commandText, {

@@ -899,8 +899,8 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   {
     id: "abandon",
     title: "Abandon",
-    description: "Abandon the focused revision",
-    canExecute: (state) => !focusedIsElided(state),
+    description: "Abandon the selected revisions, or the focused revision when nothing is selected",
+    canExecute: (state) => state.selectedRowIds.length > 0 || !focusedIsElided(state),
     run: (controller) => controller.abandonRevision(),
     group: "global",
   },

@@ -279,6 +279,39 @@ test("reloadConfig delegates to the injected config reload hook", () => {
   harness.store.dispose();
 });
 
+test("abandonRevision abandons the focused revision when nothing is selected", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "first" }),
+      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "second" }),
+    ],
+  });
+
+  harness.store.actions.moveFocus(1);
+  harness.controller.abandonRevision();
+
+  expect(harness.runJjCommands).toEqual(["abandon b"]);
+  harness.store.dispose();
+});
+
+test("abandonRevision abandons selected revisions instead of the focused revision", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "first" }),
+      createRevision({ rowId: "bbbbbbbb/2", revisionId: "bbbbbbbb/2", description: "divergent" }),
+      createRevision({ rowId: "cccccccc", revisionId: "cccccccc", description: "focused" }),
+    ],
+  });
+
+  harness.store.actions.toggleRevisionSelection();
+  harness.store.actions.toggleRevisionSelection();
+  harness.store.actions.moveFocus(1);
+  harness.controller.abandonRevision();
+
+  expect(harness.runJjCommands).toEqual(["abandon a bbbbbbbb/2"]);
+  harness.store.dispose();
+});
+
 test("switchWorkspace delegates an arbitrary workspace name", async () => {
   const harness = createControllerHarness({ revisions: [] });
 

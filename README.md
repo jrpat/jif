@@ -149,7 +149,7 @@ When the active revset is only `files(...)`, the collapsed status bar shows a `f
 
 | Key | Command | Description |
 |-----|---------|-------------|
-| `a` | abandon | Abandon the focused revision |
+| `a` | abandon | Abandon the selected revisions, or the focused revision when nothing is selected |
 | `A` | absorb | Start an absorb operation, preselecting the default target revisions |
 | `c` | commit | Commit the working-copy revision (`@`) |
 | `d` | show-diff | Show diff for the focused revision or file |
@@ -688,7 +688,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `jji(commandText, options?)` | Run an interactive `jj` command |
 | `sh(commandText, options?)` | Run a shell command through the configured shell |
 | `shi(commandText, options?)` | Run an interactive shell command through the configured shell |
-| `abandonRevision()` | Abandon the focused revision |
+| `abandonRevision()` | Abandon the selected revisions, or the focused revision when nothing is selected |
 | `cancelOrBlur()` | Run the current mode's cancel action |
 | `closeFocusedRevision()` | Collapse the focused revision details |
 | `collapseNotification()` | Collapse the focused notification |

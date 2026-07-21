@@ -127,6 +127,21 @@ test("open-evolog canExecute is false when no focused revision or marker is elid
   expect(command?.canExecute?.(emptyState)).toBeFalse();
 });
 
+test("abandon remains available with selected revisions when focus is elided", () => {
+  const state = createState();
+  const selectedWithElidedFocus: AppState = {
+    ...state,
+    focusedRevisionIndex: 1,
+    selectedRowIds: [state.revisions[0]!.rowId],
+    revisions: [
+      state.revisions[0]!,
+      { ...state.revisions[1]!, marker: "elided" },
+    ],
+  };
+
+  expect(resolveForState("a", selectedWithElidedFocus)).toBe("abandon");
+});
+
 test("ctrl-e resolves to open-evolog and ctrl-o to the operation log in normal mode", () => {
   expect(resolveForState("ctrl-e", createState())).toBe("open-evolog");
   expect(resolveForState("ctrl-o", createState())).toBe("open-operation-log");

@@ -2646,6 +2646,13 @@ export function getSelectedRevisionIds(state: AppState): readonly string[] {
     .filter((revisionId): revisionId is string => revisionId !== null);
 }
 
+export function getSelectedRevisionArgs(state: AppState): readonly string[] {
+  return state.selectedRowIds
+    .map((rowId) => state.revisions.find((revision) => revision.rowId === rowId))
+    .filter((revision): revision is RevisionSummary => revision !== undefined)
+    .map((revision) => getRevisionArg(revision.revisionId, revision.changeIdPrefixLength));
+}
+
 type ContextOverrides = Readonly<{ forceApply?: boolean }>;
 
 function buildContext(
