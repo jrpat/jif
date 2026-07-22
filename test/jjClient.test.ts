@@ -212,6 +212,27 @@ test("parseLogOutput creates a synthetic elided revision", () => {
   expect(revisions[1]?.localTimestamp).toBe("");
 });
 
+test("loadElidedRevisions queries hidden ancestors of the descendant minus shown revisions", async () => {
+  const client = new JjClient(REPO_PATH);
+  const calls: string[][] = [];
+
+  (client as unknown as {
+    runJj(args: readonly string[]): Promise<{ stdout: string; stderr: string; exitCode: number }>;
+  }).runJj = async (args) => {
+    calls.push([...args]);
+    return { stdout: "", stderr: "", exitCode: 0 };
+  };
+
+  await client.loadElidedRevisions("abcdefgh", ["abcdefgh", "bcdefghi"], 20);
+
+  expect(calls).toHaveLength(1);
+  const args = calls[0]!;
+  expect(args.slice(0, 3)).toEqual(["log", "--limit", "20"]);
+  const revsetIndex = args.indexOf("-r");
+  expect(revsetIndex).toBeGreaterThan(-1);
+  expect(args[revsetIndex + 1]).toBe("::abcdefgh ~ (abcdefgh | bcdefghi)");
+});
+
 test("parseLogOutput sets hasConflict for conflicted revisions", () => {
   const output = [
     "×  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001fmerge feature\u001f\u001f\u001fabc\u001ffalse\u001f2026-03-30 07:22:39\u001ftrue",

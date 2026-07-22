@@ -5,6 +5,7 @@ import {
   DEFAULT_REPOSITORY_LOAD_LIMIT,
   type WorkingCopyRefreshOptions,
 } from "../jj/client.ts";
+import { unionRevsetWithCommits } from "../revset/compose.ts";
 
 type RepositoryRefreshClient = {
   loadRepository(
@@ -12,6 +13,7 @@ type RepositoryRefreshClient = {
     revset?: string,
     options?: WorkingCopyRefreshOptions,
   ): Promise<RepositoryData>;
+  loadDefaultRevset?(options?: WorkingCopyRefreshOptions): Promise<string>;
 };
 
 type RepositoryRefreshActions = {
@@ -41,12 +43,43 @@ export function createRepositoryRefresher(args: {
   client: RepositoryRefreshClient;
   actions: RepositoryRefreshActions;
   getRevsetQuery: () => string;
+  getRevealedCommitIds?: () => readonly string[];
   getRefreshScope?: () => string;
   onRefreshSuccess?: (details: RepositoryRefreshSuccess) => void;
 }) {
   const refreshInFlightByScope = new Map<string, Promise<boolean>>();
   const currentRevisionLimitByScope = new Map<string, number>();
   const lastAppliedFingerprintByScope = new Map<string, number | bigint>();
+  const defaultRevsetByScope = new Map<string, string>();
+
+  // Revisions revealed by expanding elided rows are unioned into every load so
+  // expansions survive refreshes. When no revset is active the configured
+  // default must be resolved first, because passing -r would otherwise replace
+  // it instead of extending it; the resolved text is cached per scope so the
+  // config lookup subprocess doesn't run on every refresh.
+  async function composeRevset(
+    refreshScope: string,
+    baseRevset: string | undefined,
+    options?: RepositoryRefreshOptions,
+  ): Promise<string | undefined> {
+    const revealedCommitIds = args.getRevealedCommitIds?.() ?? [];
+    if (revealedCommitIds.length === 0) {
+      return baseRevset;
+    }
+
+    let base = baseRevset ?? defaultRevsetByScope.get(refreshScope);
+    if (base === undefined) {
+      base = await args.client.loadDefaultRevset?.({ workingCopy: options?.workingCopy }) ?? "";
+      if (base) {
+        defaultRevsetByScope.set(refreshScope, base);
+      }
+    }
+    if (!base) {
+      return baseRevset;
+    }
+
+    return unionRevsetWithCommits(base, revealedCommitIds);
+  }
 
   return async function refreshRepository(
     revset?: string,
@@ -59,11 +92,12 @@ export function createRepositoryRefresher(args: {
       return refreshInFlight;
     }
 
-    const effectiveRevset = revset || args.getRevsetQuery() || undefined;
+    const baseRevset = revset || args.getRevsetQuery() || undefined;
     const effectiveLimit = limit ?? currentRevisionLimitByScope.get(refreshScope) ?? DEFAULT_REPOSITORY_LOAD_LIMIT;
     let refreshPromise!: Promise<boolean>;
     refreshPromise = (async () => {
       try {
+        const effectiveRevset = await composeRevset(refreshScope, baseRevset, options);
         const repositoryData = await args.client.loadRepository(effectiveLimit, effectiveRevset, options);
         if ((args.getRefreshScope?.() ?? "") !== refreshScope) {
           return false;

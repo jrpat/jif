@@ -67,7 +67,7 @@ import {
   prevSearchMatch,
   toggleSearchIdOnly,
   dismissStatusMessage,
-  expandElidedRevision,
+  revealRevisions,
   logEvent,
   openInlineConfirmation,
   pushStatusMessage,
@@ -237,8 +237,8 @@ export function createAppStore(
       openFocusedRevision() {
         mutate((currentState) => openFocusedRevision(currentState));
       },
-      expandElidedRevision(elidedIndex: number, replacements: readonly RevisionSummary[]) {
-        mutate((currentState) => expandElidedRevision(currentState, elidedIndex, replacements));
+      revealRevisions(commitIds: readonly string[]) {
+        mutate((currentState) => revealRevisions(currentState, commitIds));
       },
       closeFocusedRevision() {
         mutate((currentState) => closeFocusedRevision(currentState));

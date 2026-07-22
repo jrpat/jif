@@ -47,10 +47,11 @@ function createRuntimeHarness(options: Readonly<{
   defaultRevset?: string;
   revsetHistory?: readonly string[];
   loadElidedRevisions?: (
-    afterRevisionId: string,
-    beforeRevisionId: string | null,
+    descendantRevisionArg: string,
+    excludeRevisionArgs: readonly string[],
     limit: number,
   ) => Promise<readonly RevisionSummary[]>;
+  onRefresh?: (store: ReturnType<typeof createAppStore>) => void;
 }>) {
   const store = createAppStore(REPO_PATH);
   if (options.revisions) {
@@ -103,6 +104,7 @@ function createRuntimeHarness(options: Readonly<{
     refreshRepository: async (revset, refreshOption) => {
       refreshCalls.push(revset);
       refreshOptions.push(refreshOption ?? {});
+      options.onRefresh?.(store);
       const result = options.refreshResults?.[refreshIndex];
       refreshIndex += 1;
       return result ?? true;
@@ -408,17 +410,30 @@ test("restoreLogRevsetFromFileFilter falls back to the jj default revset", async
   harness.store.dispose();
 });
 
-test("expandElidedRevisions replaces the elided row through the runtime seam", async () => {
-  const replacement = createRevision({ rowId: "cccccccc", revisionId: "cccccccc", description: "unelided" });
+function createElidedRow(index: number): RevisionSummary {
+  return createRevision({
+    rowId: `synthetic:elided:${index}`,
+    revisionId: `__elided_${index}`,
+    description: "(elided revisions)",
+    marker: "elided",
+    filesLoaded: true,
+  });
+}
+
+test("expandElidedRevisions anchors on the revision above and reveals through a refresh", async () => {
+  // Mirrors a real graph log: the row below an elided marker can be a sibling
+  // branch, so the descendant above is the only reliable anchor.
+  const replacement = createRevision({ rowId: "cccccccc", revisionId: "cccccccc", description: "unelided", changeIdPrefixLength: 8 });
   const harness = createRuntimeHarness({
     revisions: [
-      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "before" }),
-      createRevision({ rowId: "__elided_0", revisionId: "__elided_0", description: "(elided revisions)", marker: "elided", filesLoaded: true }),
-      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "after" }),
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "descendant", changeIdPrefixLength: 8 }),
+      createElidedRow(1),
+      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "sibling branch", changeIdPrefixLength: 8 }),
+      createRevision({ rowId: "dddddddd", revisionId: "dddddddd", description: "shared ancestor", changeIdPrefixLength: 8 }),
     ],
-    loadElidedRevisions: async (afterRevisionId, beforeRevisionId, limit) => {
-      expect(afterRevisionId).toBe("bbbbbbbb");
-      expect(beforeRevisionId).toBe("aaaaaaaa");
+    loadElidedRevisions: async (descendantRevisionArg, excludeRevisionArgs, limit) => {
+      expect(descendantRevisionArg).toBe("aaaaaaaa");
+      expect(excludeRevisionArgs).toEqual(["aaaaaaaa", "bbbbbbbb", "dddddddd"]);
       expect(limit).toBe(20);
       return [replacement];
     },
@@ -426,10 +441,163 @@ test("expandElidedRevisions replaces the elided row through the runtime seam", a
 
   await harness.runtime.expandElidedRevisions(1);
 
-  expect(harness.store.state.revisions.map((revision) => revision.revisionId)).toEqual([
-    "aaaaaaaa",
-    "cccccccc",
-    "bbbbbbbb",
-  ]);
+  expect(harness.store.state.revealedCommitIds).toEqual(["cccccccc-commit"]);
+  expect(harness.refreshCalls).toEqual([undefined]);
+  expect(harness.refreshOptions).toEqual([{ workingCopy: "read-only" }]);
+  harness.store.dispose();
+});
+
+test("expandElidedRevisions skips adjacent elided rows when resolving the descendant", async () => {
+  // A merge revision renders one elided marker per elided parent edge, so an
+  // elided row's display neighbor above can itself be elided.
+  const replacement = createRevision({ rowId: "cccccccc", revisionId: "cccccccc", description: "unelided", changeIdPrefixLength: 8 });
+  const calls: string[] = [];
+  const harness = createRuntimeHarness({
+    revisions: [
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "merge", changeIdPrefixLength: 8 }),
+      createElidedRow(1),
+      createElidedRow(2),
+      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "parent branch", changeIdPrefixLength: 8 }),
+    ],
+    loadElidedRevisions: async (descendantRevisionArg) => {
+      calls.push(descendantRevisionArg);
+      return [replacement];
+    },
+  });
+
+  await harness.runtime.expandElidedRevisions(2);
+
+  expect(calls).toEqual(["aaaaaaaa"]);
+  expect(harness.store.state.revealedCommitIds).toEqual(["cccccccc-commit"]);
+  harness.store.dispose();
+});
+
+test("expandElidedRevisions truncates divergent revision ids to jj-safe arguments", async () => {
+  const harness = createRuntimeHarness({
+    revisions: [
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa/2", description: "divergent", changeIdPrefixLength: 8 }),
+      createElidedRow(1),
+      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "ancestor", changeIdPrefixLength: 4 }),
+    ],
+    loadElidedRevisions: async (descendantRevisionArg, excludeRevisionArgs) => {
+      expect(descendantRevisionArg).toBe("aaaaaaaa/2");
+      expect(excludeRevisionArgs).toEqual(["aaaaaaaa/2", "bbbb"]);
+      return [];
+    },
+  });
+
+  await harness.runtime.expandElidedRevisions(1);
+  harness.store.dispose();
+});
+
+test("expandElidedRevisions does not reveal nested elided marker rows", async () => {
+  // The expansion sub-log carries its own elided marker rows; only real
+  // revisions are revealed.
+  const replacements = [
+    createRevision({ rowId: "cccccccc", revisionId: "cccccccc", description: "hidden", changeIdPrefixLength: 8 }),
+    createElidedRow(1),
+  ];
+  const harness = createRuntimeHarness({
+    revisions: [
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "descendant", changeIdPrefixLength: 8 }),
+      createElidedRow(1),
+      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "ancestor", changeIdPrefixLength: 8 }),
+    ],
+    loadElidedRevisions: async () => replacements,
+  });
+
+  await harness.runtime.expandElidedRevisions(1);
+
+  expect(harness.store.state.revealedCommitIds).toEqual(["cccccccc-commit"]);
+  harness.store.dispose();
+});
+
+test("expandElidedRevisions focuses the first revealed revision once the refresh applies", async () => {
+  const revealed = createRevision({ rowId: "cccccccc", revisionId: "cccccccc", description: "revealed", changeIdPrefixLength: 8 });
+  const harness = createRuntimeHarness({
+    revisions: [
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "descendant", changeIdPrefixLength: 8 }),
+      createElidedRow(1),
+      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "ancestor", changeIdPrefixLength: 8 }),
+    ],
+    loadElidedRevisions: async () => [revealed],
+    onRefresh: (store) => {
+      // Simulate the refresher re-rendering the log with the revealed
+      // revision included and the marker recomputed by jj.
+      applyRepositoryData(store, [
+        createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "descendant", changeIdPrefixLength: 8 }),
+        revealed,
+        createElidedRow(2),
+        createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "ancestor", changeIdPrefixLength: 8 }),
+      ]);
+    },
+  });
+
+  await harness.runtime.expandElidedRevisions(1);
+
+  expect(harness.store.state.focusedRevisionIndex).toBe(1);
+  expect(harness.store.state.revisions[1]?.revisionId).toBe("cccccccc");
+  harness.store.dispose();
+});
+
+test("applyRevsetQuery restores revealed commits when the new revset fails to apply", async () => {
+  const harness = createRuntimeHarness({
+    revisions: [
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "descendant", changeIdPrefixLength: 8 }),
+      createElidedRow(1),
+    ],
+    loadElidedRevisions: async () => [
+      createRevision({ rowId: "cccccccc", revisionId: "cccccccc", description: "hidden", changeIdPrefixLength: 8 }),
+    ],
+    // First refresh: the expansion reveal. Second: the failing revset apply.
+    refreshResults: [true, false, true],
+  });
+
+  await harness.runtime.expandElidedRevisions(1);
+  expect(harness.store.state.revealedCommitIds).toEqual(["cccccccc-commit"]);
+
+  await harness.runtime.applyRevsetQuery("this is not a revset");
+
+  expect(harness.store.state.revsetQuery).toBe("");
+  expect(harness.store.state.revealedCommitIds).toEqual(["cccccccc-commit"]);
+  harness.store.dispose();
+});
+
+test("applyRevsetQuery clears revealed commits when a new revset applies", async () => {
+  const harness = createRuntimeHarness({
+    revisions: [
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "descendant", changeIdPrefixLength: 8 }),
+      createElidedRow(1),
+    ],
+    loadElidedRevisions: async () => [
+      createRevision({ rowId: "cccccccc", revisionId: "cccccccc", description: "hidden", changeIdPrefixLength: 8 }),
+    ],
+  });
+
+  await harness.runtime.expandElidedRevisions(1);
+  expect(harness.store.state.revealedCommitIds).toEqual(["cccccccc-commit"]);
+
+  await harness.runtime.applyRevsetQuery("mine()");
+
+  expect(harness.store.state.revsetQuery).toBe("mine()");
+  expect(harness.store.state.revealedCommitIds).toEqual([]);
+  harness.store.dispose();
+});
+
+test("expandElidedRevisions reports when nothing is hidden and skips the refresh", async () => {
+  const harness = createRuntimeHarness({
+    revisions: [
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "descendant", changeIdPrefixLength: 8 }),
+      createElidedRow(1),
+      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "ancestor", changeIdPrefixLength: 8 }),
+    ],
+    loadElidedRevisions: async () => [],
+  });
+
+  await harness.runtime.expandElidedRevisions(1);
+
+  expect(harness.store.state.revealedCommitIds).toEqual([]);
+  expect(harness.refreshCalls).toEqual([]);
+  expect(harness.store.state.eventLog.at(-1)?.text).toContain("No hidden revisions");
   harness.store.dispose();
 });

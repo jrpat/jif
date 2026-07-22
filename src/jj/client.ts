@@ -118,13 +118,16 @@ export class JjClient {
   }
 
   async loadElidedRevisions(
-    afterRevisionId: string,
-    beforeRevisionId: string | null,
+    descendantRevisionArg: string,
+    excludeRevisionArgs: readonly string[],
     limit = 20,
   ): Promise<readonly RevisionSummary[]> {
-    const revset = beforeRevisionId
-      ? `${afterRevisionId}::${beforeRevisionId} ~ ${afterRevisionId} ~ ${beforeRevisionId}`
-      : `${afterRevisionId}::`;
+    // An elided marker hides ancestors of the revision rendered above it, so
+    // anchor on that descendant and subtract everything already shown (the
+    // caller includes the descendant among the exclusions). jj's
+    // reverse-topological output order makes --limit return the hidden
+    // ancestors nearest the descendant first.
+    const revset = `::${descendantRevisionArg} ~ (${excludeRevisionArgs.join(" | ")})`;
     const args = [
       "log",
       "--limit",

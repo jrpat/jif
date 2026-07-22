@@ -6,7 +6,7 @@ import type {
   ShellCommandOptions,
 } from "../commands/definitions.ts";
 import { isAlwaysInteractiveJjCommand } from "../commands/interactive-subcommands.ts";
-import type { RevisionSummary } from "../domain/types.ts";
+import { resolveElidedExpansion } from "../domain/elidedRevisions.ts";
 import type { JjClient, WorkingCopyRefreshOptions } from "../jj/client.ts";
 import type { PersistenceService } from "../persistence/service.ts";
 import { isFilesOnlyRevset } from "../revset/files.ts";
@@ -41,6 +41,7 @@ export function createJifRuntime(args: Readonly<{
 
   const applyRevsetQuery = async (query: string): Promise<void> => {
     const previousQuery = store.snapshot().revsetQuery;
+    const previousRevealedCommitIds = store.snapshot().revealedCommitIds;
     store.actions.setRevsetQuery(query);
     store.actions.closeRevsetInput();
 
@@ -59,6 +60,9 @@ export function createJifRuntime(args: Readonly<{
     }
 
     store.actions.setRevsetQuery(previousQuery);
+    // Rolling back a failed apply keeps the effective revset unchanged, so
+    // restore the revealed expansions the query switch cleared.
+    store.actions.revealRevisions(previousRevealedCommitIds);
     void args.refreshRepository(previousQuery || undefined, { workingCopy: "read-only" });
   };
 
@@ -159,20 +163,37 @@ export function createJifRuntime(args: Readonly<{
     },
 
     async expandElidedRevisions(elidedIndex: number): Promise<void> {
-      const state = store.snapshot();
-      const afterRevision = state.revisions[elidedIndex + 1];
-      const beforeRevision = state.revisions[elidedIndex - 1];
-      if (!afterRevision) {
+      const expansion = resolveElidedExpansion(store.snapshot().revisions, elidedIndex);
+      if (!expansion) {
         return;
       }
 
       try {
         const revisions = await client.loadElidedRevisions(
-          afterRevision.revisionId,
-          beforeRevision?.revisionId ?? null,
+          expansion.descendantArg,
+          expansion.excludeArgs,
           20,
         );
-        store.actions.expandElidedRevision(elidedIndex, revisions);
+        const commitIds = revisions
+          .filter((revision) => revision.marker !== "elided")
+          .map((revision) => revision.commitId);
+        if (commitIds.length === 0) {
+          store.actions.pushEvent("No hidden revisions to expand", "info");
+          return;
+        }
+
+        // Revealing goes through a full refresh instead of splicing rows in:
+        // the refresher unions revealed commits into the log revset, so jj
+        // renders real graph rows, recomputes the elided markers, and the
+        // expansion survives later refreshes until the revset changes.
+        store.actions.revealRevisions(commitIds);
+        await args.refreshRepository(undefined, { workingCopy: "read-only" });
+
+        const focusIndex = store.snapshot().revisions
+          .findIndex((revision) => revision.commitId === commitIds[0]);
+        if (focusIndex >= 0) {
+          store.actions.focusRevisionAt(focusIndex);
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         store.actions.pushEvent(message, "error");

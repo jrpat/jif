@@ -191,6 +191,7 @@ export function JifView(props: {
     client,
     actions: store.actions,
     getRevsetQuery: () => store.snapshot().revsetQuery,
+    getRevealedCommitIds: () => store.snapshot().revealedCommitIds,
     getRefreshScope: () => store.state.repoPath,
     onRefreshSuccess: (details) => {
       setCurrentRevisionLoadLimit(details.requestedLimit);

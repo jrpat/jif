@@ -238,6 +238,7 @@ export function createInitialState(
     useShortFlags: options?.useShortFlags ?? true,
     layout: options?.layout ?? "loose",
     revsetQuery: "",
+    revealedCommitIds: [],
     revsetInputQuery: null,
     searchQuery: "",
     searchScope: null,
@@ -378,7 +379,13 @@ export function closeRevsetInput(state: AppState): AppState {
 }
 
 export function setRevsetQuery(state: AppState, query: string): AppState {
-  return { ...state, revsetQuery: query };
+  if (query === state.revsetQuery) {
+    return state;
+  }
+
+  // Revealed elided expansions are scoped to the revset they were expanded
+  // under; a new revset starts from a clean log.
+  return { ...state, revsetQuery: query, revealedCommitIds: [] };
 }
 
 export function openFileSearch(state: AppState): AppState {
@@ -1033,21 +1040,17 @@ export function collapseFocusedNotification(state: AppState): AppState {
   };
 }
 
-export function expandElidedRevision(
+export function revealRevisions(
   state: AppState,
-  elidedIndex: number,
-  replacements: readonly RevisionSummary[],
+  commitIds: readonly string[],
 ): AppState {
-  const revisions = [
-    ...state.revisions.slice(0, elidedIndex),
-    ...replacements,
-    ...state.revisions.slice(elidedIndex + 1),
-  ];
-  return {
-    ...state,
-    revisions,
-    focusedRevisionIndex: replacements.length > 0 ? elidedIndex : state.focusedRevisionIndex,
-  };
+  const known = new Set(state.revealedCommitIds);
+  const added = commitIds.filter((commitId) => commitId.length > 0 && !known.has(commitId));
+  if (added.length === 0) {
+    return state;
+  }
+
+  return { ...state, revealedCommitIds: [...state.revealedCommitIds, ...added] };
 }
 
 export function closeFocusedRevision(state: AppState): AppState {

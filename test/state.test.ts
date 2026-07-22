@@ -69,7 +69,7 @@ import {
   toggleRebaseSkipEmptied,
   toggleRevisionSelection,
   toggleSquashAnchor,
-  expandElidedRevision,
+  revealRevisions,
   openRevsetInput,
   closeRevsetInput,
   openFileSearch,
@@ -2556,37 +2556,39 @@ test("setRevsetQuery updates the query", () => {
   expect(state.revsetQuery).toBe("ancestors(trunk(), 10)");
 });
 
-test("expandElidedRevision replaces elided entry with new revisions and updates focus", () => {
+test("revealRevisions accumulates unique commit ids", () => {
   let state = createState();
-  const elidedEntry = {
-    rowId: "synthetic:elided:2",
-    revisionId: "__elided_2",
-    changeIdPrefixLength: 0,
-    commitId: "",
-    description: "(elided revisions)",
-    localTimestamp: "",
-    bookmarks: [] as readonly string[],
-    workspaces: [] as readonly string[],
-    graphRows: ["~  "] as readonly string[],
-    isEmpty: false,
-    hasConflict: false,
-    marker: "elided" as const,
-    filesLoaded: true,
-    files: [] as readonly { status: string; path: string }[],
-  };
-  state = { ...state, revisions: [...state.revisions, elidedEntry], focusedRevisionIndex: 2 };
-  expect(state.revisions).toHaveLength(3);
+  expect(state.revealedCommitIds).toEqual([]);
 
-  const replacements = [
-    { ...elidedEntry, rowId: createRowId("33333333", "cccccccc"), revisionId: "cccccccc", marker: "plain" as const, description: "third", commitId: "33333333" },
-    { ...elidedEntry, rowId: createRowId("44444444", "dddddddd"), revisionId: "dddddddd", marker: "plain" as const, description: "fourth", commitId: "44444444" },
-  ];
-  state = expandElidedRevision(state, 2, replacements);
+  state = revealRevisions(state, ["33333333", "44444444"]);
+  expect(state.revealedCommitIds).toEqual(["33333333", "44444444"]);
 
-  expect(state.revisions).toHaveLength(4);
-  expect(state.revisions[2]?.revisionId).toBe("cccccccc");
-  expect(state.revisions[3]?.revisionId).toBe("dddddddd");
-  expect(state.focusedRevisionIndex).toBe(2);
+  state = revealRevisions(state, ["44444444", "", "55555555"]);
+  expect(state.revealedCommitIds).toEqual(["33333333", "44444444", "55555555"]);
+});
+
+test("setRevsetQuery clears revealed commit ids only when the query changes", () => {
+  let state = createState();
+  state = setRevsetQuery(state, "mine()");
+  state = revealRevisions(state, ["33333333"]);
+
+  state = setRevsetQuery(state, "mine()");
+  expect(state.revealedCommitIds).toEqual(["33333333"]);
+
+  state = setRevsetQuery(state, "all()");
+  expect(state.revealedCommitIds).toEqual([]);
+});
+
+test("applyRepositoryData keeps revealed commit ids", () => {
+  let state = createState();
+  state = revealRevisions(state, ["33333333"]);
+
+  state = applyRepositoryData(state, {
+    repoPath: state.repoPath,
+    revisions: state.revisions,
+  });
+
+  expect(state.revealedCommitIds).toEqual(["33333333"]);
 });
 
 test("applyRepositoryData clears stale loaded files when a revision becomes empty", () => {

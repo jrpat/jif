@@ -61,6 +61,80 @@ test("createRepositoryRefresher reloads using the active revset", async () => {
   expect(appliedRepositoryData).toEqual(repositoryData);
 });
 
+function createRevealRefresher(options: Readonly<{
+  revsetQuery: string;
+  revealedCommitIds: readonly string[];
+  loadDefaultRevset?: () => Promise<string>;
+}>) {
+  const calls: string[] = [];
+  const refreshRepository = createRepositoryRefresher({
+    client: {
+      async loadRepository(_limit, revset) {
+        calls.push(`load:${revset ?? ""}`);
+        return createRepositoryData();
+      },
+      loadDefaultRevset: options.loadDefaultRevset ?? (async () => {
+        throw new Error("an active revset should not need the default");
+      }),
+    },
+    actions: {
+      setLoading() {},
+      applyRepositoryData() {},
+      pushEvent() {
+        throw new Error("refresh should not fail");
+      },
+    },
+    getRevsetQuery: () => options.revsetQuery,
+    getRevealedCommitIds: () => options.revealedCommitIds,
+  });
+
+  return { refreshRepository, calls };
+}
+
+test("createRepositoryRefresher unions revealed commits into the active revset", async () => {
+  const { refreshRepository, calls } = createRevealRefresher({
+    revsetQuery: "mine()",
+    revealedCommitIds: ["1111", "2222"],
+  });
+
+  await refreshRepository();
+
+  expect(calls).toEqual(["load:(mine()) | present(1111) | present(2222)"]);
+});
+
+test("createRepositoryRefresher resolves and caches the default revset when revealing without an active revset", async () => {
+  let defaultLookups = 0;
+  const { refreshRepository, calls } = createRevealRefresher({
+    revsetQuery: "",
+    revealedCommitIds: ["1111"],
+    loadDefaultRevset: async () => {
+      defaultLookups += 1;
+      return "default()";
+    },
+  });
+
+  await refreshRepository();
+  await refreshRepository();
+
+  expect(defaultLookups).toBe(1);
+  expect(calls).toEqual([
+    "load:(default()) | present(1111)",
+    "load:(default()) | present(1111)",
+  ]);
+});
+
+test("createRepositoryRefresher drops revealed commits when the default revset cannot be resolved", async () => {
+  const { refreshRepository, calls } = createRevealRefresher({
+    revsetQuery: "",
+    revealedCommitIds: ["1111"],
+    loadDefaultRevset: async () => "",
+  });
+
+  await refreshRepository();
+
+  expect(calls).toEqual(["load:"]);
+});
+
 test("createRepositoryRefresher forwards the working-copy refresh mode", async () => {
   const calls: string[] = [];
 

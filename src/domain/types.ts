@@ -217,6 +217,10 @@ export type AppState = Readonly<{
   useShortFlags: boolean;
   layout: AppLayout;
   revsetQuery: string;
+  // Commits revealed by expanding elided log rows. Unioned into the log revset
+  // on every refresh so expansions survive reloads; in-memory only and cleared
+  // when the revset changes, so they never outlive the session.
+  revealedCommitIds: readonly string[];
   revsetInputQuery: string | null;
   searchQuery: string;
   searchScope: SearchScopeId | null;
