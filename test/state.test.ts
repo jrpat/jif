@@ -1689,7 +1689,7 @@ test("getActiveMode stays in the underlying browse mode while a help toast is vi
 
   // A help toast is no longer its own mode; the underlying surface keeps the
   // keyboard, so j/k navigate the log instead of scrolling the toast.
-  expect(getActiveMode(state)).toBe("normal");
+  expect(getActiveMode(state)).toBe("revision-log");
 
   const layered: AppState = { ...state, focusMode: "notifications" };
   expect(getActiveMode(layered)).toBe("notifications");

@@ -355,7 +355,7 @@ test("resolveConfiguredKeymap preserves built-in bindings while adding inline co
   const run = () => {};
 
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         title: "Custom Search",
         run,
@@ -364,9 +364,9 @@ test("resolveConfiguredKeymap preserves built-in bindings while adding inline co
   });
 
   expect(resolved.keymap.log.j).toBe("move-down");
-  expect(resolved.keymap.normal.g).toBe("user:normal:g");
+  expect(resolved.keymap["revision-log"].g).toBe("user:revision-log:g");
 
-  const command = resolved.commands.find((entry) => entry.id === "user:normal:g");
+  const command = resolved.commands.find((entry) => entry.id === "user:revision-log:g");
   expect(command).toBeDefined();
   expect(command?.title).toBe("Custom Search");
   expect(command?.description).toBeUndefined();
@@ -397,12 +397,12 @@ test("resolveConfiguredKeymap preserves explicit ids for inline commands", () =>
 
 test("resolveConfiguredKeymap accepts alias bindings with canonical: false", () => {
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       x: { command: "move-down", canonical: false },
     },
   });
 
-  expect(resolved.keymap.normal.x).toEqual({ command: "move-down", canonical: false });
+  expect(resolved.keymap["revision-log"].x).toEqual({ command: "move-down", canonical: false });
   expect(resolved.keymap.log.j).toBe("move-down");
 });
 
@@ -410,7 +410,7 @@ test("resolveConfiguredKeymap respects canonical: false on inline commands", () 
   const run = () => {};
 
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         title: "Hidden Command",
         canonical: false,
@@ -419,13 +419,13 @@ test("resolveConfiguredKeymap respects canonical: false on inline commands", () 
     },
   });
 
-  expect(resolved.keymap.normal.g).toEqual({ command: "user:normal:g", canonical: false });
-  expect(resolved.commands.find((entry) => entry.id === "user:normal:g")).toBeDefined();
+  expect(resolved.keymap["revision-log"].g).toEqual({ command: "user:revision-log:g", canonical: false });
+  expect(resolved.commands.find((entry) => entry.id === "user:revision-log:g")).toBeDefined();
 });
 
 test("resolveConfiguredKeymap namespaces explicit user ids away from built-in command ids", () => {
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         id: "move-up",
         title: "Custom Move Up",
@@ -434,30 +434,30 @@ test("resolveConfiguredKeymap namespaces explicit user ids away from built-in co
     },
   });
 
-  expect(resolved.keymap.normal.g).toBe("user:move-up");
+  expect(resolved.keymap["revision-log"].g).toBe("user:move-up");
   expect(resolved.commands.find((entry) => entry.id === "move-up")?.title).toBe("Move Up");
   expect(resolved.commands.find((entry) => entry.id === "user:move-up")?.title).toBe("Custom Move Up");
 });
 
 test("resolveConfiguredKeymap lets users rebind built-in commands by id", () => {
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       j: "move-up",
     },
   });
 
-  expect(resolved.keymap.normal.j).toBe("move-up");
+  expect(resolved.keymap["revision-log"].j).toBe("move-up");
   expect(resolved.keymap.log.k).toBe("move-up");
 });
 
 test("resolveConfiguredKeymap accepts null to unbind a key", () => {
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       j: null,
     },
   });
 
-  expect(resolved.keymap.normal.j).toBeNull();
+  expect(resolved.keymap["revision-log"].j).toBeNull();
 });
 
 test("resolveConfiguredKeymap supports bindings shared by revision drafts", () => {
@@ -473,23 +473,23 @@ test("resolveConfiguredKeymap supports bindings shared by revision drafts", () =
 
 test("resolveConfiguredKeymap deep-merges user bindings into the default keymap", () => {
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         title: "Custom Action",
         run: () => {},
       },
     },
-    files: {
+    "revision-files": {
       x: "restore",
     },
   });
 
   expect(resolved.keymap._global.escape).toBe("cancel");
   expect(resolved.keymap.log.j).toBe("move-down");
-  expect(resolved.keymap.normal.g).toBe("user:normal:g");
-  expect(resolved.keymap.files["ctrl-s"]).toBeUndefined();
-  expect(resolved.keymap.files["alt-s"]).toBeUndefined();
-  expect(resolved.keymap.files.x).toBe("restore");
+  expect(resolved.keymap["revision-log"].g).toBe("user:revision-log:g");
+  expect(resolved.keymap["revision-files"]["ctrl-s"]).toBeUndefined();
+  expect(resolved.keymap["revision-files"]["alt-s"]).toBeUndefined();
+  expect(resolved.keymap["revision-files"].x).toBe("restore");
 });
 
 test("loadAppConfig reads config.ts from XDG_CONFIG_HOME/jif", async () => {

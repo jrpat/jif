@@ -604,7 +604,7 @@ You can rebind an existing built-in command by id:
 ```ts
 export default {
   keymap: {
-    normal: {
+    "revision-log": {
       J: "move-down",
     },
   },
@@ -616,21 +616,21 @@ Set a binding to `null` to disable that key in a scope. A null binding overrides
 ```ts
 export default {
   keymap: {
-    normal: {
+    "revision-log": {
       "ctrl-o": null,
     },
   },
 } satisfies Jif.Config;
 ```
 
-Besides the concrete per-mode scopes (`normal`, `files`, `op-log`, `evolog`, …) and `_global`, there are two shared scopes. `log` is inherited by Normal, Operation Log, Evolog, Bookmark, and Revision Draft. `revision-draft` inherits `log` and is itself inherited by operation composers such as Rebase and Squash. Binding a key under either shared scope rebinds it for every descendant; a same-key binding in a child mode still overrides the inherited binding there.
+Besides the concrete per-mode scopes (`revision-log`, `revision-files`, `op-log`, `evolog`, …) and `_global`, there are two shared scopes. `log` is inherited by Normal, Operation Log, Evolog, Bookmark, and Revision Draft. `revision-draft` inherits `log` and is itself inherited by operation composers such as Rebase and Squash. Binding a key under either shared scope rebinds it for every descendant; a same-key binding in a child mode still overrides the inherited binding there.
 
 Or define an inline command directly in the keymap:
 
 ```ts
 export default {
   keymap: {
-    normal: {
+    "revision-log": {
       "ctrl-g": {
         id: "show-focused",  // command ids are optional
         title: "Show Focused Revision",
@@ -849,7 +849,7 @@ Every binding shows up in the shortcut panel by default. To bind an alias key th
 ```ts
 export default {
   keymap: {
-    normal: {
+    "revision-log": {
       // alias for `move-down`; works but stays out of the shortcut panel
       x: { command: "move-down", canonical: false },
     },

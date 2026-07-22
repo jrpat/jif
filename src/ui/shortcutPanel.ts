@@ -273,9 +273,9 @@ export function shortcutModeLabel(mode: Mode): string {
       return "Log";
     case "revision-draft":
       return "Revision Draft";
-    case "normal":
+    case "revision-log":
       return "Revisions";
-    case "files":
+    case "revision-files":
       return "Files";
     case "op-log":
       return "Op Log";

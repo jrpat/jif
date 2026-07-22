@@ -658,7 +658,7 @@ export function JifView(props: {
     if (
       showsPersistentShortcutPanel() &&
       !showsTransientShortcutPanel() &&
-      activeMode() !== "normal"
+      activeMode() !== "revision-log"
     ) {
       return {
         kind: "split",

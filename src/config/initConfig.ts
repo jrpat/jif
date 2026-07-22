@@ -173,7 +173,7 @@ export default {
     // wordWrap: false,
   },
   keymap: {
-    normal: {
+    "revision-log": {
       // "ctrl-g": {
       //   title: "Show focused revision",
       //   run: (cmd, app) => {
@@ -426,8 +426,8 @@ namespace Jif {
     | "_global"
     | "log"
     | "revision-draft"
-    | "normal"
-    | "files"
+    | "revision-log"
+    | "revision-files"
     | "op-log"
     | "evolog"
     | "inline-confirmation"

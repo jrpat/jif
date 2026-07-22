@@ -289,9 +289,9 @@ test("computeShortcutPanelHeight follows the adaptive terminal-height rule", () 
 });
 
 test("shortcutModeLabel formats the current mode for the panel header", () => {
-  expect(shortcutModeLabel("normal")).toBe("Revisions");
+  expect(shortcutModeLabel("revision-log")).toBe("Revisions");
   expect(shortcutModeLabel("revision-draft")).toBe("Revision Draft");
-  expect(shortcutModeLabel("files")).toBe("Files");
+  expect(shortcutModeLabel("revision-files")).toBe("Files");
   expect(shortcutModeLabel("command")).toBe("Command");
   expect(shortcutModeLabel("rebase")).toBe("Rebase");
   expect(shortcutModeLabel("squash")).toBe("Squash");
@@ -374,7 +374,7 @@ test("getShortcutPanelBindings narrows file mode shortcuts to file-relevant acti
 test("getShortcutPanelBindings includes inline configured commands from the merged keymap", () => {
   const state = createState();
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         title: "Custom Action",
         run: () => {},
@@ -383,11 +383,11 @@ test("getShortcutPanelBindings includes inline configured commands from the merg
   });
 
   const bindings = getShortcutPanelBindings(state, bindingsForMode(state, resolved.keymap, resolved.commands));
-  expect(bindings.find(({ command }) => command.id === "user:normal:g")?.command.title).toBe("Custom Action");
+  expect(bindings.find(({ command }) => command.id === "user:revision-log:g")?.command.title).toBe("Custom Action");
 });
 
 test("collectDirectCanonicalBindingsForMode is mode-specific and excludes parents and globals", () => {
-  const keys = collectDirectCanonicalBindingsForMode("files", defaultKeymap).map((b) => b.key);
+  const keys = collectDirectCanonicalBindingsForMode("revision-files", defaultKeymap).map((b) => b.key);
   // files mode is self-contained: it binds its own navigation and file actions directly
   expect(keys).not.toContain("ctrl-s");
   expect(keys).not.toContain("alt-s");
@@ -407,7 +407,7 @@ test("collectDirectCanonicalBindingsForMode is mode-specific and excludes parent
 });
 
 test("collectInheritedAndGlobalCanonicalBindings returns globals only when a mode has no parent", () => {
-  const keys = collectInheritedAndGlobalCanonicalBindings("files", defaultKeymap).map((b) => b.key);
+  const keys = collectInheritedAndGlobalCanonicalBindings("revision-files", defaultKeymap).map((b) => b.key);
   // files mode no longer inherits Normal, so only globals remain in the bottom set
   expect(keys).toContain("q");
   expect(keys).toContain("ctrl-z");
@@ -482,7 +482,7 @@ test("evolog has no direct bindings and inherits everything from the log parent"
 });
 
 test("normal still surfaces the shared log keys alongside its revision commands", () => {
-  const keys = collectCanonicalBindingsForMode("normal", defaultKeymap).map((b) => b.key);
+  const keys = collectCanonicalBindingsForMode("revision-log", defaultKeymap).map((b) => b.key);
   // Shared log keys — inherited from the `log` parent, must still be present
   expect(keys).toContain(":");
   expect(keys).toContain("?");
@@ -502,12 +502,12 @@ test("normal still surfaces the shared log keys alongside its revision commands"
 
 test("collectCanonicalBindingsForMode excludes alias bindings (canonical: false)", () => {
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       x: { command: "move-down", canonical: false },
     },
   });
 
-  const keys = collectCanonicalBindingsForMode("normal", resolved.keymap).map((b) => b.key);
+  const keys = collectCanonicalBindingsForMode("revision-log", resolved.keymap).map((b) => b.key);
 
   expect(keys).toContain("j");
   expect(keys).not.toContain("x");

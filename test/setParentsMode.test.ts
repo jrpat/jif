@@ -212,11 +212,11 @@ test("escape cancels set-parents and clears the working pick set", () => {
 
   expect(state.commandDraft).toBeNull();
   expect(state.selectedRowIds).toEqual([]);
-  expect(getActiveMode(state)).toBe("normal");
+  expect(getActiveMode(state)).toBe("revision-log");
 });
 
 test("M enters set-parents from normal and space toggles a parent pick inside it", () => {
-  expect(resolveCommand("normal", "M")).toBe("set-parents");
+  expect(resolveCommand("revision-log", "M")).toBe("set-parents");
   expect(resolveCommand("set-parents", " ")).toBe("toggle-set-parents-pick");
   // Navigation comes from Log; confirmation comes from Revision Draft.
   expect(resolveCommand("set-parents", "j")).toBe("move-down");

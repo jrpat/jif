@@ -332,7 +332,7 @@ test("dispatchGlobalKey passes the full app state values to inline configured ha
   let receivedState: { repoPath: string; focusedRevisionIndex: number } | null = null;
 
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         title: "Capture State",
         run: (_controller, app) => {
@@ -368,7 +368,7 @@ test("dispatchGlobalKey passes the full app state values to inline configured ha
 test("inline configured handlers can switch to an arbitrary workspace by name", () => {
   const calls: string[] = [];
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         title: "Switch Workspace",
         run: (controller) => controller.switchWorkspace("review"),
@@ -394,7 +394,7 @@ test("dispatchGlobalKey exposes the focused revision object on app.focusedRevisi
   let focusedRevisionId: string | null = null;
 
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         title: "Read Focused Revision",
         run: (_controller, app) => {
@@ -432,7 +432,7 @@ test("app.rev is the focused revision's jj argument; app.focusedRevision is the 
   } = {};
 
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         title: "Read app.rev",
         run: (_controller, app) => {
@@ -476,7 +476,7 @@ test("app.rev keeps the full id for divergent revisions", () => {
   const captured: { rev?: string } = {};
 
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         title: "Read divergent app.rev",
         run: (_controller, app) => {
@@ -519,7 +519,7 @@ test("app.selectedRevs exposes selected revisions as jj arguments", () => {
   const captured: { selectedRevs?: readonly string[]; interpolated?: string } = {};
 
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         title: "Read selected revs",
         run: (_controller, app) => {
@@ -566,7 +566,7 @@ test("app.file is the focused file's path; app.focusedFile is the object", () =>
   const captured: { file?: string; path?: string; status?: string } = {};
 
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         title: "Read app.file",
         run: (_controller, app) => {
@@ -600,7 +600,7 @@ test("app.rev is empty and app.focusedRevision is null when there are no revisio
   let guarded = false;
 
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         title: "Read empty app.rev",
         run: (_controller, app) => {
@@ -634,7 +634,7 @@ test("dispatchGlobalKey reports rejected inline handlers through the controller"
   const errors: string[] = [];
   const state = createState();
   const resolved = resolveConfiguredKeymap({
-    normal: {
+    "revision-log": {
       g: {
         title: "Reject",
         run: async () => {
@@ -1552,8 +1552,8 @@ test("dispatchGlobalKey prefers current mode bindings over global bindings on th
         ...defaultKeymap._global,
         s: "quit",
       },
-      files: {
-        ...defaultKeymap.files,
+      "revision-files": {
+        ...defaultKeymap["revision-files"],
         s: "split",
       },
     },

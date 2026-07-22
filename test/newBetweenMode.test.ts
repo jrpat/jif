@@ -63,7 +63,7 @@ function selectRows(state: AppState, rowIds: readonly string[]): AppState {
 }
 
 test("alt-n enters new-between from normal and space pins an insert-before pick inside it", () => {
-  expect(resolveCommand("normal", "alt-n")).toBe("new-between");
+  expect(resolveCommand("revision-log", "alt-n")).toBe("new-between");
   expect(resolveCommand("new-between", " ")).toBe("toggle-new-between-before");
   // Navigation comes from Log; confirmation comes from Revision Draft.
   expect(resolveCommand("new-between", "j")).toBe("move-down");
@@ -244,5 +244,5 @@ test("escape cancels new-between and clears the composition", () => {
 
   expect(state.commandDraft).toBeNull();
   expect(state.selectedRowIds).toEqual([]);
-  expect(getActiveMode(state)).toBe("normal");
+  expect(getActiveMode(state)).toBe("revision-log");
 });

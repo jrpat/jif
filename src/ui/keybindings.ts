@@ -70,7 +70,7 @@ export function dispatchGlobalKey(options: {
     return false;
   }
   const rawGlobalCommandId = bindingCommand(globalBinding);
-  const globalCommandId = mode !== "normal" && rawGlobalCommandId === "quit" ? "cancel" : rawGlobalCommandId;
+  const globalCommandId = mode !== "revision-log" && rawGlobalCommandId === "quit" ? "cancel" : rawGlobalCommandId;
 
   const command = commands.find((c) => c.id === globalCommandId);
   if (!command) {

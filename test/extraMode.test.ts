@@ -55,7 +55,7 @@ describe("extra mode", () => {
     const entered = enterExtraMode(createState());
     const exited = exitExtraMode(entered);
     expect(exited.focusMode).toBe("revisions");
-    expect(getActiveMode(exited)).toBe("normal");
+    expect(getActiveMode(exited)).toBe("revision-log");
   });
 
   test("cancelOrBlurState exits extra mode", () => {
@@ -65,7 +65,7 @@ describe("extra mode", () => {
   });
 
   test("default keymap binds `;` in normal mode to enter-extra-mode", () => {
-    expect(resolveCommand("normal", ";", defaultKeymap)).toBe("enter-extra-mode");
+    expect(resolveCommand("revision-log", ";", defaultKeymap)).toBe("enter-extra-mode");
   });
 
   test("extra mode has no direct bindings by default", () => {

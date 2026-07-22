@@ -31,7 +31,7 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(configText).toContain("refresh: {");
   expect(configText).toContain("commands: {");
   expect(configText).toContain("keymap: {");
-  expect(configText).toContain("normal: {");
+  expect(configText).toContain('"revision-log": {');
   expect(configText).toContain('// chromeBorderFocus: "#00cdcd",');
   expect(configText).toContain(
     `// previewPaneFill: { source: "foreground", opacity: ${DEFAULT_PREVIEW_PANE_FILL_OPACITY} },`,

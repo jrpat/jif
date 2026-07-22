@@ -93,7 +93,7 @@ test("resolveCommand resolves vim navigation in normal mode", () => {
 
 test("quit is bound globally so q exits from any non-text-input mode", () => {
   expect(defaultKeymap._global.q).toBe("quit");
-  expect(defaultKeymap.normal.q).toBeUndefined();
+  expect(defaultKeymap["revision-log"].q).toBeUndefined();
 });
 
 test("suspend uses ctrl-z canonically and Z as a normal-mode alias", () => {
@@ -103,7 +103,7 @@ test("suspend uses ctrl-z canonically and Z as a normal-mode alias", () => {
   expect(defaultKeymap._global["ctrl-z"]).toBe("suspend");
   expect(resolveForState("Z", state)).toBe("suspend");
   expect(resolveForState("Z", revsetState)).toBeNull();
-  expect(defaultKeymap.normal.Z).toEqual({ command: "suspend", canonical: false });
+  expect(defaultKeymap["revision-log"].Z).toEqual({ command: "suspend", canonical: false });
 });
 
 test("resolveCommand returns null for unbound keys", () => {
@@ -218,20 +218,20 @@ test("rebase-descendants resolves in rebase mode but not normal mode", () => {
 test("a null mode binding overrides an inherited command", () => {
   const keymap: Keymap = {
     ...defaultKeymap,
-    normal: {
-      ...defaultKeymap.normal,
+    "revision-log": {
+      ...defaultKeymap["revision-log"],
       j: null,
     },
   };
 
   expect(resolveCommand("log", "j", keymap)).toBe("move-down");
-  expect(resolveCommand("normal", "j", keymap)).toBeNull();
+  expect(resolveCommand("revision-log", "j", keymap)).toBeNull();
 });
 
 test("split bindings resolve only in revision-log mode", () => {
   for (const mode of Object.keys(modeDefinitions) as Mode[]) {
-    expect(resolveCommand(mode, "ctrl-s")).toBe(mode === "normal" ? "split" : null);
-    expect(resolveCommand(mode, "alt-s")).toBe(mode === "normal" ? "split-parallel" : null);
+    expect(resolveCommand(mode, "ctrl-s")).toBe(mode === "revision-log" ? "split" : null);
+    expect(resolveCommand(mode, "alt-s")).toBe(mode === "revision-log" ? "split-parallel" : null);
   }
 });
 
@@ -264,12 +264,12 @@ test("revision draft modes inherit Revision Draft instead of Normal", () => {
 test("Log owns retry and flag bindings while Revision Draft owns draft mechanics", () => {
   expect(defaultKeymap.log["!"]).toBe("force-last-command");
   expect(defaultKeymap.log["-"]).toBe("toggle-flags");
-  expect(defaultKeymap.normal["!"]).toBeUndefined();
-  expect(defaultKeymap.normal["-"]).toBeUndefined();
+  expect(defaultKeymap["revision-log"]["!"]).toBeUndefined();
+  expect(defaultKeymap["revision-log"]["-"]).toBeUndefined();
   expect(defaultKeymap["revision-draft"].enter).toBe("confirm");
   expect(defaultKeymap["revision-draft"][" "]).toBe("toggle-revision-selection");
 
-  for (const mode of ["normal", "op-log", "evolog", "revision-draft"] satisfies Mode[]) {
+  for (const mode of ["revision-log", "op-log", "evolog", "revision-draft"] satisfies Mode[]) {
     expect(resolveCommand(mode, "!")).toBe("force-last-command");
     expect(resolveCommand(mode, "-")).toBe("toggle-flags");
   }
@@ -422,7 +422,7 @@ function createFilesState(): AppState {
 
 test("a selects all files in files mode", () => {
   const state = createFilesState();
-  expect(getActiveMode(state)).toBe("files");
+  expect(getActiveMode(state)).toBe("revision-files");
   expect(resolveForState("a", state)).toBe("select-all-files");
 });
 
@@ -546,8 +546,8 @@ test("undo and redo resolve in normal mode", () => {
   expect(resolveForState("u", state)).toBe("undo");
   expect(resolveForState("alt-u", state)).toBe("redo");
   expect(resolveForState("U", state)).toBeNull();
-  expect(defaultKeymap.normal["alt-u"]).toBe("redo");
-  expect(defaultKeymap.normal.U).toBeUndefined();
+  expect(defaultKeymap["revision-log"]["alt-u"]).toBe("redo");
+  expect(defaultKeymap["revision-log"].U).toBeUndefined();
   // `G` is inherited from the shared `log` parent, not bound directly on normal.
   expect(defaultKeymap.log.G).toBe("jump-to-bottom");
 });
@@ -581,9 +581,9 @@ test("shortcut panel toggle uses ? in normal mode", () => {
   expect(resolveForState("?", state)).toBe("shortcut-panel");
   expect(resolveForState("!", state)).toBe("force-last-command");
   expect(resolveForState(">", state)).toBe("shell-command-bar");
-  expect(defaultKeymap.normal[">"]).toBe("shell-command-bar");
+  expect(defaultKeymap["revision-log"][">"]).toBe("shell-command-bar");
   expect(resolveForState("g", state)).toBe("git-command-bar");
-  expect(defaultKeymap.normal["g"]).toBe("git-command-bar");
+  expect(defaultKeymap["revision-log"]["g"]).toBe("git-command-bar");
 
   const revsetState: AppState = { ...state, focusMode: "revset" };
   expect(resolveForState("?", revsetState)).toBeNull();
@@ -653,8 +653,8 @@ test("files mode keeps its self-contained file bindings", () => {
   expect(resolveForState("?", state)).toBe("shortcut-panel");
 
   // Mode-local in files
-  expect(defaultKeymap.files["ctrl-s"]).toBeUndefined();
-  expect(defaultKeymap.files["alt-s"]).toBeUndefined();
+  expect(defaultKeymap["revision-files"]["ctrl-s"]).toBeUndefined();
+  expect(defaultKeymap["revision-files"]["alt-s"]).toBeUndefined();
   expect(resolveForState("ctrl-s", state)).toBeNull();
   expect(resolveForState("alt-s", state)).toBeNull();
   expect(resolveForState("r", state)).toBe("restore");

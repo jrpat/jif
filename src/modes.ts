@@ -4,8 +4,8 @@ import type { CommandDefinition } from "./commands/definitions.ts";
 export type Mode =
   | "log"
   | "revision-draft"
-  | "normal"
-  | "files"
+  | "revision-log"
+  | "revision-files"
   | "op-log"
   | "evolog"
   | "inline-confirmation"
@@ -47,8 +47,8 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
     inputPassthrough: false,
     label: "Revision Draft",
   },
-  normal: { id: "normal", parent: "log", inputPassthrough: false, label: "Revisions" },
-  files: { id: "files", inputPassthrough: false, label: "Files" },
+  "revision-log": { id: "revision-log", parent: "log", inputPassthrough: false, label: "Revisions" },
+  "revision-files": { id: "revision-files", inputPassthrough: false, label: "Files" },
   "op-log": { id: "op-log", parent: "log", inputPassthrough: false, label: "Op Log" },
   evolog: { id: "evolog", parent: "log", inputPassthrough: false, label: "Evolog" },
   "inline-confirmation": { id: "inline-confirmation", inputPassthrough: false, label: "Confirm" },
@@ -134,7 +134,7 @@ export const defaultKeymap: Keymap = {
     enter: "confirm",
     " ": "toggle-revision-selection",
   },
-  normal: {
+  "revision-log": {
     J: "move-parent",
     K: "move-child",
     "alt-j": "jump-to-next-divergent",
@@ -185,7 +185,7 @@ export const defaultKeymap: Keymap = {
     M: "set-parents",
     ";": "enter-extra-mode",
   },
-  files: {
+  "revision-files": {
     j: "move-down",
     down: alias("move-down"),
     k: "move-up",
@@ -319,7 +319,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "op-log") return "op-log";
   if (state.focusMode === "evolog") return "evolog";
   if (state.focusMode === "notifications") return "notifications";
-  if (state.focusMode === "files") return "files";
+  if (state.focusMode === "files") return "revision-files";
   if (state.commandDraft?.config.kind === "rebase") return "rebase";
   if (state.commandDraft?.config.kind === "duplicate") return "duplicate";
   if (state.commandDraft?.config.kind === "revert") return "revert";
@@ -333,7 +333,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.commandDraft?.config.kind === "bookmark-move") return "bookmark-move";
   if (state.focusMode === "bookmark") return "bookmark";
   if (state.focusMode === "extra") return "extra";
-  return "normal";
+  return "revision-log";
 }
 
 export function resolveCommand(

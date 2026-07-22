@@ -90,7 +90,7 @@ describe("bookmark leader mode", () => {
     const entered = enterBookmarkLeader(createState());
     const exited = exitBookmarkLeader(entered);
     expect(exited.focusMode).toBe("revisions");
-    expect(getActiveMode(exited)).toBe("normal");
+    expect(getActiveMode(exited)).toBe("revision-log");
   });
 
   test("cancelOrBlurState exits bookmark leader without affecting other state", () => {
@@ -111,7 +111,7 @@ describe("bookmark leader mode", () => {
     const cancelled = cancelOrBlurState(moveDraft);
     expect(cancelled.commandDraft).toBeNull();
     expect(cancelled.focusMode).toBe("revisions");
-    expect(getActiveMode(cancelled)).toBe("normal");
+    expect(getActiveMode(cancelled)).toBe("revision-log");
   });
 
   test("startBookmarkPrompt focuses the command bar with prefilled text and bookmark context", () => {
