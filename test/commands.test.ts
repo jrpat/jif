@@ -591,6 +591,12 @@ test("shortcut panel toggle uses ? in normal mode", () => {
   expect(resolveForState(">", revsetState)).toBeNull();
 });
 
+test("ctrl-enter in revision-log mode triggers the diff-context hint", () => {
+  expect(resolveCommand("revision-log", "ctrl-enter")).toBe("expand-diff-context");
+  // The hint is specific to the revision-log view; the shared log parent does not bind it.
+  expect(resolveCommand("op-log", "ctrl-enter")).toBeNull();
+});
+
 test("reload config is globally bound to ctrl-comma", () => {
   expect(defaultKeymap._global["ctrl-,"]).toBe("reload-config");
   expect(commandDefinitions.some((command) => command.id === "reload-config")).toBeTrue();

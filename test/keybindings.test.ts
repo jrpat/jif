@@ -131,6 +131,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     cyclePreviewPosition: () => calls.push("cyclePreviewPosition"),
     togglePreviewWordWrap: () => calls.push("togglePreviewWordWrap"),
     togglePreviewFullFile: () => calls.push("togglePreviewFullFile"),
+    expandDiffContext: () => calls.push("expandDiffContext"),
     expandPreview: () => calls.push("expandPreview"),
     shrinkPreview: () => calls.push("shrinkPreview"),
     scrollPreview: (rowDelta) => calls.push(`scrollPreview(${rowDelta})`),
@@ -2105,7 +2106,7 @@ test("W routes to preview word wrap in browse modes", () => {
   }
 });
 
-test("ctrl-enter routes to full-file preview toggle only in files mode", () => {
+test("ctrl-enter toggles full-file context in files mode and hints at it in the revision log", () => {
   const filesCalls: string[] = [];
   const filesHandled = dispatchGlobalKey({
     normalizedKey: "ctrl-enter",
@@ -2117,8 +2118,21 @@ test("ctrl-enter routes to full-file preview toggle only in files mode", () => {
   expect(filesHandled).toBeTrue();
   expect(filesCalls).toEqual(["togglePreviewFullFile"]);
 
-  const otherModes: AppState["focusMode"][] = ["revisions", "op-log", "evolog"];
-  for (const focusMode of otherModes) {
+  // In the revision-log view the same key explains that context expansion needs a single file.
+  const revisionCalls: string[] = [];
+  const revisionHandled = dispatchGlobalKey({
+    normalizedKey: "ctrl-enter",
+    state: { ...createState(), focusMode: "revisions" },
+    commands: commandDefinitions,
+    controller: createController(revisionCalls),
+  });
+
+  expect(revisionHandled).toBeTrue();
+  expect(revisionCalls).toEqual(["expandDiffContext"]);
+
+  // The operation log and evolog leave ctrl-enter unbound entirely.
+  const unboundModes: AppState["focusMode"][] = ["op-log", "evolog"];
+  for (const focusMode of unboundModes) {
     const calls: string[] = [];
     const handled = dispatchGlobalKey({
       normalizedKey: "ctrl-enter",

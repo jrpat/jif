@@ -1334,6 +1334,24 @@ test("cyclePreviewPosition shows a single toast that refreshes in place", () => 
   harness.store.dispose();
 });
 
+test("expandDiffContext explains the single-file restriction with one refreshing toast", () => {
+  const harness = createControllerHarness({});
+
+  harness.controller.expandDiffContext();
+  let toasts = harness.store.snapshot().statusMessages;
+  expect(toasts).toHaveLength(1);
+  expect(toasts[0]?.text).toContain("single file");
+  // "success" so the toast auto-dismisses after the normal duration (info would stick).
+  expect(toasts[0]?.level).toBe("success");
+
+  // Pressing again refreshes the same toast instead of stacking a second one.
+  harness.controller.expandDiffContext();
+  toasts = harness.store.snapshot().statusMessages;
+  expect(toasts).toHaveLength(1);
+
+  harness.store.dispose();
+});
+
 test("scrollHelpToast is a no-op when no help scrollbox is registered", () => {
   const harness = createControllerHarness({});
 

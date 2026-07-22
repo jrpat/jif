@@ -184,6 +184,7 @@ export const defaultKeymap: Keymap = {
     b: "enter-bookmark-mode",
     M: "set-parents",
     ";": "enter-extra-mode",
+    "ctrl-enter": "expand-diff-context",
   },
   "revision-files": {
     j: "move-down",

@@ -94,6 +94,7 @@ type SwitchWorkspace = (workspaceName: string) => Promise<void>;
 // instead of stacking a new one per press.
 const PREVIEW_POSITION_TOAST_ID = "preview-position";
 const PREVIEW_CONTEXT_TOAST_ID = "preview-context";
+const DIFF_CONTEXT_HINT_TOAST_ID = "diff-context-hint";
 const REBASE_SELECTION_KIND_TOAST_ID = "rebase-selection-kind";
 
 export function createJifCommandController(args: Readonly<{
@@ -737,6 +738,19 @@ export function createJifCommandController(args: Readonly<{
       store.actions.upsertStatusMessage(
         PREVIEW_CONTEXT_TOAST_ID,
         `Preview context: ${enabled ? "full file" : "compact"}`,
+        "success",
+      );
+    },
+    expandDiffContext() {
+      // Expanding diff context is a single-file-preview affordance (see
+      // togglePreviewFullFile, the ctrl-enter toggle in the revision-files
+      // view). Bound to the same ctrl-enter in the revision-log view so the key
+      // gently explains the restriction instead of doing nothing. A stable id
+      // refreshes one toast in place, and "success" lets it auto-dismiss after
+      // the normal duration.
+      store.actions.upsertStatusMessage(
+        DIFF_CONTEXT_HINT_TOAST_ID,
+        "Heads up — extra diff context is only available when viewing a single file's diff.",
         "success",
       );
     },

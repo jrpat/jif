@@ -142,6 +142,7 @@ When the focused revision has multiple workspace chips, `tab` switches to the fi
 | `/` | search | Incremental search through the revision log |
 | `f` | fast-jump | Incremental search through the revision log, clearing highlights on Enter |
 | `_` | cycle-layout | Rotate loose, normal, and tight layouts |
+| `ctrl-enter` | expand-diff-context | Note that extra diff context is available only when viewing a single file's diff — expand a revision and focus a file, where `ctrl-enter` toggles full-file context |
 
 When the active revset is only `files(...)`, the collapsed status bar shows a `file` chip at the left and starts its shortcuts with `esc log`. Pressing Escape restores the most recent saved revset that is not another pure file filter; if none exists, jif falls back to the configured `revsets.log` value or jj's default log revset.
 

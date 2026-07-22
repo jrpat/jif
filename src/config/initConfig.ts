@@ -380,6 +380,7 @@ namespace Jif {
     toggleInterdiffSwap: () => void;
     togglePreviewWordWrap: () => void;
     togglePreviewFullFile: () => void;
+    expandDiffContext: () => void;
     selectAbsorbDescendants: () => void;
     undo: () => void;
     redo: () => void;

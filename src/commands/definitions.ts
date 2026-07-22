@@ -105,6 +105,7 @@ export type CommandController = Readonly<{
   cyclePreviewPosition: () => void;
   togglePreviewWordWrap: () => void;
   togglePreviewFullFile: () => void;
+  expandDiffContext: () => void;
   expandPreview: () => void;
   shrinkPreview: () => void;
   scrollPreview: (rowDelta: number) => void;
@@ -671,6 +672,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Toggle effectively full-file context for file preview diffs",
     canExecute: (state) => state.focusMode === "files",
     run: (controller) => controller.togglePreviewFullFile(),
+    group: "mode",
+  },
+  {
+    id: "expand-diff-context",
+    title: "Diff Context",
+    description: "Expand diff context — available when viewing a single file's diff",
+    run: (controller) => controller.expandDiffContext(),
     group: "mode",
   },
   {
