@@ -3,6 +3,26 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.3.0 — 2026-07-22
+
+### Highlights
+
+- **Elided revision rows can now be expanded.** Pressing `l` / `→` on an `(elided revisions)` marker reveals the nearest hidden commits as real graph rows. Expansions survive refreshes and last until you change the revset or restart jif — previously the marker usually just vanished without showing anything.
+- **Abandon respects your selection.** `a` now abandons every selected revision, falling back to the focused revision only when nothing is selected.
+- **Breaking: keymap scopes renamed.** The `normal` and `files` keymap scopes are now `revision-log` and `revision-files`. If your config scopes bindings under the old names, update them to the new names.
+- Launching jif outside a Jujutsu repository now restores the terminal and exits with a clear error instead of leaving the screen in a bad state.
+- Pressing `ctrl-enter` in the revision log now shows a hint explaining that extra diff context is available when viewing a single file's diff, instead of doing nothing.
+
+### All changes
+
+- Give the sample repo elided revisions under the default log revset
+- Make elided-revision expansion work and survive refreshes
+- Add ctrl-enter diff-context hint in the revision-log view
+- Rename normal and files modes to revision-log and revision-files
+- Abandon selected revisions before focused revision
+- Exit cleanly when launched outside a repository
+- Bump actions/checkout to v5 in CI and release workflows
+
 ## v0.2.0 — 2026-07-17
 
 ### Highlights
