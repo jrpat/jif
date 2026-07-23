@@ -23,6 +23,7 @@ test("resolveKeyToken builds plain tokens from unmodified keys", () => {
 
 test("resolveKeyToken prefixes ctrl combos", () => {
   expect(resolveKeyToken({ name: "o", sequence: "\x0f", ctrl: true })).toBe("ctrl-o");
+  expect(resolveKeyToken({ name: "\\", sequence: "\x1c", ctrl: true })).toBe("ctrl-\\");
 });
 
 test("resolveKeyToken keeps Alt combos even though OpenTUI also sets meta", () => {

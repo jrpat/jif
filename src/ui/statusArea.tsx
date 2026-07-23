@@ -144,6 +144,16 @@ export function StatusArea(props: {
             Shortcuts
           </text>
           <text fg={colors.textTertiary}>{` ${props.currentModeLabel}`}</text>
+          <Show when={stateChipText() !== null}>
+            <box width={1} />
+            <text
+              fg={colors.statusInfo}
+              bg={colors.statusInfoFill}
+              attributes={TextAttributes.BOLD}
+            >
+              {stateChipText()!}
+            </text>
+          </Show>
           <box flexGrow={1} />
           <Show when={loadingIndicator() !== null}>
             <text fg={getStatusColor("info", colors)} truncate>{loadingIndicator()}</text>

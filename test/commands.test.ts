@@ -297,6 +297,7 @@ test("Log owns retry and flag bindings while Revision Draft owns draft mechanics
 
 test("Log owns jj and shell command entry for every descendant mode", () => {
   expect(defaultKeymap.log[":"]).toBe("command-bar");
+  expect(defaultKeymap._global["ctrl-\\"]).toBe("toggle-dry-run");
   expect(defaultKeymap.log["ctrl-;"]).toEqual({ command: "command-bar", canonical: false });
   expect(defaultKeymap.log[">"]).toBe("shell-command-bar");
   expect(defaultKeymap.log["ctrl-."]).toEqual({ command: "shell-command-bar", canonical: false });

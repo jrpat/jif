@@ -77,6 +77,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     suspend: () => calls.push("suspend"),
     cancelOrBlur: () => calls.push("cancelOrBlur"),
     confirm: () => calls.push("confirm"),
+    toggleDryRun: () => calls.push("toggleDryRun"),
     focusCommandBar: () => calls.push("focusCommandBar"),
     focusGitCommandBar: () => calls.push("focusGitCommandBar"),
     focusShellCommandBar: () => calls.push("focusShellCommandBar"),
@@ -197,19 +198,19 @@ test("dispatchGlobalKey routes ? to the shortcut panel toggle", () => {
   expect(calls).toEqual(["toggleShortcutPanel"]);
 });
 
-test("dispatchGlobalKey routes ctrl-; to the command bar", () => {
+test("dispatchGlobalKey routes ctrl-backslash to the dry-run toggle", () => {
   const calls: string[] = [];
   const state = createState();
 
   const handled = dispatchGlobalKey({
-    normalizedKey: "ctrl-;",
+    normalizedKey: "ctrl-\\",
     state,
     commands: commandDefinitions,
     controller: createController(calls),
   });
 
   expect(handled).toBeTrue();
-  expect(calls).toEqual(["focusCommandBar"]);
+  expect(calls).toEqual(["toggleDryRun"]);
 });
 
 test("dispatchGlobalKey routes g to the git command bar", () => {
@@ -1016,7 +1017,7 @@ test("dispatchGlobalKey routes : to the command bar in op-log mode", () => {
   expect(calls).toEqual(["focusCommandBar"]);
 });
 
-test("dispatchGlobalKey routes ctrl-; to the command bar in op-log mode", () => {
+test("dispatchGlobalKey routes ctrl-backslash to the dry-run toggle in op-log mode", () => {
   const calls: string[] = [];
   const state: AppState = {
     ...createState(),
@@ -1025,14 +1026,14 @@ test("dispatchGlobalKey routes ctrl-; to the command bar in op-log mode", () => 
   };
 
   const handled = dispatchGlobalKey({
-    normalizedKey: "ctrl-;",
+    normalizedKey: "ctrl-\\",
     state,
     commands: commandDefinitions,
     controller: createController(calls),
   });
 
   expect(handled).toBeTrue();
-  expect(calls).toEqual(["focusCommandBar"]);
+  expect(calls).toEqual(["toggleDryRun"]);
 });
 
 test("dispatchGlobalKey routes : to the command bar in evolog mode", () => {

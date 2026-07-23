@@ -82,10 +82,12 @@ import {
   startNewBetween,
   toggleNewBetweenBefore,
   toggleFileSelection,
+  toggleDryRun,
   toggleShortFlags,
   toggleShortcutPanel,
   createInitialState,
   focusCommandBar,
+  previewJjCommand,
   focusGitCommandBar,
   focusShellCommandBar,
   moveFocus,
@@ -276,6 +278,16 @@ export function createAppStore(
       focusCommandBar() {
         mutate((currentState) => focusCommandBar(currentState));
       },
+      previewJjCommand(
+        commandText: string,
+        options: {
+          interactive: boolean;
+          cwd?: string;
+          focusWorkingCopyAfterRefresh?: boolean;
+        },
+      ) {
+        mutate((currentState) => previewJjCommand(currentState, commandText, options));
+      },
       focusGitCommandBar() {
         mutate((currentState) => focusGitCommandBar(currentState));
       },
@@ -380,6 +392,9 @@ export function createAppStore(
       },
       toggleShortFlags() {
         mutate((currentState) => toggleShortFlags(currentState));
+      },
+      toggleDryRun() {
+        mutate((currentState) => toggleDryRun(currentState));
       },
       cycleLayout() {
         mutate((currentState) => cycleLayout(currentState));

@@ -114,6 +114,7 @@ import { resolveLogSurfaceMode } from "./logSurface.ts";
 
 const EXTRA_EMPTY_MESSAGE = "No extra bindings defined. Bind keys under `keymap.extra` in your config.";
 const FILE_FILTER_CHIP_LABEL = "file";
+const DRY_RUN_CHIP_LABEL = ":";
 
 // Deferred UI: these components only render for interactions that cannot
 // happen on the first painted frame, so their modules stay off the startup
@@ -578,17 +579,25 @@ export function JifView(props: {
   const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutBindings()));
   const shortcutContentWidth = createMemo(() => Math.max(1, terminalSize().width - 4));
   const isFileFilterRevset = createMemo(() => isFilesOnlyRevset(store.state.revsetQuery));
+  const stateChipLabel = createMemo(() => {
+    const labels = [
+      ...(isFileFilterRevset() ? [FILE_FILTER_CHIP_LABEL] : []),
+      ...(store.state.dryRun ? [DRY_RUN_CHIP_LABEL] : []),
+    ];
+    return labels.length > 0 ? labels.join(" · ") : null;
+  });
   const shortcutSummarySegments = createMemo(() => {
-    if (!isFileFilterRevset()) {
+    const chipLabel = stateChipLabel();
+    if (chipLabel === null) {
       return buildShortcutSummarySegments(shortcutEntries(), shortcutContentWidth());
     }
-    // File-filter mode is just the normal summary with a leading `esc log` hint
-    // and a chip on the left. Budget for the chip and fold the hint into the
-    // fit so trailing hints drop gracefully instead of overflowing.
-    const availableWidth = shortcutContentWidth() - stateChipSummaryWidth(FILE_FILTER_CHIP_LABEL);
-    return buildShortcutSummarySegments(shortcutEntries(), availableWidth, [
-      { keyLabel: "esc", label: "log" },
-    ]);
+    // Persistent state chips share the status row with shortcut hints. Budget
+    // for their exact combined label so trailing hints drop before overflowing.
+    const availableWidth = shortcutContentWidth() - stateChipSummaryWidth(chipLabel);
+    const leadingEntries = isFileFilterRevset()
+      ? [{ keyLabel: "esc", label: "log" }]
+      : [];
+    return buildShortcutSummarySegments(shortcutEntries(), availableWidth, leadingEntries);
   });
   const shortcutSummary = createMemo(() =>
     buildShortcutSummary(shortcutEntries(), shortcutContentWidth())
@@ -1159,6 +1168,7 @@ export function JifView(props: {
             currentModeLabel={shortcutModeLabel(activeMode())}
             panelBodyHeight={expandedShortcutPanelBodyHeight()}
             actionLabel={showsPersistentShortcutPanel() ? "? close" : null}
+            stateChipLabel={stateChipLabel()}
             config={config}
             loadingIndicatorText={loadingIndicatorText()}
             emptyMessage={activeMode() === "extra" ? EXTRA_EMPTY_MESSAGE : undefined}
@@ -1256,7 +1266,7 @@ export function JifView(props: {
             currentModeLabel={shortcutModeLabel(activeMode())}
             panelBodyHeight={shortcutPanelBodyHeight()}
             config={config}
-            stateChipLabel={isFileFilterRevset() ? FILE_FILTER_CHIP_LABEL : null}
+            stateChipLabel={stateChipLabel()}
             loadingIndicatorText={loadingIndicatorText()}
           />
         </Show>

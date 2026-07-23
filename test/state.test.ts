@@ -16,6 +16,7 @@ import {
   dismissStatusMessage,
   draftConfigs,
   focusCommandBar,
+  previewJjCommand,
   focusGitCommandBar,
   focusShellCommandBar,
   focusLogBottom,
@@ -90,6 +91,7 @@ import {
   setLastFailedCommand,
   touchStatusMessage,
   togglePreviewFullFile,
+  toggleDryRun,
 } from "../src/state/store.ts";
 
 const FIRST_ROW_ID = createRowId("11111111", "aaaaaaaa");
@@ -957,6 +959,48 @@ test("command bar editing is controlled by reducer state", () => {
   state = cancelCommandState(state);
   expect(getDisplayedCommandText(state)).toBe("");
   expect(state.focusMode).toBe("revisions");
+});
+
+test("dry-run mode toggles and survives workspace activation", () => {
+  let state = createState();
+  expect(state.dryRun).toBeFalse();
+
+  state = toggleDryRun(state);
+  expect(state.dryRun).toBeTrue();
+
+  state = activateWorkspace(state, "/tmp/other-workspace");
+  expect(state.dryRun).toBeTrue();
+
+  state = toggleDryRun(state);
+  expect(state.dryRun).toBeFalse();
+});
+
+test("previewJjCommand opens an exact editable command with submission options", () => {
+  let state = previewJjCommand(createState(), "new a", {
+    interactive: false,
+    cwd: "/tmp/other-workspace",
+    focusWorkingCopyAfterRefresh: true,
+  });
+
+  expect(state.focusMode).toBe("command");
+  expect(state.commandBar).toMatchObject({
+    kind: "jj",
+    text: "new a",
+    manual: true,
+    submissionOptions: {
+      interactive: false,
+      cwd: "/tmp/other-workspace",
+      focusWorkingCopyAfterRefresh: true,
+    },
+  });
+
+  state = setCommandBarText(state, "new b");
+  expect(state.commandBar.text).toBe("new b");
+  expect(state.commandBar.submissionOptions).toEqual({
+    interactive: false,
+    cwd: "/tmp/other-workspace",
+    focusWorkingCopyAfterRefresh: true,
+  });
 });
 
 test("git command bar prefills `git ` in compose mode for fast git subcommands", () => {

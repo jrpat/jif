@@ -75,22 +75,27 @@ export function createJifRuntime(args: Readonly<{
       const commandText = (commandOverride ?? getDisplayedCommandText(state)).trim();
       const workspaceRoot = args.getWorkspaceRoot();
       const executor: CommandExecutor = state.commandBar.kind === "shell" ? "shell" : "jj";
+      const submissionOptions = executor === "jj"
+        ? state.commandBar.submissionOptions
+        : undefined;
       const recordHistory = options?.recordHistory && workspaceRoot
         ? (value: string) => executor === "shell"
           ? persistence.recordShellHistory(workspaceRoot, value)
           : persistence.recordCommandHistory(workspaceRoot, value)
         : undefined;
-      const interactive = executor === "jj" && isAlwaysInteractiveJjCommand(commandText);
+      const interactive = executor === "jj" &&
+        (submissionOptions?.interactive ?? isAlwaysInteractiveJjCommand(commandText));
 
       await commandRunner.run({
         commandText,
         executor,
         interactive,
-        cwd: executor === "shell" ? args.getShellCwd() : undefined,
+        cwd: executor === "shell" ? args.getShellCwd() : submissionOptions?.cwd,
         canExecute: commandCanExecute(state),
         cancelBeforeRun: true,
         successFeedback: interactive ? "none" : "status-toast",
         failureFeedback: interactive ? "event" : "status-toast",
+        focusWorkingCopyAfterRefresh: submissionOptions?.focusWorkingCopyAfterRefresh,
         recordHistory,
       });
     },
@@ -99,6 +104,15 @@ export function createJifRuntime(args: Readonly<{
       commandText: string,
       options?: JjCommandOptions,
     ): Promise<boolean> {
+      if (store.snapshot().dryRun) {
+        store.actions.previewJjCommand(commandText, {
+          interactive: false,
+          cwd: options?.cwd,
+          focusWorkingCopyAfterRefresh: options?.focusWorkingCopyAfterRefresh,
+        });
+        return false;
+      }
+
       return await commandRunner.run({
         commandText,
         canExecute: true,
@@ -132,6 +146,14 @@ export function createJifRuntime(args: Readonly<{
     ): Promise<boolean> {
       const cwd = options?.cwd ?? args.getWorkspaceRoot();
       if (!cwd) {
+        return false;
+      }
+
+      if (store.snapshot().dryRun) {
+        store.actions.previewJjCommand(commandText, {
+          interactive: true,
+          cwd,
+        });
         return false;
       }
 

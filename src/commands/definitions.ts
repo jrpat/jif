@@ -36,6 +36,7 @@ export type CommandController = Readonly<{
   suspend: () => void;
   cancelOrBlur: () => void;
   confirm: () => void;
+  toggleDryRun: () => void;
   focusCommandBar: () => void;
   focusGitCommandBar: () => void;
   focusShellCommandBar: () => void;
@@ -369,6 +370,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Close the focused detail view",
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.closeFocusedRevision(),
+  },
+  {
+    id: "toggle-dry-run",
+    title: "Dry Run",
+    description: "Toggle previewing direct jj commands in the command bar before execution",
+    run: (controller) => controller.toggleDryRun(),
+    group: "global",
   },
   {
     id: "command-bar",

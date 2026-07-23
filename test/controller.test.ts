@@ -279,6 +279,23 @@ test("reloadConfig delegates to the injected config reload hook", () => {
   harness.store.dispose();
 });
 
+test("toggleDryRun changes the mode and reports its state", () => {
+  const harness = createControllerHarness({ revisions: [] });
+
+  harness.controller.toggleDryRun();
+
+  expect(harness.store.state.dryRun).toBeTrue();
+  expect(harness.store.state.statusMessages.at(-1)?.text).toBe("Dry-run mode enabled");
+  expect(harness.store.state.statusMessages.at(-1)?.level).toBe("success");
+
+  harness.controller.toggleDryRun();
+
+  expect(harness.store.state.dryRun).toBeFalse();
+  expect(harness.store.state.statusMessages.at(-1)?.text).toBe("Dry-run mode disabled");
+  expect(harness.store.state.statusMessages.at(-1)?.level).toBe("success");
+  harness.store.dispose();
+});
+
 test("abandonRevision abandons the focused revision when nothing is selected", () => {
   const harness = createControllerHarness({
     revisions: [

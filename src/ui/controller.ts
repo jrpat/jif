@@ -96,6 +96,7 @@ const PREVIEW_POSITION_TOAST_ID = "preview-position";
 const PREVIEW_CONTEXT_TOAST_ID = "preview-context";
 const DIFF_CONTEXT_HINT_TOAST_ID = "diff-context-hint";
 const REBASE_SELECTION_KIND_TOAST_ID = "rebase-selection-kind";
+const DRY_RUN_TOAST_ID = "dry-run-mode";
 
 export function createJifCommandController(args: Readonly<{
   store: AppStore;
@@ -378,6 +379,15 @@ export function createJifCommandController(args: Readonly<{
       } else {
         void args.executeCurrentCommand();
       }
+    },
+    toggleDryRun() {
+      const enabled = !store.snapshot().dryRun;
+      store.actions.toggleDryRun();
+      store.actions.upsertStatusMessage(
+        DRY_RUN_TOAST_ID,
+        `Dry-run mode ${enabled ? "enabled" : "disabled"}`,
+        "success",
+      );
     },
     focusCommandBar() {
       store.actions.focusCommandBar();

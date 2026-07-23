@@ -87,6 +87,7 @@ describe("extra mode", () => {
       "search-next",
       "search-prev",
       "suspend",
+      "toggle-dry-run",
     ]);
   });
 

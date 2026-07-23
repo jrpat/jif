@@ -292,6 +292,7 @@ namespace Jif {
     markedRowIds: readonly string[];
     selectedFilePaths: readonly string[];
     commandBar: Readonly<{ text: string; manual: boolean }>;
+    dryRun: boolean;
     commandDraft: unknown;
     lastFailedCommand: FailedCommand | null;
     statusMessages: readonly StatusMessage[];
@@ -354,6 +355,7 @@ namespace Jif {
     suspend: () => void;
     cancelOrBlur: () => void;
     confirm: () => void;
+    toggleDryRun: () => void;
     focusCommandBar: () => void;
     focusShellCommandBar: () => void;
     forceLastCommand: () => void;

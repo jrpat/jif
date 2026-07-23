@@ -59,6 +59,8 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(typesText).toContain("file: string");
   expect(typesText).toContain("focusedRevision: RevisionSummary | null");
   expect(typesText).toContain("focusedFile: ChangedFile | null");
+  expect(typesText).toContain("dryRun: boolean");
+  expect(typesText).toContain("toggleDryRun: () => void");
   expect(typesText).toContain("type UserKeyBinding = string | UserAliasBinding | UserKeybindingCommand | null");
   expect(typesText).toContain('| "revision-draft"');
 });

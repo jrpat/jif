@@ -167,6 +167,13 @@ export type CommandBarState = Readonly<{
   // completion instead of command history, so prefilled subcommands immediately
   // surface their completions.
   startInCompose?: boolean;
+  // Direct commands routed through dry-run mode retain the execution behavior
+  // of the action that composed them when the edited prompt is submitted.
+  submissionOptions?: Readonly<{
+    interactive: boolean;
+    cwd?: string;
+    focusWorkingCopyAfterRefresh?: boolean;
+  }>;
 }>;
 
 export type FailedCommand = Readonly<{
@@ -205,6 +212,7 @@ export type AppState = Readonly<{
   markedRowIds: readonly string[];
   selectedFilePaths: readonly string[];
   commandBar: CommandBarState;
+  dryRun: boolean;
   commandDraft: CommandDraft | null;
   lastFailedCommand: FailedCommand | null;
   statusMessages: readonly StatusMessage[];

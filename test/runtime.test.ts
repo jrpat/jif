@@ -277,6 +277,58 @@ test("runJjCommand forwards an explicit cwd override", async () => {
   harness.store.dispose();
 });
 
+test("dry-run mode previews direct jj commands and submits the edited command", async () => {
+  const harness = createRuntimeHarness({});
+  harness.store.actions.toggleDryRun();
+
+  const executed = await harness.runtime.runJjCommand("new a", {
+    cwd: "/tmp/other",
+    focusWorkingCopyAfterRefresh: true,
+  });
+
+  expect(executed).toBeFalse();
+  expect(harness.commandRuns).toEqual([]);
+  expect(harness.store.state.focusMode).toBe("command");
+  expect(harness.store.state.commandBar.text).toBe("new a");
+
+  harness.store.actions.setCommandBarText("new b");
+  await harness.runtime.executeCurrentCommand(undefined, { recordHistory: true });
+
+  expect(harness.commandRuns).toHaveLength(1);
+  expect(harness.commandRuns[0]).toMatchObject({
+    commandText: "new b",
+    interactive: false,
+    cwd: "/tmp/other",
+    focusWorkingCopyAfterRefresh: true,
+    cancelBeforeRun: true,
+  });
+  harness.store.dispose();
+});
+
+test("dry-run mode preserves interactive execution through the command prompt", async () => {
+  const harness = createRuntimeHarness({});
+  harness.store.actions.toggleDryRun();
+
+  const executed = await harness.runtime.runInteractiveJjCommand("commit");
+
+  expect(executed).toBeFalse();
+  expect(harness.commandRuns).toEqual([]);
+  expect(harness.store.state.commandBar.text).toBe("commit");
+  expect(harness.store.state.commandBar.submissionOptions?.interactive).toBeTrue();
+
+  await harness.runtime.executeCurrentCommand(undefined, { recordHistory: true });
+
+  expect(harness.commandRuns).toHaveLength(1);
+  expect(harness.commandRuns[0]).toMatchObject({
+    commandText: "commit",
+    executor: "jj",
+    interactive: true,
+    successFeedback: "none",
+    failureFeedback: "event",
+  });
+  harness.store.dispose();
+});
+
 test("runShellCommand forwards an explicit cwd override", async () => {
   const harness = createRuntimeHarness({ workspaceRoot: null });
 

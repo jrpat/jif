@@ -106,6 +106,7 @@ export const defaultKeymap: Keymap = {
     escape: "cancel",
     "ctrl-r": "refresh-repository",
     "ctrl-,": "reload-config",
+    "ctrl-\\": "toggle-dry-run",
     "ctrl-z": "suspend",
     "ctrl-n": "search-next",
     "ctrl-p": "search-prev",

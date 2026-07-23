@@ -83,6 +83,7 @@ Available in every mode (mode-specific bindings can override these).
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 | `ctrl-r` | refresh-repository | Refresh the revision log |
 | `ctrl-,` | reload-config | Reload config files and apply runtime settings |
+| `ctrl-\` | toggle-dry-run | Toggle dry-run mode for direct jj commands |
 | `ctrl-z` | suspend | Suspend the application and return to the shell |
 | `ctrl-n` | search-next | Jump to the next search match (no-op when no search is active) |
 | `ctrl-p` | search-prev | Jump to the previous search match (no-op when no search is active) |
@@ -180,7 +181,7 @@ The split bindings are available only in the revision log, not while composing a
 
 | Key | Command | Description |
 |-----|---------|-------------|
-| `:` | command-bar | Run a jj subcommand |
+| `:` / `ctrl-;` | command-bar | Run a jj subcommand |
 | `g` | git-command-bar | Open the command bar prefilled with `git `, straight into complete-at-point so git subcommands complete immediately |
 | `>` | shell-command-bar | Run a shell command |
 | `ctrl-o` | open-operation-log | Open the repository operation log |
@@ -205,7 +206,7 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 | `r` | restore | Restore selected files to their state before this change |
 | `ctrl-u` | untrack | Stop tracking the focused file, or all selected files (`jj file untrack <paths>`) |
 | `ctrl-f` | restrict-revset-to-focused-file | Show revisions that changed the focused file |
-| `:` / `ctrl-;` | command-bar | Run a jj subcommand |
+| `:` | command-bar | Run a jj subcommand |
 | `>` / `ctrl-.` | shell-command-bar | Run a shell command |
 
 ### Rebase
@@ -630,7 +631,9 @@ export default {
 
 Besides the concrete per-mode scopes (`revision-log`, `revision-files`, `op-log`, `evolog`, …) and `_global`, there are two shared scopes. `log` is inherited by Normal, Operation Log, Evolog, Bookmark, and Revision Draft. `revision-draft` inherits `log` and is itself inherited by operation composers such as Rebase and Squash. Binding a key under either shared scope rebinds it for every descendant; a same-key binding in a child mode still overrides the inherited binding there.
 
-The default jj command bindings (`:` / `ctrl-;`) and shell command bindings (`>` / `ctrl-.`) live in `log`, so they are available from every one of those descendants. Opening a prompt preserves the current log surface behind it.
+The default jj command bindings (`:` / `ctrl-;`) and shell command bindings (`>` / `ctrl-.`) live in `log`, so they are available from every one of those descendants. Opening a prompt preserves the current log surface behind it. The global `ctrl-\` binding toggles dry-run mode.
+
+When dry-run mode is enabled, an action that would run a jj command directly opens the jj command prompt with that command prefilled instead. You can edit the command or press `enter` to submit it. Commands submitted from the prompt, internal repository reads, and shell commands continue normally. A bold `:` chip remains visible in the status area while the mode is enabled.
 
 Or define an inline command directly in the keymap:
 
@@ -769,6 +772,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `startSquashOnto()` | Start squash-onto with the focused revision as the target |
 | `suspend()` | Suspend jif and return to the shell |
 | `toggleFileSelection()` | Toggle the focused file selection |
+| `toggleDryRun()` | Toggle previewing direct jj commands in the command prompt before execution |
 | `toggleInterdiffSwap()` | Swap interdiff `--from` and `--to` roles |
 | `togglePreviewFullFile()` | Toggle effectively full-file context for file preview diffs |
 | `togglePreviewWordWrap()` | Wrap or unwrap long preview diff lines |
@@ -802,6 +806,7 @@ The `app` argument is a read-only snapshot of jif state, plus the ergonomic `rev
 | `focusedRevision` | `RevisionSummary \| null` | Focused revision object, or `null` |
 | `focusedFile` | `ChangedFile \| null` | Focused changed file object, or `null` |
 | `commandBar` | `CommandBarState` | Current command bar state |
+| `dryRun` | `boolean` | Whether direct jj commands open in the command prompt before execution |
 | `commandBarBookmark` | `CommandBarBookmarkContext \| null` | Bookmark autocomplete context for command prompts |
 | `commandDraft` | `CommandDraft \| null` | Active command draft |
 | `diffViewer` | `DiffViewerState \| null` | Active diff viewer state |

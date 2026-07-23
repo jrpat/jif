@@ -226,6 +226,7 @@ export function createInitialState(
     markedRowIds: [],
     selectedFilePaths: [],
     commandBar: createEmptyCommandBar(),
+    dryRun: false,
     commandDraft: null,
     lastFailedCommand: null,
     statusMessages: [],
@@ -274,6 +275,7 @@ export function activateWorkspace(
     focusedNotificationIndex: clampIndex(state.focusedNotificationIndex, state.eventLog.length),
     expandedNotificationIds: state.expandedNotificationIds,
     shortcutPanelExpanded: state.shortcutPanelExpanded,
+    dryRun: state.dryRun,
     previewPositionOverride: state.previewPositionOverride,
     previewVisibleOverride: state.previewVisibleOverride,
     previewSizePercentOverride: state.previewSizePercentOverride,
@@ -411,13 +413,17 @@ export function createEmptyCommandBar(): CommandBarState {
 function createManualCommandBar(
   kind: CommandBarKind,
   text: string,
-  options?: { startInCompose?: boolean },
+  options?: {
+    startInCompose?: boolean;
+    submissionOptions?: CommandBarState["submissionOptions"];
+  },
 ): CommandBarState {
   return {
     kind,
     text,
     manual: true,
     ...(options?.startInCompose ? { startInCompose: true } : {}),
+    ...(options?.submissionOptions ? { submissionOptions: options.submissionOptions } : {}),
   };
 }
 
@@ -1081,6 +1087,26 @@ export function focusCommandBar(state: AppState): AppState {
   return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "command"]);
 }
 
+export function previewJjCommand(
+  state: AppState,
+  commandText: string,
+  options: NonNullable<CommandBarState["submissionOptions"]>,
+): AppState {
+  const nextState = {
+    ...state,
+    inlineConfirmation: null,
+    commandBar: createManualCommandBar("jj", commandText, {
+      submissionOptions: options,
+    }),
+  };
+
+  return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "command"]);
+}
+
+export function toggleDryRun(state: AppState): AppState {
+  return { ...state, dryRun: !state.dryRun };
+}
+
 export function focusGitCommandBar(state: AppState): AppState {
   const nextState = {
     ...state,
@@ -1115,7 +1141,9 @@ export function setCommandBarText(state: AppState, text: string): AppState {
 
   return {
     ...state,
-    commandBar: createManualCommandBar(state.commandBar.kind, normalizedText),
+    commandBar: createManualCommandBar(state.commandBar.kind, normalizedText, {
+      submissionOptions: state.commandBar.submissionOptions,
+    }),
   };
 }
 
