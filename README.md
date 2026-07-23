@@ -948,6 +948,8 @@ The `:` command bar has two views: your **command history**, and structured **co
 
 Complete-at-point suggests the next thing a `jj` command needs: subcommands, configured command aliases, flags, revisions, enum values, and bookmark names. `tab` inserts the current suggestion and advances to the next thing to complete; the arrows / `ctrl-n`,`ctrl-p` / `ctrl-j`,`ctrl-k` move through the list. `enter` runs the command, unless you have moved to a suggestion, in which case it accepts that suggestion. The flag and value metadata comes straight from `jj`'s own help, so it matches your installed `jj`; command aliases come from `jj config list aliases`, excluding aliases that start with `util`. The `>` shell command bar is unchanged (history only).
 
+Both command bars wrap long commands and grow to half the terminal height before scrolling, so the full command stays visible without crowding out the log.
+
 </details>
 
 ## Developing

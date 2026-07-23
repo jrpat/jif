@@ -1,6 +1,11 @@
-import { TextAttributes, type InputRenderable } from "@opentui/core";
+import {
+  TextAttributes,
+  type BoxRenderable,
+  type InputRenderable,
+  type TextareaRenderable,
+} from "@opentui/core";
 import { For, Show, batch, createEffect, createMemo, createSignal, onMount } from "solid-js";
-import { useKeyboard } from "@opentui/solid";
+import { useKeyboard, useTerminalDimensions } from "@opentui/solid";
 import { matchHistoryEntries } from "../history/store.ts";
 import type { JjClient } from "../jj/client.ts";
 import type { JjCommandAlias } from "../jj/commandAliases.ts";
@@ -68,9 +73,10 @@ export function CommandPrompt(props: {
   const [historyMode, setHistoryMode] = createSignal(false);
   const [helpVersion, setHelpVersion] = createSignal(0);
   const composeActive = () => props.composeEnabled && !props.bookmarkContext && !historyMode();
-  let input: InputRenderable | undefined;
+  let input: TextareaRenderable | undefined;
   // The initial view is chosen once, after history first loads.
   let initialViewChosen = false;
+  const dimensions = useTerminalDimensions();
 
   // Flip between history and compose. Switching INTO history is a no-op when
   // there is no history to show, so the jj bar never lands on an empty list.
@@ -275,6 +281,10 @@ export function CommandPrompt(props: {
     return filteredHistory()[index] ?? draftText();
   });
 
+  // Most rows the text area may grow to before it scrolls, so a very long command
+  // never crowds out the log above it.
+  const maxLines = createMemo(() => Math.max(1, Math.floor(dimensions().height / 2)));
+
   const displayedCursorOffset = createMemo<number | null>(() => {
     if (pendingInitialSync()) {
       return props.bookmarkContext?.initialCursorOffset ?? draftText().length;
@@ -411,8 +421,14 @@ export function CommandPrompt(props: {
       <box width={Array.from(props.prefix).length} flexDirection="row" flexShrink={0}>
         <text fg={colors.textPrimary}>{props.prefix}</text>
       </box>
-      <input
-        ref={(el: InputRenderable) => {
+      {/*
+        A wrapping text area (not an <input>) so a long command grows vertically
+        and word-wraps instead of scrolling off the right edge. Enter still
+        submits: the useKeyboard handler above intercepts "return" and calls
+        preventDefault, so the text area never inserts a literal newline.
+      */}
+      <textarea
+        ref={(el: TextareaRenderable) => {
           input = el;
           el.editorView.setScrollMargin(0);
           const cursor = displayedCursorOffset();
@@ -420,7 +436,9 @@ export function CommandPrompt(props: {
           setPendingInitialSync(false);
         }}
         flexGrow={1}
+        maxHeight={maxLines()}
         marginRight={1}
+        wrapMode="word"
         placeholder={props.placeholder}
         focused
         textColor={colors.textPrimary}
@@ -428,11 +446,30 @@ export function CommandPrompt(props: {
         placeholderColor={colors.textQuaternary}
         cursorColor={colors.chromeBorderFocus}
         cursorStyle={{ style: "line" }}
-        onInput={(value) => {
+        onContentChange={() => {
+          const raw = input?.plainText ?? "";
+          // onContentChange also fires for the programmatic setText we make while
+          // syncing a history preview, accepting a suggestion, or on the initial
+          // mount. Those set the buffer to exactly what displayedText() already
+          // reports, so if the buffer still matches there is nothing new to
+          // capture — skip, and the live draft is preserved. (A synchronous
+          // "is this programmatic" flag can't work here: the callback runs at
+          // render time, after any such flag would have been cleared.)
+          if (raw === displayedText()) {
+            return;
+          }
+          let value = raw;
+          // The prompt is a single logical line that just wraps, so fold any
+          // pasted newline into a space (the old <input> stripped newlines too).
+          if (value.includes("\n")) {
+            const cursor = input?.cursorOffset ?? value.length;
+            value = value.replace(/\n/g, " ");
+            syncPromptInput(input, value, cursor);
+          }
           // A bare ':' (the first-and-only character) is a mode-toggle command,
           // not content: swallow it and flip history <-> compose.
           if (props.composeEnabled && !props.bookmarkContext && value === ":") {
-            input?.setText("");
+            syncPromptInput(input, "", 0);
             toggleHistoryMode();
             batch(() => {
               setDraftText("");
@@ -912,20 +949,15 @@ function PromptShell(props: {
   children: any;
 }) {
   const colors = props.config.colorScheme.semanticColors;
-  const autocompleteHeight = createMemo(() => Math.min(props.items.length, 10));
-  const totalHeight = createMemo(() =>
-    3 + autocompleteHeight() + (props.items.length > 0 ? 1 : 0)
-  );
-
-  createEffect(() => {
-    props.onHeightChange?.(totalHeight());
-  });
 
   return (
     <box
       width="100%"
-      height={totalHeight()}
+      flexShrink={0}
       flexDirection="column"
+      onSizeChange={function (this: BoxRenderable) {
+        props.onHeightChange?.(this.height);
+      }}
     >
       <Show when={props.items.length > 0}>
         <AutocompleteList
@@ -938,7 +970,6 @@ function PromptShell(props: {
       </Show>
       <box
         width="100%"
-        height={3}
         flexDirection="row"
         paddingX={1}
         border
@@ -975,7 +1006,7 @@ function getRevsetSuggestionText(
   return currentText.slice(0, start) + nextValue;
 }
 
-function syncPromptInput(input: InputRenderable | undefined, text: string, cursorOffset?: number) {
+function syncPromptInput(input: TextareaRenderable | undefined, text: string, cursorOffset?: number) {
   if (!input) {
     return;
   }
