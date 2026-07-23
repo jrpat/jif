@@ -337,6 +337,8 @@ test("getShortcutPanelBindings narrows rebase draft shortcuts to draft-relevant 
   expect(ids).toContain("force-last-command");
   expect(ids).toContain("rebase-descendants");
   expect(ids).toContain("shortcut-panel");
+  expect(ids).toContain("command-bar");
+  expect(ids).toContain("shell-command-bar");
   expect(ids).not.toContain("split");
   expect(ids).not.toContain("split-parallel");
   expect(ids).not.toContain("quit");
@@ -360,7 +362,11 @@ test("getShortcutPanelBindings narrows file mode shortcuts to file-relevant acti
   expect(ids).toContain("toggle-preview-full-file");
   expect(ids).toContain("collapse");
   expect(ids).toContain("shortcut-panel");
+  expect(ids).toContain("command-bar");
+  expect(ids).toContain("shell-command-bar");
   expect(bindings.find(({ command }) => command.id === "toggle-preview-full-file")?.key).toBe("ctrl-enter");
+  expect(bindings.find(({ command }) => command.id === "command-bar")?.key).toBe(":");
+  expect(bindings.find(({ command }) => command.id === "shell-command-bar")?.key).toBe(">");
   // files mode does not inherit Normal, so revision and global power commands are absent
   expect(ids).not.toContain("force-last-command");
   expect(ids).not.toContain("rebase");
@@ -398,6 +404,8 @@ test("collectDirectCanonicalBindingsForMode is mode-specific and excludes parent
   expect(keys).toContain("j");
   expect(keys).toContain("k");
   expect(keys).toContain("h");
+  expect(keys).toContain(":");
+  expect(keys).toContain(">");
   // files mode does not inherit Normal, so revision-only keys are absent entirely
   expect(keys).not.toContain("G");
   expect(keys).not.toContain("S");
@@ -446,6 +454,7 @@ test("op-log inherits the shared log keys and globals below the divider", () => 
   const keys = collectInheritedAndGlobalCanonicalBindings("op-log", defaultKeymap).map((b) => b.key);
   // Shared log chrome, inherited from the `log` parent
   expect(keys).toContain(":");
+  expect(keys).toContain(">");
   expect(keys).toContain("?");
   expect(keys).toContain("/");
   expect(keys).toContain("f");
@@ -470,6 +479,7 @@ test("evolog has no direct bindings and inherits everything from the log parent"
 
   const inherited = collectInheritedAndGlobalCanonicalBindings("evolog", defaultKeymap).map((b) => b.key);
   expect(inherited).toContain(":");
+  expect(inherited).toContain(">");
   expect(inherited).toContain("?");
   expect(inherited).toContain("/");
   expect(inherited).toContain("f");

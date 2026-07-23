@@ -110,6 +110,7 @@ import {
 import { executeShellCommand as executeShellTextCommand } from "../jj/process.ts";
 import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 import { switchWorkspace } from "./workspaceSwitch.ts";
+import { resolveLogSurfaceMode } from "./logSurface.ts";
 
 const EXTRA_EMPTY_MESSAGE = "No extra bindings defined. Bind keys under `keymap.extra` in your config.";
 const FILE_FILTER_CHIP_LABEL = "file";
@@ -186,6 +187,7 @@ export function JifView(props: {
   const logScrollAcceleration = createMemo(() =>
     makeScrollAcceleration(config.scroll.step, config.scroll.acceleration)
   );
+  const logSurfaceMode = createMemo(() => resolveLogSurfaceMode(store.state));
   const persistence = createPersistenceService();
   const refreshRepository = createRepositoryRefresher({
     client,
@@ -425,7 +427,7 @@ export function JifView(props: {
   // so rapid j/k navigation doesn't spawn a jj process per keystroke; a sequence
   // token discards stale async results.
   createEffect(() => {
-    const mode = store.state.focusMode;
+    const mode = logSurfaceMode();
     const visible = previewVisible();
     const activeRoot = store.state.repoPath;
 
@@ -1011,13 +1013,13 @@ export function JifView(props: {
             >
               <box width="100%" flexDirection="column">
                 <Show
-                  when={store.state.focusMode === "notifications"}
+                  when={logSurfaceMode() === "notifications"}
                   fallback={(
                     <Show
-                      when={store.state.focusMode === "op-log"}
+                      when={logSurfaceMode() === "op-log"}
                       fallback={(
                         <Show
-                          when={store.state.focusMode === "evolog"}
+                          when={logSurfaceMode() === "evolog"}
                           fallback={(
                             <For each={store.state.revisions}>
                               {(revision, index) => (

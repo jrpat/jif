@@ -205,6 +205,8 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 | `r` | restore | Restore selected files to their state before this change |
 | `ctrl-u` | untrack | Stop tracking the focused file, or all selected files (`jj file untrack <paths>`) |
 | `ctrl-f` | restrict-revset-to-focused-file | Show revisions that changed the focused file |
+| `:` / `ctrl-;` | command-bar | Run a jj subcommand |
+| `>` / `ctrl-.` | shell-command-bar | Run a shell command |
 
 ### Rebase
 
@@ -326,7 +328,7 @@ Note: in terminals without enhanced keyboard support, `ctrl-i` and `tab` are ind
 
 ### Operation Log
 
-Active while the operation log panel is open. Inherits the shared **Log** bindings (movement, `:`, `/`, `f`, `?`, and the preview controls); it does **not** inherit Normal, so revision operations are unavailable. Only the operation-specific keys below are its own.
+Active while the operation log panel is open. Inherits the shared **Log** bindings (movement, `:`, `>`, `/`, `f`, `?`, and the preview controls); it does **not** inherit Normal, so revision operations are unavailable. Only the operation-specific keys below are its own.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -338,12 +340,13 @@ Active while the operation log panel is open. Inherits the shared **Log** bindin
 | `R` | revert-operation | Revert the focused operation |
 | `d` | show-operation-diff | Show repository changes for the focused operation |
 | `:` | command-bar | Run a jj subcommand |
+| `>` | shell-command-bar | Run a shell command |
 | `/` | search | Incremental search through the operation log |
 | `f` | fast-jump | Incremental search through the operation log, clearing highlights on Enter |
 
 ### Evolog
 
-Active while the evolog panel is open. Opened from Normal with `ctrl-e` for the focused revision. Inherits the shared **Log** bindings (movement, `:`, `/`, `f`, `?`, and the preview controls); it does **not** inherit Normal. Every key below comes from the shared Log set — evolog has no keys of its own.
+Active while the evolog panel is open. Opened from Normal with `ctrl-e` for the focused revision. Inherits the shared **Log** bindings (movement, `:`, `>`, `/`, `f`, `?`, and the preview controls); it does **not** inherit Normal. Every key below comes from the shared Log set — evolog has no keys of its own.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -351,6 +354,7 @@ Active while the evolog panel is open. Opened from Normal with `ctrl-e` for the 
 | `k` / `↑` | move-up | Focus the previous evolog entry |
 | `G` | jump-to-bottom | Jump to the last evolog entry |
 | `:` | command-bar | Run a jj subcommand |
+| `>` | shell-command-bar | Run a shell command |
 | `/` | search | Incremental search through the evolog |
 | `f` | fast-jump | Incremental search through the evolog, clearing highlights on Enter |
 
@@ -625,6 +629,8 @@ export default {
 ```
 
 Besides the concrete per-mode scopes (`revision-log`, `revision-files`, `op-log`, `evolog`, …) and `_global`, there are two shared scopes. `log` is inherited by Normal, Operation Log, Evolog, Bookmark, and Revision Draft. `revision-draft` inherits `log` and is itself inherited by operation composers such as Rebase and Squash. Binding a key under either shared scope rebinds it for every descendant; a same-key binding in a child mode still overrides the inherited binding there.
+
+The default jj command bindings (`:` / `ctrl-;`) and shell command bindings (`>` / `ctrl-.`) live in `log`, so they are available from every one of those descendants. Opening a prompt preserves the current log surface behind it.
 
 Or define an inline command directly in the keymap:
 

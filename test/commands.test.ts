@@ -295,6 +295,29 @@ test("Log owns retry and flag bindings while Revision Draft owns draft mechanics
   }
 });
 
+test("Log owns jj and shell command entry for every descendant mode", () => {
+  expect(defaultKeymap.log[":"]).toBe("command-bar");
+  expect(defaultKeymap.log["ctrl-;"]).toEqual({ command: "command-bar", canonical: false });
+  expect(defaultKeymap.log[">"]).toBe("shell-command-bar");
+  expect(defaultKeymap.log["ctrl-."]).toEqual({ command: "shell-command-bar", canonical: false });
+  expect(defaultKeymap["revision-log"][">"]).toBeUndefined();
+  expect(defaultKeymap["revision-log"]["ctrl-."]).toBeUndefined();
+
+  for (const mode of [
+    "revision-log",
+    "op-log",
+    "evolog",
+    "bookmark",
+    "rebase",
+    "squash",
+  ] satisfies Mode[]) {
+    expect(resolveCommand(mode, ":")).toBe("command-bar");
+    expect(resolveCommand(mode, "ctrl-;")).toBe("command-bar");
+    expect(resolveCommand(mode, ">")).toBe("shell-command-bar");
+    expect(resolveCommand(mode, "ctrl-.")).toBe("shell-command-bar");
+  }
+});
+
 test("rebase mode binds source, target, and modifier keys", () => {
   const rebaseState = startCommandDraft(createState(), draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
 
@@ -581,7 +604,6 @@ test("shortcut panel toggle uses ? in normal mode", () => {
   expect(resolveForState("?", state)).toBe("shortcut-panel");
   expect(resolveForState("!", state)).toBe("force-last-command");
   expect(resolveForState(">", state)).toBe("shell-command-bar");
-  expect(defaultKeymap["revision-log"][">"]).toBe("shell-command-bar");
   expect(resolveForState("g", state)).toBe("git-command-bar");
   expect(defaultKeymap["revision-log"]["g"]).toBe("git-command-bar");
 

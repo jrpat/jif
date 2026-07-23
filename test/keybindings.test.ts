@@ -297,6 +297,48 @@ test("dispatchGlobalKey routes ctrl-f to focused-file revset restriction in file
   expect(calls).toEqual(["restrictRevsetToFocusedFile"]);
 });
 
+test("dispatchGlobalKey routes command bar bindings in files mode", () => {
+  const state: AppState = {
+    ...createState(),
+    focusMode: "files",
+    focusModeStack: ["revisions", "files"],
+  };
+
+  for (const normalizedKey of [":", "ctrl-;"]) {
+    const calls: string[] = [];
+    const handled = dispatchGlobalKey({
+      normalizedKey,
+      state,
+      commands: commandDefinitions,
+      controller: createController(calls),
+    });
+
+    expect(handled).toBeTrue();
+    expect(calls).toEqual(["focusCommandBar"]);
+  }
+});
+
+test("dispatchGlobalKey routes shell command bar bindings in files mode", () => {
+  const state: AppState = {
+    ...createState(),
+    focusMode: "files",
+    focusModeStack: ["revisions", "files"],
+  };
+
+  for (const normalizedKey of [">", "ctrl-."]) {
+    const calls: string[] = [];
+    const handled = dispatchGlobalKey({
+      normalizedKey,
+      state,
+      commands: commandDefinitions,
+      controller: createController(calls),
+    });
+
+    expect(handled).toBeTrue();
+    expect(calls).toEqual(["focusShellCommandBar"]);
+  }
+});
+
 test("dispatchGlobalKey routes ctrl-comma to reload config", () => {
   const calls: string[] = [];
   const state = createState();
@@ -1010,6 +1052,29 @@ test("dispatchGlobalKey routes : to the command bar in evolog mode", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["focusCommandBar"]);
+});
+
+test("dispatchGlobalKey routes shell command bindings from shared log modes", () => {
+  for (const focusMode of ["op-log", "evolog"] as const) {
+    const state: AppState = {
+      ...createState(),
+      focusMode,
+      focusModeStack: ["revisions", focusMode],
+    };
+
+    for (const normalizedKey of [">", "ctrl-."]) {
+      const calls: string[] = [];
+      const handled = dispatchGlobalKey({
+        normalizedKey,
+        state,
+        commands: commandDefinitions,
+        controller: createController(calls),
+      });
+
+      expect(handled).toBeTrue();
+      expect(calls).toEqual(["focusShellCommandBar"]);
+    }
+  }
 });
 
 test("dispatchGlobalKey routes / to openSearch in op-log mode", () => {

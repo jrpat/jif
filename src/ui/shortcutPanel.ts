@@ -229,6 +229,7 @@ export function getShortcutPanelBindings(
   if (state.commandDraft !== null) {
     return actionable.filter(({ command }) =>
       NAVIGATION_COMMAND_IDS.has(command.id) ||
+      COMMAND_ENTRY_COMMAND_IDS.has(command.id) ||
       command.group === "mode" ||
       command.group === "cancel" ||
       command.id === "shortcut-panel" ||
@@ -248,6 +249,7 @@ export function getShortcutPanelBindings(
   if (state.focusMode === "files") {
     return actionable.filter(({ command }) =>
       NAVIGATION_COMMAND_IDS.has(command.id) ||
+      COMMAND_ENTRY_COMMAND_IDS.has(command.id) ||
       command.group === "mode" ||
       command.group === "cancel" ||
       command.id === "shortcut-panel" ||
@@ -432,6 +434,11 @@ const NAVIGATION_COMMAND_IDS = new Set([
   "move-to-prev-bookmark",
   "expand",
   "collapse",
+]);
+
+const COMMAND_ENTRY_COMMAND_IDS = new Set([
+  "command-bar",
+  "shell-command-bar",
 ]);
 
 function commandHasImmediateEffect(
