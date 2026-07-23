@@ -54,6 +54,7 @@
 # JJ/Repo Setup Expectations
 
 - Deterministic sample data lives at `test/fixtures/sample-repo.jsonl`.
+- The fixture marks history below the `immutable/*` bookmarks immutable (via a repo-level `immutable_heads()` alias) so the default log revset shows elided-revision markers; keep at least one such marker when editing the fixture.
 - Sample repo materialization logic lives under `src/dev/`.
 - Debug mode should launch against a freshly materialized sample repo instead of the ambient working directory:
   - `bun run index.ts --sample`

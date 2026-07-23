@@ -62,6 +62,7 @@
 {"kind":"appendFile","path":"docs/architecture.md","content":"\n## Theming\n\nSemantic color tokens resolve against detected terminal theme.\n"}
 {"kind":"jj","args":["describe","-m","style: add initial tui theme tokens"]}
 {"kind":"jj","args":["bookmark","set","main"]}
+{"kind":"jj","args":["bookmark","create","immutable/base"]}
 {"kind":"jj","args":["new"]}
 {"kind":"jj","args":["new","branch-point"]}
 {"kind":"writeFile","path":"src/rebase-flow.ts","content":"export function beginRebase(source) {\n  return `rebase -r ${source}`;\n}\n"}
@@ -223,3 +224,25 @@
 {"kind":"jj","args":["describe","-m","wip(absorb): tweak every section"]}
 {"kind":"jj","args":["bookmark","set","sample/absorb"]}
 {"kind":"jj","args":["edit","main"]}
+{"kind": "jj", "args": ["new", "root()"]}
+{"kind": "writeFile", "path": "docs/decisions/0001-use-jujutsu.md", "content": "# 1. Use Jujutsu\n\nTrack history with jj so the UI always has a real graph to render.\n"}
+{"kind": "jj", "args": ["describe", "-m", "docs(archive): record jujutsu adoption decision"]}
+{"kind": "jj", "args": ["new"]}
+{"kind": "writeFile", "path": "docs/decisions/0002-terminal-ui.md", "content": "# 2. Terminal UI\n\nShip a keyboard-first TUI instead of a desktop shell.\n"}
+{"kind": "jj", "args": ["describe", "-m", "docs(archive): record terminal ui decision"]}
+{"kind": "jj", "args": ["new"]}
+{"kind": "writeFile", "path": "docs/decisions/0003-log-first.md", "content": "# 3. Log First\n\nNavigation starts from the revision log, not a file tree.\n"}
+{"kind": "jj", "args": ["describe", "-m", "docs(archive): record log-first navigation decision"]}
+{"kind": "jj", "args": ["new"]}
+{"kind": "writeFile", "path": "docs/decisions/0004-deterministic-fixtures.md", "content": "# 4. Deterministic Fixtures\n\nSample repositories replay a checked-in operation log.\n"}
+{"kind": "jj", "args": ["describe", "-m", "docs(archive): record deterministic fixture decision"]}
+{"kind": "jj", "args": ["new"]}
+{"kind": "writeFile", "path": "docs/decisions/0005-progressive-commands.md", "content": "# 5. Progressive Commands\n\nCommands compose progressively from single keys.\n"}
+{"kind": "jj", "args": ["describe", "-m", "docs(archive): record progressive command decision"]}
+{"kind": "jj", "args": ["bookmark", "create", "immutable/archive"]}
+{"kind": "jj", "args": ["new"]}
+{"kind": "writeFile", "path": "docs/decisions/0006-draft.md", "content": "# 6. Draft\n\nPending: how elided revisions expand in the log view.\n"}
+{"kind": "jj", "args": ["describe", "-m", "wip(archive): draft next decision entry"]}
+{"kind": "jj", "args": ["bookmark", "create", "sample/archive"]}
+{"kind": "jj", "args": ["edit", "main"]}
+{"kind": "jj", "args": ["config", "set", "--repo", "revset-aliases.\"immutable_heads()\"", "builtin_immutable_heads() | bookmarks(glob:\"immutable/*\")"]}

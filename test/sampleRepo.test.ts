@@ -30,6 +30,27 @@ test("sample repo materialization creates bookmarks and workspaces", async () =>
   expect(bookmarkList.stdout).toContain("feature/ui");
 }, 20000);
 
+test("sample repo elides revisions under the default log revset", async () => {
+  const repo = await materializeSampleRepoCached({
+    baseDir: await createTempDir("materialize-sample-elided"),
+  });
+
+  // Pin the stock default revset so the assertion holds regardless of the
+  // ambient user config. Elision comes from the fixture's immutable/* anchors:
+  // ancestors(immutable_heads().., 2) cuts the deep history they protect.
+  const log = await runCommand(repo.repoPath, [
+    "jj",
+    "log",
+    "--color",
+    "never",
+    "--config",
+    'revsets.log="present(@) | ancestors(immutable_heads().., 2) | present(trunk())"',
+  ]);
+
+  const elidedMarkers = log.stdout.split("\n").filter((line) => line.includes("(elided revisions)"));
+  expect(elidedMarkers.length).toBeGreaterThanOrEqual(2);
+}, 20000);
+
 test("sample repo includes a simple side branch after the integration fixture commit", async () => {
   const repo = await materializeSampleRepoCached({
     baseDir: await createTempDir("materialize-sample-branch"),
