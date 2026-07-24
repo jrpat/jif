@@ -445,6 +445,21 @@ test("moveFocus enters file navigation when details are open", () => {
   expect(state.focusedRevisionIndex).toBe(0);
 });
 
+test("moveFocus requests revision visibility when movement is clamped", () => {
+  let state = createState();
+  const topRequest = state.revisionScrollRequest;
+
+  state = moveFocus(state, -1);
+  expect(state.focusedRevisionIndex).toBe(0);
+  expect(state.revisionScrollRequest).toBe(topRequest + 1);
+
+  state = focusLogBottom(state);
+  const bottomRequest = state.revisionScrollRequest;
+  state = moveFocus(state, 1);
+  expect(state.focusedRevisionIndex).toBe(state.revisions.length - 1);
+  expect(state.revisionScrollRequest).toBe(bottomRequest + 1);
+});
+
 test("openOperationLog enters a dedicated browse mode", () => {
   const state = openOperationLog({
     ...createState(),

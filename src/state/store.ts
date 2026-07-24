@@ -553,6 +553,7 @@ export function moveFocus(state: AppState, delta: number): AppState {
       state.focusedRevisionIndex + delta,
       state.revisions.length,
     ),
+    revisionScrollRequest: state.revisionScrollRequest + 1,
     focusedFileIndex: 0,
   };
 }
