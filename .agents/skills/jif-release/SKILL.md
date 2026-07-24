@@ -63,6 +63,18 @@ Write the notes to `.tmp/release-notes.md`:
   the mechanism behind a fix, why a bug happened — unless a user must know it
   to use the feature. If a bullet only makes sense to someone reading the
   code, it belongs in `## All changes` (or nowhere), not in Highlights.
+
+  Highlights are for genuinely new capabilities or notable behavior changes,
+  not fixes. A change that only restores intended behavior is a bugfix even
+  when its commit frames it as a feature; list it under `## All changes` and
+  leave it out of Highlights. When unsure whether something is a feature or a
+  fix, treat it as a fix.
+
+  Keep each bullet to one capability, then stop. State what the user can now
+  do or will notice and end there — cut secondary reassurances (preserved
+  state, status chips, notifications, "Enter still submits," and the like). If
+  a detail is not the reason someone would care about the change, it does not
+  belong in the Highlight.
 - `## All changes` — one bullet per commit subject, newest first. Omit empty
   and dead-end commits.
 - Footer, verbatim:
