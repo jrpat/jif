@@ -3,6 +3,22 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.5.0 — 2026-07-24
+
+### Highlights
+
+- Major rendering performance improvements in the revision log.
+- Diff previews now show revision metadata above the description: full change and commit IDs, plus author and committer names, emails, and timestamps.
+- Press `` alt-` `` to open jif's GitHub releases page in your browser.
+- Fast jump now matches only revision IDs, bookmark names, and workspace names.
+
+### All changes
+
+- Normalize revision rendering around stable slots
+- Show revision metadata in diff previews
+- Add alt+` shortcut to open the GitHub releases page
+- Limit fast jump to revision reference fields
+
 ## v0.4.0 — 2026-07-23
 
 ### Highlights
