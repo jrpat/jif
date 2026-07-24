@@ -39,7 +39,12 @@ const SEARCH_SCOPE_DEFINITIONS: Readonly<Record<SearchScopeId, SearchScopeDefini
     setFocusedIndex: (state, index) => ({ ...state, focusedRevisionIndex: index }),
     getItemCount: (state) => state.revisions.length,
     getSearchableItems: (state) => state.revisions.map((revision, index) =>
-      createRevisionSearchableItem(revision, index, state.searchIdOnly)
+      createRevisionSearchableItem(
+        revision,
+        index,
+        state.searchIdOnly,
+        state.searchMode === "fast-jump",
+      )
     ),
   },
   "operation-log": {
@@ -245,19 +250,28 @@ function createRevisionSearchableItem(
   revision: RevisionSummary,
   index: number,
   idOnly: boolean,
+  fastJump: boolean,
 ): SearchableItem {
+  const jumpTargets = [
+    revision.revisionId,
+    ...revision.bookmarks,
+    ...revision.workspaces,
+  ];
+
   return {
     scope: "revision-log",
     id: `revision-${revision.rowId}`,
     index,
     text: idOnly
       ? revision.revisionId
-      : [
-          revision.revisionId,
-          firstLine(revision.description),
-          ...revision.bookmarks,
-          ...revision.workspaces,
-        ].join("\n"),
+      : (fastJump
+        ? jumpTargets
+        : [
+            revision.revisionId,
+            firstLine(revision.description),
+            ...revision.bookmarks,
+            ...revision.workspaces,
+          ]).join("\n"),
   };
 }
 

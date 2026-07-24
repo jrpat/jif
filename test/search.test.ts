@@ -95,7 +95,7 @@ test("confirming fast jump keeps the matched focus and clears highlights", () =>
 
   state = openFastJump(state);
   expect(state.searchMode).toBe("fast-jump");
-  state = setSearchText(state, "first");
+  state = setSearchText(state, "aaaa");
   state = finalizeSearch(state);
 
   expect(state.focusMode).toBe("revisions");
@@ -104,6 +104,42 @@ test("confirming fast jump keeps the matched focus and clears highlights", () =>
   expect(state.searchMode).toBe("search");
   expect(hasVisibleSearchHighlights(state)).toBeFalse();
   expect(state.focusedRevisionIndex).toBe(0);
+});
+
+test("revision fast jump searches IDs, bookmarks, and workspaces but not descriptions", () => {
+  let state: AppState = {
+    ...createInitialState("/tmp/repo"),
+    revisions: [
+      createRevision({
+        rowId: "description",
+        revisionId: "aaaaaaaa",
+        description: "needle appears only in this description",
+      }),
+      createRevision({
+        rowId: "revision-id",
+        revisionId: "needleid",
+        description: "unrelated",
+      }),
+      createRevision({
+        rowId: "bookmark",
+        revisionId: "bbbbbbbb",
+        description: "unrelated",
+        bookmarks: ["needle-bookmark"],
+      }),
+      createRevision({
+        rowId: "workspace",
+        revisionId: "cccccccc",
+        description: "unrelated",
+        workspaces: ["needle-workspace"],
+      }),
+    ],
+  };
+
+  state = openFastJump(state);
+  state = setSearchText(state, "needle");
+
+  expect(getSearchMatchIndices(state)).toEqual([1, 2, 3]);
+  expect(state.focusedRevisionIndex).toBe(1);
 });
 
 test("setSearchText after finalize does not snap focus back to the first match", () => {

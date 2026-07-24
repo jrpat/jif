@@ -141,7 +141,7 @@ When the focused revision has multiple workspace chips, `tab` switches to the fi
 | `L` | edit-revset | Change which revisions are displayed |
 | `ctrl-f` | find-file | Search jj-known files and show revisions that changed the selected file |
 | `/` | search | Incremental search through the revision log |
-| `f` | fast-jump | Incremental search through the revision log, clearing highlights on Enter |
+| `f` | fast-jump | Incremental jump by revision ID, bookmark, or workspace name, clearing highlights on Enter |
 | `_` | cycle-layout | Rotate loose, normal, and tight layouts |
 | `ctrl-enter` | expand-diff-context | Note that extra diff context is available only when viewing a single file's diff — expand a revision and focus a file, where `ctrl-enter` toggles full-file context |
 
@@ -312,7 +312,7 @@ Bookmark autocomplete is sorted with the closest ancestor bookmark first (visual
 
 ### Search
 
-Press `/` from the revision log, operation log, or evolog to start an incremental search. Matching text is highlighted with inverse video as you type, and focus snaps to the first match. Press `f` from the same views to start a fast jump: it uses the same incremental matching, but Enter clears the query and highlights immediately after moving focus.
+Press `/` from the revision log, operation log, or evolog to start an incremental search. Matching text is highlighted with inverse video as you type, and focus snaps to the first match. Press `f` from the same views to start a fast jump: in the revision log it matches only revision IDs, bookmark names, and workspace names, excluding commit descriptions. Enter clears the query and highlights immediately after moving focus.
 
 - **Enter** dismisses the search input but leaves the highlights live. You stay in whatever mode you were in (Normal, Rebase, Squash, Op Log, …), so you can compose commands or multi-select against the matched revision.
 - **Escape (first press)** clears the highlights and the query. **Escape (second press)** runs whatever cancel that mode would normally do — for example, cancelling an in-flight rebase.
