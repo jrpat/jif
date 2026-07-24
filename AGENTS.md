@@ -14,7 +14,7 @@
 # Repository And Tooling
 
 - This is a Jujutsu repository. Use `jj`, not Git, for version-control operations.
-- Never move or push the `main` bookmark (`jj bookmark set main`, `jj git push`). The user controls where `main` points and when it is pushed; land commits and let him advance it.
+- Never move or push the `main` bookmark (`jj bookmark set main`, `jj git push`) during normal work. The user controls where `main` points and when it is pushed; land commits and let him advance it. The sole exception is the `jif-release` skill: once the version and release notes are approved, it is authorized to point `main` at the release commit and push it, so the rest of the cut needs no further human involvement.
 - Run `jj commit` outside the sandbox with escalation. The repository metadata lives outside the writable workspace root, so sandboxed commits cannot lock the Jujutsu store.
 - Default runtime and package manager is Bun.
 - Commit messages should use:

@@ -31,7 +31,7 @@ do with the changes — never abandon work yourself.
 Find the previous release, then agree on the new version with the user:
 
 ```bash
-gh release list --limit 5
+gh release list --repo jrpat/jif --limit 5
 ```
 
 Versioning policy (pre-1.0): `0.MINOR.PATCH` — bump MINOR for features, PATCH
@@ -104,37 +104,43 @@ footer:
 Commit it (outside the sandbox): `jj commit -m "Release vX.Y.Z"`. Betas skip
 this step — their notes live only on the GitHub prerelease.
 
-## 5. Push main and create the draft
+## 5. Move main and create the draft
 
-**Never move or push the `main` bookmark yourself** (see AGENTS.md). Ask the
-user to point `main` at the release commit and push it, then confirm the
-remote is where they expect:
+Once the notes are approved and the release commit is landed, the rest of the
+cut runs without further human involvement. For the release flow you **do**
+move and push `main` yourself (this is the standing exception to the AGENTS.md
+rule) — point it at the release commit, push, then confirm the remote is where
+you expect:
 
 ```bash
+jj bookmark set main -r @-   # @- is the "Release vX.Y.Z" commit from step 4
+jj git push
 jj log -r 'main | main@origin' --no-graph -T 'bookmarks ++ " " ++ commit_id.short(8) ++ " " ++ description.first_line() ++ "\n"'
 ```
 
 Create the draft against the exact commit (add `--prerelease` for betas), then
-dispatch the pipeline — draft creation alone does not trigger it:
+dispatch the pipeline — draft creation alone does not trigger it. The `gh`
+commands need `--repo jrpat/jif` because this is a jj-only checkout with no
+git remote for `gh` to auto-detect:
 
 ```bash
 TARGET=$(jj log --no-graph -r main -T commit_id)
-gh release create vX.Y.Z --draft --title "jif X.Y.Z" --notes-file .tmp/release-notes.md --target "$TARGET"
-gh workflow run release.yml -f version=vX.Y.Z -f dry-run=false
+gh release create vX.Y.Z --repo jrpat/jif --draft --title "jif X.Y.Z" --notes-file .tmp/release-notes.md --target "$TARGET"
+gh workflow run release.yml --repo jrpat/jif -f version=vX.Y.Z -f dry-run=false
 ```
 
 ## 6. Watch CI
 
 ```bash
-gh run list --workflow=release.yml --limit 1
-gh run watch <run-id>
+gh run list --repo jrpat/jif --workflow=release.yml --limit 1
+gh run watch --repo jrpat/jif <run-id>
 ```
 
 On success the release is published automatically and the Homebrew tap is
-bumped (stable only). Confirm with `gh release view vX.Y.Z`.
+bumped (stable only). Confirm with `gh release view vX.Y.Z --repo jrpat/jif`.
 
 If a build leg fails: for a fix that needs no new commits, re-run the failed
 jobs from the Actions UI, or dispatch `release.yml` with the version and
 dry-run unchecked to finish the existing draft. If the fix needs new commits,
-delete the draft (`gh release delete vX.Y.Z`), land the fix, and restart from
+delete the draft (`gh release delete vX.Y.Z --repo jrpat/jif`), land the fix, and restart from
 step 1.
