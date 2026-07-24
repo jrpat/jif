@@ -1394,9 +1394,8 @@ test("expandDiffContext explains the single-file restriction with one refreshing
   harness.controller.expandDiffContext();
   let toasts = harness.store.snapshot().statusMessages;
   expect(toasts).toHaveLength(1);
-  expect(toasts[0]?.text).toContain("single file");
-  // "success" so the toast auto-dismisses after the normal duration (info would stick).
-  expect(toasts[0]?.level).toBe("success");
+  expect(toasts[0]?.text).toBe("Extra diff context is only available when viewing a single file's diff.");
+  expect(toasts[0]?.level).toBe("error");
 
   // Pressing again refreshes the same toast instead of stacking a second one.
   harness.controller.expandDiffContext();

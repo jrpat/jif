@@ -766,12 +766,11 @@ export function createJifCommandController(args: Readonly<{
       // togglePreviewFullFile, the ctrl-enter toggle in the revision-files
       // view). Bound to the same ctrl-enter in the revision-log view so the key
       // gently explains the restriction instead of doing nothing. A stable id
-      // refreshes one toast in place, and "success" lets it auto-dismiss after
-      // the normal duration.
+      // refreshes one toast in place.
       store.actions.upsertStatusMessage(
         DIFF_CONTEXT_HINT_TOAST_ID,
-        "Heads up — extra diff context is only available when viewing a single file's diff.",
-        "success",
+        "Extra diff context is only available when viewing a single file's diff.",
+        "error",
       );
     },
     expandPreview() {
