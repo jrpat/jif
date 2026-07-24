@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { createSignal } from "solid-js";
+import { isRenderable, type Renderable } from "@opentui/core";
 import { testRender } from "@opentui/solid";
 import { resolveAppConfig } from "../src/config/index.ts";
 import { JjClient } from "../src/jj/client.ts";
@@ -35,6 +36,7 @@ const config = resolveAppConfig({
 });
 const [showRevisionLog, setShowRevisionLog] = createSignal(true);
 
+const initialRenderStartedAt = performance.now();
 const rendered = await testRender(() => (
   <box width="100%" height="100%" flexDirection="column">
     <scrollbox width="100%" height="100%" scrollY>
@@ -57,6 +59,12 @@ const rendered = await testRender(() => (
 
 try {
   await rendered.renderOnce();
+  const initialRenderMs = performance.now() - initialRenderStartedAt;
+  const revisionLogSurface = rendered.renderer.root.findDescendantById("revision-log-surface");
+  const renderableCounts = {
+    total: countRenderableTree(rendered.renderer.root),
+    revisionLog: revisionLogSurface ? countRenderableTree(revisionLogSurface) : 0,
+  };
   const summaries: BenchmarkSummary[] = [];
 
   if (options.scenario !== "oplog") {
@@ -93,11 +101,16 @@ try {
       repoPath: options.repoPath,
       revisionCount: data.revisions.length,
       viewport: { width: options.width, height: options.height },
+      initialRenderMs,
+      renderableCounts,
       benchmarks: summaries,
     }, null, 2));
   } else {
     console.log(
       `Revision rendering: ${data.revisions.length} revisions, ${options.width}x${options.height}, ${options.repoPath}`,
+    );
+    console.log(
+      `Initial render: ${initialRenderMs.toFixed(2)} ms; retained renderables: ${renderableCounts.total} total, ${renderableCounts.revisionLog} revision log`,
     );
     for (const summary of summaries) {
       console.log(formatBenchmarkSummary(summary));
@@ -115,6 +128,16 @@ try {
 } finally {
   rendered.renderer.destroy();
   store.dispose();
+}
+
+function countRenderableTree(root: Renderable): number {
+  let count = 1;
+  for (const child of root.getChildren()) {
+    if (isRenderable(child)) {
+      count += countRenderableTree(child);
+    }
+  }
+  return count;
 }
 
 async function setLayout(layout: "loose" | "normal" | "tight"): Promise<void> {

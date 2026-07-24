@@ -52,8 +52,9 @@ import {
   splitGraphTitleSegments,
 } from "./revisionGutter.ts";
 import {
-  buildRevisionLayoutSpec,
   buildRevisionSideChips,
+  getRevisionLayoutPlan,
+  resolveRevisionGraphMode,
   type RevisionSideChip,
 } from "./revisionLayout.ts";
 import {
@@ -1377,18 +1378,15 @@ export function RevisionItem(props: {
     ? Math.max(props.revision.files.length, 1) + (inlineConfirmation() ? 1 : 0)
     : 0;
   const sideChips = createMemo(() => buildRevisionSideChips(props.revision));
-  const layoutSpec = createMemo(() =>
-    buildRevisionLayoutSpec(props.revision, {
-      mode: props.state.layout,
-      commandChipText: commandChipText(),
-      sideChips: sideChips(),
-    }),
+  const layoutPlan = createMemo(() => getRevisionLayoutPlan(props.state.layout));
+  const visibleGraphMode = createMemo(() =>
+    resolveRevisionGraphMode(layoutPlan(), props.revision.graphRows)
   );
   const boxedGraphWidth = createMemo(() =>
     measureBoxedGraphWidth({
       graphRows: props.revision.graphRows,
-      baseGraphRowCount: layoutSpec().baseGraphRowCount,
-      visibleGraphMode: layoutSpec().visibleGraphMode,
+      baseGraphRowCount: layoutPlan().graph.baseRowCount,
+      visibleGraphMode: visibleGraphMode(),
     })
   );
   const previousBoxedGraphWidth = createMemo(() => {
@@ -1397,15 +1395,10 @@ export function RevisionItem(props: {
       return null;
     }
 
-    const previousLayoutSpec = buildRevisionLayoutSpec(prev, {
-      mode: props.state.layout,
-      commandChipText: null,
-    });
-
     return measureBoxedGraphWidth({
       graphRows: prev.graphRows,
-      baseGraphRowCount: previousLayoutSpec.baseGraphRowCount,
-      visibleGraphMode: previousLayoutSpec.visibleGraphMode,
+      baseGraphRowCount: layoutPlan().graph.baseRowCount,
+      visibleGraphMode: resolveRevisionGraphMode(layoutPlan(), prev.graphRows),
     });
   });
   const nextBoxedGraphWidth = createMemo(() => {
@@ -1414,15 +1407,10 @@ export function RevisionItem(props: {
       return null;
     }
 
-    const nextLayoutSpec = buildRevisionLayoutSpec(next, {
-      mode: props.state.layout,
-      commandChipText: null,
-    });
-
     return measureBoxedGraphWidth({
       graphRows: next.graphRows,
-      baseGraphRowCount: nextLayoutSpec.baseGraphRowCount,
-      visibleGraphMode: nextLayoutSpec.visibleGraphMode,
+      baseGraphRowCount: layoutPlan().graph.baseRowCount,
+      visibleGraphMode: resolveRevisionGraphMode(layoutPlan(), next.graphRows),
     });
   });
   const effectiveRowState = createMemo((): RevisionRowState => {
@@ -1441,7 +1429,7 @@ export function RevisionItem(props: {
     return rs;
   });
   const usesExternalGraphSpacer = createMemo(() =>
-    layoutSpec().visibleGraphMode === "keep-second-row"
+    visibleGraphMode() === "keep-second-row"
   );
   const previousUsesExternalGraphSpacer = createMemo(() => {
     const previous = props.index > 0 ? props.state.revisions[props.index - 1] : null;
@@ -1449,10 +1437,7 @@ export function RevisionItem(props: {
       return false;
     }
 
-    return buildRevisionLayoutSpec(previous, {
-      mode: props.state.layout,
-      commandChipText: null,
-    }).visibleGraphMode === "keep-second-row";
+    return resolveRevisionGraphMode(layoutPlan(), previous.graphRows) === "keep-second-row";
   });
   const sharesTopBorder = createMemo(() => !previousUsesExternalGraphSpacer());
   const sharesBottomBorder = createMemo(() => !usesExternalGraphSpacer());
@@ -1466,8 +1451,8 @@ export function RevisionItem(props: {
   }));
   const gutterPlan = createMemo(() => buildRevisionGutterPlan({
     graphRows: props.revision.graphRows,
-    baseGraphRowCount: layoutSpec().baseGraphRowCount,
-    visibleGraphMode: layoutSpec().visibleGraphMode,
+    baseGraphRowCount: layoutPlan().graph.baseRowCount,
+    visibleGraphMode: visibleGraphMode(),
     detailRowCount: detailRowCount(),
     ownsTop: borderPolicy().ownsTop,
     ownsBottom: borderPolicy().ownsBottom,
@@ -1583,8 +1568,8 @@ export function RevisionItem(props: {
   );
   const superGutterPlan = createMemo(() => buildRevisionGutterPlan({
     graphRows: props.revision.graphRows,
-    baseGraphRowCount: layoutSpec().baseGraphRowCount,
-    visibleGraphMode: layoutSpec().visibleGraphMode,
+    baseGraphRowCount: layoutPlan().graph.baseRowCount,
+    visibleGraphMode: visibleGraphMode(),
     detailRowCount: changedFileRows().length + (inlineConfirmation() ? 1 : 0),
     ownsTop: false,
     ownsBottom: false,
@@ -1592,6 +1577,35 @@ export function RevisionItem(props: {
     hasNextRevision: false,
   }));
   const superGraphWidth = createMemo(() => measureGutterPlanWidth(superGutterPlan()));
+  const isBoxedLayout = () => layoutPlan().contentFrame === "bordered";
+  const activeGutterPlan = () => isBoxedLayout() ? gutterPlan() : superGutterPlan();
+  const activeGraphWidth = () => isBoxedLayout() ? inlineGraphWidth() : superGraphWidth();
+  const activeGraphTail = () => isBoxedLayout() ? inlineGraphTail() : superGutterPlan().tail;
+  const activeGraphDetail = () => activeGutterPlan().detail;
+  const effectiveHeaderRowCount = () =>
+    props.revision.marker === "elided" ? 1 : layoutPlan().header.rowCount;
+  const metadataSlotLayout = () => layoutPlan().header.slots.metadata;
+  const commandSlotLayout = () => layoutPlan().header.slots.command;
+  const showsTopNarrowConnector = () =>
+    isBoxedLayout() &&
+    borderPolicy().ownsTop &&
+    connectedPrevLeftCol() !== null &&
+    currentLeftCol() < connectedPrevLeftCol()!;
+  const showsTopWideConnector = () =>
+    isBoxedLayout() &&
+    borderPolicy().ownsTop &&
+    connectedPrevLeftCol() !== null &&
+    currentLeftCol() > connectedPrevLeftCol()!;
+  const showsBottomNarrowConnector = () =>
+    isBoxedLayout() &&
+    borderPolicy().ownsBottom &&
+    connectedNextLeftCol() !== null &&
+    currentLeftCol() < connectedNextLeftCol()!;
+  const showsBottomWideConnector = () =>
+    isBoxedLayout() &&
+    borderPolicy().ownsBottom &&
+    connectedNextLeftCol() !== null &&
+    currentLeftCol() > connectedNextLeftCol()!;
 
   return (
     <box
@@ -1606,336 +1620,294 @@ export function RevisionItem(props: {
       }}
     >
       <box
-        id={`layout-regular-${props.revision.rowId}`}
-        visible={layoutSpec().mode !== "tight"}
+        id={`revision-frame-${props.revision.rowId}`}
         width="100%"
         flexDirection="column"
       >
         <box width="100%" flexDirection="row" position="relative">
-            <box width={inlineGraphWidth()} flexDirection="column">
-              {gutterPlan().topDivider !== null ? (
-                <text fg={continuationGraphColor()}>
-                  {padRight(gutterPlan().topDivider!, inlineGraphWidth())}
-                </text>
-              ) : null}
-              <box flexDirection="row" height={1}>
-                <Index each={splitGraphTitleSegments(padRight(gutterPlan().title, inlineGraphWidth()))}>
-                  {(segment) => (
-                    <text
-                      fg={segment().isMarker && props.revision.hasConflict ? colors().statusError : titleGraphColor()}
-                      attributes={segment().isMarker && props.revision.hasConflict ? TextAttributes.BOLD : undefined}
-                    >
-                      {segment().text}
-                    </text>
-                  )}
-                </Index>
-              </box>
-              <Show when={layoutSpec().headerRowCount === 2 && props.revision.marker !== "elided"}>
-                <text fg={continuationGraphColor()}>
-                  {padRight(gutterPlan().subtitle, inlineGraphWidth())}
-                </text>
-              </Show>
-              <Index each={inlineGraphTail()}>
-                {(graphLine) => (
-                  <text fg={continuationGraphColor()}>
-                    {padRight(graphLine(), inlineGraphWidth())}
-                  </text>
-                )}
-              </Index>
-              <Index each={gutterPlan().detail}>
-                {(graphLine) => (
-                  <text fg={continuationGraphColor()}>
-                    {padRight(graphLine(), inlineGraphWidth())}
-                  </text>
-                )}
-              </Index>
-              {inlineBottomDivider() !== null ? (
-                <text fg={continuationGraphColor()}>
-                  {padRight(inlineBottomDivider()!, inlineGraphWidth())}
-                </text>
-              ) : null}
-            </box>
-            <box width={1} />
+          <box
+            id={`revision-slot-graph-${props.revision.rowId}`}
+            width={activeGraphWidth()}
+            flexDirection="column"
+          >
             <box
-              flexGrow={1}
-              flexDirection="column"
-              backgroundColor={rowBackgroundColor()}
-              border={borderPolicy().borderSides}
-              borderStyle="single"
-              borderColor={borderColor()}
-              customBorderChars={borderPolicy().borderChars}
+              id={`revision-slot-graph-top-${props.revision.rowId}`}
+              visible={isBoxedLayout() && gutterPlan().topDivider !== null}
+              width="100%"
+              height={1}
+              flexDirection="row"
             >
-              <Show
-                when={props.revision.marker !== "elided"}
-                fallback={
-                  <text width="100%" fg={colors().textTertiary} wrapMode="none" truncate={true}>
-                    {props.revision.description}
-                  </text>
-                }
-              >
-                <box
-                  id={`layout-loose-header-${props.revision.rowId}`}
-                  visible={layoutSpec().headerRowCount === 2}
-                  width="100%"
-                  flexDirection="column"
-                >
-                  <box width="100%" flexDirection="row">
-                    <RevisionChangeId
-                      revision={props.revision}
-                      displayLength={revisionChangeIdDisplayLength()}
-                      rowState={effectiveRowState()}
-                      colors={colors()}
-                    />
-                    <text flexShrink={0} fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
-                      {getRevisionSelectionMarker(effectiveRowState())}
-                    </text>
-                    <box flexGrow={1} />
-                    <DateChip text={relativeAgo()} colors={colors()} />
-                    {layoutSpec().commandChip ? (
-                      <CommandChip
-                        text={layoutSpec().commandChip!.text}
-                        backgroundColor={commandChipBackgroundColor()}
-                        foregroundColor={commandChipForegroundColor()}
-                        colors={colors()}
-                      />
-                    ) : null}
-                  </box>
-                  <box width="100%" flexDirection="row">
-                    <box flexDirection="row" flexShrink={0}>
-                      <Show when={layoutSpec().sideChips.length > 0}>
-                        <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
-                        <box width={1} />
-                      </Show>
-                    </box>
-                    <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
-                      <text
-                        flexGrow={1}
-                        flexBasis={0}
-                        minWidth={0}
-                        fg={descriptionColor()}
-                        wrapMode="none"
-                        truncate={true}
-                      >
-                        {props.revision.description}
-                      </text>
-                    </box>
-                  </box>
-                </box>
-                <box
-                  id={`layout-normal-header-${props.revision.rowId}`}
-                  visible={layoutSpec().headerRowCount === 1}
-                  width="100%"
-                  height={1}
-                  overflow="hidden"
-                  position="relative"
-                >
-                  <box width="100%" height={1} flexDirection="row">
-                    <RevisionChangeId
-                      revision={props.revision}
-                      displayLength={revisionChangeIdDisplayLength()}
-                      rowState={effectiveRowState()}
-                      colors={colors()}
-                    />
-                    <text flexShrink={0} fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
-                      {getRevisionSelectionMarker(effectiveRowState())}
-                    </text>
-                    <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
-                    <Show when={layoutSpec().sideChips.length > 0}>
-                      <box width={1} />
-                    </Show>
-                    <box flexGrow={1} flexBasis={0} minWidth={0} height={1} overflow="hidden" flexDirection="row">
-                      <text
-                        flexGrow={1}
-                        flexBasis={0}
-                        minWidth={0}
-                        fg={descriptionColor()}
-                        wrapMode="none"
-                        truncate={true}
-                      >
-                        {props.revision.description}
-                      </text>
-                    </box>
-                    <DateChip text={relativeAgo()} colors={colors()} />
-                  </box>
-                  {layoutSpec().commandChip?.placement === "overlay" ? (
-                    <text
-                      position="absolute"
-                      right={0}
-                      top={0}
-                      zIndex={1}
-                      fg={commandChipForegroundColor()}
-                      bg={commandChipBackgroundColor()}
-                    >
-                      {` ${layoutSpec().commandChip!.text} `}
-                    </text>
-                  ) : null}
-                </box>
-                <Index each={inlineGraphTail()}>
-                  {() => <box width="100%" height={1} />}
-                </Index>
-                {isExpanded() ? (
-                  <ChangedFiles
-                    state={props.state}
-                    revision={props.revision}
-                    config={props.config}
-                  />
-                ) : null}
-              </Show>
+              <text fg={continuationGraphColor()}>
+                {padRight(gutterPlan().topDivider ?? "", activeGraphWidth())}
+              </text>
             </box>
-            {borderPolicy().ownsTop && connectedPrevLeftCol() !== null && currentLeftCol() < connectedPrevLeftCol()! ? (
-              <text position="absolute" left={connectedPrevLeftCol()!} top={0} zIndex={1} fg={borderColor()}>┴</text>
-            ) : null}
-            {borderPolicy().ownsTop && connectedPrevLeftCol() !== null && currentLeftCol() > connectedPrevLeftCol()! ? (
-              <text position="absolute" left={connectedPrevLeftCol()!} top={0} zIndex={1} fg={borderColor()}>
-                {"└" + "─".repeat(currentLeftCol() - connectedPrevLeftCol()! - 1)}
+            <box
+              id={`revision-slot-graph-title-${props.revision.rowId}`}
+              flexDirection="row"
+              height={1}
+            >
+              <Index each={splitGraphTitleSegments(padRight(activeGutterPlan().title, activeGraphWidth()))}>
+                {(segment) => (
+                  <text
+                    fg={segment().isMarker && props.revision.hasConflict ? colors().statusError : titleGraphColor()}
+                    attributes={segment().isMarker && props.revision.hasConflict ? TextAttributes.BOLD : undefined}
+                  >
+                    {segment().text}
+                  </text>
+                )}
+              </Index>
+            </box>
+            <box
+              id={`revision-slot-graph-subtitle-${props.revision.rowId}`}
+              visible={
+                isBoxedLayout() &&
+                layoutPlan().header.rowCount === 2 &&
+                props.revision.marker !== "elided"
+              }
+              width="100%"
+              height={1}
+              flexDirection="row"
+            >
+              <text fg={continuationGraphColor()}>
+                {padRight(gutterPlan().subtitle, activeGraphWidth())}
               </text>
-            ) : null}
-            {borderPolicy().ownsBottom && connectedNextLeftCol() !== null && currentLeftCol() < connectedNextLeftCol()! ? (
-              <text position="absolute" left={connectedNextLeftCol()!} bottom={0} zIndex={1} fg={borderColor()}>┬</text>
-            ) : null}
-            {borderPolicy().ownsBottom && connectedNextLeftCol() !== null && currentLeftCol() > connectedNextLeftCol()! ? (
-              <text position="absolute" left={connectedNextLeftCol()!} bottom={0} zIndex={1} fg={borderColor()}>
-                {"┌" + "─".repeat(currentLeftCol() - connectedNextLeftCol()! - 1)}
-              </text>
-            ) : null}
-        </box>
-      </box>
-      <box
-        id={`layout-tight-${props.revision.rowId}`}
-        visible={layoutSpec().mode === "tight"}
-        width="100%"
-        flexDirection="column"
-      >
-        <box width="100%" flexDirection="row" position="relative">
-          <box width={superGraphWidth()} flexDirection="row" height={1}>
-            <Index each={splitGraphTitleSegments(padRight(superGutterPlan().title, superGraphWidth()))}>
-              {(segment) => (
-                <text
-                  fg={segment().isMarker && props.revision.hasConflict ? colors().statusError : titleGraphColor()}
-                  attributes={segment().isMarker && props.revision.hasConflict ? TextAttributes.BOLD : undefined}
-                >
-                  {segment().text}
+            </box>
+            <Index each={activeGraphTail()}>
+              {(graphLine) => (
+                <text fg={continuationGraphColor()}>
+                  {padRight(graphLine(), activeGraphWidth())}
                 </text>
               )}
             </Index>
+            <Index each={activeGraphDetail()}>
+              {(graphLine) => (
+                <text fg={continuationGraphColor()}>
+                  {padRight(graphLine(), activeGraphWidth())}
+                </text>
+              )}
+            </Index>
+            <box
+              id={`revision-slot-graph-bottom-${props.revision.rowId}`}
+              visible={isBoxedLayout() && inlineBottomDivider() !== null}
+              width="100%"
+              height={1}
+              flexDirection="row"
+            >
+              <text fg={continuationGraphColor()}>
+                {padRight(inlineBottomDivider() ?? "", activeGraphWidth())}
+              </text>
+            </box>
           </box>
           <box width={1} />
           <box
+            id={`revision-slot-content-frame-${props.revision.rowId}`}
             flexGrow={1}
-            minWidth={0}
-            height={1}
-            overflow="hidden"
-            flexDirection="row"
+            flexDirection="column"
             backgroundColor={rowBackgroundColor()}
+            border={isBoxedLayout() ? borderPolicy().borderSides : []}
+            borderStyle="single"
+            borderColor={borderColor()}
+            customBorderChars={isBoxedLayout() ? borderPolicy().borderChars : undefined}
           >
-            <Show
-              when={props.revision.marker !== "elided"}
-              fallback={
-                <text flexGrow={1} flexBasis={0} minWidth={0} fg={colors().textTertiary} wrapMode="none" truncate={true}>
-                  {props.revision.description}
-                </text>
-              }
+            <box
+              id={`revision-slot-header-${props.revision.rowId}`}
+              width="100%"
+              height={effectiveHeaderRowCount()}
+              flexDirection="column"
+              position="relative"
+              overflow="hidden"
             >
-              <RevisionChangeId
-                revision={props.revision}
-                displayLength={revisionChangeIdDisplayLength()}
-                rowState={effectiveRowState()}
-                colors={colors()}
-              />
-              <text flexShrink={0} fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
-                {getRevisionSelectionMarker(effectiveRowState())}
-              </text>
-              <Show when={layoutSpec().sideChips.length > 0}>
-                <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
-                <box width={1} />
-              </Show>
+              <box
+                visible={props.revision.marker !== "elided"}
+                width="100%"
+                height={layoutPlan().header.rowCount}
+                flexDirection="row"
+                position="relative"
+                overflow="hidden"
+              >
+                <box
+                  id={`revision-slot-identity-${props.revision.rowId}`}
+                  flexDirection="row"
+                  flexShrink={0}
+                >
+                  <box id={`revision-slot-change-id-${props.revision.rowId}`} flexDirection="row" flexShrink={0}>
+                    <RevisionChangeId
+                      revision={props.revision}
+                      displayLength={revisionChangeIdDisplayLength()}
+                      rowState={effectiveRowState()}
+                      colors={colors()}
+                    />
+                  </box>
+                  <box id={`revision-slot-selection-${props.revision.rowId}`} flexDirection="row" flexShrink={0}>
+                    <text flexShrink={0} fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
+                      {getRevisionSelectionMarker(effectiveRowState())}
+                    </text>
+                  </box>
+                </box>
+                <box
+                  id={`revision-slot-metadata-${props.revision.rowId}`}
+                  position={metadataSlotLayout().placement === "positioned" ? "absolute" : "relative"}
+                  left={metadataSlotLayout().placement === "positioned" ? 0 : undefined}
+                  right={metadataSlotLayout().placement === "positioned" ? 0 : undefined}
+                  top={metadataSlotLayout().row}
+                  flexGrow={metadataSlotLayout().placement === "flow" && metadataSlotLayout().grow ? 1 : 0}
+                  flexBasis={metadataSlotLayout().placement === "flow" && metadataSlotLayout().grow ? 0 : undefined}
+                  minWidth={0}
+                  height={1}
+                  overflow="hidden"
+                  flexDirection="row"
+                >
+                  <box
+                    id={`revision-slot-side-chips-${props.revision.rowId}`}
+                    flexDirection="row"
+                    flexShrink={0}
+                  >
+                    <RevisionSideChips chips={sideChips()} colors={colors()} />
+                  </box>
+                  <box visible={sideChips().length > 0} width={1} />
+                  <box
+                    id={`revision-slot-description-${props.revision.rowId}`}
+                    flexGrow={1}
+                    flexBasis={0}
+                    minWidth={0}
+                    height={1}
+                    overflow="hidden"
+                    flexDirection="row"
+                  >
+                    <text
+                      flexGrow={1}
+                      flexBasis={0}
+                      minWidth={0}
+                      fg={descriptionColor()}
+                      wrapMode="none"
+                      truncate={true}
+                    >
+                      {props.revision.description}
+                    </text>
+                  </box>
+                </box>
+                <box
+                  visible={metadataSlotLayout().placement === "positioned"}
+                  flexGrow={1}
+                  height={1}
+                />
+                <box visible={!isBoxedLayout()} width={1} height={1} />
+                <box
+                  id={`revision-slot-date-${props.revision.rowId}`}
+                  flexDirection="row"
+                  flexShrink={0}
+                >
+                  <DateChip text={relativeAgo()} colors={colors()} />
+                </box>
+                <box
+                  id={`revision-slot-command-${props.revision.rowId}`}
+                  visible={commandChipText() !== null}
+                  position={commandSlotLayout().placement === "positioned" ? "absolute" : "relative"}
+                  right={commandSlotLayout().placement === "positioned" ? 0 : undefined}
+                  top={commandSlotLayout().row}
+                  zIndex={commandSlotLayout().placement === "positioned" ? 50 : 0}
+                  flexDirection="row"
+                  flexShrink={0}
+                >
+                  <CommandChip
+                    text={commandChipText() ?? ""}
+                    backgroundColor={commandChipBackgroundColor()}
+                    foregroundColor={commandChipForegroundColor()}
+                    colors={colors()}
+                  />
+                </box>
+              </box>
               <text
-                flexGrow={1}
-                flexBasis={0}
-                minWidth={0}
-                fg={descriptionColor()}
+                visible={props.revision.marker === "elided"}
+                width="100%"
+                fg={colors().textTertiary}
                 wrapMode="none"
                 truncate={true}
               >
                 {props.revision.description}
               </text>
-              <box width={1} />
-              <DateChip text={relativeAgo()} colors={colors()} />
-            </Show>
-          </box>
-          {layoutSpec().commandChip?.placement === "overlay" ? (
-            <text
-              position="absolute"
-              right={0}
-              top={0}
-              zIndex={50}
-              fg={commandChipForegroundColor()}
-              bg={commandChipBackgroundColor()}
+            </box>
+            <Index each={activeGraphTail()}>
+              {() => <box width="100%" height={1} />}
+            </Index>
+            <box
+              id={`revision-slot-details-${props.revision.rowId}`}
+              visible={props.revision.marker !== "elided" && isExpanded()}
+              width="100%"
+              flexDirection="column"
             >
-              {` ${layoutSpec().commandChip!.text} `}
-            </text>
-          ) : null}
-        </box>
-        <Index each={superGutterPlan().tail}>
-          {(graphLine) => (
-            <box width="100%" flexDirection="row">
-              <text fg={continuationGraphColor()}>
-                {padRight(graphLine(), superGraphWidth())}
-              </text>
-              <box width={1} />
-              <box flexGrow={1} height={1} />
-            </box>
-          )}
-        </Index>
-        <For each={changedFileRows()}>
-          {(row, index) => (
-            <box width="100%" flexDirection="row">
-              <text fg={continuationGraphColor()}>
-                {padRight(superGutterPlan().detail[index()] ?? "", superGraphWidth())}
-              </text>
-              <box width={1} />
-              <box flexGrow={1}>
-                <ChangedFileRowContent
+              {isExpanded() ? (
+                <ChangedFiles
                   state={props.state}
-                  rowId={props.revision.rowId}
-                  row={row}
+                  revision={props.revision}
                   config={props.config}
                 />
+              ) : null}
+            </box>
+          </box>
+          <text
+            visible={showsTopNarrowConnector()}
+            position="absolute"
+            left={showsTopNarrowConnector() ? connectedPrevLeftCol()! : 0}
+            top={0}
+            zIndex={1}
+            fg={borderColor()}
+          >
+            ┴
+          </text>
+          <text
+            visible={showsTopWideConnector()}
+            position="absolute"
+            left={showsTopWideConnector() ? connectedPrevLeftCol()! : 0}
+            top={0}
+            zIndex={1}
+            fg={borderColor()}
+          >
+            {showsTopWideConnector()
+              ? "└" + "─".repeat(currentLeftCol() - connectedPrevLeftCol()! - 1)
+              : ""}
+          </text>
+          <text
+            visible={showsBottomNarrowConnector()}
+            position="absolute"
+            left={showsBottomNarrowConnector() ? connectedNextLeftCol()! : 0}
+            bottom={0}
+            zIndex={1}
+            fg={borderColor()}
+          >
+            ┬
+          </text>
+          <text
+            visible={showsBottomWideConnector()}
+            position="absolute"
+            left={showsBottomWideConnector() ? connectedNextLeftCol()! : 0}
+            bottom={0}
+            zIndex={1}
+            fg={borderColor()}
+          >
+            {showsBottomWideConnector()
+              ? "┌" + "─".repeat(currentLeftCol() - connectedNextLeftCol()! - 1)
+              : ""}
+          </text>
+        </box>
+        <box
+          id={`revision-slot-graph-external-${props.revision.rowId}`}
+          visible={isBoxedLayout() && usesExternalGraphSpacer()}
+          width="100%"
+          flexDirection="column"
+        >
+          <Index each={isBoxedLayout() ? externalGraphRows() : []}>
+            {(graphLine) => (
+              <box width="100%" flexDirection="row">
+                <text fg={continuationGraphColor()}>
+                  {padRight(graphLine(), fullGraphWidth())}
+                </text>
+                <box width={1} />
+                <box flexGrow={1} height={1} />
               </box>
-            </box>
-          )}
-        </For>
-        {inlineConfirmation()
-          ? (
-            <box width="100%" flexDirection="row">
-              <text fg={continuationGraphColor()}>
-                {padRight(superGutterPlan().detail[changedFileRows().length] ?? "", superGraphWidth())}
-              </text>
-              <box width={1} />
-              <box flexGrow={1}>
-                <InlineConfirmation
-                  config={props.config}
-                  message={inlineConfirmation()!.message}
-                  options={inlineConfirmation()!.options}
-                  selectedOption={inlineConfirmation()!.selectedOption}
-                />
-              </box>
-            </box>
-          )
-          : null}
-      </box>
-      <box visible={layoutSpec().mode !== "tight"} width="100%" flexDirection="column">
-        <Index each={externalGraphRows()}>
-          {(graphLine) => (
-            <box width="100%" flexDirection="row">
-              <text fg={continuationGraphColor()}>
-                {padRight(graphLine(), fullGraphWidth())}
-              </text>
-              <box width={1} />
-              <box flexGrow={1} height={1} />
-            </box>
-          )}
-        </Index>
+            )}
+          </Index>
+        </box>
       </box>
     </box>
   );

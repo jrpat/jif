@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
 import type { RevisionSummary } from "../src/domain/types.ts";
 import {
-  buildRevisionLayoutSpec,
+  buildRevisionSideChips,
+  getRevisionLayoutPlan,
   getMaxRevisionBaseGraphRowCount,
+  resolveRevisionGraphMode,
 } from "../src/ui/revisionLayout.ts";
 
 function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSummary {
@@ -28,18 +30,26 @@ function createRevision(overrides: Partial<RevisionSummary> = {}): RevisionSumma
 }
 
 test("loose layout uses direct two-row graph geometry", () => {
-  const layout = buildRevisionLayoutSpec(createRevision(), {
-    mode: "loose",
-    commandChipText: "onto",
-  });
+  const layout = getRevisionLayoutPlan("loose");
 
   expect(getMaxRevisionBaseGraphRowCount()).toBe(2);
   expect(layout.mode).toBe("loose");
-  expect(layout.headerRowCount).toBe(2);
-  expect(layout.baseGraphRowCount).toBe(2);
-  expect(layout.visibleGraphMode).toBe("direct");
-  expect(layout.commandChip?.placement).toBe("inline");
-  expect(layout.sideChips).toEqual([
+  expect(layout.header).toEqual({
+    rowCount: 2,
+    slots: {
+      identity: { row: 0, placement: "flow", grow: false },
+      metadata: { row: 1, placement: "positioned", grow: true },
+      date: { row: 0, placement: "flow", grow: false },
+      command: { row: 0, placement: "flow", grow: false },
+    },
+  });
+  expect(layout.contentFrame).toBe("bordered");
+  expect(layout.graph).toEqual({
+    baseRowCount: 2,
+    condensableMode: "direct",
+  });
+  expect(resolveRevisionGraphMode(layout, createRevision().graphRows)).toBe("direct");
+  expect(buildRevisionSideChips(createRevision())).toEqual([
     { kind: "workspace", text: "review@" },
     { kind: "bookmark", text: "main" },
   ]);
@@ -47,79 +57,54 @@ test("loose layout uses direct two-row graph geometry", () => {
 
 test("normal layout folds the first two graph rows and overlays the target chip", () => {
   const revision = createRevision({ graphRows: ["@  ", "│"] });
-  const layout = buildRevisionLayoutSpec(revision, {
-    mode: "normal",
-    commandChipText: "onto",
-  });
+  const layout = getRevisionLayoutPlan("normal");
 
   expect(layout.mode).toBe("normal");
-  expect(layout.headerRowCount).toBe(1);
-  expect(layout.baseGraphRowCount).toBe(2);
-  expect(layout.visibleGraphMode).toBe("fold-first-two");
-  expect(layout.commandChip).toEqual({
-    placement: "overlay",
-    text: "onto",
+  expect(layout.header).toEqual({
+    rowCount: 1,
+    slots: {
+      identity: { row: 0, placement: "flow", grow: false },
+      metadata: { row: 0, placement: "flow", grow: true },
+      date: { row: 0, placement: "flow", grow: false },
+      command: { row: 0, placement: "positioned", grow: false },
+    },
   });
+  expect(layout.contentFrame).toBe("bordered");
+  expect(layout.graph.baseRowCount).toBe(2);
+  expect(resolveRevisionGraphMode(layout, revision.graphRows)).toBe("fold-first-two");
 });
 
-test("command chips do not change normal layout for divergent revision ids", () => {
-  const revision = createRevision({
-    revisionId: "abcdefgh/1",
-    graphRows: ["@  ", "│"],
-  });
-
-  const layout = buildRevisionLayoutSpec(revision, {
-    mode: "normal",
-    commandChipText: "onto",
-  });
-
-  expect(layout.commandChip).toEqual({
-    placement: "overlay",
-    text: "onto",
-  });
+test("layout plans are stable and independent of per-revision content", () => {
+  expect(getRevisionLayoutPlan("normal")).toBe(getRevisionLayoutPlan("normal"));
 });
 
 test("normal layout preserves a second graph row when it carries branch topology", () => {
-  const layout = buildRevisionLayoutSpec(
-    createRevision({ graphRows: ["│ ○  ", "├─╯"] }),
-    {
-      mode: "normal",
-      commandChipText: null,
-    },
-  );
+  const layout = getRevisionLayoutPlan("normal");
 
-  expect(layout.headerRowCount).toBe(1);
-  expect(layout.visibleGraphMode).toBe("keep-second-row");
+  expect(layout.header.rowCount).toBe(1);
+  expect(
+    resolveRevisionGraphMode(layout, createRevision({ graphRows: ["│ ○  ", "├─╯"] }).graphRows),
+  ).toBe("keep-second-row");
 });
 
 test("tight layout overlays the command chip so it isn't clipped by long descriptions", () => {
-  const layout = buildRevisionLayoutSpec(
-    createRevision({ bookmarks: [], workspaces: [] }),
-    {
-      mode: "tight",
-      commandChipText: "onto",
-    },
-  );
+  const layout = getRevisionLayoutPlan("tight");
 
   expect(layout.mode).toBe("tight");
-  expect(layout.headerRowCount).toBe(1);
-  expect(layout.baseGraphRowCount).toBe(2);
-  expect(layout.visibleGraphMode).toBe("fold-first-two");
-  expect(layout.sideChips).toEqual([]);
-  expect(layout.commandChip).toEqual({
-    placement: "overlay",
-    text: "onto",
+  expect(layout.header.rowCount).toBe(1);
+  expect(layout.header.slots.metadata).toEqual({
+    row: 0,
+    placement: "flow",
+    grow: true,
   });
+  expect(layout.header.slots.command.placement).toBe("positioned");
+  expect(layout.contentFrame).toBe("unboxed");
+  expect(layout.graph.baseRowCount).toBe(2);
+  expect(resolveRevisionGraphMode(layout, createRevision().graphRows)).toBe("fold-first-two");
 });
 
-test("loose layout inlines any command chip text, including source chips", () => {
-  const layout = buildRevisionLayoutSpec(createRevision(), {
-    mode: "loose",
-    commandChipText: "move",
-  });
+test("loose layout leaves the command slot in flow", () => {
+  const layout = getRevisionLayoutPlan("loose");
 
-  expect(layout.commandChip).toEqual({
-    placement: "inline",
-    text: "move",
-  });
+  expect(layout.header.slots.command.placement).toBe("flow");
 });

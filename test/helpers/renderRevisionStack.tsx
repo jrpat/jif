@@ -170,7 +170,7 @@ async function renderLayoutCycleAfterMount() {
   return frame;
 }
 
-async function captureRetainedLayoutBranches() {
+async function captureRetainedRevisionSlots() {
   const revisions = [
     createRevision("curr", "branch", ["│ ○  ", "├─╯  "]),
   ] as const;
@@ -193,30 +193,46 @@ async function captureRetainedLayoutBranches() {
   ), { width: 32, height: 6 });
 
   await rendered.renderOnce();
-  const branchIds = [
-    "revision-log-surface",
-    "revision-curr",
-    "layout-regular-curr",
-    "layout-tight-curr",
-    "layout-loose-header-curr",
-    "layout-normal-header-curr",
+  const slotIds = [
+    "revision-frame-curr",
+    "revision-slot-graph-curr",
+    "revision-slot-header-curr",
+    "revision-slot-identity-curr",
+    "revision-slot-metadata-curr",
+    "revision-slot-date-curr",
+    "revision-slot-command-curr",
+    "revision-slot-details-curr",
   ] as const;
-  const before = branchIds.map((id) => rendered.renderer.root.findDescendantById(id)?.num ?? null);
+  const capture = () => Object.fromEntries(
+    slotIds.map((id) => [id, rendered.renderer.root.findDescendantById(id)?.num ?? null]),
+  );
+  const loose = capture();
+
+  store.actions.cycleLayout();
+  await rendered.renderOnce();
+  const normal = capture();
+
+  store.actions.cycleLayout();
+  await rendered.renderOnce();
+  const tight = capture();
+
+  store.actions.cycleLayout();
+  await rendered.renderOnce();
+  const looseAgain = capture();
 
   setVisible(false);
   await rendered.renderOnce();
+  const hidden = capture();
+
   setVisible(true);
   await rendered.renderOnce();
-  store.actions.cycleLayout();
-  await rendered.renderOnce();
-  store.actions.cycleLayout();
-  await rendered.renderOnce();
-  store.actions.cycleLayout();
-  await rendered.renderOnce();
+  const shown = capture();
 
-  const after = branchIds.map((id) => rendered.renderer.root.findDescendantById(id)?.num ?? null);
   rendered.renderer.destroy();
-  return { before, after };
+  return {
+    slotIds,
+    snapshots: { loose, normal, tight, looseAgain, hidden, shown },
+  };
 }
 
 async function renderLongSuperCondensedDescription() {
@@ -588,7 +604,7 @@ const squashCommandChips = await renderCommandDraftChips("loose", "squash");
 const dateChipLongDescriptionLoose = await renderDateChipWithLongDescription("loose");
 const dateChipLongDescriptionNormal = await renderDateChipWithLongDescription("normal");
 const dateChipLongDescriptionTight = await renderDateChipWithLongDescription("tight");
-const retainedLayoutBranches = await captureRetainedLayoutBranches();
+const retainedRevisionSlots = await captureRetainedRevisionSlots();
 
 console.log(JSON.stringify({
   normalUnfocused,
@@ -615,5 +631,5 @@ console.log(JSON.stringify({
   dateChipLongDescriptionLoose,
   dateChipLongDescriptionNormal,
   dateChipLongDescriptionTight,
-  retainedLayoutBranches,
+  retainedRevisionSlots,
 }));

@@ -51,7 +51,7 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     dateChipLongDescriptionLoose,
     dateChipLongDescriptionNormal,
     dateChipLongDescriptionTight,
-    retainedLayoutBranches,
+    retainedRevisionSlots,
   } = JSON.parse(stdout) as {
     normalUnfocused: string;
     normalFocused: string;
@@ -89,9 +89,9 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     dateChipLongDescriptionLoose: string;
     dateChipLongDescriptionNormal: string;
     dateChipLongDescriptionTight: string;
-    retainedLayoutBranches: {
-      before: (number | null)[];
-      after: (number | null)[];
+    retainedRevisionSlots: {
+      slotIds: string[];
+      snapshots: Record<string, Record<string, number | null>>;
     };
   };
 
@@ -233,6 +233,17 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
   expect(squashCommandChips).toContain("into");
   expect(squashCommandChips).not.toContain("✓");
 
-  expect(retainedLayoutBranches.before).not.toContain(null);
-  expect(retainedLayoutBranches.after).toEqual(retainedLayoutBranches.before);
+  const initialRevisionSlots = retainedRevisionSlots.snapshots.loose!;
+  for (const slotId of retainedRevisionSlots.slotIds) {
+    expect(
+      initialRevisionSlots[slotId],
+      `${slotId} should identify an explicit revision slot renderable`,
+    ).not.toBeNull();
+  }
+  for (const [state, revisionSlots] of Object.entries(retainedRevisionSlots.snapshots)) {
+    expect(
+      revisionSlots,
+      `revision slot renderables should retain identity in ${state}`,
+    ).toEqual(initialRevisionSlots);
+  }
 }, 20000);

@@ -8,38 +8,113 @@ export type RevisionSideChip = Readonly<{
 
 export type RevisionLayoutMode = AppLayout;
 
-export type RevisionLayoutSpec = Readonly<{
-  mode: RevisionLayoutMode;
-  headerRowCount: 1 | 2;
-  baseGraphRowCount: number;
-  visibleGraphMode: "direct" | "fold-first-two" | "keep-second-row";
-  sideChips: readonly RevisionSideChip[];
-  commandChip: Readonly<{
-    placement: "inline" | "overlay";
-    text: string;
-  }> | null;
+export const REVISION_RENDER_SLOT_NAMES = [
+  "graph",
+  "header",
+  "identity",
+  "metadata",
+  "date",
+  "command",
+  "details",
+] as const;
+
+export type RevisionRenderSlotName = typeof REVISION_RENDER_SLOT_NAMES[number];
+
+export type RevisionHeaderSlotLayout = Readonly<{
+  row: 0 | 1;
+  placement: "flow" | "positioned";
+  grow: boolean;
 }>;
 
-const BASE_LAYOUT_SPECS: Readonly<Record<RevisionLayoutMode, Omit<RevisionLayoutSpec, "mode" | "sideChips" | "commandChip">>> = {
+export type RevisionHeaderLayout = Readonly<{
+  rowCount: 1 | 2;
+  slots: Readonly<Record<
+    "identity" | "metadata" | "date" | "command",
+    RevisionHeaderSlotLayout
+  >>;
+}>;
+
+export type RevisionGraphMode = "direct" | "fold-first-two" | "keep-second-row";
+
+export type RevisionLayoutPlan = Readonly<{
+  mode: RevisionLayoutMode;
+  header: RevisionHeaderLayout;
+  contentFrame: "bordered" | "unboxed";
+  graph: Readonly<{
+    baseRowCount: number;
+    condensableMode: Exclude<RevisionGraphMode, "keep-second-row">;
+  }>;
+}>;
+
+const REVISION_LAYOUT_PLANS: Readonly<Record<RevisionLayoutMode, RevisionLayoutPlan>> = {
   loose: {
-    headerRowCount: 2,
-    baseGraphRowCount: 2,
-    visibleGraphMode: "direct",
+    mode: "loose",
+    header: {
+      rowCount: 2,
+      slots: {
+        identity: { row: 0, placement: "flow", grow: false },
+        metadata: { row: 1, placement: "positioned", grow: true },
+        date: { row: 0, placement: "flow", grow: false },
+        command: { row: 0, placement: "flow", grow: false },
+      },
+    },
+    contentFrame: "bordered",
+    graph: {
+      baseRowCount: 2,
+      condensableMode: "direct",
+    },
   },
   normal: {
-    headerRowCount: 1,
-    baseGraphRowCount: 2,
-    visibleGraphMode: "fold-first-two",
+    mode: "normal",
+    header: {
+      rowCount: 1,
+      slots: {
+        identity: { row: 0, placement: "flow", grow: false },
+        metadata: { row: 0, placement: "flow", grow: true },
+        date: { row: 0, placement: "flow", grow: false },
+        command: { row: 0, placement: "positioned", grow: false },
+      },
+    },
+    contentFrame: "bordered",
+    graph: {
+      baseRowCount: 2,
+      condensableMode: "fold-first-two",
+    },
   },
   tight: {
-    headerRowCount: 1,
-    baseGraphRowCount: 2,
-    visibleGraphMode: "fold-first-two",
+    mode: "tight",
+    header: {
+      rowCount: 1,
+      slots: {
+        identity: { row: 0, placement: "flow", grow: false },
+        metadata: { row: 0, placement: "flow", grow: true },
+        date: { row: 0, placement: "flow", grow: false },
+        command: { row: 0, placement: "positioned", grow: false },
+      },
+    },
+    contentFrame: "unboxed",
+    graph: {
+      baseRowCount: 2,
+      condensableMode: "fold-first-two",
+    },
   },
 };
 
 export function getMaxRevisionBaseGraphRowCount(): number {
-  return Math.max(...Object.values(BASE_LAYOUT_SPECS).map((spec) => spec.baseGraphRowCount));
+  return Math.max(...Object.values(REVISION_LAYOUT_PLANS).map((plan) => plan.graph.baseRowCount));
+}
+
+export function getRevisionLayoutPlan(mode: RevisionLayoutMode): RevisionLayoutPlan {
+  return REVISION_LAYOUT_PLANS[mode];
+}
+
+export function resolveRevisionGraphMode(
+  plan: Pick<RevisionLayoutPlan, "graph">,
+  graphRows: readonly string[],
+): RevisionGraphMode {
+  return shouldCondenseGraphRows(graphRows.slice(0, plan.graph.baseRowCount))
+    ? plan.graph.condensableMode
+    : "keep-second-row";
 }
 
 function formatWorkspaceChipText(workspaceName: string): string {
@@ -57,32 +132,4 @@ export function buildRevisionSideChips(
     })),
     ...revision.bookmarks.map((text) => ({ kind: "bookmark" as const, text })),
   ];
-}
-
-export function buildRevisionLayoutSpec(
-  revision: Pick<RevisionSummary, "revisionId" | "bookmarks" | "workspaces" | "graphRows" | "hasConflict">,
-  options: Readonly<{
-    mode: RevisionLayoutMode;
-    commandChipText: string | null;
-    sideChips?: readonly RevisionSideChip[];
-  }>,
-): RevisionLayoutSpec {
-  const sideChips = options.sideChips ?? buildRevisionSideChips(revision);
-  const base = BASE_LAYOUT_SPECS[options.mode];
-
-  return {
-    mode: options.mode,
-    ...base,
-    visibleGraphMode:
-      shouldCondenseGraphRows(revision.graphRows.slice(0, base.baseGraphRowCount))
-        ? base.visibleGraphMode
-        : "keep-second-row",
-    sideChips,
-    commandChip: options.commandChipText
-      ? {
-          placement: options.mode === "loose" ? "inline" : "overlay",
-          text: options.commandChipText,
-        }
-      : null,
-  };
 }

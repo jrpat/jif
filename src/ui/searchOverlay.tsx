@@ -7,7 +7,7 @@ import {
   type ScrollBoxRenderable,
 } from "@opentui/core";
 import type { ResolvedAppConfig } from "../config/schema.ts";
-import type { AppState, SearchScopeId } from "../domain/types.ts";
+import type { AppState } from "../domain/types.ts";
 import { findTextMatchRanges, getActiveSearchScope, getMatchModeForState, getSearchMatchItemIds } from "../search/matching.ts";
 
 type TextRenderableLike = Renderable & Readonly<{
@@ -95,7 +95,6 @@ export function drawSearchHighlights(args: Readonly<{
   }
 
   const groups = collectSearchLineGroups({
-    scope,
     root: viewport.content,
     matchedItemIds,
   });
@@ -129,15 +128,14 @@ export function drawSearchHighlights(args: Readonly<{
 }
 
 function collectSearchLineGroups(args: Readonly<{
-  scope: SearchScopeId;
   root: Renderable;
   matchedItemIds: ReadonlySet<string>;
 }>): readonly LineGroup[] {
   const groupsByKey = new Map<string, TextSegment[]>();
 
   for (const renderable of collectTextRenderables(args.root)) {
-    const itemId = findSearchItemAncestorId(renderable, args.scope);
-    if (!itemId || !args.matchedItemIds.has(itemId)) {
+    const itemId = findSearchItemAncestorId(renderable, args.matchedItemIds);
+    if (!itemId) {
       continue;
     }
 
@@ -223,16 +221,14 @@ function getVisibleText(renderable: TextRenderableLike): string {
   return text.slice(0, renderable.width);
 }
 
-function findSearchItemAncestorId(renderable: Renderable, scope: SearchScopeId): string | null {
-  const prefix = scope === "operation-log"
-    ? "operation-log-entry-"
-    : scope === "evolog"
-      ? "evolog-entry-"
-      : "revision-";
+function findSearchItemAncestorId(
+  renderable: Renderable,
+  matchedItemIds: ReadonlySet<string>,
+): string | null {
   let current: Renderable | null = renderable;
 
   while (current) {
-    if (current.id.startsWith(prefix)) {
+    if (matchedItemIds.has(current.id)) {
       return current.id;
     }
     current = current.parent;
