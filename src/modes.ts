@@ -114,6 +114,7 @@ export const defaultKeymap: Keymap = {
     "ctrl-k": "scroll-help-up",
     q: "quit",
     "~": "open-notifications",
+    "alt-`": "open-releases",
   },
   // Shared by scrollable log modes, including revision operation drafts.
   log: {

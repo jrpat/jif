@@ -109,6 +109,7 @@ export function createJifCommandController(args: Readonly<{
   runInteractiveJjCommand: RunInteractiveJjCommand;
   runInteractiveShellCommand: RunInteractiveShellCommand;
   openTextInEditor: OpenTextInEditor;
+  openReleasesPage: () => Promise<void>;
   applyRevsetQuery: ApplyRevsetQuery;
   restoreLogRevsetFromFileFilter: RestoreLogRevsetFromFileFilter;
   switchWorkspace: SwitchWorkspace;
@@ -263,6 +264,15 @@ export function createJifCommandController(args: Readonly<{
     },
     openNotifications() {
       store.actions.openNotifications();
+    },
+    openReleasesPage() {
+      void (async () => {
+        try {
+          await args.openReleasesPage();
+        } catch (error) {
+          reportError(store, error);
+        }
+      })();
     },
     expandNotification() {
       store.actions.expandFocusedNotification();

@@ -111,6 +111,7 @@ export type CommandController = Readonly<{
   shrinkPreview: () => void;
   scrollPreview: (rowDelta: number) => void;
   openNotifications: () => void;
+  openReleasesPage: () => void;
   expandNotification: () => void;
   collapseNotification: () => void;
   editFocusedNotification: () => void;
@@ -334,6 +335,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Notifications",
     description: "Show recent toast notifications",
     run: (controller) => controller.openNotifications(),
+    group: "global",
+  },
+  {
+    id: "open-releases",
+    title: "Releases",
+    description: "Open the jif releases page on GitHub in your default browser",
+    run: (controller) => controller.openReleasesPage(),
     group: "global",
   },
   {

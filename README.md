@@ -91,6 +91,7 @@ Available in every mode (mode-specific bindings can override these).
 | `ctrl-k` | scroll-help-up | Scroll the visible help toast up one line (in Normal, Files, Operation Log, and Evolog this scrolls the [preview](#preview-pane) instead when it is shown) |
 | `escape` | cancel | Cancel command composition, leave input mode, or return from a file filter to the log |
 | `~` | open-notifications | Open the notifications history panel |
+| `` alt-` `` | open-releases | Open the [jif releases page](https://github.com/jrpat/jif/releases) on GitHub in your default browser |
 
 ### Preview
 
@@ -730,6 +731,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `openFocusedRevision()` | Expand the focused revision details |
 | `openNotifications()` | Open notification history |
 | `openOperationLog()` | Open the repository operation log |
+| `openReleasesPage()` | Open the jif releases page on GitHub in the default browser |
 | `openFileSearch()` | Open the file search prompt |
 | `openFastJump()` | Open fast jump in the current searchable view |
 | `openRevsetInput(initialQuery?)` | Open the revset prompt, optionally seeded with draft text |

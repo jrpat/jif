@@ -77,6 +77,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   interdiffCalls?: Array<readonly string[]>;
   anchorRange?: readonly string[];
   absorbTargets?: readonly string[];
+  openReleasesPageError?: Error;
 }>) {
   const store = createAppStore(REPO_PATH);
   if (harnessOptions.revisions) {
@@ -114,6 +115,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   let executeCurrentCommandCalls = 0;
   const editorTexts: string[] = [];
   let reloadConfigCalls = 0;
+  let openReleasesPageCalls = 0;
 
   const controller = createJifCommandController({
     store,
@@ -190,6 +192,12 @@ function createControllerHarness(harnessOptions: Readonly<{
     openTextInEditor: async (text) => {
       editorTexts.push(text);
     },
+    openReleasesPage: async () => {
+      openReleasesPageCalls += 1;
+      if (harnessOptions.openReleasesPageError) {
+        throw harnessOptions.openReleasesPageError;
+      }
+    },
     reloadConfig: async () => {
       reloadConfigCalls += 1;
     },
@@ -258,6 +266,9 @@ function createControllerHarness(harnessOptions: Readonly<{
     get reloadConfigCalls() {
       return reloadConfigCalls;
     },
+    get openReleasesPageCalls() {
+      return openReleasesPageCalls;
+    },
   };
 }
 
@@ -276,6 +287,32 @@ test("reloadConfig delegates to the injected config reload hook", () => {
   harness.controller.reloadConfig();
 
   expect(harness.reloadConfigCalls).toBe(1);
+  harness.store.dispose();
+});
+
+test("openReleasesPage delegates to the injected opener", () => {
+  const harness = createControllerHarness({ revisions: [] });
+
+  harness.controller.openReleasesPage();
+
+  expect(harness.openReleasesPageCalls).toBe(1);
+  harness.store.dispose();
+});
+
+test("openReleasesPage reports opener failures as an error event", async () => {
+  const harness = createControllerHarness({
+    revisions: [],
+    openReleasesPageError: new Error("no browser"),
+  });
+
+  harness.controller.openReleasesPage();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  const errors = harness.store
+    .snapshot()
+    .statusMessages.filter((message) => message.level === "error");
+  expect(errors.map((message) => message.text)).toContain("no browser");
   harness.store.dispose();
 });
 

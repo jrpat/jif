@@ -34,6 +34,13 @@ test("resolveKeyToken keeps Alt combos even though OpenTUI also sets meta", () =
   expect(resolveKeyToken({ name: "j", sequence: "j", option: true, meta: true })).toBe("alt-j");
 });
 
+test("resolveKeyToken builds alt-backtick from an Option+backtick press", () => {
+  // Under the Kitty keyboard protocol (OpenTUI's default) Option+` reports the
+  // backtick as `name` with both option and meta set; the token must resolve to
+  // alt-` rather than being discarded as a Meta combo.
+  expect(resolveKeyToken({ name: "`", sequence: "`", option: true, meta: true })).toBe("alt-`");
+});
+
 test("resolveKeyToken ignores true Meta/Command combos without option", () => {
   expect(resolveKeyToken({ name: "r", sequence: "r", meta: true })).toBeNull();
 });

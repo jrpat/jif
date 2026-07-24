@@ -97,6 +97,7 @@ import { bindAutoRefresh, bindOpHeadsWatcher, bindRefreshOnFocus, createReposito
 import { createFocusClickGuard } from "./focusClickGuard.ts";
 import { suspendProcessToShell } from "./suspend.ts";
 import { openTextInEditor } from "./openTextInEditor.ts";
+import { openUrl, JIF_RELEASES_URL } from "./openUrl.ts";
 import { hasVisibleSearchHighlights, hasVisibleSearchScope, stripAnsi } from "../search/matching.ts";
 import { getStatusHelpToastMaxBodyHeight, getStatusToastMaxBodyHeight } from "./statusMessages.ts";
 import {
@@ -406,6 +407,7 @@ export function JifView(props: {
         }
       },
     }),
+    openReleasesPage: () => openUrl({ url: JIF_RELEASES_URL }),
     reloadConfig,
     refreshRepository: (options) => refreshRepository(undefined, undefined, options),
     expandElidedRevisions: runtime.expandElidedRevisions,

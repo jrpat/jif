@@ -79,6 +79,7 @@ describe("extra mode", () => {
     expect(commandIds).toEqual([
       "cancel",
       "open-notifications",
+      "open-releases",
       "quit",
       "refresh-repository",
       "reload-config",

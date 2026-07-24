@@ -137,6 +137,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     shrinkPreview: () => calls.push("shrinkPreview"),
     scrollPreview: (rowDelta) => calls.push(`scrollPreview(${rowDelta})`),
     openNotifications: () => calls.push("openNotifications"),
+    openReleasesPage: () => calls.push("openReleasesPage"),
     expandNotification: () => calls.push("expandNotification"),
     collapseNotification: () => calls.push("collapseNotification"),
     editFocusedNotification: () => calls.push("editFocusedNotification"),
@@ -811,6 +812,36 @@ test("dispatchGlobalKey routes uppercase Z to suspend in normal mode", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["suspend"]);
+});
+
+test("dispatchGlobalKey routes alt-backtick to the releases page", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "alt-`",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["openReleasesPage"]);
+});
+
+test("dispatchGlobalKey routes alt-backtick to the releases page from an input mode", () => {
+  const calls: string[] = [];
+  const state: AppState = { ...createState(), focusMode: "revset" };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "alt-`",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["openReleasesPage"]);
 });
 
 test("dispatchGlobalKey routes ctrl-o to the operation log", () => {
