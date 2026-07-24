@@ -3,6 +3,19 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.4.0 — 2026-07-23
+
+### Highlights
+
+- **Editable dry-run mode.** Toggle it with `ctrl-\` to route jj actions into the command prompt, where you can review and edit the exact command before it runs.
+- **Wrapping command bar.** Long jj/shell commands now word-wrap and grow vertically — up to half the terminal height — instead of scrolling off the right edge, keeping the full command visible while you type.
+
+### All changes
+
+- Wrap long command-bar input instead of scrolling off-screen
+- Add editable dry-run mode for jj commands
+- Allow command prompts from all log surfaces
+
 ## v0.3.0 — 2026-07-22
 
 ### Highlights
