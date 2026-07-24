@@ -6,6 +6,7 @@ import {
   resolveAppConfig,
 } from "../../src/config/index.ts";
 import { PreviewPane } from "../../src/ui/PreviewPane.tsx";
+import { REVISION_PREVIEW_METADATA_LINE_COUNT } from "../../src/ui/revisionHeader.ts";
 
 const originalConsoleLog = console.log;
 console.log = (...args: unknown[]) => {
@@ -93,6 +94,7 @@ async function capture(
     scrollX?: boolean;
     scrollDownBy?: number;
     config?: typeof config;
+    headerDividerAfterLine?: number | null;
     previewWordWrap?: boolean;
     waitForExactSpan?: string;
   } = {},
@@ -103,6 +105,7 @@ async function capture(
   const rendered = await testRender(() => (
     <PreviewPane
       header={header}
+      headerDividerAfterLine={options.headerDividerAfterLine ?? null}
       diff={diff}
       loading={false}
       viewportWidth={width - 1}
@@ -219,8 +222,16 @@ ${tallDiffBody}
 `;
 
 const withHeader = await capture(
-  "Add a preview pane that word-wraps its full description across the pane",
+  [
+    "Change ID: qpvuntsmwlqt",
+    "Commit ID: 0123456789abcdef",
+    "Committer: 2026-07-24 10:30:00 · Grace <g@x.co>",
+    "Author   : 2026-07-23 09:15:00 · Ada <a@x.co>",
+    "",
+    "Add a preview pane that word-wraps its full description across the pane",
+  ].join("\n"),
   multiFileDiff,
+  { headerDividerAfterLine: REVISION_PREVIEW_METADATA_LINE_COUNT },
 );
 // Header carries a unique token so we can tell whether it scrolled off-screen.
 const scrollingHeader = await capture("ZZHEADERZZ revision summary", tallDiff, {

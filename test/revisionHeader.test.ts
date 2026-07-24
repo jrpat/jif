@@ -3,6 +3,7 @@ import type { RevisionSummary } from "../src/domain/types.ts";
 import {
   buildRevisionChangeIdSegments,
   formatRelativeAgo,
+  formatRevisionPreviewHeader,
   getRevisionChangeIdDisplayLength,
   getRevisionCommandRoleColors,
   getRevisionChangeIdColors,
@@ -289,6 +290,43 @@ test("formatRelativeAgo clamps future timestamps to zero seconds", () => {
   const now = new Date(2026, 4, 15, 12, 0, 0);
 
   expect(formatRelativeAgo("2026-06-01 12:00:00", now)).toBe("0s");
+});
+
+test("formatRevisionPreviewHeader puts revision metadata before the description", () => {
+  expect(formatRevisionPreviewHeader({
+    changeId: "qpvuntsmwlqt",
+    commitId: "0123456789abcdef",
+    authorLocalTimestamp: "2026-07-23 09:15:00",
+    authorName: "Ada Lovelace",
+    authorEmail: "ada@example.com",
+    committerLocalTimestamp: "2026-07-24 10:30:00",
+    committerName: "Grace Hopper",
+    committerEmail: "grace@example.com",
+    description: "Subject\n\nBody",
+  }, "(no description)")).toBe([
+    "Change ID: qpvuntsmwlqt",
+    "Commit ID: 0123456789abcdef",
+    "Committer: 2026-07-24 10:30:00 · Grace Hopper <grace@example.com>",
+    "Author   : 2026-07-23 09:15:00 · Ada Lovelace <ada@example.com>",
+    "",
+    "Subject",
+    "",
+    "Body",
+  ].join("\n"));
+});
+
+test("formatRevisionPreviewHeader retains the no-description placeholder", () => {
+  expect(formatRevisionPreviewHeader({
+    changeId: "qpvuntsmwlqt",
+    commitId: "0123456789abcdef",
+    authorLocalTimestamp: "2026-07-23 09:15:00",
+    authorName: "Ada Lovelace",
+    authorEmail: "ada@example.com",
+    committerLocalTimestamp: "2026-07-24 10:30:00",
+    committerName: "Grace Hopper",
+    committerEmail: "grace@example.com",
+    description: "",
+  }, "(empty) (no description)")).toEndWith("\n\n(empty) (no description)");
 });
 
 test("getRevisionSelectionMarker fills the one-character slot after the change id without shifting layout", () => {

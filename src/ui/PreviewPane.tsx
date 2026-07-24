@@ -21,13 +21,15 @@ import { makeScrollAcceleration } from "./scrollAcceleration.ts";
  * Unwrapped mode uses the exact logical row count from {@link countDiffRows};
  * wrapped mode gives the diff component the available width and lets it wrap.
  *
- * The header scrolls with the diff content (it is the top of the scroll area),
- * but its box is constrained to the viewport width so it word-wraps at the
+ * The header scrolls with the diff content (it is the top of the scroll area).
+ * Its sections are constrained to the viewport width so they word-wrap at the
  * visible width rather than the (potentially much wider) diff width, which is
- * what sizes the horizontally-scrollable content box.
+ * what sizes the horizontally-scrollable content box. Revision headers can
+ * place the same rule used between files after their metadata lines.
  */
 export function PreviewPane(props: {
   header: string | null;
+  headerDividerAfterLine: number | null;
   diff: string;
   loading: boolean;
   viewportWidth: number;
@@ -38,6 +40,19 @@ export function PreviewPane(props: {
   const colors = props.config.colorScheme.semanticColors;
   const syntaxStyle = buildPreviewSyntaxStyle();
   const files = createMemo(() => splitGitDiff(props.diff));
+  const headerSections = createMemo(() => {
+    const header = props.header;
+    const splitAfter = props.headerDividerAfterLine;
+    if (!header || splitAfter === null) {
+      return { beforeDivider: header, afterDivider: null };
+    }
+
+    const lines = header.split("\n");
+    return {
+      beforeDivider: lines.slice(0, splitAfter).join("\n"),
+      afterDivider: lines.slice(splitAfter).join("\n"),
+    };
+  });
   // At least the viewport width so short diffs fill the pane; wider than it (so
   // the scrollbox scrolls horizontally) when a diff line is longer. Wrapped
   // mode keeps content at the viewport width so OpenTUI can actually wrap.
@@ -79,9 +94,19 @@ export function PreviewPane(props: {
         contentOptions={{ width: contentWidth(), maxWidth: undefined }}
       >
         <box flexDirection="column" width={contentWidth()} paddingX={1}>
-          <Show when={props.header}>
+          <Show when={headerSections().beforeDivider}>
             <box width={headerWidth()} flexShrink={0}>
-              <text fg={colors.textSecondary} wrapMode="word">{props.header}</text>
+              <text fg={colors.textSecondary} wrapMode="word">
+                {headerSections().beforeDivider}
+              </text>
+            </box>
+          </Show>
+          <Show when={headerSections().afterDivider !== null}>
+            <PreviewDivider borderColor={colors.chromeBorderIdle} />
+            <box width={headerWidth()} flexShrink={0}>
+              <text fg={colors.textSecondary} wrapMode="word">
+                {headerSections().afterDivider}
+              </text>
             </box>
           </Show>
           <Show
@@ -104,13 +129,9 @@ export function PreviewPane(props: {
                 return (
                   <box flexDirection="column" width="100%" flexShrink={0}>
                     <Show when={showSeparator()}>
-                      <box
-                        height={2}
-                        width="100%"
-                        flexShrink={0}
-                        border={["bottom"]}
-                        borderStyle="single"
+                      <PreviewDivider
                         borderColor={colors.chromeBorderIdle}
+                        leadingBlankLine
                       />
                     </Show>
                     <text fg={colors.diffFileName} attributes={TextAttributes.BOLD} wrapMode="none" truncate>
@@ -162,6 +183,22 @@ export function PreviewPane(props: {
         </box>
       </scrollbox>
     </box>
+  );
+}
+
+function PreviewDivider(props: {
+  borderColor: string | undefined;
+  leadingBlankLine?: boolean;
+}) {
+  return (
+    <box
+      height={props.leadingBlankLine ? 2 : 1}
+      width="100%"
+      flexShrink={0}
+      border={["bottom"]}
+      borderStyle="single"
+      borderColor={props.borderColor}
+    />
   );
 }
 

@@ -577,6 +577,57 @@ test("file preview diff loader can request effectively full-file context", async
   expect(calls.every((call) => call.options?.workingCopy === "read-only")).toBeTrue();
 });
 
+test("revision preview metadata loads ids, signatures, dates, and the full description", async () => {
+  const client = new JjClient(REPO_PATH);
+  const calls: Array<{ args: readonly string[]; options?: { workingCopy?: string } }> = [];
+  const stdout = [
+    "qpvuntsmwlqt",
+    "0123456789abcdef",
+    "2026-07-23 09:15:00",
+    "Ada Lovelace",
+    "ada@example.com",
+    "2026-07-24 10:30:00",
+    "Grace Hopper",
+    "grace@example.com",
+    "A full revision description",
+  ].join("\u001f");
+
+  (client as unknown as {
+    runJj(
+      args: readonly string[],
+      options?: { workingCopy?: string },
+    ): Promise<{ stdout: string; stderr: string; exitCode: number }>;
+  }).runJj = async (args, options) => {
+    calls.push({ args, options });
+    return { stdout, stderr: "", exitCode: 0 };
+  };
+
+  expect(await client.loadRevisionPreviewMetadata("abc")).toEqual({
+    changeId: "qpvuntsmwlqt",
+    commitId: "0123456789abcdef",
+    authorLocalTimestamp: "2026-07-23 09:15:00",
+    authorName: "Ada Lovelace",
+    authorEmail: "ada@example.com",
+    committerLocalTimestamp: "2026-07-24 10:30:00",
+    committerName: "Grace Hopper",
+    committerEmail: "grace@example.com",
+    description: "A full revision description",
+  });
+  expect(calls).toEqual([{
+    args: [
+      "log",
+      "--no-graph",
+      "--color",
+      "never",
+      "-r",
+      "abc",
+      "-T",
+      'change_id ++ "\u001f" ++ commit_id ++ "\u001f" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "\u001f" ++ author.name() ++ "\u001f" ++ author.email() ++ "\u001f" ++ committer.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "\u001f" ++ committer.name() ++ "\u001f" ++ committer.email() ++ "\u001f" ++ description',
+    ],
+    options: { workingCopy: "read-only" },
+  }]);
+});
+
 test("parseLogOutput defaults hasConflict to false when field is missing", () => {
   const output = [
     "@  abcdefgh\u001fheader\u001fabcdefgh\u001f11111111\u001ffirst\u001f\u001f\u001fabc\u001ffalse\u001f2026-03-30 07:22:39",
@@ -610,6 +661,21 @@ test("JjClient loads a real sample repository", async () => {
 
   const firstFiles = await client.loadChangedFiles(firstChangedRevision!.revisionId);
   expect(firstFiles.length).toBeGreaterThan(0);
+
+  const previewRevision = repository.revisions.find((revision) =>
+    !revision.isEmpty && !revision.description.includes("(no description)")
+  );
+  expect(previewRevision).toBeDefined();
+  const previewMetadata = await client.loadRevisionPreviewMetadata(previewRevision!.revisionId);
+  expect(previewMetadata.changeId.length).toBeGreaterThanOrEqual(8);
+  expect(previewMetadata.commitId).toBe(previewRevision!.commitId);
+  expect(previewMetadata.authorLocalTimestamp).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+  expect(previewMetadata.authorName).not.toBe("");
+  expect(previewMetadata.authorEmail).toContain("@");
+  expect(previewMetadata.committerLocalTimestamp).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+  expect(previewMetadata.committerName).not.toBe("");
+  expect(previewMetadata.committerEmail).toContain("@");
+  expect(previewMetadata.description.trim().split("\n")[0]).toBe(previewRevision!.description);
 
   const knownFiles = await client.loadKnownFiles();
   expect(knownFiles).toContain("src/app.ts");

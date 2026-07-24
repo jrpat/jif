@@ -5,6 +5,8 @@ import type { RevisionRowState } from "./revisionBorders.ts";
 const NO_DESCRIPTION_PLACEHOLDER = "(no description)";
 const EMPTY_NO_DESCRIPTION_PLACEHOLDER = "(empty) (no description)";
 
+export const REVISION_PREVIEW_METADATA_LINE_COUNT = 4;
+
 export type RevisionChangeIdSegment = Readonly<{
   kind: "prefix" | "suffix";
   text: string;
@@ -217,6 +219,31 @@ export function hasUserDescription(
 ): boolean {
   return revision.description !== NO_DESCRIPTION_PLACEHOLDER
     && revision.description !== EMPTY_NO_DESCRIPTION_PLACEHOLDER;
+}
+
+export function formatRevisionPreviewHeader(
+  metadata: Readonly<{
+    changeId: string;
+    commitId: string;
+    authorLocalTimestamp: string;
+    authorName: string;
+    authorEmail: string;
+    committerLocalTimestamp: string;
+    committerName: string;
+    committerEmail: string;
+    description: string;
+  }>,
+  fallbackDescription: string,
+): string {
+  const description = metadata.description.trim() || fallbackDescription;
+  return [
+    `Change ID: ${metadata.changeId}`,
+    `Commit ID: ${metadata.commitId}`,
+    `Committer: ${metadata.committerLocalTimestamp} · ${metadata.committerName} <${metadata.committerEmail}>`,
+    `Author   : ${metadata.authorLocalTimestamp} · ${metadata.authorName} <${metadata.authorEmail}>`,
+    "",
+    description,
+  ].join("\n");
 }
 
 export function getRevisionChangeIdColors(options: Readonly<{

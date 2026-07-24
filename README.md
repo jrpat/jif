@@ -893,7 +893,7 @@ A resizable pane beside the log shows the diff of whatever is focused, following
 
 The pane is active in Normal, Files, Operation Log, and Evolog:
 
-- **Normal** — the full diff of the focused revision (all files), with a change-id + description header.
+- **Normal** — the full diff of the focused revision (all files), with change/commit IDs and author/committer signatures separated from the full description by a divider.
 - **Files** — the diff of the focused file only.
 - **Operation Log** — the diff of the focused operation (`jj operation diff`).
 - **Evolog** — the diff of the focused evolution entry.

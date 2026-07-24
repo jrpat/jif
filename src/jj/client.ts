@@ -40,6 +40,18 @@ export type PreviewDiffOptions = Readonly<{
   fullFile?: boolean;
 }>;
 
+export type RevisionPreviewMetadata = Readonly<{
+  changeId: string;
+  commitId: string;
+  authorLocalTimestamp: string;
+  authorName: string;
+  authorEmail: string;
+  committerLocalTimestamp: string;
+  committerName: string;
+  committerEmail: string;
+  description: string;
+}>;
+
 function previewDiffArgs(args: readonly string[], options?: PreviewDiffOptions): string[] {
   return options?.fullFile
     ? [...args, "--context", String(FULL_FILE_DIFF_CONTEXT_LINES)]
@@ -266,12 +278,42 @@ export class JjClient {
     return result.stdout;
   }
 
-  async loadRevisionDescription(revisionArg: string): Promise<string> {
+  async loadRevisionPreviewMetadata(revisionArg: string): Promise<RevisionPreviewMetadata> {
     const result = await this.runJj(
-      ["log", "--no-graph", "--color", "never", "-r", revisionArg, "-T", "description"],
+      [
+        "log",
+        "--no-graph",
+        "--color",
+        "never",
+        "-r",
+        revisionArg,
+        "-T",
+        `change_id ++ "${FIELD_SEPARATOR}" ++ commit_id ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ author.name() ++ "${FIELD_SEPARATOR}" ++ author.email() ++ "${FIELD_SEPARATOR}" ++ committer.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ committer.name() ++ "${FIELD_SEPARATOR}" ++ committer.email() ++ "${FIELD_SEPARATOR}" ++ description`,
+      ],
       { workingCopy: "read-only" },
     );
-    return result.stdout;
+    const [
+      changeId = "",
+      commitId = "",
+      authorLocalTimestamp = "",
+      authorName = "",
+      authorEmail = "",
+      committerLocalTimestamp = "",
+      committerName = "",
+      committerEmail = "",
+      ...descriptionParts
+    ] = result.stdout.split(FIELD_SEPARATOR);
+    return {
+      changeId: changeId.trim(),
+      commitId: commitId.trim(),
+      authorLocalTimestamp: authorLocalTimestamp.trim(),
+      authorName: authorName.trim(),
+      authorEmail: authorEmail.trim(),
+      committerLocalTimestamp: committerLocalTimestamp.trim(),
+      committerName: committerName.trim(),
+      committerEmail: committerEmail.trim(),
+      description: descriptionParts.join(FIELD_SEPARATOR),
+    };
   }
 
   async loadFileDiff(revisionArg: string, path: string, options?: PreviewDiffOptions): Promise<string> {

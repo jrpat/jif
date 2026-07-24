@@ -55,6 +55,8 @@ import { buildRevisionLayoutSpec, type RevisionSideChip } from "./revisionLayout
 import {
   buildRevisionChangeIdSegments,
   formatRelativeAgo,
+  formatRevisionPreviewHeader,
+  REVISION_PREVIEW_METADATA_LINE_COUNT,
   getRevisionChangeIdDisplayLength,
   getRevisionCommandRoleColors,
   getRevisionChangeIdColors,
@@ -452,13 +454,15 @@ export function JifView(props: {
       const revision = getFocusedRevision(store.state);
       const revArg = getFocusedRevisionArg(store.state);
       if (revision && revArg) {
-        placeholderHeader = revision.description;
         fetcher = async () => {
-          const [diff, description] = await Promise.all([
+          const [diff, metadata] = await Promise.all([
             client.loadRevisionDiff(revArg),
-            client.loadRevisionDescription(revArg),
+            client.loadRevisionPreviewMetadata(revArg),
           ]);
-          return { diff, header: description.trim() || revision.description };
+          return {
+            diff,
+            header: formatRevisionPreviewHeader(metadata, revision.description),
+          };
         };
       }
     } else if (mode === "files") {
@@ -1149,6 +1153,11 @@ export function JifView(props: {
             >
               <PreviewPane
                 header={previewHeader()}
+                headerDividerAfterLine={
+                  logSurfaceMode() === "revisions"
+                    ? REVISION_PREVIEW_METADATA_LINE_COUNT
+                    : null
+                }
                 diff={previewDiff()}
                 loading={previewLoading()}
                 viewportWidth={previewViewportWidth()}
