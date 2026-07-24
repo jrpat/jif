@@ -4,7 +4,7 @@ import { resolveAppConfig } from "../../src/config/index.ts";
 import { createAppStore } from "../../src/state/appStore.ts";
 import { draftConfigs, getCommandTargetRowId, getMarkedRowIds } from "../../src/state/store.ts";
 import type { RevisionSummary } from "../../src/domain/types.ts";
-import { RevisionItem } from "../../src/ui/render.tsx";
+import { RevisionItem, RevisionLogSurface } from "../../src/ui/render.tsx";
 import type { AppLayout } from "../../src/domain/types.ts";
 
 type CapturedSpans = Awaited<ReturnType<typeof testRender>>["captureSpans"] extends () => infer T ? T : never;
@@ -168,6 +168,55 @@ async function renderLayoutCycleAfterMount() {
   const frame = rendered.captureCharFrame();
   rendered.renderer.destroy();
   return frame;
+}
+
+async function captureRetainedLayoutBranches() {
+  const revisions = [
+    createRevision("curr", "branch", ["│ ○  ", "├─╯  "]),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout: "loose" });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+  const [visible, setVisible] = createSignal(true);
+  const config = resolveAppConfig({ commands: { layout: "loose" } });
+
+  const rendered = await testRender(() => (
+    <box width={32} flexDirection="column">
+      <RevisionLogSurface
+        visible={visible()}
+        state={store.state}
+        config={config}
+      />
+    </box>
+  ), { width: 32, height: 6 });
+
+  await rendered.renderOnce();
+  const branchIds = [
+    "revision-log-surface",
+    "revision-curr",
+    "layout-regular-curr",
+    "layout-tight-curr",
+    "layout-loose-header-curr",
+    "layout-normal-header-curr",
+  ] as const;
+  const before = branchIds.map((id) => rendered.renderer.root.findDescendantById(id)?.num ?? null);
+
+  setVisible(false);
+  await rendered.renderOnce();
+  setVisible(true);
+  await rendered.renderOnce();
+  store.actions.cycleLayout();
+  await rendered.renderOnce();
+  store.actions.cycleLayout();
+  await rendered.renderOnce();
+  store.actions.cycleLayout();
+  await rendered.renderOnce();
+
+  const after = branchIds.map((id) => rendered.renderer.root.findDescendantById(id)?.num ?? null);
+  rendered.renderer.destroy();
+  return { before, after };
 }
 
 async function renderLongSuperCondensedDescription() {
@@ -539,6 +588,7 @@ const squashCommandChips = await renderCommandDraftChips("loose", "squash");
 const dateChipLongDescriptionLoose = await renderDateChipWithLongDescription("loose");
 const dateChipLongDescriptionNormal = await renderDateChipWithLongDescription("normal");
 const dateChipLongDescriptionTight = await renderDateChipWithLongDescription("tight");
+const retainedLayoutBranches = await captureRetainedLayoutBranches();
 
 console.log(JSON.stringify({
   normalUnfocused,
@@ -565,4 +615,5 @@ console.log(JSON.stringify({
   dateChipLongDescriptionLoose,
   dateChipLongDescriptionNormal,
   dateChipLongDescriptionTight,
+  retainedLayoutBranches,
 }));

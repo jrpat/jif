@@ -46,18 +46,28 @@ function formatWorkspaceChipText(workspaceName: string): string {
   return workspaceName.endsWith("@") ? workspaceName : `${workspaceName}@`;
 }
 
+export function buildRevisionSideChips(
+  revision: Pick<RevisionSummary, "bookmarks" | "workspaces" | "hasConflict">,
+): readonly RevisionSideChip[] {
+  return [
+    ...(revision.hasConflict ? [{ kind: "conflict" as const, text: "×" }] : []),
+    ...revision.workspaces.map((text) => ({
+      kind: "workspace" as const,
+      text: formatWorkspaceChipText(text),
+    })),
+    ...revision.bookmarks.map((text) => ({ kind: "bookmark" as const, text })),
+  ];
+}
+
 export function buildRevisionLayoutSpec(
   revision: Pick<RevisionSummary, "revisionId" | "bookmarks" | "workspaces" | "graphRows" | "hasConflict">,
   options: Readonly<{
     mode: RevisionLayoutMode;
     commandChipText: string | null;
+    sideChips?: readonly RevisionSideChip[];
   }>,
 ): RevisionLayoutSpec {
-  const sideChips: RevisionSideChip[] = [
-    ...(revision.hasConflict ? [{ kind: "conflict" as const, text: "×" }] : []),
-    ...revision.workspaces.map((text) => ({ kind: "workspace" as const, text: formatWorkspaceChipText(text) })),
-    ...revision.bookmarks.map((text) => ({ kind: "bookmark" as const, text })),
-  ];
+  const sideChips = options.sideChips ?? buildRevisionSideChips(revision);
   const base = BASE_LAYOUT_SPECS[options.mode];
 
   return {

@@ -51,6 +51,7 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     dateChipLongDescriptionLoose,
     dateChipLongDescriptionNormal,
     dateChipLongDescriptionTight,
+    retainedLayoutBranches,
   } = JSON.parse(stdout) as {
     normalUnfocused: string;
     normalFocused: string;
@@ -88,6 +89,10 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     dateChipLongDescriptionLoose: string;
     dateChipLongDescriptionNormal: string;
     dateChipLongDescriptionTight: string;
+    retainedLayoutBranches: {
+      before: (number | null)[];
+      after: (number | null)[];
+    };
   };
 
   const expectedFocusedBg = hexToRgb(resolveAppConfig({}).colorScheme.semanticColors.rowFocusedFill!);
@@ -227,4 +232,7 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
   expect(squashCommandChips).toContain("from");
   expect(squashCommandChips).toContain("into");
   expect(squashCommandChips).not.toContain("✓");
+
+  expect(retainedLayoutBranches.before).not.toContain(null);
+  expect(retainedLayoutBranches.after).toEqual(retainedLayoutBranches.before);
 }, 20000);

@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { MouseButton, TextAttributes, type MouseEvent, type ScrollBoxRenderable } from "@opentui/core";
-import { For, Show, createEffect, createMemo, createRenderEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Index, Show, createEffect, createMemo, createRenderEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { useKeyboard, useRenderer } from "@opentui/solid";
 import { createCommandRunner } from "../commands/runner.ts";
@@ -51,7 +51,11 @@ import {
   measureGutterPlanWidth,
   splitGraphTitleSegments,
 } from "./revisionGutter.ts";
-import { buildRevisionLayoutSpec, type RevisionSideChip } from "./revisionLayout.ts";
+import {
+  buildRevisionLayoutSpec,
+  buildRevisionSideChips,
+  type RevisionSideChip,
+} from "./revisionLayout.ts";
 import {
   buildRevisionChangeIdSegments,
   formatRelativeAgo,
@@ -1027,94 +1031,71 @@ export function JifView(props: {
               )}
             >
               <box width="100%" flexDirection="column">
-                <Show
-                  when={logSurfaceMode() === "notifications"}
-                  fallback={(
-                    <Show
-                      when={logSurfaceMode() === "op-log"}
-                      fallback={(
-                        <Show
-                          when={logSurfaceMode() === "evolog"}
-                          fallback={(
-                            <For each={store.state.revisions}>
-                              {(revision, index) => (
-                                <RevisionItem
-                                  state={store.state}
-                                  revision={revision}
-                                  revisionChangeIdDisplayLength={revisionChangeIdDisplayLength()}
-                                  index={index()}
-                                  previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
-                                  nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
-                                  config={config}
-                                  focusedRowId={getFocusedRevision(store.state)?.rowId ?? null}
-                                  selectedRowIds={getMarkedRowIds(store.state)}
-                                  expandedRowId={getExpandedRevision(store.state)?.rowId ?? null}
-                                  commandTargetRowId={getCommandTargetRowId(store.state)}
-                                  onMouseFocus={() => {
-                                    if (focusClickGuard.isWithinFocusGrace()) return;
-                                    store.actions.focusRevisionAt(index());
-                                  }}
-                                />
-                              )}
-                            </For>
-                          )}
-                        >
-                          <Show
-                            when={store.state.evologEntries.length > 0}
-                            fallback={(
-                              <box width="100%" paddingX={1} paddingY={1}>
-                                <text fg={config.colorScheme.semanticColors.textTertiary}>
-                                  {store.state.evologLoading ? "Loading evolog..." : "No evolog entries."}
-                                </text>
-                              </box>
-                            )}
-                          >
-                            <For each={store.state.evologEntries}>
-                              {(entry, index) => (
-                                <OperationLogEntryItem
-                                  id={`evolog-entry-${index()}`}
-                                  entry={entry}
-                                  focused={store.state.focusedEvologIndex === index()}
-                                  config={config}
-                                  onMouseFocus={() => {
-                                    if (focusClickGuard.isWithinFocusGrace()) return;
-                                    store.actions.focusEvologEntryAt(index());
-                                  }}
-                                />
-                              )}
-                            </For>
-                          </Show>
-                        </Show>
+                <RevisionLogSurface
+                  visible={logSurfaceMode() === "revisions" || logSurfaceMode() === "files"}
+                  state={store.state}
+                  config={config}
+                  revisionChangeIdDisplayLength={revisionChangeIdDisplayLength()}
+                  onMouseFocus={(index) => {
+                    if (focusClickGuard.isWithinFocusGrace()) return;
+                    store.actions.focusRevisionAt(index);
+                  }}
+                />
+                <Show when={logSurfaceMode() === "evolog"}>
+                  <Show
+                    when={store.state.evologEntries.length > 0}
+                    fallback={(
+                      <box width="100%" paddingX={1} paddingY={1}>
+                        <text fg={config.colorScheme.semanticColors.textTertiary}>
+                          {store.state.evologLoading ? "Loading evolog..." : "No evolog entries."}
+                        </text>
+                      </box>
+                    )}
+                  >
+                    <For each={store.state.evologEntries}>
+                      {(entry, index) => (
+                        <OperationLogEntryItem
+                          id={`evolog-entry-${index()}`}
+                          entry={entry}
+                          focused={store.state.focusedEvologIndex === index()}
+                          config={config}
+                          onMouseFocus={() => {
+                            if (focusClickGuard.isWithinFocusGrace()) return;
+                            store.actions.focusEvologEntryAt(index());
+                          }}
+                        />
                       )}
-                    >
-                      <Show
-                        when={store.state.operationLogEntries.length > 0}
-                        fallback={(
-                          <box width="100%" paddingX={1} paddingY={1}>
-                            <text fg={config.colorScheme.semanticColors.textTertiary}>
-                              {store.state.operationLogLoading ? "Loading operation log..." : "No operation log entries."}
-                            </text>
-                          </box>
-                        )}
-                      >
-                        <For each={store.state.operationLogEntries}>
-                          {(entry, index) => (
-                            <OperationLogEntryItem
-                              id={`operation-log-entry-${index()}`}
-                              entry={entry}
-                              focused={store.state.focusedOperationLogIndex === index()}
-                              config={config}
-                              onMouseFocus={() => {
-                                if (focusClickGuard.isWithinFocusGrace()) return;
-                                store.actions.focusOperationLogEntryAt(index());
-                              }}
-                            />
-                          )}
-                        </For>
-                      </Show>
-                    </Show>
-                  )}
-                >
+                    </For>
+                  </Show>
+                </Show>
+                <Show when={logSurfaceMode() === "op-log"}>
+                  <Show
+                    when={store.state.operationLogEntries.length > 0}
+                    fallback={(
+                      <box width="100%" paddingX={1} paddingY={1}>
+                        <text fg={config.colorScheme.semanticColors.textTertiary}>
+                          {store.state.operationLogLoading ? "Loading operation log..." : "No operation log entries."}
+                        </text>
+                      </box>
+                    )}
+                  >
+                    <For each={store.state.operationLogEntries}>
+                      {(entry, index) => (
+                        <OperationLogEntryItem
+                          id={`operation-log-entry-${index()}`}
+                          entry={entry}
+                          focused={store.state.focusedOperationLogIndex === index()}
+                          config={config}
+                          onMouseFocus={() => {
+                            if (focusClickGuard.isWithinFocusGrace()) return;
+                            store.actions.focusOperationLogEntryAt(index());
+                          }}
+                        />
+                      )}
+                    </For>
+                  </Show>
+                </Show>
+                <Show when={logSurfaceMode() === "notifications"}>
                   <NotificationsOverlay
                     entries={getDisplayedNotifications(store.state)}
                     focusedIndex={store.state.focusedNotificationIndex}
@@ -1305,6 +1286,47 @@ export function JifView(props: {
 
 }
 
+export function RevisionLogSurface(props: {
+  visible: boolean;
+  state: AppStore["state"];
+  config: ResolvedAppConfig;
+  revisionChangeIdDisplayLength?: number;
+  onMouseFocus?: (index: number) => void;
+}) {
+  const focusedRowId = createMemo(() => getFocusedRevision(props.state)?.rowId ?? null);
+  const selectedRowIds = createMemo(() => getMarkedRowIds(props.state));
+  const expandedRowId = createMemo(() => getExpandedRevision(props.state)?.rowId ?? null);
+  const commandTargetRowId = createMemo(() => getCommandTargetRowId(props.state));
+
+  return (
+    <box
+      id="revision-log-surface"
+      visible={props.visible}
+      width="100%"
+      flexDirection="column"
+    >
+      <For each={props.state.revisions}>
+        {(revision, index) => (
+          <RevisionItem
+            state={props.state}
+            revision={revision}
+            revisionChangeIdDisplayLength={props.revisionChangeIdDisplayLength}
+            index={index()}
+            previousRowId={props.state.revisions[index() - 1]?.rowId ?? null}
+            nextRowId={props.state.revisions[index() + 1]?.rowId ?? null}
+            config={props.config}
+            focusedRowId={focusedRowId()}
+            selectedRowIds={selectedRowIds()}
+            expandedRowId={expandedRowId()}
+            commandTargetRowId={commandTargetRowId()}
+            onMouseFocus={() => props.onMouseFocus?.(index())}
+          />
+        )}
+      </For>
+    </box>
+  );
+}
+
 export function RevisionItem(props: {
   state: AppStore["state"];
   revision: RevisionSummary;
@@ -1354,10 +1376,12 @@ export function RevisionItem(props: {
   const detailRowCount = () => isExpanded()
     ? Math.max(props.revision.files.length, 1) + (inlineConfirmation() ? 1 : 0)
     : 0;
+  const sideChips = createMemo(() => buildRevisionSideChips(props.revision));
   const layoutSpec = createMemo(() =>
     buildRevisionLayoutSpec(props.revision, {
       mode: props.state.layout,
       commandChipText: commandChipText(),
+      sideChips: sideChips(),
     }),
   );
   const boxedGraphWidth = createMemo(() =>
@@ -1581,10 +1605,13 @@ export function RevisionItem(props: {
         props.onMouseFocus?.();
       }}
     >
-      <Show
-        when={layoutSpec().mode === "tight"}
-        fallback={
-          <box width="100%" flexDirection="row" position="relative">
+      <box
+        id={`layout-regular-${props.revision.rowId}`}
+        visible={layoutSpec().mode !== "tight"}
+        width="100%"
+        flexDirection="column"
+      >
+        <box width="100%" flexDirection="row" position="relative">
             <box width={inlineGraphWidth()} flexDirection="column">
               {gutterPlan().topDivider !== null ? (
                 <text fg={continuationGraphColor()}>
@@ -1592,36 +1619,36 @@ export function RevisionItem(props: {
                 </text>
               ) : null}
               <box flexDirection="row" height={1}>
-                <For each={splitGraphTitleSegments(padRight(gutterPlan().title, inlineGraphWidth()))}>
+                <Index each={splitGraphTitleSegments(padRight(gutterPlan().title, inlineGraphWidth()))}>
                   {(segment) => (
                     <text
-                      fg={segment.isMarker && props.revision.hasConflict ? colors().statusError : titleGraphColor()}
-                      attributes={segment.isMarker && props.revision.hasConflict ? TextAttributes.BOLD : undefined}
+                      fg={segment().isMarker && props.revision.hasConflict ? colors().statusError : titleGraphColor()}
+                      attributes={segment().isMarker && props.revision.hasConflict ? TextAttributes.BOLD : undefined}
                     >
-                      {segment.text}
+                      {segment().text}
                     </text>
                   )}
-                </For>
+                </Index>
               </box>
               <Show when={layoutSpec().headerRowCount === 2 && props.revision.marker !== "elided"}>
                 <text fg={continuationGraphColor()}>
                   {padRight(gutterPlan().subtitle, inlineGraphWidth())}
                 </text>
               </Show>
-              <For each={inlineGraphTail()}>
+              <Index each={inlineGraphTail()}>
                 {(graphLine) => (
                   <text fg={continuationGraphColor()}>
-                    {padRight(graphLine, inlineGraphWidth())}
+                    {padRight(graphLine(), inlineGraphWidth())}
                   </text>
                 )}
-              </For>
-              <For each={gutterPlan().detail}>
+              </Index>
+              <Index each={gutterPlan().detail}>
                 {(graphLine) => (
                   <text fg={continuationGraphColor()}>
-                    {padRight(graphLine, inlineGraphWidth())}
+                    {padRight(graphLine(), inlineGraphWidth())}
                   </text>
                 )}
-              </For>
+              </Index>
               {inlineBottomDivider() !== null ? (
                 <text fg={continuationGraphColor()}>
                   {padRight(inlineBottomDivider()!, inlineGraphWidth())}
@@ -1646,105 +1673,106 @@ export function RevisionItem(props: {
                   </text>
                 }
               >
-                <Show
-                  when={layoutSpec().headerRowCount === 1}
-                  fallback={
-                    <>
-                      <box width="100%" flexDirection="row">
-                        <RevisionChangeId
-                          revision={props.revision}
-                          displayLength={revisionChangeIdDisplayLength()}
-                          rowState={effectiveRowState()}
-                          colors={colors()}
-                        />
-                        <text flexShrink={0} fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
-                          {getRevisionSelectionMarker(effectiveRowState())}
-                        </text>
-                        <box flexGrow={1} />
-                        <DateChip text={relativeAgo()} colors={colors()} />
-                        {layoutSpec().commandChip ? (
-                          <CommandChip
-                            text={layoutSpec().commandChip!.text}
-                            backgroundColor={commandChipBackgroundColor()}
-                            foregroundColor={commandChipForegroundColor()}
-                            colors={colors()}
-                          />
-                        ) : null}
-                      </box>
-                      <box width="100%" flexDirection="row">
-                        <box flexDirection="row" flexShrink={0}>
-                          <Show when={layoutSpec().sideChips.length > 0}>
-                            <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
-                            <box width={1} />
-                          </Show>
-                        </box>
-                        <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
-                          <text
-                            flexGrow={1}
-                            flexBasis={0}
-                            minWidth={0}
-                            fg={descriptionColor()}
-                            wrapMode="none"
-                            truncate={true}
-                          >
-                            {props.revision.description}
-                          </text>
-                        </box>
-                      </box>
-                    </>
-                  }
+                <box
+                  id={`layout-loose-header-${props.revision.rowId}`}
+                  visible={layoutSpec().headerRowCount === 2}
+                  width="100%"
+                  flexDirection="column"
                 >
-                  <box
-                    width="100%"
-                    height={layoutSpec().headerRowCount}
-                    overflow={layoutSpec().headerRowCount === 1 ? "hidden" : undefined}
-                    position="relative"
-                  >
-                    <box width="100%" height={1} flexDirection="row">
-                      <RevisionChangeId
-                        revision={props.revision}
-                        displayLength={revisionChangeIdDisplayLength()}
-                        rowState={effectiveRowState()}
+                  <box width="100%" flexDirection="row">
+                    <RevisionChangeId
+                      revision={props.revision}
+                      displayLength={revisionChangeIdDisplayLength()}
+                      rowState={effectiveRowState()}
+                      colors={colors()}
+                    />
+                    <text flexShrink={0} fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
+                      {getRevisionSelectionMarker(effectiveRowState())}
+                    </text>
+                    <box flexGrow={1} />
+                    <DateChip text={relativeAgo()} colors={colors()} />
+                    {layoutSpec().commandChip ? (
+                      <CommandChip
+                        text={layoutSpec().commandChip!.text}
+                        backgroundColor={commandChipBackgroundColor()}
+                        foregroundColor={commandChipForegroundColor()}
                         colors={colors()}
                       />
-                      <text flexShrink={0} fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
-                        {getRevisionSelectionMarker(effectiveRowState())}
-                      </text>
-                      <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
-                      <Show when={layoutSpec().sideChips.length > 0}>
-                        <box width={1} />
-                      </Show>
-                      <box flexGrow={1} flexBasis={0} minWidth={0} height={1} overflow="hidden" flexDirection="row">
-                        <text
-                          flexGrow={1}
-                          flexBasis={0}
-                          minWidth={0}
-                          fg={descriptionColor()}
-                          wrapMode="none"
-                          truncate={true}
-                        >
-                          {props.revision.description}
-                        </text>
-                      </box>
-                      <DateChip text={relativeAgo()} colors={colors()} />
-                    </box>
-                    {layoutSpec().commandChip?.placement === "overlay" ? (
-                      <text
-                        position="absolute"
-                        right={0}
-                        top={0}
-                        zIndex={1}
-                        fg={commandChipForegroundColor()}
-                        bg={commandChipBackgroundColor()}
-                      >
-                        {` ${layoutSpec().commandChip!.text} `}
-                      </text>
                     ) : null}
                   </box>
-                </Show>
-                <For each={inlineGraphTail()}>
+                  <box width="100%" flexDirection="row">
+                    <box flexDirection="row" flexShrink={0}>
+                      <Show when={layoutSpec().sideChips.length > 0}>
+                        <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
+                        <box width={1} />
+                      </Show>
+                    </box>
+                    <box flexGrow={1} minWidth={0} height={1} overflow="hidden" flexDirection="row">
+                      <text
+                        flexGrow={1}
+                        flexBasis={0}
+                        minWidth={0}
+                        fg={descriptionColor()}
+                        wrapMode="none"
+                        truncate={true}
+                      >
+                        {props.revision.description}
+                      </text>
+                    </box>
+                  </box>
+                </box>
+                <box
+                  id={`layout-normal-header-${props.revision.rowId}`}
+                  visible={layoutSpec().headerRowCount === 1}
+                  width="100%"
+                  height={1}
+                  overflow="hidden"
+                  position="relative"
+                >
+                  <box width="100%" height={1} flexDirection="row">
+                    <RevisionChangeId
+                      revision={props.revision}
+                      displayLength={revisionChangeIdDisplayLength()}
+                      rowState={effectiveRowState()}
+                      colors={colors()}
+                    />
+                    <text flexShrink={0} fg={colors().rowSelectedAccent} attributes={TextAttributes.BOLD}>
+                      {getRevisionSelectionMarker(effectiveRowState())}
+                    </text>
+                    <RevisionSideChips chips={layoutSpec().sideChips} colors={colors()} />
+                    <Show when={layoutSpec().sideChips.length > 0}>
+                      <box width={1} />
+                    </Show>
+                    <box flexGrow={1} flexBasis={0} minWidth={0} height={1} overflow="hidden" flexDirection="row">
+                      <text
+                        flexGrow={1}
+                        flexBasis={0}
+                        minWidth={0}
+                        fg={descriptionColor()}
+                        wrapMode="none"
+                        truncate={true}
+                      >
+                        {props.revision.description}
+                      </text>
+                    </box>
+                    <DateChip text={relativeAgo()} colors={colors()} />
+                  </box>
+                  {layoutSpec().commandChip?.placement === "overlay" ? (
+                    <text
+                      position="absolute"
+                      right={0}
+                      top={0}
+                      zIndex={1}
+                      fg={commandChipForegroundColor()}
+                      bg={commandChipBackgroundColor()}
+                    >
+                      {` ${layoutSpec().commandChip!.text} `}
+                    </text>
+                  ) : null}
+                </box>
+                <Index each={inlineGraphTail()}>
                   {() => <box width="100%" height={1} />}
-                </For>
+                </Index>
                 {isExpanded() ? (
                   <ChangedFiles
                     state={props.state}
@@ -1770,21 +1798,26 @@ export function RevisionItem(props: {
                 {"┌" + "─".repeat(currentLeftCol() - connectedNextLeftCol()! - 1)}
               </text>
             ) : null}
-          </box>
-        }
+        </box>
+      </box>
+      <box
+        id={`layout-tight-${props.revision.rowId}`}
+        visible={layoutSpec().mode === "tight"}
+        width="100%"
+        flexDirection="column"
       >
         <box width="100%" flexDirection="row" position="relative">
           <box width={superGraphWidth()} flexDirection="row" height={1}>
-            <For each={splitGraphTitleSegments(padRight(superGutterPlan().title, superGraphWidth()))}>
+            <Index each={splitGraphTitleSegments(padRight(superGutterPlan().title, superGraphWidth()))}>
               {(segment) => (
                 <text
-                  fg={segment.isMarker && props.revision.hasConflict ? colors().statusError : titleGraphColor()}
-                  attributes={segment.isMarker && props.revision.hasConflict ? TextAttributes.BOLD : undefined}
+                  fg={segment().isMarker && props.revision.hasConflict ? colors().statusError : titleGraphColor()}
+                  attributes={segment().isMarker && props.revision.hasConflict ? TextAttributes.BOLD : undefined}
                 >
-                  {segment.text}
+                  {segment().text}
                 </text>
               )}
-            </For>
+            </Index>
           </box>
           <box width={1} />
           <box
@@ -1843,17 +1876,17 @@ export function RevisionItem(props: {
             </text>
           ) : null}
         </box>
-        <For each={superGutterPlan().tail}>
+        <Index each={superGutterPlan().tail}>
           {(graphLine) => (
             <box width="100%" flexDirection="row">
               <text fg={continuationGraphColor()}>
-                {padRight(graphLine, superGraphWidth())}
+                {padRight(graphLine(), superGraphWidth())}
               </text>
               <box width={1} />
               <box flexGrow={1} height={1} />
             </box>
           )}
-        </For>
+        </Index>
         <For each={changedFileRows()}>
           {(row, index) => (
             <box width="100%" flexDirection="row">
@@ -1890,20 +1923,20 @@ export function RevisionItem(props: {
             </box>
           )
           : null}
-      </Show>
-      <Show when={layoutSpec().mode !== "tight"}>
-        <For each={externalGraphRows()}>
+      </box>
+      <box visible={layoutSpec().mode !== "tight"} width="100%" flexDirection="column">
+        <Index each={externalGraphRows()}>
           {(graphLine) => (
             <box width="100%" flexDirection="row">
               <text fg={continuationGraphColor()}>
-                {padRight(graphLine, fullGraphWidth())}
+                {padRight(graphLine(), fullGraphWidth())}
               </text>
               <box width={1} />
               <box flexGrow={1} height={1} />
             </box>
           )}
-        </For>
-      </Show>
+        </Index>
+      </box>
     </box>
   );
 }

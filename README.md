@@ -1040,6 +1040,21 @@ bunx tsc --noEmit
 </details>
 
 <details>
+<summary>Benchmark</summary>
+
+Benchmark layout changes and the operation-log return path against the current repository:
+
+```bash
+bun run bench:revision-render
+```
+
+Use `--repo`, `--iterations`, `--warmup`, `--width`, and `--height` to control the run. `--scenario layout` or `--scenario oplog` narrows it, and `--json` emits machine-readable results. Optional `--median-budget-ms` and `--p95-budget-ms` limits make the command exit nonzero when either budget is exceeded, providing a path to enforce stable performance budgets in CI.
+
+The benchmark uses OpenTUI's test renderer and Bun's built-in clock. For a sampling profile without adding a dependency or production instrumentation, run the benchmark entrypoint with Bun's `--cpu-prof` and `--cpu-prof-md` flags.
+
+</details>
+
+<details>
 <summary>Distribute</summary>
 
 Releases are tag-driven with curated notes, cut with the `jif-release` skill (`.agents/skills/jif-release/SKILL.md`): run `bun run release:preflight`, agree on a version (`0.MINOR.PATCH`, betas `-beta.N`), draft notes from `jj log`, update `CHANGELOG.md` for stable cuts, push `main`, create a **draft** GitHub Release, and dispatch `.github/workflows/release.yml`, which builds every platform binary, verifies and checksums the assets, and publishes the draft; publishing creates the tag. Stable releases also bump the Homebrew tap (`jrpat/homebrew-jif-tap`).
