@@ -914,6 +914,32 @@ test("dispatchGlobalKey routes alt-j to jump-to-next-divergent", () => {
   expect(calls).toEqual(["moveFocusToNextDivergentSibling"]);
 });
 
+test("dispatchGlobalKey routes alt-j while composing rebase, squash, and interdiff", () => {
+  const base = createState();
+  const divergentState: AppState = {
+    ...base,
+    focusedRevisionIndex: 0,
+    revisions: [
+      { ...base.revisions[0]!, revisionId: "abc1234/1", changeIdPrefixLength: 4 },
+      { ...base.revisions[1]!, revisionId: "abc1234/2", changeIdPrefixLength: 4 },
+    ],
+  };
+
+  for (const config of [draftConfigs.rebase, draftConfigs.squash, draftConfigs.interdiff]) {
+    const calls: string[] = [];
+    const state = startCommandDraft(divergentState, config);
+    const handled = dispatchGlobalKey({
+      normalizedKey: "alt-j",
+      state,
+      commands: commandDefinitions,
+      controller: createController(calls),
+    });
+
+    expect(handled).toBeTrue();
+    expect(calls).toEqual(["moveFocusToNextDivergentSibling"]);
+  }
+});
+
 test("dispatchGlobalKey routes y to duplicate and alt-r to revert", () => {
   const dupCalls: string[] = [];
   const state = createState();

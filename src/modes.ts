@@ -227,6 +227,7 @@ export const defaultKeymap: Keymap = {
     enter: "confirm",
   },
   rebase: {
+    "alt-j": "jump-to-next-divergent",
     s: "rebase-descendants",
     B: "rebase-source-branch",
     b: "rebase-target-before",
@@ -248,10 +249,12 @@ export const defaultKeymap: Keymap = {
   },
   restore: {},
   squash: {
+    "alt-j": "jump-to-next-divergent",
     s: "squash-from-anchor",
     S: alias("squash-from-anchor"),
   },
   interdiff: {
+    "alt-j": "jump-to-next-divergent",
     "=": "interdiff-swap",
   },
   diff: {},

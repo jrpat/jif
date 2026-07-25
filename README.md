@@ -218,6 +218,7 @@ Active while previewing a rebase. Inherits Revision Draft, not Normal revision o
 
 | Key | Command | Description |
 |-----|---------|-------------|
+| `alt-j` | jump-to-next-divergent | When the focused revision is divergent, cycle to the next visible sibling sharing its change-id |
 | `s` | rebase-descendants | Toggle `--source` (move the focused revision and its descendants) |
 | `B` | rebase-source-branch | Toggle `--branch` (rebase the whole branch containing the focused revision) |
 | `b` | rebase-target-before | Toggle `--insert-before` on the target |
@@ -258,6 +259,7 @@ Two keys from Normal mode enter squash mode:
 
 | Key | Command | Description |
 |-----|---------|-------------|
+| `alt-j` | jump-to-next-divergent | When the focused revision is divergent, cycle to the next visible sibling sharing its change-id |
 | `s` | squash-from-anchor | Toggle whether the source extends to a range `<source>::<anchor>`, where `<anchor>` is `@` if the working copy is non-empty, otherwise `@-`. `S` is an alias here, so you can keep toggling with either case |
 
 ### Restore
@@ -270,6 +272,7 @@ Active while previewing an interdiff. Inherits Revision Draft, not Normal. Compo
 
 | Key | Command | Description |
 |-----|---------|-------------|
+| `alt-j` | jump-to-next-divergent | When the focused revision is divergent, cycle to the next visible sibling sharing its change-id |
 | `=` | interdiff-swap | Swap which side is `--from` and which is `--to`: the selected revision becomes `--to` and the focused revision becomes `--from`. Press again to swap back |
 
 ### Diff

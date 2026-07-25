@@ -166,6 +166,23 @@ test("alt-j resolves to jump-to-next-divergent only on a divergent revision", ()
   expect(resolveForState("alt-j", divergentState)).toBe("jump-to-next-divergent");
 });
 
+test("alt-j resolves to jump-to-next-divergent while composing rebase, squash, and interdiff", () => {
+  const plainState = createState();
+  const divergentState: AppState = {
+    ...plainState,
+    revisions: [
+      { ...plainState.revisions[0]!, revisionId: "abc1234/1", changeIdPrefixLength: 4 },
+      { ...plainState.revisions[1]!, revisionId: "abc1234/2", changeIdPrefixLength: 4 },
+    ],
+  };
+
+  for (const config of [draftConfigs.rebase, draftConfigs.squash, draftConfigs.interdiff]) {
+    const drafted = startCommandDraft(divergentState, config);
+    expect(getActiveMode(drafted)).toBe(config.kind);
+    expect(resolveForState("alt-j", drafted)).toBe("jump-to-next-divergent");
+  }
+});
+
 test("y, alt-r, and alt-s resolve to duplicate, revert, and split-parallel in normal mode", () => {
   const state = createState();
   expect(resolveForState("y", state)).toBe("duplicate");
@@ -333,6 +350,7 @@ test("getDirectCommandsForMode returns only rebase-specific bindings", () => {
   const commands = getDirectCommandsForMode("rebase", defaultKeymap, commandDefinitions);
 
   expect(commands.map((command) => command.id).sort()).toEqual([
+    "jump-to-next-divergent",
     "rebase-descendants",
     "rebase-source-branch",
     "rebase-target-after",
