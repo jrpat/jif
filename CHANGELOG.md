@@ -3,6 +3,22 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.5.1 — 2026-07-24
+
+### Highlights
+
+jif 0.5.1 is a small bugfix release.
+
+- Background refreshes (the file watcher and the refresh interval) no longer merge divergent JJ operation heads, so an idle jif instance can no longer create operations that re-trigger every other running instance.
+- `alt-j` now jumps between visible divergent siblings while composing rebase, squash, or interdiff.
+
+### All changes
+
+- Prevent passive refreshes from merging JJ operations
+- Enable divergent jumps in draft modes
+- Style the diff-context hint as an error
+- Keep clamped log navigation visible
+
 ## v0.5.0 — 2026-07-24
 
 ### Highlights
