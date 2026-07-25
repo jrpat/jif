@@ -182,11 +182,15 @@ type OpHeadsWatchHandle = Readonly<{ close(): void }>;
 type OpHeadsWatchFactory = (path: string, onChange: () => void) => OpHeadsWatchHandle;
 
 type DebounceScheduler = Readonly<{
+  now(): number;
   setTimeout(callback: () => void, delayMs: number): ReturnType<typeof globalThis.setTimeout>;
   clearTimeout(handle: ReturnType<typeof globalThis.setTimeout>): void;
 }>;
 
 const defaultDebounceScheduler: DebounceScheduler = {
+  now() {
+    return globalThis.performance.now();
+  },
   setTimeout(callback, delayMs) {
     return globalThis.setTimeout(callback, delayMs);
   },
@@ -204,28 +208,81 @@ const defaultOpHeadsWatchFactory: OpHeadsWatchFactory = (path, onChange) => {
 };
 
 // A single jj operation touches the heads directory more than once (the new
-// head is written before the old one is removed), so changes are debounced
-// into one refresh.
+// head is written before the old one is removed), so wait for a quiet second
+// before refreshing. While the repo stays hot, cap watcher refreshes at one
+// per five seconds; interval and explicit refreshes are not affected.
 const OP_HEADS_DEBOUNCE_MS = 1000;
+const OP_HEADS_MIN_REFRESH_INTERVAL_MS = 5000;
+const OP_HEADS_MAX_JITTER_MS = 500;
 
 export function bindOpHeadsWatcher(args: Readonly<{
   opHeadsPath: string;
   refreshRepository(options?: RepositoryRefreshOptions): Promise<boolean>;
   watch?: OpHeadsWatchFactory;
   scheduler?: DebounceScheduler;
+  // Pins the per-binding jitter so tests see deterministic delays.
+  jitterMs?: number;
 }>): () => void {
   const scheduler = args.scheduler ?? defaultDebounceScheduler;
   const watchFactory = args.watch ?? defaultOpHeadsWatchFactory;
+  const jitterMs = args.jitterMs ?? Math.random() * OP_HEADS_MAX_JITTER_MS;
   let pending: ReturnType<typeof globalThis.setTimeout> | null = null;
+  // createRepositoryRefresher already joins concurrent refreshes, but joining
+  // is wrong here: a change that lands mid-load would be answered by a load
+  // that started before it, and the event would be lost. Track the in-flight
+  // refresh separately so the watcher re-reads once it settles instead.
+  let refreshing = false;
+  let lastChangeAt = Number.NEGATIVE_INFINITY;
+  let lastRefreshStartedAt = Number.NEGATIVE_INFINITY;
+  let dirty = false;
+  let disposed = false;
+
+  const getEligibilityDelay = (now: number) => {
+    const readyAt = jitterMs + Math.max(
+      lastChangeAt + OP_HEADS_DEBOUNCE_MS,
+      lastRefreshStartedAt + OP_HEADS_MIN_REFRESH_INTERVAL_MS,
+    );
+    return Math.max(0, readyAt - now);
+  };
+
+  const scheduleRefresh = () => {
+    if (disposed || !dirty || pending !== null || refreshing) {
+      return;
+    }
+
+    pending = scheduler.setTimeout(runScheduledRefresh, getEligibilityDelay(scheduler.now()));
+  };
+
+  const settleRefresh = () => {
+    refreshing = false;
+    scheduleRefresh();
+  };
+
+  const runScheduledRefresh = () => {
+    pending = null;
+    if (disposed) {
+      return;
+    }
+
+    // Changes that arrived while the timer was armed only moved lastChangeAt,
+    // so re-arming here is what extends the debounce window over a burst.
+    const now = scheduler.now();
+    const eligibilityDelay = getEligibilityDelay(now);
+    if (eligibilityDelay > 0) {
+      pending = scheduler.setTimeout(runScheduledRefresh, eligibilityDelay);
+      return;
+    }
+
+    dirty = false;
+    lastRefreshStartedAt = now;
+    refreshing = true;
+    void args.refreshRepository({ workingCopy: "read-only" }).then(settleRefresh, settleRefresh);
+  };
 
   const handleChange = () => {
-    if (pending !== null) {
-      scheduler.clearTimeout(pending);
-    }
-    pending = scheduler.setTimeout(() => {
-      pending = null;
-      void args.refreshRepository({ workingCopy: "read-only" });
-    }, OP_HEADS_DEBOUNCE_MS);
+    dirty = true;
+    lastChangeAt = scheduler.now();
+    scheduleRefresh();
   };
 
   let watcher: OpHeadsWatchHandle;
@@ -236,6 +293,7 @@ export function bindOpHeadsWatcher(args: Readonly<{
   }
 
   return () => {
+    disposed = true;
     if (pending !== null) {
       scheduler.clearTimeout(pending);
       pending = null;

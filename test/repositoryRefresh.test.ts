@@ -538,16 +538,21 @@ test("bindAutoRefresh schedules read-only refreshes and unsubscribes cleanly", a
 });
 
 function createFakeDebounceScheduler() {
-  const pending: Array<{ callback: () => void; handle: number }> = [];
+  const pending: Array<{ callback: () => void; dueAt: number; handle: number }> = [];
   let nextHandle = 0;
+  let now = 0;
   const cleared: number[] = [];
+  const delays: number[] = [];
 
   return {
     scheduler: {
+      now() {
+        return now;
+      },
       setTimeout(callback: () => void, delayMs: number) {
-        expect(delayMs).toBe(1000);
+        delays.push(delayMs);
         const handle = nextHandle++;
-        pending.push({ callback, handle });
+        pending.push({ callback, dueAt: now + delayMs, handle });
         return handle as unknown as ReturnType<typeof globalThis.setTimeout>;
       },
       clearTimeout(handle: ReturnType<typeof globalThis.setTimeout>) {
@@ -558,20 +563,26 @@ function createFakeDebounceScheduler() {
         }
       },
     },
-    firePending() {
-      const entries = pending.splice(0);
-      for (const entry of entries) {
+    advanceBy(delayMs: number) {
+      const target = now + delayMs;
+      // The watcher arms at most one timer at a time, so arrival order is due
+      // order and the queue never needs sorting.
+      while (pending[0] && pending[0].dueAt <= target) {
+        const entry = pending.shift()!;
+        now = entry.dueAt;
         entry.callback();
       }
+      now = target;
     },
     get pendingCount() {
       return pending.length;
     },
+    delays,
     cleared,
   };
 }
 
-test("bindOpHeadsWatcher debounces change bursts into one read-only refresh", async () => {
+test("bindOpHeadsWatcher bounds scheduling and refresh work during change bursts", async () => {
   const refreshOptions: RepositoryRefreshOptions[] = [];
   let watchedPath: string | undefined;
   let emitChange!: () => void;
@@ -589,6 +600,7 @@ test("bindOpHeadsWatcher debounces change bursts into one read-only refresh", as
       return { close() {} };
     },
     scheduler: fake.scheduler,
+    jitterMs: 0,
   });
 
   expect(watchedPath).toBe("/tmp/repo/.jj/repo/op_heads/heads");
@@ -597,19 +609,67 @@ test("bindOpHeadsWatcher debounces change bursts into one read-only refresh", as
   emitChange();
   emitChange();
   expect(fake.pendingCount).toBe(1);
+  expect(fake.delays).toEqual([1000]);
+  expect(fake.cleared).toEqual([]);
   expect(refreshOptions).toEqual([]);
 
-  fake.firePending();
+  fake.advanceBy(1000);
   await Promise.resolve();
   expect(refreshOptions).toEqual([{ workingCopy: "read-only" }]);
 
   emitChange();
-  fake.firePending();
+  fake.advanceBy(4999);
+  await Promise.resolve();
+  expect(refreshOptions).toHaveLength(1);
+
+  fake.advanceBy(1);
   await Promise.resolve();
   expect(refreshOptions).toEqual([
     { workingCopy: "read-only" },
     { workingCopy: "read-only" },
   ]);
+
+  dispose();
+});
+
+test("bindOpHeadsWatcher extends the debounce window without re-arming per change", async () => {
+  const refreshOptions: RepositoryRefreshOptions[] = [];
+  let emitChange!: () => void;
+  const fake = createFakeDebounceScheduler();
+
+  const dispose = bindOpHeadsWatcher({
+    opHeadsPath: "/tmp/heads",
+    refreshRepository: async (options) => {
+      refreshOptions.push(options ?? {});
+      return true;
+    },
+    watch: (_path, onChange) => {
+      emitChange = onChange;
+      return { close() {} };
+    },
+    scheduler: fake.scheduler,
+    jitterMs: 0,
+  });
+
+  // A change every 500 ms keeps pushing the quiet-second deadline out, so the
+  // armed timer re-arms itself instead of being cleared and replaced.
+  emitChange();
+  fake.advanceBy(500);
+  emitChange();
+  fake.advanceBy(500);
+  await Promise.resolve();
+  expect(refreshOptions).toEqual([]);
+  expect(fake.cleared).toEqual([]);
+
+  emitChange();
+  fake.advanceBy(999);
+  await Promise.resolve();
+  expect(refreshOptions).toEqual([]);
+
+  fake.advanceBy(1);
+  await Promise.resolve();
+  expect(refreshOptions).toEqual([{ workingCopy: "read-only" }]);
+  expect(fake.cleared).toEqual([]);
 
   dispose();
 });
@@ -633,6 +693,7 @@ test("bindOpHeadsWatcher dispose closes the watcher and cancels pending refreshe
       };
     },
     scheduler: fake.scheduler,
+    jitterMs: 0,
   });
 
   emitChange();
@@ -640,6 +701,46 @@ test("bindOpHeadsWatcher dispose closes the watcher and cancels pending refreshe
 
   expect(closed).toBe(1);
   expect(fake.pendingCount).toBe(0);
+});
+
+test("bindOpHeadsWatcher queues one follow-up when changes arrive during refresh", async () => {
+  const firstRefresh = createDeferred<boolean>();
+  const refreshOptions: RepositoryRefreshOptions[] = [];
+  let emitChange!: () => void;
+  const fake = createFakeDebounceScheduler();
+
+  const dispose = bindOpHeadsWatcher({
+    opHeadsPath: "/tmp/heads",
+    refreshRepository: (options) => {
+      refreshOptions.push(options ?? {});
+      return refreshOptions.length === 1 ? firstRefresh.promise : Promise.resolve(true);
+    },
+    watch: (_path, onChange) => {
+      emitChange = onChange;
+      return { close() {} };
+    },
+    scheduler: fake.scheduler,
+    jitterMs: 0,
+  });
+
+  emitChange();
+  fake.advanceBy(1000);
+  expect(refreshOptions).toHaveLength(1);
+
+  emitChange();
+  emitChange();
+  expect(fake.pendingCount).toBe(0);
+
+  firstRefresh.resolve(true);
+  await firstRefresh.promise;
+  await Promise.resolve();
+  expect(fake.pendingCount).toBe(1);
+
+  fake.advanceBy(5000);
+  await Promise.resolve();
+  expect(refreshOptions).toHaveLength(2);
+
+  dispose();
 });
 
 test("bindOpHeadsWatcher tolerates a watch setup failure", () => {
