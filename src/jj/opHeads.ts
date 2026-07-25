@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 
 // Every jj operation rewrites the files in `<repo>/op_heads/heads`, which
@@ -31,4 +31,43 @@ export async function resolveOpHeadsPath(workspaceRoot: string): Promise<string 
   } catch {
     return null;
   }
+}
+
+// Reading the repository normally when several operation heads exist makes jj
+// reconcile them and write a new operation. Passive jif reads instead load one
+// concrete head. Prefer the newest head file so the view tracks the most recent
+// observable operation without joining a thundering herd of reconcilers.
+export async function resolveLatestOpHeadId(workspaceRoot: string): Promise<string | null> {
+  const headsPath = await resolveOpHeadsPath(workspaceRoot);
+  if (!headsPath) {
+    return null;
+  }
+
+  let headIds: string[];
+  try {
+    headIds = await readdir(headsPath);
+  } catch {
+    return null;
+  }
+  if (headIds.length === 0) {
+    return null;
+  }
+  if (headIds.length === 1) {
+    return headIds[0]!;
+  }
+
+  const headsByModifiedTime = await Promise.all(headIds.map(async (headId) => {
+    try {
+      return { headId, modifiedAt: (await stat(join(headsPath, headId))).mtimeMs };
+    } catch {
+      return null;
+    }
+  }));
+  const survivingHeads = headsByModifiedTime
+    .filter((head): head is NonNullable<typeof head> => head !== null)
+    .sort((left, right) =>
+      right.modifiedAt - left.modifiedAt || right.headId.localeCompare(left.headId)
+    );
+
+  return survivingHeads[0]?.headId ?? null;
 }

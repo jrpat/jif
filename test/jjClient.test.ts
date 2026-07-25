@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdir, rename } from "node:fs/promises";
+import { mkdir, readdir, rename } from "node:fs/promises";
 import { join } from "node:path";
 import { materializeSampleRepoCached } from "../src/dev/sampleRepo.ts";
 import {
@@ -495,6 +495,43 @@ test("loadRepository can ignore the working copy for passive refreshes", async (
   expect(logCall.args).toContain("7");
   expect(logCall.args).toContain("mine()");
   expect(capturedCalls.every((call) => call.options?.workingCopy === "read-only")).toBeTrue();
+});
+
+test("concurrent read-only repository loads do not reconcile divergent operations", async () => {
+  const repoPath = await createTempDir("client-divergent-operations");
+  await runCommand(repoPath, ["jj", "git", "init"]);
+  const baseOperation = (
+    await runCommand(repoPath, [
+      "jj",
+      "op",
+      "log",
+      "--no-graph",
+      "-T",
+      'self.id() ++ "\n"',
+      "-n",
+      "1",
+    ])
+  ).stdout.trim();
+
+  await runCommand(repoPath, ["jj", "new", "-m", "first concurrent operation"]);
+  await runCommand(repoPath, [
+    "jj",
+    `--at-operation=${baseOperation}`,
+    "new",
+    "-m",
+    "second concurrent operation",
+  ]);
+
+  const opHeadsPath = join(repoPath, ".jj", "repo", "op_heads", "heads");
+  const headsBefore = (await readdir(opHeadsPath)).sort();
+  expect(headsBefore).toHaveLength(2);
+
+  await Promise.all(Array.from(
+    { length: 4 },
+    () => new JjClient(repoPath).loadRepository(10, "all()", { workingCopy: "read-only" }),
+  ));
+
+  expect((await readdir(opHeadsPath)).sort()).toEqual(headsBefore);
 });
 
 test("loadRepository prefers the jj log error when all startup reads fail", async () => {

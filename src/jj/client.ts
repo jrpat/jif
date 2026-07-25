@@ -15,6 +15,7 @@ import {
   parseCommandAliasConfigOutput,
   type JjCommandAlias,
 } from "./commandAliases.ts";
+import { resolveLatestOpHeadId } from "./opHeads.ts";
 
 const FIELD_SEPARATOR = "\u001f";
 const ROW_KIND_HEADER = "header";
@@ -34,6 +35,7 @@ export type WorkingCopyRefreshOptions = Readonly<{
 type JjRunOptions = Readonly<{
   color?: boolean;
   cwd?: string;
+  operationId?: string | null;
 }> & WorkingCopyRefreshOptions;
 
 export type PreviewDiffOptions = Readonly<{
@@ -92,7 +94,10 @@ export class JjClient {
     options?: WorkingCopyRefreshOptions,
   ): Promise<RepositoryData> {
     const repoPath = this.repoPath;
-    const runOptions = { ...options, cwd: repoPath };
+    const operationId = options?.workingCopy === "read-only"
+      ? await resolveLatestOpHeadId(repoPath)
+      : undefined;
+    const runOptions = { ...options, cwd: repoPath, operationId };
     const args = [
       "log",
       "--limit",
@@ -570,10 +575,22 @@ export class JjClient {
   }
 
   private async runJj(args: readonly string[], options?: JjRunOptions) {
-    const workingCopyArgs = options?.workingCopy === "read-only"
-      ? ["--ignore-working-copy"]
-      : [];
-    return await runCommand(options?.cwd ?? this.repoPath, ["jj", ...workingCopyArgs, ...args], options);
+    // `--ignore-working-copy` alone can still reconcile concurrent operation
+    // heads, which writes a new operation. When several jif instances respond
+    // to the same op-heads event, those writes can create fresh divergences and
+    // feed the watcher indefinitely. Loading at one concrete operation also
+    // ignores the working copy and never merges divergent operations.
+    const cwd = options?.cwd ?? this.repoPath;
+    let workingCopyArgs: string[] = [];
+    if (options?.workingCopy === "read-only") {
+      const operationId = options.operationId === undefined
+        ? await resolveLatestOpHeadId(cwd)
+        : options.operationId;
+      workingCopyArgs = operationId
+        ? [`--at-operation=${operationId}`]
+        : ["--ignore-working-copy"];
+    }
+    return await runCommand(cwd, ["jj", ...workingCopyArgs, ...args], options);
   }
 }
 

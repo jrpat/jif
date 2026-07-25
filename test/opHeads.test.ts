@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
-import { mkdir, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, utimes, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { resolveOpHeadsPath } from "../src/jj/opHeads.ts";
+import { resolveLatestOpHeadId, resolveOpHeadsPath } from "../src/jj/opHeads.ts";
 import { runCommand } from "../src/jj/process.ts";
 import { createTempDir } from "./helpers/tempRepo.ts";
 
@@ -66,6 +66,19 @@ test("resolveOpHeadsPath returns null when the heads directory is missing", asyn
   });
 
   expect(await resolveOpHeadsPath(workspaceRoot)).toBeNull();
+});
+
+test("resolveLatestOpHeadId selects the most recently written operation head", async () => {
+  const { workspaceRoot, repoDir } = await createFakeWorkspace({ repoMarker: "directory" });
+  const headsPath = join(repoDir, "op_heads", "heads");
+  const olderHead = "1111111111111111";
+  const newerHead = "2222222222222222";
+  await writeFile(join(headsPath, olderHead), "");
+  await writeFile(join(headsPath, newerHead), "");
+  await utimes(join(headsPath, olderHead), new Date(1_000), new Date(1_000));
+  await utimes(join(headsPath, newerHead), new Date(2_000), new Date(2_000));
+
+  expect(await resolveLatestOpHeadId(workspaceRoot)).toBe(newerHead);
 });
 
 test("op head files change when a jj operation runs in a real repo", async () => {
