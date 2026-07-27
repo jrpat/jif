@@ -194,7 +194,7 @@ The split bindings are available only in the revision log, not while composing a
 
 ### Files
 
-Active when a revision is expanded and a file is focused. Self-contained — it does **not** inherit Normal, so revision-level operations (rebase, squash, new, …) are unavailable here; collapse back with `h` to reach them. Only `_global` shortcuts (quit, escape, refresh, …) remain.
+Active when a revision is expanded and a file is focused. Self-contained — it does **not** inherit Normal, so revision-level operations (rebase, squash, new, …) are unavailable here; collapse back with `h` to reach them. Undo and redo retain their Normal bindings, and `_global` shortcuts (quit, escape, refresh, …) remain available.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -206,6 +206,8 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 | `d` | show-file-diff | Show the diff for the focused file |
 | `r` | restore | Restore selected files to their state before this change |
 | `ctrl-u` | untrack | Stop tracking the focused file, or all selected files (`jj file untrack <paths>`) |
+| `u` | undo | Undo the last operation |
+| `alt-u` | redo | Redo the last undone operation |
 | `ctrl-f` | restrict-revset-to-focused-file | Show revisions that changed the focused file |
 | `:` | command-bar | Run a jj subcommand |
 | `>` / `ctrl-.` | shell-command-bar | Run a shell command |

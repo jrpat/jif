@@ -253,7 +253,9 @@ export function getShortcutPanelBindings(
       command.group === "mode" ||
       command.group === "cancel" ||
       command.id === "shortcut-panel" ||
-      command.id === "force-last-command"
+      command.id === "force-last-command" ||
+      command.id === "undo" ||
+      command.id === "redo"
     );
   }
 

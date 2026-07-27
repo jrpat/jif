@@ -1715,6 +1715,32 @@ test("dispatchGlobalKey routes ctrl-u to untrack in files mode", () => {
   expect(calls).toEqual(["untrackFiles"]);
 });
 
+test("dispatchGlobalKey routes undo and redo in files mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "files",
+    expandedRowId: "aaaaaaaa",
+  };
+
+  const undoHandled = dispatchGlobalKey({
+    normalizedKey: "u",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+  const redoHandled = dispatchGlobalKey({
+    normalizedKey: "alt-u",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(undoHandled).toBeTrue();
+  expect(redoHandled).toBeTrue();
+  expect(calls).toEqual(["undo", "redo"]);
+});
+
 test("dispatchGlobalKey handles escape even in input modes", () => {
   const calls: string[] = [];
   const state: AppState = {

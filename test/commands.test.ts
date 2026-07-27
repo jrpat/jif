@@ -706,6 +706,8 @@ test("files mode keeps its self-contained file bindings", () => {
   expect(resolveForState("alt-s", state)).toBeNull();
   expect(resolveForState("r", state)).toBe("restore");
   expect(resolveForState(" ", state)).toBe("toggle-file-selection");
+  expect(resolveForState("u", state)).toBe("undo");
+  expect(resolveForState("alt-u", state)).toBe("redo");
 });
 
 test("_global escape binding resolves regardless of mode", () => {

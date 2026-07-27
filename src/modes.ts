@@ -198,6 +198,8 @@ export const defaultKeymap: Keymap = {
     r: "restore",
     d: "show-file-diff",
     "ctrl-u": "untrack",
+    u: "undo",
+    "alt-u": "redo",
     "ctrl-f": "restrict-revset-to-focused-file",
     " ": "toggle-file-selection",
     a: "select-all-files",

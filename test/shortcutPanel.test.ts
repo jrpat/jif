@@ -364,6 +364,8 @@ test("getShortcutPanelBindings narrows file mode shortcuts to file-relevant acti
   expect(ids).toContain("shortcut-panel");
   expect(ids).toContain("command-bar");
   expect(ids).toContain("shell-command-bar");
+  expect(ids).toContain("undo");
+  expect(ids).toContain("redo");
   expect(bindings.find(({ command }) => command.id === "toggle-preview-full-file")?.key).toBe("ctrl-enter");
   expect(bindings.find(({ command }) => command.id === "command-bar")?.key).toBe(":");
   expect(bindings.find(({ command }) => command.id === "shell-command-bar")?.key).toBe(">");
@@ -373,7 +375,6 @@ test("getShortcutPanelBindings narrows file mode shortcuts to file-relevant acti
   expect(ids).not.toContain("squash");
   expect(ids).not.toContain("new-revision");
   expect(ids).not.toContain("edit-revision");
-  expect(ids).not.toContain("undo");
   expect(ids).not.toContain("edit-revset");
 });
 
@@ -406,6 +407,8 @@ test("collectDirectCanonicalBindingsForMode is mode-specific and excludes parent
   expect(keys).toContain("h");
   expect(keys).toContain(":");
   expect(keys).toContain(">");
+  expect(keys).toContain("u");
+  expect(keys).toContain("alt-u");
   // files mode does not inherit Normal, so revision-only keys are absent entirely
   expect(keys).not.toContain("G");
   expect(keys).not.toContain("S");
