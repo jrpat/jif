@@ -77,6 +77,7 @@ import {
   buildShortcutGrid,
   buildShortcutSummary,
   buildShortcutSummarySegments,
+  buildStateChipLabel,
   computeShortcutPanelHeight,
   getShortcutPanelBindings,
   resolveShortcutPanelBindings,
@@ -122,8 +123,6 @@ import { switchWorkspace } from "./workspaceSwitch.ts";
 import { resolveLogSurfaceMode } from "./logSurface.ts";
 
 const EXTRA_EMPTY_MESSAGE = "No extra bindings defined. Bind keys under `keymap.extra` in your config.";
-const FILE_FILTER_CHIP_LABEL = "file";
-const DRY_RUN_CHIP_LABEL = ":";
 
 // Deferred UI: these components only render for interactions that cannot
 // happen on the first painted frame, so their modules stay off the startup
@@ -588,13 +587,9 @@ export function JifView(props: {
   const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutBindings()));
   const shortcutContentWidth = createMemo(() => Math.max(1, terminalSize().width - 4));
   const isFileFilterRevset = createMemo(() => isFilesOnlyRevset(store.state.revsetQuery));
-  const stateChipLabel = createMemo(() => {
-    const labels = [
-      ...(isFileFilterRevset() ? [FILE_FILTER_CHIP_LABEL] : []),
-      ...(store.state.dryRun ? [DRY_RUN_CHIP_LABEL] : []),
-    ];
-    return labels.length > 0 ? labels.join(" · ") : null;
-  });
+  const stateChipLabel = createMemo(() =>
+    buildStateChipLabel(isFileFilterRevset(), store.state.dryRun)
+  );
   const shortcutSummarySegments = createMemo(() => {
     const chipLabel = stateChipLabel();
     if (chipLabel === null) {

@@ -640,7 +640,7 @@ Besides the concrete per-mode scopes (`revision-log`, `revision-files`, `op-log`
 
 The default revision graph, bookmark, workspace, divergent-sibling, and working-copy navigation bindings live in `revision-log-nav`. The jj command bindings (`:` / `ctrl-;`) and shell command bindings (`>` / `ctrl-.`) live in `log`. Opening a prompt preserves the current log surface behind it. The global `ctrl-\` binding toggles dry-run mode.
 
-When dry-run mode is enabled, an action that would run a jj command directly opens the jj command prompt with that command prefilled instead. You can edit the command or press `enter` to submit it. Commands submitted from the prompt, internal repository reads, and shell commands continue normally. A bold `:` chip remains visible in the status area while the mode is enabled.
+When dry-run mode is enabled, an action that would run a jj command directly opens the jj command prompt with that command prefilled instead. You can edit the command or press `enter` to submit it. Commands submitted from the prompt, internal repository reads, and shell commands continue normally. A bold `#` chip remains visible in the status area while the mode is enabled.
 
 Or define an inline command directly in the keymap:
 

@@ -19,6 +19,8 @@ const GRID_GAP = 2;
 const MIN_COLUMN_WIDTH = 24;
 const MAX_KEY_WIDTH = 12;
 const SUMMARY_GAP = "   ";
+const FILE_FILTER_CHIP_LABEL = "file";
+const DRY_RUN_CHIP_LABEL = "#";
 const MODIFIER_LABELS: Readonly<Record<string, string>> = {
   a: "⌥",
   alt: "⌥",
@@ -191,6 +193,17 @@ function measureSummaryWidth(segments: readonly ShortcutSummarySegment[]): numbe
 // overflowing them.
 export function stateChipSummaryWidth(label: string): number {
   return label.length + 2;
+}
+
+export function buildStateChipLabel(
+  isFileFilterRevset: boolean,
+  dryRun: boolean,
+): string | null {
+  const labels = [
+    ...(isFileFilterRevset ? [FILE_FILTER_CHIP_LABEL] : []),
+    ...(dryRun ? [DRY_RUN_CHIP_LABEL] : []),
+  ];
+  return labels.length > 0 ? labels.join(" · ") : null;
 }
 
 export function buildShortcutGrid(

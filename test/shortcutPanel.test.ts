@@ -19,6 +19,7 @@ import {
   buildShortcutGrid,
   buildShortcutSummary,
   buildShortcutSummarySegments,
+  buildStateChipLabel,
   computeShortcutPanelHeight,
   formatShortcutKeyLabel,
   getShortcutPanelBindings,
@@ -244,6 +245,11 @@ test("buildShortcutSummarySegments drops trailing hints when the leading hint ea
 
 test("stateChipSummaryWidth reserves the rendered ` label ` columns", () => {
   expect(stateChipSummaryWidth("file")).toBe(6);
+});
+
+test("buildStateChipLabel uses # for dry-run mode", () => {
+  expect(buildStateChipLabel(false, true)).toBe("#");
+  expect(buildStateChipLabel(true, true)).toBe("file · #");
 });
 
 test("formatShortcutKeyLabel uses symbolic labels for space and modifiers", () => {
