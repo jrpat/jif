@@ -72,6 +72,7 @@ import { getChangedFileRowBackgroundColor, getRevisionRowBackgroundColor } from 
 import { isScrollboxAtBottom, observeScrollboxBottomReached, scrollToKeepChildVisible, type ScrollVisibilityDirection } from "./scroll.ts";
 import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
 import {
+  buildAlignedShortcutGrids,
   buildShortcutEntries,
   buildShortcutGrid,
   buildShortcutSummary,
@@ -668,11 +669,12 @@ export function JifView(props: {
   const expandedShortcutGrid = createMemo(() =>
     buildShortcutGrid(expandedShortcutEntries(), shortcutContentWidth())
   );
-  const directShortcutGrid = createMemo(() =>
-    buildShortcutGrid(buildShortcutEntries(modeShortcutBindings()), shortcutContentWidth())
-  );
-  const inheritedShortcutGrid = createMemo(() =>
-    buildShortcutGrid(buildShortcutEntries(shortcutInheritedBindings()), shortcutContentWidth())
+  const alignedShortcutGrids = createMemo(() =>
+    buildAlignedShortcutGrids(
+      buildShortcutEntries(modeShortcutBindings()),
+      buildShortcutEntries(shortcutInheritedBindings()),
+      shortcutContentWidth(),
+    )
   );
   const expandedShortcutLayout = createMemo<ShortcutPanelLayout>(() => {
     if (shouldSplitShortcutPanelLayout({
@@ -683,8 +685,8 @@ export function JifView(props: {
     })) {
       return {
         kind: "split",
-        topGrid: directShortcutGrid(),
-        bottomGrid: inheritedShortcutGrid(),
+        topGrid: alignedShortcutGrids().topGrid,
+        bottomGrid: alignedShortcutGrids().bottomGrid,
       };
     }
     return { kind: "single", grid: expandedShortcutGrid() };

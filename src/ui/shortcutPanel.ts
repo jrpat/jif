@@ -197,18 +197,74 @@ export function buildShortcutGrid(
   entries: readonly ShortcutEntry[],
   availableWidth: number,
 ): ShortcutGrid {
+  return buildShortcutGridWithGeometry(
+    entries,
+    resolveShortcutGridGeometry([entries], availableWidth),
+  );
+}
+
+export function buildAlignedShortcutGrids(
+  topEntries: readonly ShortcutEntry[],
+  bottomEntries: readonly ShortcutEntry[],
+  availableWidth: number,
+): Readonly<{ topGrid: ShortcutGrid; bottomGrid: ShortcutGrid }> {
+  const geometry = resolveShortcutGridGeometry(
+    [topEntries, bottomEntries],
+    availableWidth,
+  );
+  return {
+    topGrid: buildShortcutGridWithGeometry(topEntries, geometry),
+    bottomGrid: buildShortcutGridWithGeometry(bottomEntries, geometry),
+  };
+}
+
+type ShortcutGridGeometry = Readonly<{
+  columnCount: number;
+  columnWidth: number;
+  keyWidth: number;
+  gap: number;
+}>;
+
+function resolveShortcutGridGeometry(
+  entryGroups: readonly (readonly ShortcutEntry[])[],
+  availableWidth: number,
+): ShortcutGridGeometry {
   const safeWidth = Math.max(1, availableWidth);
   const maxColumns = Math.max(1, Math.floor((safeWidth + GRID_GAP) / (MIN_COLUMN_WIDTH + GRID_GAP)));
-  const columnCount = Math.min(Math.max(entries.length, 1), maxColumns);
+  const entryCount = entryGroups.reduce(
+    (maximum, entries) => Math.max(maximum, entries.length),
+    0,
+  );
+  const columnCount = Math.min(Math.max(entryCount, 1), maxColumns);
   const columnWidth = Math.max(
     1,
     Math.floor((safeWidth - GRID_GAP * (columnCount - 1)) / columnCount),
   );
   const keyWidth = Math.min(
     MAX_KEY_WIDTH,
-    entries.reduce((maxWidth, entry) => Math.max(maxWidth, entry.keyLabel.length), 0),
+    entryGroups.reduce(
+      (maximum, entries) =>
+        entries.reduce(
+          (groupMaximum, entry) => Math.max(groupMaximum, entry.keyLabel.length),
+          maximum,
+        ),
+      0,
+    ),
   );
 
+  return {
+    columnCount,
+    columnWidth,
+    keyWidth,
+    gap: GRID_GAP,
+  };
+}
+
+function buildShortcutGridWithGeometry(
+  entries: readonly ShortcutEntry[],
+  geometry: ShortcutGridGeometry,
+): ShortcutGrid {
+  const { columnCount, columnWidth, keyWidth, gap } = geometry;
   const rowCount = Math.max(1, Math.ceil(entries.length / columnCount));
   const rows: ShortcutEntry[][] = Array.from({ length: rowCount }, () => []);
   for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
@@ -225,7 +281,7 @@ export function buildShortcutGrid(
     columnCount,
     columnWidth,
     keyWidth,
-    gap: GRID_GAP,
+    gap,
   };
 }
 

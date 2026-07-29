@@ -14,6 +14,7 @@ import {
   type Mode,
 } from "../src/modes.ts";
 import {
+  buildAlignedShortcutGrids,
   buildShortcutEntries,
   buildShortcutGrid,
   buildShortcutSummary,
@@ -291,6 +292,33 @@ test("buildShortcutGrid falls back to one column in narrow terminals", () => {
     ["a"],
     ["b"],
   ]);
+});
+
+test("buildAlignedShortcutGrids shares column geometry across section breaks", () => {
+  const topEntries = buildShortcutEntries([
+    makeBinding("a", "Alpha", "a"),
+    makeBinding("b", "Bravo", "b"),
+  ]);
+  const bottomEntries = buildShortcutEntries([
+    makeBinding("c", "Charlie", "c"),
+    makeBinding("d", "Delta", "d"),
+    makeBinding("e", "Echo", "e"),
+    makeBinding("f", "Foxtrot", "f"),
+    makeBinding("g", "Golf", "g"),
+    makeBinding("confirm", "Confirm", "ctrl-enter"),
+  ]);
+
+  const { topGrid, bottomGrid } = buildAlignedShortcutGrids(
+    topEntries,
+    bottomEntries,
+    80,
+  );
+
+  expect(topGrid.columnCount).toBe(3);
+  expect(topGrid.columnCount).toBe(bottomGrid.columnCount);
+  expect(topGrid.columnWidth).toBe(bottomGrid.columnWidth);
+  expect(topGrid.keyWidth).toBe(bottomGrid.keyWidth);
+  expect(topGrid.gap).toBe(bottomGrid.gap);
 });
 
 test("computeShortcutPanelHeight follows the adaptive terminal-height rule", () => {
