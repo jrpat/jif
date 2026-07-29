@@ -4,7 +4,7 @@ import { commandDefinitions, type CommandController } from "../src/commands/defi
 import type { AppState } from "../src/domain/types.ts";
 import { getRevisionArg } from "../src/domain/revisionIds.ts";
 import { createInitialState, draftConfigs, enterExtraMode, startCommandDraft } from "../src/state/store.ts";
-import { defaultKeymap, type Keymap } from "../src/modes.ts";
+import { bindingCommand, defaultKeymap, type Keymap } from "../src/modes.ts";
 import {
   dispatchGlobalKey,
   shouldDismissShortcutContextBeforeCommand,
@@ -751,6 +751,25 @@ test("reload config preserves the active shortcut context", () => {
   })).toBeFalse();
 });
 
+test("revision log navigation preserves the active shortcut context", () => {
+  const commandIds = Object.values(defaultKeymap["revision-log-nav"]).map((binding) =>
+    bindingCommand(binding!)
+  );
+  expect(commandIds.length).toBeGreaterThan(0);
+
+  for (const commandId of commandIds) {
+    expect(shouldDismissShortcutContextBeforeCommand({
+      commandId,
+      mode: "rebase",
+    })).toBeFalse();
+  }
+
+  expect(shouldDismissShortcutContextBeforeCommand({
+    commandId: "rebase-descendants",
+    mode: "rebase",
+  })).toBeTrue();
+});
+
 test("dispatchGlobalKey routes ! to forceLastCommand", () => {
   const calls: string[] = [];
   const state = createState();
@@ -940,35 +959,32 @@ test("dispatchGlobalKey routes alt-j from every revision draft mode", () => {
   }
 });
 
-test("dispatchGlobalKey routes graph navigation while composing a rebase", () => {
+test("dispatchGlobalKey routes revision navigation while composing a rebase", () => {
   const base = createState();
+  // `selectedRowIds` pins the draft's focus via `hasPreSelection`, so each case
+  // starts from the revision whose neighbour the key should reach.
+  const cases = [
+    { key: "J", focusedRevisionIndex: 0, expected: "moveFocusToParent" },
+    { key: "K", focusedRevisionIndex: 1, expected: "moveFocusToChild" },
+    { key: "@", focusedRevisionIndex: 0, expected: "focusWorkingCopy" },
+  ] as const;
 
-  const parentCalls: string[] = [];
-  const atChild = startCommandDraft({
-    ...base,
-    selectedRowIds: [base.revisions[0]!.rowId],
-  }, draftConfigs.rebase);
-  expect(dispatchGlobalKey({
-    normalizedKey: "J",
-    state: atChild,
-    commands: commandDefinitions,
-    controller: createController(parentCalls),
-  })).toBeTrue();
-  expect(parentCalls).toEqual(["moveFocusToParent"]);
+  for (const { key, focusedRevisionIndex, expected } of cases) {
+    const calls: string[] = [];
+    const state = startCommandDraft({
+      ...base,
+      focusedRevisionIndex,
+      selectedRowIds: [base.revisions[focusedRevisionIndex]!.rowId],
+    }, draftConfigs.rebase);
 
-  const childCalls: string[] = [];
-  const atParent = startCommandDraft({
-    ...base,
-    focusedRevisionIndex: 1,
-    selectedRowIds: [base.revisions[1]!.rowId],
-  }, draftConfigs.rebase);
-  expect(dispatchGlobalKey({
-    normalizedKey: "K",
-    state: atParent,
-    commands: commandDefinitions,
-    controller: createController(childCalls),
-  })).toBeTrue();
-  expect(childCalls).toEqual(["moveFocusToChild"]);
+    expect(dispatchGlobalKey({
+      normalizedKey: key,
+      state,
+      commands: commandDefinitions,
+      controller: createController(calls),
+    })).toBeTrue();
+    expect(calls).toEqual([expected]);
+  }
 });
 
 test("dispatchGlobalKey routes y to duplicate and alt-r to revert", () => {
@@ -1491,22 +1507,6 @@ test("dispatchGlobalKey routes s to rebase-descendants in rebase mode", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["setRebaseSourceKind(source)"]);
-});
-
-test("dispatchGlobalKey routes @ to the working copy in rebase mode", () => {
-  const calls: string[] = [];
-  let state = createState();
-  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
-
-  const handled = dispatchGlobalKey({
-    normalizedKey: "@",
-    state,
-    commands: commandDefinitions,
-    controller: createController(calls),
-  });
-
-  expect(handled).toBeTrue();
-  expect(calls).toEqual(["focusWorkingCopy"]);
 });
 
 test("a null mode binding suppresses the inherited and global binding", () => {

@@ -97,7 +97,9 @@ export type KeymapBinding =
   | Readonly<{ command: string; canonical: false }>
   | null;
 
-export type Keymap = Readonly<Record<"_global" | Mode, Readonly<Record<string, KeymapBinding>>>>;
+export type KeymapScope = "_global" | Mode;
+
+export type Keymap = Readonly<Record<KeymapScope, Readonly<Record<string, KeymapBinding>>>>;
 
 export const bindingCommand = (binding: NonNullable<KeymapBinding>): string =>
   typeof binding === "string" ? binding : binding.command;
@@ -338,6 +340,19 @@ export const defaultKeymap: Keymap = {
   },
   extra: {},
 };
+
+// Every configurable scope, derived from the default keymap so a new mode cannot
+// be missed by keymap cloning, user-binding resolution, or the generated types.
+export const keymapScopes = Object.keys(defaultKeymap) as readonly KeymapScope[];
+
+// The commands bound directly on the shared `revision-log-nav` scope. Consumers
+// that treat "moves revision focus" as a category derive from this instead of
+// restating the list, so a new navigation binding joins them automatically.
+export const revisionLogNavCommandIds: ReadonlySet<string> = new Set(
+  Object.values(defaultKeymap["revision-log-nav"])
+    .filter((binding): binding is NonNullable<KeymapBinding> => binding !== null)
+    .map(bindingCommand),
+);
 
 export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "command") return "command";

@@ -1,6 +1,6 @@
 import type { CommandDefinition } from "../commands/definitions.ts";
 import type { AppState } from "../domain/types.ts";
-import type { Mode } from "../modes.ts";
+import { modeDefinitions, revisionLogNavCommandIds, type CanonicalKeyBinding, type Mode } from "../modes.ts";
 import { commandCanExecute, getExpandedRevision, getFocusedChildRevision, getFocusedParentRevision, getFocusedRevision } from "../state/store.ts";
 
 const MODIFIER_PREFIXES = new Set([
@@ -83,6 +83,20 @@ export type ShortcutSummarySegment = Readonly<{
 export type ShortcutPanelLayout =
   | Readonly<{ kind: "single"; grid: ShortcutGrid }>
   | Readonly<{ kind: "split"; topGrid: ShortcutGrid; bottomGrid: ShortcutGrid }>;
+
+// A split panel keeps a mode's own bindings above the ones it inherits. That is
+// only worth the extra section when the mode was entered from somewhere — the
+// root revision log has nothing to contrast against.
+export function shouldSplitShortcutPanelLayout(args: Readonly<{
+  showsPersistentShortcutPanel: boolean;
+  showsTransientShortcutPanel: boolean;
+  hasCommandDraft: boolean;
+  activeMode: Mode;
+}>): boolean {
+  return args.showsTransientShortcutPanel
+    ? args.hasCommandDraft
+    : args.showsPersistentShortcutPanel && args.activeMode !== "revision-log";
+}
 
 export function shortcutLayoutRowCount(layout: ShortcutPanelLayout): number {
   if (layout.kind === "single") return layout.grid.rows.length;
@@ -220,6 +234,20 @@ export type ShortcutPanelBindingInput = Readonly<{
   command: CommandDefinition;
 }>;
 
+// Pairs canonical bindings with their command definitions, dropping keys bound to
+// a command that the active configuration does not define.
+export function resolveShortcutPanelBindings(
+  bindings: readonly CanonicalKeyBinding[],
+  commandsById: ReadonlyMap<string, CommandDefinition>,
+): readonly ShortcutPanelBindingInput[] {
+  const resolved: ShortcutPanelBindingInput[] = [];
+  for (const { key, commandId } of bindings) {
+    const command = commandsById.get(commandId);
+    if (command) resolved.push({ key, command });
+  }
+  return resolved;
+}
+
 export function getShortcutPanelBindings(
   state: AppState,
   bindings: readonly ShortcutPanelBindingInput[],
@@ -272,62 +300,7 @@ export function computeShortcutPanelHeight(terminalHeight: number): number {
 }
 
 export function shortcutModeLabel(mode: Mode): string {
-  switch (mode) {
-    case "log":
-      return "Log";
-    case "revision-log-nav":
-      return "Revision Log Navigation";
-    case "revision-draft":
-      return "Revision Draft";
-    case "revision-log":
-      return "Revisions";
-    case "revision-files":
-      return "Files";
-    case "op-log":
-      return "Op Log";
-    case "evolog":
-      return "Evolog";
-    case "inline-confirmation":
-      return "Confirm";
-    case "rebase":
-      return "Rebase";
-    case "duplicate":
-      return "Duplicate";
-    case "revert":
-      return "Revert";
-    case "restore":
-      return "Restore";
-    case "squash":
-      return "Squash";
-    case "interdiff":
-      return "Interdiff";
-    case "diff":
-      return "Diff";
-    case "absorb":
-      return "Absorb";
-    case "command":
-      return "Command";
-    case "revset":
-      return "Revset";
-    case "file-search":
-      return "File Search";
-    case "search":
-      return "Search";
-    case "diff-viewer":
-      return "Diff";
-    case "notifications":
-      return "Notifications";
-    case "bookmark":
-      return "Bookmark";
-    case "bookmark-move":
-      return "Bookmark Move";
-    case "set-parents":
-      return "Set Parents";
-    case "new-between":
-      return "New Between";
-    case "extra":
-      return "Extra";
-  }
+  return modeDefinitions[mode].label;
 }
 
 export function formatShortcutKeyLabel(keyLabel: string): string {
@@ -427,15 +400,13 @@ function splitShortcutKey(keyLabel: string): Readonly<{
   };
 }
 
+// Focus movement that stays visible in narrowed panels. The shared revision
+// navigation scope supplies the revision-relationship jumps; the extras here are
+// the linear movement from `log` and the detail expansion from `revision-log`.
 const NAVIGATION_COMMAND_IDS = new Set([
   "move-down",
   "move-up",
-  "move-parent",
-  "move-child",
-  "move-to-next-workspace",
-  "move-to-prev-workspace",
-  "move-to-next-bookmark",
-  "move-to-prev-bookmark",
+  ...revisionLogNavCommandIds,
   "expand",
   "collapse",
 ]);

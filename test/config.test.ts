@@ -13,7 +13,7 @@ import {
   type AppConfig,
 } from "../src/config/index.ts";
 import { runCommand } from "../src/jj/process.ts";
-import { resolveCommand } from "../src/modes.ts";
+import { keymapScopes, resolveCommand } from "../src/modes.ts";
 
 async function initJjWorkspace(parentDir: string, name = "repo"): Promise<string> {
   await runCommand(parentDir, ["jj", "git", "init", name]);
@@ -483,6 +483,13 @@ test("resolveConfiguredKeymap supports bindings shared by revision log navigatio
   expect(resolveCommand("rebase", "x", resolved.keymap)).toBe("jump-to-working-copy");
   expect(resolveCommand("bookmark", "x", resolved.keymap)).toBe("jump-to-working-copy");
   expect(resolveCommand("evolog", "x", resolved.keymap)).toBeNull();
+});
+
+test("resolveConfiguredKeymap accepts user bindings in every keymap scope", () => {
+  for (const scope of keymapScopes) {
+    const resolved = resolveConfiguredKeymap({ [scope]: { x: "jump-to-working-copy" } });
+    expect(resolved.keymap[scope].x).toBe("jump-to-working-copy");
+  }
 });
 
 test("resolveConfiguredKeymap deep-merges user bindings into the default keymap", () => {

@@ -7,8 +7,11 @@ import {
   collectCanonicalBindingsForMode,
   collectDirectCanonicalBindingsForMode,
   collectInheritedAndGlobalCanonicalBindings,
+  bindingCommand,
   defaultKeymap,
   getActiveMode,
+  type CanonicalKeyBinding,
+  type Mode,
 } from "../src/modes.ts";
 import {
   buildShortcutEntries,
@@ -19,6 +22,8 @@ import {
   formatShortcutKeyLabel,
   getShortcutPanelBindings,
   normalizeShortcutSortKey,
+  resolveShortcutPanelBindings,
+  shouldSplitShortcutPanelLayout,
   shortcutModeLabel,
   stateChipSummaryWidth,
   type ShortcutPanelBinding,
@@ -34,13 +39,20 @@ function bindingsForMode(
   keymap = defaultKeymap,
   commands: readonly CommandDefinition[] = commandDefinitions,
 ): readonly ShortcutPanelBindingInput[] {
-  const byId = new Map(commands.map((command) => [command.id, command] as const));
-  const resolved: ShortcutPanelBindingInput[] = [];
-  for (const { key, commandId } of collectCanonicalBindingsForMode(getActiveMode(state), keymap)) {
-    const command = byId.get(commandId);
-    if (command) resolved.push({ key, command });
-  }
-  return resolved;
+  return resolveBindings(
+    collectCanonicalBindingsForMode(getActiveMode(state), keymap),
+    commands,
+  );
+}
+
+function resolveBindings(
+  bindings: readonly CanonicalKeyBinding[],
+  commands: readonly CommandDefinition[] = commandDefinitions,
+): readonly ShortcutPanelBindingInput[] {
+  return resolveShortcutPanelBindings(
+    bindings,
+    new Map(commands.map((command) => [command.id, command] as const)),
+  );
 }
 
 function createState(): AppState {
@@ -348,6 +360,85 @@ test("getShortcutPanelBindings narrows rebase draft shortcuts to draft-relevant 
   expect(ids).not.toContain("edit-revset");
 });
 
+test("getShortcutPanelBindings includes Revision Log Navigation in command drafts", () => {
+  const base = createState();
+  const ancestor = {
+    ...base.revisions[1]!,
+    rowId: "cccccccc",
+    revisionId: "cccccccc",
+    commitId: "33333333",
+    description: "third",
+  };
+  const state = startCommandDraft({
+    ...base,
+    revisions: [
+      base.revisions[0]!,
+      { ...base.revisions[1]!, parentRevisionIds: [ancestor.revisionId] },
+      ancestor,
+    ],
+  }, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb", "cccccccc"] });
+
+  const bindings = getShortcutPanelBindings(state, bindingsForMode(state));
+  const commandsByKey = new Map(bindings.map(({ key, command }) => [key, command.id]));
+
+  for (const [key, binding] of Object.entries(defaultKeymap["revision-log-nav"])) {
+    expect(commandsByKey.get(key)).toBe(bindingCommand(binding!));
+  }
+});
+
+test("transient command-draft panels keep direct and inherited bindings in separate sections", () => {
+  const state = startCommandDraft(
+    createState(),
+    draftConfigs.rebase,
+    { descendantRevisionIds: ["aaaaaaaa", "bbbbbbbb"] },
+  );
+  const mode = getActiveMode(state);
+  const direct = getShortcutPanelBindings(
+    state,
+    resolveBindings(collectDirectCanonicalBindingsForMode(mode, defaultKeymap)),
+  );
+  const inherited = getShortcutPanelBindings(
+    state,
+    resolveBindings(collectInheritedAndGlobalCanonicalBindings(mode, defaultKeymap)),
+  );
+
+  const directCommandsByKey = new Map(direct.map(({ key, command }) => [key, command.id]));
+  const inheritedCommandsByKey = new Map(inherited.map(({ key, command }) => [key, command.id]));
+
+  expect(directCommandsByKey.get("s")).toBe("rebase-descendants");
+  expect(directCommandsByKey.has("]")).toBe(false);
+  expect(inheritedCommandsByKey.get("]")).toBe("move-to-next-bookmark");
+  expect(inheritedCommandsByKey.get("@")).toBe("jump-to-working-copy");
+  expect(inheritedCommandsByKey.get(":")).toBe("command-bar");
+});
+
+test("shouldSplitShortcutPanelLayout splits everything but the root revision log", () => {
+  const cases = [
+    // Transient panels split only while a revision draft is being composed.
+    { persistent: false, transient: true, draft: true, mode: "rebase", expected: true },
+    { persistent: false, transient: true, draft: false, mode: "extra", expected: false },
+    // Persistent panels split for any mode entered from the revision log.
+    { persistent: true, transient: false, draft: false, mode: "rebase", expected: true },
+    { persistent: true, transient: false, draft: false, mode: "revision-log", expected: false },
+    { persistent: false, transient: false, draft: false, mode: "rebase", expected: false },
+  ] as const satisfies readonly Readonly<{
+    persistent: boolean;
+    transient: boolean;
+    draft: boolean;
+    mode: Mode;
+    expected: boolean;
+  }>[];
+
+  for (const { persistent, transient, draft, mode, expected } of cases) {
+    expect(shouldSplitShortcutPanelLayout({
+      showsPersistentShortcutPanel: persistent,
+      showsTransientShortcutPanel: transient,
+      hasCommandDraft: draft,
+      activeMode: mode,
+    })).toBe(expected);
+  }
+});
+
 test("getShortcutPanelBindings narrows file mode shortcuts to file-relevant actions", () => {
   let state = createState();
   state = openFocusedRevision(state);
@@ -498,14 +589,9 @@ test("evolog has no direct bindings and inherits everything from the log parent"
 
 test("revision drafts surface shared revision navigation", () => {
   const keys = collectCanonicalBindingsForMode("rebase", defaultKeymap).map((b) => b.key);
-  expect(keys).toContain("J");
-  expect(keys).toContain("K");
-  expect(keys).toContain("alt-j");
-  expect(keys).toContain("]");
-  expect(keys).toContain("[");
-  expect(keys).toContain("}");
-  expect(keys).toContain("{");
-  expect(keys).toContain("@");
+  for (const key of Object.keys(defaultKeymap["revision-log-nav"])) {
+    expect(keys).toContain(key);
+  }
   expect(keys).not.toContain("tab");
 });
 

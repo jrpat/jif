@@ -1,5 +1,6 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { keymapScopes } from "../modes.ts";
 import {
   CONFIG_CANDIDATES,
   projectConfigDir,
@@ -426,27 +427,7 @@ namespace Jif {
   type UserKeyBinding = string | UserAliasBinding | UserKeybindingCommand | null;
 
   type KeymapScope =
-    | "_global"
-    | "log"
-    | "revision-log-nav"
-    | "revision-draft"
-    | "revision-log"
-    | "revision-files"
-    | "op-log"
-    | "evolog"
-    | "inline-confirmation"
-    | "rebase"
-    | "restore"
-    | "squash"
-    | "interdiff"
-    | "diff"
-    | "absorb"
-    | "command"
-    | "revset"
-    | "search"
-    | "diff-viewer"
-    | "notifications"
-    | "extra";
+${keymapScopes.map((scope) => `    | "${scope}"`).join("\n")};
 
   type UserKeyMap = Partial<Record<KeymapScope, Readonly<Record<string, UserKeyBinding>>>>;
 

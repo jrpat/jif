@@ -10,6 +10,7 @@ import {
   isKeyExplicitlyUnbound,
   modeDefinitions,
   resolveCommand,
+  revisionLogNavCommandIds,
 } from "../modes.ts";
 
 export type CommandDispatchDetails = Readonly<{
@@ -17,10 +18,13 @@ export type CommandDispatchDetails = Readonly<{
   mode: Mode;
 }>;
 
+// Revision navigation only moves focus, so it keeps an expanded shortcut panel
+// open instead of dismissing it mid-traversal.
 const SHORTCUT_CONTEXT_PRESERVING_COMMAND_IDS = new Set([
   "cancel",
   "reload-config",
   "shortcut-panel",
+  ...revisionLogNavCommandIds,
 ]);
 
 export function shouldDismissShortcutContextBeforeCommand(

@@ -74,6 +74,8 @@ Keybindings are per-mode. Global bindings are available in every mode and may be
 
 Log-oriented modes share a common **Log** binding set: linear movement, the command bar, search, fast jump, help, preview, retry, and flag controls. Revision-backed modes additionally inherit **Revision Log Navigation**: graph movement (`J`/`K`), divergent sibling cycling (`alt-j`), bookmark and workspace jumps (`[`/`]`, `{`/`}`), and the working-copy jump (`@`). Normal and Bookmark inherit Revision Log Navigation; revision operation composers such as Rebase and Squash inherit it through an abstract **Revision Draft** mode, which adds `enter` to confirm and `space` to select revisions without inheriting revision-log-only commands from Normal. Operation Log and Evolog inherit only Log. Each mode is annotated below with what, if anything, it inherits.
 
+When the shortcut panel is expanded, Revision Log Navigation commands keep it open so the inherited and mode-specific bindings remain visible in separate sections while focus moves.
+
 ### Global
 
 Available in every mode (mode-specific bindings can override these).

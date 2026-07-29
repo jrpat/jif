@@ -22,6 +22,10 @@ import {
   type Mode,
 } from "../src/modes.ts";
 
+// Derived so a newly added draft mode is covered without editing every list.
+const revisionDraftModes = (Object.keys(modeDefinitions) as Mode[])
+  .filter((mode) => modeDefinitions[mode].parent === "revision-draft");
+
 function createState(): AppState {
   return {
     ...createInitialState("/tmp/repo"),
@@ -257,22 +261,8 @@ test("revision draft modes inherit Revision Draft instead of Normal", () => {
   expect(modeDefinitions["revision-log"].parent).toBe("revision-log-nav");
   expect(modeDefinitions["revision-draft"].parent).toBe("revision-log-nav");
 
-  const modes = [
-    "rebase",
-    "duplicate",
-    "revert",
-    "restore",
-    "squash",
-    "interdiff",
-    "diff",
-    "absorb",
-    "bookmark-move",
-    "set-parents",
-    "new-between",
-  ] satisfies Mode[];
-
-  for (const mode of modes) {
-    expect(modeDefinitions[mode].parent).toBe("revision-draft");
+  expect(revisionDraftModes.length).toBeGreaterThan(0);
+  for (const mode of revisionDraftModes) {
     expect(resolveCommand(mode, "j")).toBe("move-down");
     expect(resolveCommand(mode, "n")).toBeNull();
   }
@@ -302,17 +292,7 @@ test("Revision Log Navigation owns revision focus movement", () => {
     "revision-log",
     "revision-draft",
     "bookmark",
-    "rebase",
-    "duplicate",
-    "revert",
-    "restore",
-    "squash",
-    "interdiff",
-    "diff",
-    "absorb",
-    "bookmark-move",
-    "set-parents",
-    "new-between",
+    ...revisionDraftModes,
   ] satisfies Mode[];
 
   for (const mode of modes) {
@@ -342,21 +322,7 @@ test("Log owns generic retry and flag bindings while Revision Draft owns draft m
     expect(resolveCommand(mode, "-")).toBe("toggle-flags");
   }
 
-  const modes = [
-    "rebase",
-    "duplicate",
-    "revert",
-    "restore",
-    "squash",
-    "interdiff",
-    "diff",
-    "absorb",
-    "bookmark-move",
-    "set-parents",
-    "new-between",
-  ] satisfies Mode[];
-
-  for (const mode of modes) {
+  for (const mode of revisionDraftModes) {
     expect(resolveCommand(mode, "enter")).toBe("confirm");
     expect(resolveCommand(mode, "!")).toBe("force-last-command");
     expect(resolveCommand(mode, "-")).toBe("toggle-flags");

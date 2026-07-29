@@ -1,10 +1,9 @@
 import { commandDefinitions, type CommandDefinition, type UserCommandController } from "../commands/definitions.ts";
 import type { AppState as BaseAppState, ChangedFile, RevisionSummary } from "../domain/types.ts";
 import { getRevisionArg } from "../domain/revisionIds.ts";
-import { defaultKeymap, type Keymap, type KeymapBinding, type Mode } from "../modes.ts";
+import { defaultKeymap, keymapScopes, type Keymap, type KeymapBinding, type KeymapScope } from "../modes.ts";
 import { getExpandedRevision } from "../state/store.ts";
 
-type KeymapScope = "_global" | Mode;
 type MutableKeymap = {
   [Scope in KeymapScope]: Record<string, KeymapBinding>;
 };
@@ -76,7 +75,7 @@ export function resolveConfiguredKeymap(userKeymap?: UserKeyMap): ResolvedConfig
   const keymap = cloneKeymap(defaultKeymap);
   const commandsById = new Map(commandDefinitions.map((command) => [command.id, command] as const));
 
-  for (const scope of KEYMAP_SCOPES) {
+  for (const scope of keymapScopes) {
     const bindings = userKeymap?.[scope];
     if (!bindings) {
       continue;
@@ -127,36 +126,9 @@ function isAliasBinding(
 }
 
 function cloneKeymap(source: Keymap): MutableKeymap {
-  return {
-    _global: { ...source._global },
-    log: { ...source.log },
-    "revision-log-nav": { ...source["revision-log-nav"] },
-    "revision-draft": { ...source["revision-draft"] },
-    "revision-log": { ...source["revision-log"] },
-    "revision-files": { ...source["revision-files"] },
-    "op-log": { ...source["op-log"] },
-    evolog: { ...source.evolog },
-    "inline-confirmation": { ...source["inline-confirmation"] },
-    rebase: { ...source.rebase },
-    duplicate: { ...source.duplicate },
-    revert: { ...source.revert },
-    restore: { ...source.restore },
-    squash: { ...source.squash },
-    interdiff: { ...source.interdiff },
-    diff: { ...source.diff },
-    absorb: { ...source.absorb },
-    command: { ...source.command },
-    revset: { ...source.revset },
-    "file-search": { ...source["file-search"] },
-    search: { ...source.search },
-    "diff-viewer": { ...source["diff-viewer"] },
-    notifications: { ...source.notifications },
-    bookmark: { ...source.bookmark },
-    "bookmark-move": { ...source["bookmark-move"] },
-    "set-parents": { ...source["set-parents"] },
-    "new-between": { ...source["new-between"] },
-    extra: { ...source.extra },
-  };
+  return Object.fromEntries(
+    Object.entries(source).map(([scope, bindings]) => [scope, { ...bindings }]),
+  ) as MutableKeymap;
 }
 
 function toUserCommandId(value: string): string {
@@ -165,32 +137,3 @@ function toUserCommandId(value: string): string {
     : `${USER_COMMAND_ID_PREFIX}${value}`;
 }
 
-const KEYMAP_SCOPES: readonly KeymapScope[] = [
-  "_global",
-  "log",
-  "revision-log-nav",
-  "revision-draft",
-  "revision-log",
-  "revision-files",
-  "op-log",
-  "evolog",
-  "inline-confirmation",
-  "rebase",
-  "duplicate",
-  "revert",
-  "restore",
-  "squash",
-  "interdiff",
-  "diff",
-  "command",
-  "revset",
-  "file-search",
-  "search",
-  "diff-viewer",
-  "notifications",
-  "bookmark",
-  "bookmark-move",
-  "set-parents",
-  "new-between",
-  "extra",
-];

@@ -78,10 +78,11 @@ import {
   buildShortcutSummarySegments,
   computeShortcutPanelHeight,
   getShortcutPanelBindings,
+  resolveShortcutPanelBindings,
+  shouldSplitShortcutPanelLayout,
   shortcutLayoutRowCount,
   shortcutModeLabel,
   stateChipSummaryWidth,
-  type ShortcutPanelBindingInput,
   type ShortcutPanelLayout,
   type ShortcutSummarySegment,
 } from "./shortcutPanel.ts";
@@ -93,7 +94,6 @@ import {
   type CommandDispatchDetails,
 } from "./keybindings.ts";
 import {
-  collectCanonicalBindingsForMode,
   collectDirectCanonicalBindingsForMode,
   collectInheritedAndGlobalCanonicalBindings,
   getActiveMode,
@@ -559,27 +559,17 @@ export function JifView(props: {
   const commandsById = createMemo(() =>
     new Map(configuredKeymap().commands.map((command) => [command.id, command] as const))
   );
-  const resolveBindings = (
-    raw: readonly { key: string; commandId: string }[],
-  ): readonly ShortcutPanelBindingInput[] => {
-    const resolved: ShortcutPanelBindingInput[] = [];
-    for (const { key, commandId } of raw) {
-      const command = commandsById().get(commandId);
-      if (command) resolved.push({ key, command });
-    }
-    return resolved;
-  };
-  const visibleBindings = createMemo(() =>
-    resolveBindings(collectCanonicalBindingsForMode(activeMode(), configuredKeymap().keymap))
-  );
   const directModeBindings = createMemo(() =>
-    resolveBindings(collectDirectCanonicalBindingsForMode(activeMode(), configuredKeymap().keymap))
+    resolveShortcutPanelBindings(
+      collectDirectCanonicalBindingsForMode(activeMode(), configuredKeymap().keymap),
+      commandsById(),
+    )
   );
   const inheritedAndGlobalBindings = createMemo(() =>
-    resolveBindings(collectInheritedAndGlobalCanonicalBindings(activeMode(), configuredKeymap().keymap))
-  );
-  const shortcutBindings = createMemo(() =>
-    getShortcutPanelBindings(store.state, visibleBindings())
+    resolveShortcutPanelBindings(
+      collectInheritedAndGlobalCanonicalBindings(activeMode(), configuredKeymap().keymap),
+      commandsById(),
+    )
   );
   const modeShortcutBindings = createMemo(() =>
     getShortcutPanelBindings(store.state, directModeBindings())
@@ -587,6 +577,13 @@ export function JifView(props: {
   const shortcutInheritedBindings = createMemo(() =>
     getShortcutPanelBindings(store.state, inheritedAndGlobalBindings())
   );
+  // `collectCanonicalBindingsForMode` is direct-then-inherited and every panel
+  // filter is per-binding, so concatenating the two halves avoids filtering the
+  // inherited bindings a second time on every focus move.
+  const shortcutBindings = createMemo(() => [
+    ...modeShortcutBindings(),
+    ...shortcutInheritedBindings(),
+  ]);
   const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutBindings()));
   const shortcutContentWidth = createMemo(() => Math.max(1, terminalSize().width - 4));
   const isFileFilterRevset = createMemo(() => isFilesOnlyRevset(store.state.revsetQuery));
@@ -671,22 +668,23 @@ export function JifView(props: {
   const expandedShortcutGrid = createMemo(() =>
     buildShortcutGrid(expandedShortcutEntries(), shortcutContentWidth())
   );
-  const persistentDirectGrid = createMemo(() =>
+  const directShortcutGrid = createMemo(() =>
     buildShortcutGrid(buildShortcutEntries(modeShortcutBindings()), shortcutContentWidth())
   );
-  const persistentInheritedGrid = createMemo(() =>
+  const inheritedShortcutGrid = createMemo(() =>
     buildShortcutGrid(buildShortcutEntries(shortcutInheritedBindings()), shortcutContentWidth())
   );
   const expandedShortcutLayout = createMemo<ShortcutPanelLayout>(() => {
-    if (
-      showsPersistentShortcutPanel() &&
-      !showsTransientShortcutPanel() &&
-      activeMode() !== "revision-log"
-    ) {
+    if (shouldSplitShortcutPanelLayout({
+      showsPersistentShortcutPanel: showsPersistentShortcutPanel(),
+      showsTransientShortcutPanel: showsTransientShortcutPanel(),
+      hasCommandDraft: store.state.commandDraft !== null,
+      activeMode: activeMode(),
+    })) {
       return {
         kind: "split",
-        topGrid: persistentDirectGrid(),
-        bottomGrid: persistentInheritedGrid(),
+        topGrid: directShortcutGrid(),
+        bottomGrid: inheritedShortcutGrid(),
       };
     }
     return { kind: "single", grid: expandedShortcutGrid() };
