@@ -149,6 +149,7 @@ export const defaultKeymap: Keymap = {
     "ctrl-p": "search-prev",
     "ctrl-j": "scroll-help-down",
     "ctrl-k": "scroll-help-up",
+    "?": "shortcut-panel",
     q: "quit",
     "~": "open-notifications",
     "alt-`": "open-releases",
@@ -166,7 +167,6 @@ export const defaultKeymap: Keymap = {
     "ctrl-.": alias("shell-command-bar"),
     "/": "search",
     f: "fast-jump",
-    "?": "shortcut-panel",
     "!": "force-last-command",
     "-": "toggle-flags",
     ...previewBindings,
@@ -250,7 +250,6 @@ export const defaultKeymap: Keymap = {
     "ctrl-;": alias("command-bar"),
     ">": "shell-command-bar",
     "ctrl-.": alias("shell-command-bar"),
-    "?": "shortcut-panel",
     "ctrl-enter": "toggle-preview-full-file",
     ...previewBindings,
   },
@@ -345,7 +344,6 @@ export const defaultKeymap: Keymap = {
     left: alias("collapse-notification"),
     "ctrl-g": "edit-notification",
     "~": "cancel",
-    "?": "shortcut-panel",
   },
   bookmark: {
     c: "bookmark-create",
@@ -402,18 +400,22 @@ export const revisionLogNavCommandIds: ReadonlySet<string> = new Set(
 );
 
 export function getActiveMode(state: AppState): Mode {
-  if (state.focusMode === "command") return "command";
-  if (state.focusMode === "revset") return "revset";
-  if (state.focusMode === "file-search") return "file-search";
-  if (state.focusMode === "search") return "search";
-  if (state.focusMode === "inline-confirmation") return "inline-confirmation";
-  if (state.focusMode === "diff-viewer") return "diff-viewer";
-  if (state.focusMode === "op-log") return "op-log";
-  if (state.focusMode === "evolog") return "evolog";
-  if (state.focusMode === "notifications") return "notifications";
-  if (state.focusMode === "file-filter") return "revision-files-filter";
-  if (state.focusMode === "files") return "revision-files";
-  if (state.focusMode === "preview") return "preview";
+  const focusMode = state.focusMode === "shortcut-filter"
+    ? state.focusModeStack.findLast((mode) => mode !== "shortcut-filter") ?? "revisions"
+    : state.focusMode;
+
+  if (focusMode === "command") return "command";
+  if (focusMode === "revset") return "revset";
+  if (focusMode === "file-search") return "file-search";
+  if (focusMode === "search") return "search";
+  if (focusMode === "inline-confirmation") return "inline-confirmation";
+  if (focusMode === "diff-viewer") return "diff-viewer";
+  if (focusMode === "op-log") return "op-log";
+  if (focusMode === "evolog") return "evolog";
+  if (focusMode === "notifications") return "notifications";
+  if (focusMode === "file-filter") return "revision-files-filter";
+  if (focusMode === "files") return "revision-files";
+  if (focusMode === "preview") return "preview";
   if (state.commandDraft?.config.kind === "rebase") return "rebase";
   if (state.commandDraft?.config.kind === "duplicate") return "duplicate";
   if (state.commandDraft?.config.kind === "revert") return "revert";
@@ -425,8 +427,8 @@ export function getActiveMode(state: AppState): Mode {
   if (state.commandDraft?.config.kind === "set-parents") return "set-parents";
   if (state.commandDraft?.config.kind === "new-between") return "new-between";
   if (state.commandDraft?.config.kind === "bookmark-move") return "bookmark-move";
-  if (state.focusMode === "bookmark") return "bookmark";
-  if (state.focusMode === "extra") return "extra";
+  if (focusMode === "bookmark") return "bookmark";
+  if (focusMode === "extra") return "extra";
   return "revision-log";
 }
 

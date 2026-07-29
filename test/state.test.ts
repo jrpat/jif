@@ -36,6 +36,9 @@ import {
   getSelectedRowIds,
   logEvent,
   openShortcutPanel,
+  openShortcutFilter,
+  setShortcutFilterQuery,
+  applyShortcutFilter,
   pushStatusMessage,
   updateStatusMessage,
   upsertStatusMessage,
@@ -2490,12 +2493,88 @@ test("cycleLayout rotates layouts without changing unrelated state", () => {
 test("shortcut panel is collapsed by default and can be toggled", () => {
   let state = createState();
   expect(state.shortcutPanelExpanded).toBeFalse();
+  expect(state.shortcutFilterQuery).toBe("");
 
   state = toggleShortcutPanel(state);
   expect(state.shortcutPanelExpanded).toBeTrue();
 
   state = toggleShortcutPanel(state);
   expect(state.shortcutPanelExpanded).toBeFalse();
+});
+
+test("shortcut filter opens the persistent panel and layers input focus", () => {
+  const state = openShortcutFilter(createState());
+
+  expect(state.shortcutPanelExpanded).toBeTrue();
+  expect(state.shortcutFilterQuery).toBe("");
+  expect(state.focusMode).toBe("shortcut-filter");
+  expect(state.focusModeStack).toEqual(["revisions", "shortcut-filter"]);
+  expect(openShortcutFilter(state)).toBe(state);
+});
+
+test("shortcut filter applies a query without losing the underlying files mode", () => {
+  let state = openFocusedRevision(createState());
+  expect(state.focusMode).toBe("files");
+
+  state = openShortcutFilter(state);
+  state = setShortcutFilterQuery(state, " restore ");
+  expect(getActiveMode(state)).toBe("revision-files");
+
+  state = applyShortcutFilter(state);
+  expect(state.shortcutPanelExpanded).toBeTrue();
+  expect(state.shortcutFilterQuery).toBe(" restore ");
+  expect(state.focusMode).toBe("files");
+  expect(state.focusModeStack).toEqual(["revisions", "files"]);
+  expect(getActiveMode(state)).toBe("revision-files");
+});
+
+test("applying an empty shortcut filter returns to normal panel browsing", () => {
+  let state = openShortcutFilter(createState());
+  state = setShortcutFilterQuery(state, "   ");
+  state = applyShortcutFilter(state);
+
+  expect(state.shortcutPanelExpanded).toBeTrue();
+  expect(state.shortcutFilterQuery).toBe("");
+  expect(state.focusMode).toBe("revisions");
+  expect(state.focusModeStack).toEqual(["revisions"]);
+});
+
+test("cancel clears shortcut filtering before closing the panel", () => {
+  let state = openShortcutFilter(createState());
+  state = setShortcutFilterQuery(state, "rebase");
+  state = cancelOrBlurState(state);
+
+  expect(state.shortcutPanelExpanded).toBeTrue();
+  expect(state.shortcutFilterQuery).toBe("");
+  expect(state.focusMode).toBe("revisions");
+
+  state = cancelOrBlurState(state);
+  expect(state.shortcutPanelExpanded).toBeFalse();
+});
+
+test("cancel clears an applied shortcut filter before closing the panel", () => {
+  let state = openShortcutFilter(createState());
+  state = setShortcutFilterQuery(state, "rebase");
+  state = applyShortcutFilter(state);
+  state = cancelOrBlurState(state);
+
+  expect(state.shortcutPanelExpanded).toBeTrue();
+  expect(state.shortcutFilterQuery).toBe("");
+  expect(state.focusMode).toBe("revisions");
+
+  state = cancelOrBlurState(state);
+  expect(state.shortcutPanelExpanded).toBeFalse();
+});
+
+test("closing the shortcut panel clears filtering and restores underlying focus", () => {
+  let state = openShortcutFilter(createState());
+  state = setShortcutFilterQuery(state, "rebase");
+  state = closeShortcutPanel(state);
+
+  expect(state.shortcutPanelExpanded).toBeFalse();
+  expect(state.shortcutFilterQuery).toBe("");
+  expect(state.focusMode).toBe("revisions");
+  expect(state.focusModeStack).toEqual(["revisions"]);
 });
 
 test("openShortcutPanel and closeShortcutPanel are idempotent", () => {

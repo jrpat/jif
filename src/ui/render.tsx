@@ -91,10 +91,11 @@ import {
   type ShortcutPanelLayout,
   type ShortcutSummarySegment,
 } from "./shortcutPanel.ts";
-import { resolveBottomChromeLayout } from "./bottomChrome.ts";
+import { resolveBottomChromeLayout, shouldShowCommandPreview } from "./bottomChrome.ts";
 import { resolveKeyToken } from "./keyboard.ts";
 import {
   dispatchGlobalKey,
+  getShortcutFilterKeyAction,
   shouldDismissShortcutContextBeforeCommand,
   type CommandDispatchDetails,
 } from "./keybindings.ts";
@@ -596,7 +597,9 @@ export function JifView(props: {
     ...modeShortcutBindings(),
     ...shortcutInheritedBindings(),
   ]);
-  const shortcutEntries = createMemo(() => buildShortcutEntries(shortcutBindings()));
+  const shortcutEntries = createMemo(() =>
+    buildShortcutEntries(shortcutBindings(), store.state.shortcutFilterQuery)
+  );
   const shortcutContentWidth = createMemo(() => Math.max(1, terminalSize().width - 4));
   const isFileFilterRevset = createMemo(() => isFilesOnlyRevset(store.state.revsetQuery));
   const stateChipLabel = createMemo(() =>
@@ -643,17 +646,20 @@ export function JifView(props: {
     hasVisibleSearchScope(store.state) &&
     store.state.focusMode === "search"
   );
+  const showsPromptSurface = createMemo(() =>
+    showsCommandPrompt() || showsRevsetPrompt() || showsFileSearchPrompt() || showsSearchPrompt()
+  );
   const showsPersistentShortcutPanel = createMemo(() =>
     !showsCommandPrompt() && !showsRevsetPrompt() && !showsFileSearchPrompt() && !showsSearchPrompt() &&
     store.state.shortcutPanelExpanded
   );
   const showsCommandPreview = createMemo(() =>
-    !showsCommandPrompt() &&
-    !showsRevsetPrompt() &&
-    !showsFileSearchPrompt() &&
-    !showsSearchPrompt() &&
-    !showsPersistentShortcutPanel() &&
-    commandSegments() !== null
+    shouldShowCommandPreview({
+      showsPromptSurface: showsPromptSurface(),
+      showsPersistentShortcutPanel: showsPersistentShortcutPanel(),
+      hasCommandSegments: commandSegments() !== null,
+      hasCommandDraft: store.state.commandDraft !== null,
+    })
   );
   const initialRevisionLoadLimit = createMemo(() =>
     estimateInitialRevisionLoadLimit({
@@ -673,24 +679,29 @@ export function JifView(props: {
   const expandedShortcutBindings = createMemo(() =>
     showsTransientShortcutPanel() ? modeShortcutBindings() : shortcutBindings()
   );
-  const expandedShortcutEntries = createMemo(() => buildShortcutEntries(expandedShortcutBindings()));
+  const expandedShortcutEntries = createMemo(() =>
+    buildShortcutEntries(expandedShortcutBindings(), store.state.shortcutFilterQuery)
+  );
   const expandedShortcutGrid = createMemo(() =>
     buildShortcutGrid(expandedShortcutEntries(), shortcutContentWidth())
   );
   const alignedShortcutGrids = createMemo(() =>
     buildAlignedShortcutGrids(
-      buildShortcutEntries(modeShortcutBindings()),
-      buildShortcutEntries(shortcutInheritedBindings()),
+      buildShortcutEntries(modeShortcutBindings(), store.state.shortcutFilterQuery),
+      buildShortcutEntries(shortcutInheritedBindings(), store.state.shortcutFilterQuery),
       shortcutContentWidth(),
     )
   );
   const expandedShortcutLayout = createMemo<ShortcutPanelLayout>(() => {
-    if (shouldSplitShortcutPanelLayout({
-      showsPersistentShortcutPanel: showsPersistentShortcutPanel(),
-      showsTransientShortcutPanel: showsTransientShortcutPanel(),
-      hasCommandDraft: store.state.commandDraft !== null,
-      activeMode: activeMode(),
-    })) {
+    if (
+      store.state.shortcutFilterQuery.trim() === "" &&
+      shouldSplitShortcutPanelLayout({
+        showsPersistentShortcutPanel: showsPersistentShortcutPanel(),
+        showsTransientShortcutPanel: showsTransientShortcutPanel(),
+        hasCommandDraft: store.state.commandDraft !== null,
+        activeMode: activeMode(),
+      })
+    ) {
       return {
         kind: "split",
         topGrid: alignedShortcutGrids().topGrid,
@@ -772,6 +783,26 @@ export function JifView(props: {
       focusMode: state.focusMode,
     });
     if (normalizedKey === null) {
+      return;
+    }
+
+    const shortcutFilterAction = getShortcutFilterKeyAction(
+      normalizedKey,
+      state,
+      configuredKeymap().keymap,
+      bottomChromeLayout().showExpandedShortcutPanel,
+    );
+    if (shortcutFilterAction === "activate") {
+      controller.openShortcutFilter();
+      event.preventDefault();
+      return;
+    }
+    if (shortcutFilterAction === "cancel") {
+      store.actions.cancelOrBlur();
+      event.preventDefault();
+      return;
+    }
+    if (shortcutFilterAction === "input") {
       return;
     }
 
@@ -1168,11 +1199,15 @@ export function JifView(props: {
             expanded
             currentModeLabel={shortcutModeLabel(activeMode())}
             panelBodyHeight={expandedShortcutPanelBodyHeight()}
-            actionLabel={showsPersistentShortcutPanel() ? "? close" : null}
+            actionLabel={showsPersistentShortcutPanel() ? "? filter" : null}
             stateChipLabel={stateChipLabel()}
             config={config}
             loadingIndicatorText={loadingIndicatorText()}
             emptyMessage={activeMode() === "extra" ? EXTRA_EMPTY_MESSAGE : undefined}
+            shortcutFilterQuery={store.state.shortcutFilterQuery}
+            shortcutFilterEditing={store.state.focusMode === "shortcut-filter"}
+            onShortcutFilterInput={store.actions.setShortcutFilterQuery}
+            onShortcutFilterApply={store.actions.applyShortcutFilter}
           />
         </Show>
         <Show when={showsCommandPrompt()}>

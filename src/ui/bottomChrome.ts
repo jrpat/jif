@@ -4,6 +4,17 @@ export type BottomChromeLayout = Readonly<{
   bottomSurfaceHeight: number;
 }>;
 
+export function shouldShowCommandPreview(args: {
+  showsPromptSurface: boolean;
+  showsPersistentShortcutPanel: boolean;
+  hasCommandSegments: boolean;
+  hasCommandDraft: boolean;
+}): boolean {
+  return !args.showsPromptSurface &&
+    args.hasCommandSegments &&
+    (!args.showsPersistentShortcutPanel || args.hasCommandDraft);
+}
+
 export function resolveBottomChromeLayout(args: {
   showsCommandPrompt: boolean;
   showsRevsetPrompt: boolean;

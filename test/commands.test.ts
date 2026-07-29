@@ -100,6 +100,27 @@ test("quit is bound globally so q exits from any non-text-input mode", () => {
   expect(defaultKeymap["revision-log"].q).toBeUndefined();
 });
 
+test("shortcut filtering is a global configurable command outside active prompts", () => {
+  expect(defaultKeymap._global["alt-/"]).toBeUndefined();
+
+  const command = commandDefinitions.find((entry) => entry.id === "filter-shortcuts");
+  expect(command).toBeDefined();
+  expect(command?.canExecute?.(createState())).toBeTrue();
+  expect(command?.canExecute?.({
+    ...createState(),
+    focusMode: "inline-confirmation",
+  })).toBeTrue();
+
+  for (const focusMode of [
+    "command",
+    "revset",
+    "file-search",
+    "search",
+  ] as const) {
+    expect(command?.canExecute?.({ ...createState(), focusMode })).toBeFalse();
+  }
+});
+
 test("suspend uses ctrl-z canonically and Z as a normal-mode alias", () => {
   const state = createState();
   const revsetState: AppState = { ...state, focusMode: "revset" };
@@ -644,7 +665,9 @@ test("short flags and layout cycling use - and _ respectively", () => {
 
 test("shortcut panel toggle uses ? in normal mode", () => {
   const state = createState();
-  expect(resolveForState("?", state)).toBe("shortcut-panel");
+  expect(defaultKeymap._global["?"]).toBe("shortcut-panel");
+  expect(defaultKeymap.log["?"]).toBeUndefined();
+  expect(resolveForState("?", state)).toBeNull();
   expect(resolveForState("!", state)).toBe("force-last-command");
   expect(resolveForState(">", state)).toBe("shell-command-bar");
   expect(resolveForState("g", state)).toBe("git-command-bar");
@@ -726,7 +749,7 @@ test("files mode keeps its self-contained file bindings", () => {
   // Shared navigation bindings are defined directly in files mode.
   expect(resolveForState("j", state)).toBe("move-down");
   expect(resolveForState("k", state)).toBe("move-up");
-  expect(resolveForState("?", state)).toBe("shortcut-panel");
+  expect(defaultKeymap["revision-files"]["?"]).toBeUndefined();
 
   // Mode-local in files
   expect(defaultKeymap["revision-files"]["ctrl-s"]).toBeUndefined();

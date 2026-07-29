@@ -26,14 +26,20 @@ import {
   normalizeShortcutSortKey,
   resolveShortcutPanelBindings,
   shouldSplitShortcutPanelLayout,
+  shortcutBindingMatchesQuery,
   shortcutModeLabel,
   stateChipSummaryWidth,
   type ShortcutPanelBinding,
   type ShortcutPanelBindingInput,
 } from "../src/ui/shortcutPanel.ts";
 
-function makeBinding(commandId: string, title: string, key: string): ShortcutPanelBinding {
-  return { key, command: { id: commandId, title } };
+function makeBinding(
+  commandId: string,
+  title: string,
+  key: string,
+  description?: string,
+): ShortcutPanelBinding {
+  return { key, command: { id: commandId, title, description } };
 }
 
 function bindingsForMode(
@@ -471,6 +477,116 @@ test("shouldSplitShortcutPanelLayout splits everything but the root revision log
       activeMode: mode,
     })).toBe(expected);
   }
+});
+
+test("shortcut filtering removes nonmatches and sorts by descending fzy score", () => {
+  const bindings = [
+    makeBinding("weak", "alphabetical broadcast code", "a"),
+    makeBinding("exact", "abc", "z"),
+    makeBinding("medium", "Open abc", "m"),
+    makeBinding("missing", "No match", "x"),
+  ];
+
+  const filtered = buildShortcutEntries(bindings, "abc");
+
+  expect(filtered.map((entry) => entry.commandId)).toEqual([
+    "exact",
+    "medium",
+    "weak",
+  ]);
+});
+
+test("shortcut filtering breaks equal-score ties with the normal key order", () => {
+  const filtered = buildShortcutEntries([
+    makeBinding("later", "abc", "z"),
+    makeBinding("earlier", "abc", "a"),
+  ], "abc");
+
+  expect(filtered.map((entry) => entry.commandId)).toEqual(["earlier", "later"]);
+});
+
+test("shortcut filtering does not stitch a term across word breaks", () => {
+  const releases = makeBinding(
+    "open-releases",
+    "Releases",
+    "alt-`",
+    "Open the jif releases page on GitHub in your default browser",
+  );
+  const reloadConfig = makeBinding(
+    "reload-config",
+    "Reload Config",
+    "ctrl-,",
+    "Reload config files and apply runtime settings",
+  );
+  const previousWorkspace = makeBinding(
+    "move-to-prev-workspace",
+    "Previous Workspace",
+    "[",
+    "Focus the previous visible workspace revision, or the working copy",
+  );
+
+  expect(shortcutBindingMatchesQuery(releases, "release")).toBeTrue();
+  expect(shortcutBindingMatchesQuery(reloadConfig, "release")).toBeFalse();
+  expect(shortcutBindingMatchesQuery(previousWorkspace, "release")).toBeFalse();
+});
+
+test("shortcut filtering matches command ids and trims surrounding query whitespace", () => {
+  const binding = makeBinding("jump-to-working-copy", "Working Copy", "@");
+
+  expect(shortcutBindingMatchesQuery(binding, "  JUMPWORK  ")).toBeTrue();
+  expect(shortcutBindingMatchesQuery(binding, "missing")).toBeFalse();
+  expect(shortcutBindingMatchesQuery(binding, "   ")).toBeTrue();
+});
+
+test("shortcut filtering ANDs fuzzy terms without caring about their order", () => {
+  const binding = makeBinding(
+    "shrink-preview",
+    "Shrink Preview",
+    "ctrl-]",
+    "Make the preview pane smaller",
+  );
+
+  expect(shortcutBindingMatchesQuery(binding, "preview shrink")).toBeTrue();
+  expect(shortcutBindingMatchesQuery(binding, "shrink preview")).toBeTrue();
+  expect(shortcutBindingMatchesQuery(binding, "prvw shrnk")).toBeTrue();
+  expect(shortcutBindingMatchesQuery(binding, "preview missing")).toBeFalse();
+});
+
+test("shortcut filter terms can match different searchable fields", () => {
+  const binding = makeBinding("shrink-preview", "Shrink Preview", "ctrl-]");
+
+  expect(shortcutBindingMatchesQuery(binding, "preview ctrl")).toBeTrue();
+  expect(shortcutBindingMatchesQuery(binding, "ctrl preview")).toBeTrue();
+});
+
+test("shortcut filtering derives modifier aliases mechanically from key tokens", () => {
+  const binding = makeBinding("custom", "Custom", "ctrl-alt-x");
+
+  expect(shortcutBindingMatchesQuery(binding, "ctrl alt x")).toBeTrue();
+  expect(shortcutBindingMatchesQuery(binding, "control option x")).toBeTrue();
+  expect(shortcutBindingMatchesQuery(
+    makeBinding("filter-shortcuts", "Filter Shortcuts", "alt-/"),
+    "option slash",
+  )).toBeTrue();
+  expect(shortcutBindingMatchesQuery(
+    makeBinding("select", "Select", "shift-space"),
+    "shift space",
+  )).toBeTrue();
+});
+
+test("shortcut filtering lays out scored matches left to right then top to bottom", () => {
+  const bindings = [
+    makeBinding("weak", "alphabetical broadcast code", "a"),
+    makeBinding("scattered", "A Big Choice", "b"),
+    makeBinding("medium", "Open abc", "c"),
+    makeBinding("exact", "abc", "d"),
+  ];
+  const filtered = buildShortcutGrid(buildShortcutEntries(bindings, "abc"), 52);
+
+  expect(filtered.rows.map((row) => row.map((entry) => entry.commandId))).toEqual([
+    ["exact", "medium"],
+    ["weak"],
+  ]);
 });
 
 test("getShortcutPanelBindings narrows file mode shortcuts to file-relevant actions", () => {

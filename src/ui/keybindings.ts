@@ -20,13 +20,59 @@ export type CommandDispatchDetails = Readonly<{
 
 // Revision navigation only moves focus, so it keeps an expanded shortcut panel
 // open instead of dismissing it mid-traversal.
+export type ShortcutFilterKeyAction =
+  | "inactive"
+  | "activate"
+  | "cancel"
+  | "input";
+
 const SHORTCUT_CONTEXT_PRESERVING_COMMAND_IDS = new Set([
   "cancel",
   "enter-preview-mode",
   "reload-config",
   "shortcut-panel",
   ...revisionLogNavCommandIds,
+  "filter-shortcuts",
 ]);
+
+export function getShortcutFilterKeyAction(
+  normalizedKey: string,
+  state: AppState,
+  keymap: Keymap = defaultKeymap,
+  shortcutPanelVisible = state.shortcutPanelExpanded,
+): ShortcutFilterKeyAction {
+  const filterEditing = state.focusMode === "shortcut-filter";
+  if (filterEditing && normalizedKey === "?") {
+    return "input";
+  }
+
+  if (shortcutPanelVisible && normalizedKey === "?") {
+    return "activate";
+  }
+
+  const filterActive = filterEditing || state.shortcutFilterQuery !== "";
+  if (!filterActive) {
+    return "inactive";
+  }
+
+  const mode = getActiveMode(state);
+  const modeCommandId = resolveCommand(mode, normalizedKey, keymap);
+  const globalBinding = keymap._global[normalizedKey];
+  const commandId = modeCommandId ??
+    (!isKeyExplicitlyUnbound(mode, normalizedKey, keymap) && globalBinding != null
+      ? bindingCommand(globalBinding)
+      : null);
+
+  if (commandId === "filter-shortcuts") {
+    return "activate";
+  }
+
+  if (normalizedKey === "escape" || normalizedKey === "ctrl-c") {
+    return "cancel";
+  }
+
+  return filterEditing ? "input" : "inactive";
+}
 
 export function shouldDismissShortcutContextBeforeCommand(
   details: CommandDispatchDetails,

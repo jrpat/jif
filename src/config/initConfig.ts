@@ -195,7 +195,7 @@ function renderConfigTypes(): string {
 declare global {
 namespace Jif {
   type AppLayout = "loose" | "normal" | "tight";
-  type FocusMode = "revisions" | "files" | "file-filter" | "op-log" | "evolog" | "inline-confirmation" | "command" | "revset" | "file-search" | "search" | "diff-viewer" | "notifications" | "bookmark" | "preview" | "extra";
+  type FocusMode = "revisions" | "files" | "file-filter" | "op-log" | "evolog" | "inline-confirmation" | "command" | "revset" | "file-search" | "search" | "shortcut-filter" | "diff-viewer" | "notifications" | "bookmark" | "preview" | "extra";
   type SearchScopeId = "revision-log" | "operation-log" | "evolog";
   type SearchMode = "search" | "fast-jump";
   type StatusLevel = "info" | "success" | "warning" | "error";
@@ -286,6 +286,7 @@ namespace Jif {
     focusModeStack: readonly FocusMode[];
     inlineConfirmation?: unknown;
     shortcutPanelExpanded: boolean;
+    shortcutFilterQuery: string;
     focusedRevisionIndex: number;
     expandedRowId: string | null;
     focusedFileIndex: number;
@@ -395,6 +396,7 @@ namespace Jif {
     openFileFilter: () => void;
     restrictRevsetToFocusedFile: () => void;
     toggleShortcutPanel: () => void;
+    openShortcutFilter: () => void;
     commit: () => void;
     describe: () => void;
     showRevisionDiff: () => void;

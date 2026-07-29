@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { resolveBottomChromeLayout } from "../src/ui/bottomChrome.ts";
+import { resolveBottomChromeLayout, shouldShowCommandPreview } from "../src/ui/bottomChrome.ts";
 
 test("resolveBottomChromeLayout stacks transient shortcuts above the command preview", () => {
   expect(resolveBottomChromeLayout({
@@ -35,4 +35,38 @@ test("resolveBottomChromeLayout keeps the persistent shortcut panel behavior unc
     showCollapsedStatusArea: false,
     bottomSurfaceHeight: 8,
   });
+});
+
+test("persistent shortcuts keep a command draft preview visible", () => {
+  expect(shouldShowCommandPreview({
+    showsPromptSurface: false,
+    showsPersistentShortcutPanel: true,
+    hasCommandSegments: true,
+    hasCommandDraft: true,
+  })).toBeTrue();
+
+  expect(resolveBottomChromeLayout({
+    showsCommandPrompt: false,
+    showsRevsetPrompt: false,
+    showsFileSearchPrompt: false,
+    showsSearchPrompt: false,
+    showsCommandPreview: true,
+    showsPersistentShortcutPanel: true,
+    showsTransientShortcutPanel: false,
+    promptSurfaceHeight: 3,
+    shortcutPanelRenderedHeight: 8,
+  })).toEqual({
+    showExpandedShortcutPanel: true,
+    showCollapsedStatusArea: false,
+    bottomSurfaceHeight: 11,
+  });
+});
+
+test("persistent shortcuts still suppress non-draft command previews", () => {
+  expect(shouldShowCommandPreview({
+    showsPromptSurface: false,
+    showsPersistentShortcutPanel: true,
+    hasCommandSegments: true,
+    hasCommandDraft: false,
+  })).toBeFalse();
 });

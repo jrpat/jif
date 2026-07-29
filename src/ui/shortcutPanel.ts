@@ -1,7 +1,8 @@
 import type { CommandDefinition } from "../commands/definitions.ts";
-import type { AppState } from "../domain/types.ts";
+import type { AppState, FocusMode } from "../domain/types.ts";
 import { isFileFocusMode, modeDefinitions, revisionLogNavCommandIds, type CanonicalKeyBinding, type Mode } from "../modes.ts";
 import { commandCanExecute, getFocusedChildRevision, getFocusedFile, getFocusedParentRevision, getFocusedRevision } from "../state/store.ts";
+import { hasMatch, score } from "fzy.js";
 
 const MODIFIER_PREFIXES = new Set([
   "a",
@@ -32,6 +33,17 @@ const MODIFIER_LABELS: Readonly<Record<string, string>> = {
   s: "⇧",
   shift: "⇧",
 };
+const MODIFIER_SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  a: ["alt", "option"],
+  alt: ["alt", "option"],
+  c: ["ctrl", "control"],
+  ctrl: ["ctrl", "control"],
+  cmd: ["cmd", "command", "meta"],
+  m: ["cmd", "command", "meta"],
+  meta: ["cmd", "command", "meta"],
+  s: ["shift"],
+  shift: ["shift"],
+};
 const KEY_LABEL_ABBREVIATIONS: Readonly<Record<string, string>> = {
   escape: "esc",
   enter: "ret",
@@ -41,6 +53,28 @@ const KEY_LABEL_ABBREVIATIONS: Readonly<Record<string, string>> = {
   right: "→",
   down: "↓",
   up: "↑",
+};
+const BASE_KEY_SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  " ": ["space"],
+  space: ["space"],
+  escape: ["escape", "esc"],
+  enter: ["enter", "return", "ret"],
+  left: ["left", "left arrow"],
+  right: ["right", "right arrow"],
+  down: ["down", "down arrow"],
+  up: ["up", "up arrow"],
+  "/": ["/", "slash"],
+  "\\": ["\\", "backslash"],
+  "`": ["`", "backtick"],
+  "-": ["-", "minus", "hyphen"],
+  "=": ["=", "equals"],
+  "[": ["[", "left bracket"],
+  "]": ["]", "right bracket"],
+  ";": [";", "semicolon"],
+  "'": ["'", "quote", "apostrophe"],
+  ",": [",", "comma"],
+  ".": [".", "period", "dot"],
+  "?": ["?", "question mark"],
 };
 const SHORTCUT_SUMMARY_SEGMENTS: readonly Readonly<{
   commandIds: readonly string[];
@@ -60,13 +94,14 @@ export type ShortcutEntry = Readonly<{
   commandId: string;
   hasModifier: boolean;
   keyLabel: string;
+  relevance: number | null;
   title: string;
   sortKey: string;
 }>;
 
 export type ShortcutPanelBinding = Readonly<{
   key: string;
-  command: Pick<CommandDefinition, "id" | "title">;
+  command: Pick<CommandDefinition, "id" | "title" | "description">;
 }>;
 
 export type ShortcutGrid = Readonly<{
@@ -116,20 +151,108 @@ export function normalizeShortcutSortKey(keyLabel: string): string {
 
 export function buildShortcutEntries(
   bindings: readonly ShortcutPanelBinding[],
+  query = "",
 ): readonly ShortcutEntry[] {
-  return bindings
-    .map(({ key: rawKeyLabel, command }) => {
-      const keyLabel = formatShortcutKeyLabel(rawKeyLabel);
-      return {
-        id: `${command.id}:${rawKeyLabel}`,
-        commandId: command.id,
-        hasModifier: hasShortcutModifier(rawKeyLabel),
-        keyLabel,
-        title: command.title,
-        sortKey: normalizeShortcutSortKey(rawKeyLabel),
-      };
-    })
-    .sort(compareShortcutEntries);
+  const terms = shortcutFilterTerms(query);
+  const filtered = terms.length > 0;
+  const entries: ShortcutEntry[] = [];
+
+  for (const binding of bindings) {
+    const relevance = filtered ? shortcutBindingRelevance(binding, terms) : null;
+    if (filtered && relevance === null) {
+      continue;
+    }
+
+    const { key: rawKeyLabel, command } = binding;
+    entries.push({
+      id: `${command.id}:${rawKeyLabel}`,
+      commandId: command.id,
+      hasModifier: hasShortcutModifier(rawKeyLabel),
+      keyLabel: formatShortcutKeyLabel(rawKeyLabel),
+      relevance,
+      title: command.title,
+      sortKey: normalizeShortcutSortKey(rawKeyLabel),
+    });
+  }
+
+  return entries.sort(compareShortcutEntries);
+}
+
+export function shortcutBindingMatchesQuery(
+  binding: ShortcutPanelBinding,
+  query: string,
+): boolean {
+  return shortcutBindingRelevance(binding, shortcutFilterTerms(query)) !== null;
+}
+
+function shortcutFilterTerms(query: string): readonly string[] {
+  const trimmedQuery = query.trim();
+  return trimmedQuery === "" ? [] : trimmedQuery.split(/\s+/);
+}
+
+function shortcutBindingRelevance(
+  binding: ShortcutPanelBinding,
+  terms: readonly string[],
+): number | null {
+  if (terms.length === 0) {
+    return 0;
+  }
+  const candidates = [
+    binding.command.title,
+    binding.command.description ?? "",
+    binding.command.id,
+    binding.key,
+    formatShortcutKeyLabel(binding.key),
+    ...buildKeySearchAliases(binding.key),
+  ];
+  const termScores: number[] = [];
+
+  for (const term of terms) {
+    let matched = false;
+    let bestScore = Number.NEGATIVE_INFINITY;
+    for (const candidate of candidates) {
+      const matchesWithinWord = (candidate.match(/\S+/g) ?? [])
+        .some((word) => hasMatch(term, word));
+      if (matchesWithinWord) {
+        matched = true;
+        bestScore = Math.max(bestScore, score(term, candidate));
+      }
+    }
+    if (!matched) {
+      return null;
+    }
+    termScores.push(bestScore);
+  }
+
+  // Addition is commutative in intent but not perfectly so in floating point.
+  // Sorting first keeps relevance identical when users reorder the same terms.
+  termScores.sort((a, b) => a - b);
+  return termScores.reduce((total, termScore) => total + termScore, 0);
+}
+
+function buildKeySearchAliases(key: string): readonly string[] {
+  const shortcut = splitShortcutKey(key);
+  if (shortcut === null) {
+    return baseKeySearchAliases(key);
+  }
+
+  const modifierCombinations = shortcut.modifiers.reduce<readonly string[][]>(
+    (combinations, modifier) => {
+      const aliases = MODIFIER_SEARCH_ALIASES[modifier] ?? [modifier];
+      return combinations.flatMap((combination) =>
+        aliases.map((alias) => [...combination, alias])
+      );
+    },
+    [[]],
+  );
+  const baseAliases = baseKeySearchAliases(shortcut.baseKey);
+  return modifierCombinations.flatMap((modifiers) =>
+    baseAliases.map((base) => [...modifiers, base].join(" "))
+  );
+}
+
+function baseKeySearchAliases(key: string): readonly string[] {
+  return BASE_KEY_SEARCH_ALIASES[key] ?? [key];
 }
 
 export function buildShortcutSummary(
@@ -280,11 +403,17 @@ function buildShortcutGridWithGeometry(
   const { columnCount, columnWidth, keyWidth, gap } = geometry;
   const rowCount = Math.max(1, Math.ceil(entries.length / columnCount));
   const rows: ShortcutEntry[][] = Array.from({ length: rowCount }, () => []);
-  for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
-    for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
-      const entry = entries[columnIndex * rowCount + rowIndex];
-      if (entry) {
-        rows[rowIndex]!.push(entry);
+  if (entries.some((entry) => entry.relevance !== null)) {
+    entries.forEach((entry, index) => {
+      rows[Math.floor(index / columnCount)]!.push(entry);
+    });
+  } else {
+    for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+      for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+        const entry = entries[columnIndex * rowCount + rowIndex];
+        if (entry) {
+          rows[rowIndex]!.push(entry);
+        }
       }
     }
   }
@@ -322,6 +451,7 @@ export function getShortcutPanelBindings(
   bindings: readonly ShortcutPanelBindingInput[],
 ): readonly ShortcutPanelBindingInput[] {
   const actionable = bindings.filter(({ command }) => commandHasImmediateEffect(state, command));
+  const focusMode = shortcutPanelFocusMode(state);
 
   if (state.focusMode === "preview") {
     return actionable;
@@ -334,11 +464,12 @@ export function getShortcutPanelBindings(
       command.group === "mode" ||
       command.group === "cancel" ||
       command.id === "shortcut-panel" ||
+      command.id === "filter-shortcuts" ||
       command.id === "force-last-command"
     );
   }
 
-  if (state.focusMode === "inline-confirmation") {
+  if (focusMode === "inline-confirmation") {
     return actionable.filter(({ command }) =>
       command.group === "mode" ||
       command.group === "cancel" ||
@@ -347,7 +478,7 @@ export function getShortcutPanelBindings(
     );
   }
 
-  if (state.focusMode === "files") {
+  if (focusMode === "files") {
     return actionable.filter(({ command }) =>
       NAVIGATION_COMMAND_IDS.has(command.id) ||
       COMMAND_ENTRY_COMMAND_IDS.has(command.id) ||
@@ -386,6 +517,11 @@ export function formatShortcutKeyLabel(keyLabel: string): string {
 }
 
 function compareShortcutEntries(a: ShortcutEntry, b: ShortcutEntry): number {
+  if (a.relevance !== null && b.relevance !== null) {
+    if (a.relevance > b.relevance) return -1;
+    if (a.relevance < b.relevance) return 1;
+  }
+
   // Group by base key letter case-insensitively so that `s`, `S`, and `^s` cluster together.
   const keyComparison = a.sortKey.toLowerCase().localeCompare(b.sortKey.toLowerCase());
   if (keyComparison !== 0) {
@@ -493,13 +629,14 @@ function commandHasImmediateEffect(
   state: AppState,
   command: Pick<CommandDefinition, "id">,
 ): boolean {
+  const focusMode = shortcutPanelFocusMode(state);
   switch (command.id) {
     case "confirm":
       return commandCanExecute(state);
     case "cancel":
       return hasCancelableState(state);
     case "expand":
-      return state.focusMode === "revisions" && getFocusedRevision(state) !== null;
+      return focusMode === "revisions" && getFocusedRevision(state) !== null;
     case "collapse":
       return state.expandedRowId !== null;
     case "move-parent":
@@ -509,17 +646,17 @@ function commandHasImmediateEffect(
     // Bookmark and workspace navigation is always listed so users can see both
     // directions are available; pressing a direction with no target no-ops.
     case "toggle-revision-selection":
-      return state.focusMode === "revisions" && getFocusedRevision(state) !== null;
+      return focusMode === "revisions" && getFocusedRevision(state) !== null;
     case "toggle-file-selection":
-      return state.focusMode === "files" && currentFocusedFileExists(state);
+      return focusMode === "files" && currentFocusedFileExists(state);
     case "restore":
-      return state.focusMode === "files" && currentFocusedFileExists(state);
+      return focusMode === "files" && currentFocusedFileExists(state);
     case "split":
     case "split-parallel":
-      return (state.focusMode === "revisions" || state.focusMode === "files") && getFocusedRevision(state) !== null;
+      return (focusMode === "revisions" || focusMode === "files") && getFocusedRevision(state) !== null;
     case "inline-confirmation-prev-option":
     case "inline-confirmation-next-option":
-      return state.focusMode === "inline-confirmation" && state.inlineConfirmation !== null;
+      return focusMode === "inline-confirmation" && state.inlineConfirmation !== null;
     case "rebase":
     case "duplicate":
     case "revert":
@@ -528,12 +665,20 @@ function commandHasImmediateEffect(
     case "squash":
     case "interdiff":
     case "diff":
-      return state.focusMode === "revisions" && getFocusedRevision(state) !== null;
+      return focusMode === "revisions" && getFocusedRevision(state) !== null;
     case "jump-to-working-copy":
       return state.revisions.some((revision) => revision.marker === "working-copy");
     default:
       return true;
   }
+}
+
+function shortcutPanelFocusMode(state: AppState): FocusMode {
+  if (state.focusMode !== "shortcut-filter") {
+    return state.focusMode;
+  }
+
+  return state.focusModeStack.findLast((mode) => mode !== "shortcut-filter") ?? "revisions";
 }
 
 function hasCancelableState(state: AppState): boolean {

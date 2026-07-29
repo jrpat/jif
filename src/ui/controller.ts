@@ -934,6 +934,9 @@ export function createJifCommandController(args: Readonly<{
         focusMode: store.state.focusMode,
       });
     },
+    openShortcutFilter() {
+      store.actions.openShortcutFilter();
+    },
     setRebaseSourceKind(kind: RebaseSourceKind) {
       const state = store.snapshot();
       if (state.commandDraft?.config.kind !== "rebase") {

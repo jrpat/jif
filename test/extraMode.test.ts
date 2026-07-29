@@ -88,6 +88,7 @@ describe("extra mode", () => {
       "scroll-help-up",
       "search-next",
       "search-prev",
+      "shortcut-panel",
       "suspend",
       "toggle-dry-run",
     ]);

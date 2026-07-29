@@ -3,10 +3,11 @@ import { resolveConfiguredKeymap } from "../src/config/index.ts";
 import { commandDefinitions, type CommandController } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
 import { getRevisionArg } from "../src/domain/revisionIds.ts";
-import { createInitialState, draftConfigs, enterExtraMode, startCommandDraft } from "../src/state/store.ts";
+import { applyShortcutFilter, createInitialState, draftConfigs, enterExtraMode, openShortcutFilter, openShortcutPanel, setShortcutFilterQuery, startCommandDraft } from "../src/state/store.ts";
 import { bindingCommand, defaultKeymap, type Keymap } from "../src/modes.ts";
 import {
   dispatchGlobalKey,
+  getShortcutFilterKeyAction,
   shouldDismissShortcutContextBeforeCommand,
 } from "../src/ui/keybindings.ts";
 
@@ -118,6 +119,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     openRevsetInput: (initialQuery?: string) =>
       calls.push(initialQuery === undefined ? "openRevsetInput" : `openRevsetInput:${initialQuery}`),
     toggleShortcutPanel: () => calls.push("toggleShortcutPanel"),
+    openShortcutFilter: () => calls.push("openShortcutFilter"),
     forceLastCommand: () => calls.push("forceLastCommand"),
     commit: () => calls.push("commit"),
     describe: () => calls.push("describe"),
@@ -782,6 +784,57 @@ test("revision log navigation preserves the active shortcut context", () => {
     commandId: "rebase-descendants",
     mode: "rebase",
   })).toBeTrue();
+});
+
+test("shortcut filtering preserves the active shortcut context", () => {
+  expect(shouldDismissShortcutContextBeforeCommand({
+    commandId: "filter-shortcuts",
+    mode: "revision-log",
+  })).toBeFalse();
+});
+
+test("question mark activates filtering only while the shortcut panel is visible", () => {
+  expect(getShortcutFilterKeyAction("?", createState())).toBe("inactive");
+  expect(getShortcutFilterKeyAction("?", openShortcutPanel(createState()))).toBe("activate");
+
+  const draft = startCommandDraft(createState(), draftConfigs.rebase);
+  expect(getShortcutFilterKeyAction("?", draft, defaultKeymap, true)).toBe("activate");
+});
+
+test("shortcut filter editing reserves input keys and recognizes cancel controls", () => {
+  const state = openShortcutFilter(createState());
+
+  expect(getShortcutFilterKeyAction("?", state)).toBe("input");
+  expect(getShortcutFilterKeyAction("alt-/", state)).toBe("input");
+  expect(getShortcutFilterKeyAction("escape", state)).toBe("cancel");
+  expect(getShortcutFilterKeyAction("ctrl-c", state)).toBe("cancel");
+  expect(getShortcutFilterKeyAction("j", state)).toBe("input");
+  expect(getShortcutFilterKeyAction("ctrl-r", state)).toBe("input");
+});
+
+test("shortcut filter activation follows configured bindings without printable special cases", () => {
+  const state = setShortcutFilterQuery(openShortcutFilter(createState()), "rebase");
+  const keymap: Keymap = {
+    ...defaultKeymap,
+    _global: {
+      ...defaultKeymap._global,
+      "ctrl-g": "filter-shortcuts",
+      x: "filter-shortcuts",
+    },
+  };
+
+  expect(getShortcutFilterKeyAction("?", state, keymap)).toBe("input");
+  expect(getShortcutFilterKeyAction("ctrl-g", state, keymap)).toBe("activate");
+  expect(getShortcutFilterKeyAction("x", state, keymap)).toBe("activate");
+});
+
+test("applied shortcut filters restore mode keys while retaining filter controls", () => {
+  const editing = setShortcutFilterQuery(openShortcutFilter(createState()), "rebase");
+  const state = applyShortcutFilter(editing);
+
+  expect(getShortcutFilterKeyAction("?", state)).toBe("activate");
+  expect(getShortcutFilterKeyAction("escape", state)).toBe("cancel");
+  expect(getShortcutFilterKeyAction("j", state)).toBe("inactive");
 });
 
 test("dispatchGlobalKey routes ! to forceLastCommand", () => {

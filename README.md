@@ -65,7 +65,22 @@ jif --version
 
 ## Keybindings
 
-Press `?` in jif at any time to show keybindings for the current mode.
+Press `?` in jif to show keybindings for the current mode, then press `?` again
+while the panel is visible to focus its fuzzy filter. While editing the filter,
+`?` is ordinary input and inserts a literal question mark. The filter searches
+shortcut keys, command names, descriptions, ids, and mechanical key aliases
+such as `option`, `control`, and `left arrow`. Space-separated terms narrow the
+results independently, so their order does not matter and different terms can
+match different fields. Each term must fuzzy-match within one word; a match
+cannot stitch letters across spaces. Nonmatches are removed. Matches are ranked
+by fzy relevance and laid out in reading order, left-to-right and then
+top-to-bottom.
+
+Press `enter` to apply a nonempty filter. The results and filter text remain
+visible, but the underlying mode regains focus so every displayed shortcut can
+be invoked immediately. Press `?` again to edit the applied filter. The first
+`escape` (or `ctrl-c`) clears a filter and keeps the panel open; a second
+`escape` closes the panel. Closing the panel also clears its filter.
 
 <details>
 <summary>Default Keybindings</summary>
@@ -82,7 +97,7 @@ Available in every mode (mode-specific bindings can override these).
 
 | Key | Command | Description |
 |-----|---------|-------------|
-| `?` | shortcut-panel | Expand or collapse the shortcut panel |
+| `?` | shortcut-panel | Open the shortcut panel, or focus its filter while visible |
 | `ctrl-r` | refresh-repository | Refresh the revision log |
 | `ctrl+alt+r` | restart | Replace the current process image with a fresh plain `jif` invocation |
 | `ctrl-,` | reload-config | Reload config files and apply runtime settings |
@@ -841,6 +856,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `toggleRebaseSkipEmptied()` | Toggle `--skip-emptied` on a rebase draft |
 | `toggleSearchIdOnly()` | Toggle ID-only search |
 | `toggleSelection()` | Toggle the focused revision selection |
+| `openShortcutFilter()` | Open the shortcut panel and focus its fuzzy filter |
 | `toggleShortcutPanel()` | Expand or collapse the shortcut panel |
 | `toggleShortFlags()` | Toggle composed commands between short and long flags |
 | `toggleSquashAnchor()` | Toggle squash source anchoring |
@@ -905,6 +921,7 @@ The `app` argument is a read-only snapshot of jif state, plus the ergonomic `rev
 | `searchStartIndex` | `number \| null` | Search start index for cancellation/restoration |
 | `selectedFilePaths` | `readonly string[]` | Selected file paths |
 | `selectedRowIds` | `readonly string[]` | Selected revision row ids |
+| `shortcutFilterQuery` | `string` | Current shortcut-panel filter, or `""` when inactive |
 | `shortcutPanelExpanded` | `boolean` | Whether the shortcut panel is expanded |
 | `statusMessages` | `readonly StatusMessage[]` | Visible status messages |
 | `useShortFlags` | `boolean` | Whether composed commands prefer short flags |

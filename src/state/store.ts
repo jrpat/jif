@@ -218,6 +218,7 @@ export function createInitialState(
     focusModeStack: ["revisions"],
     inlineConfirmation: null,
     shortcutPanelExpanded: false,
+    shortcutFilterQuery: "",
     focusedRevisionIndex: 0,
     revisionScrollRequest: 0,
     focusedOperationLogIndex: 0,
@@ -353,12 +354,95 @@ export function openShortcutPanel(state: AppState): AppState {
   return { ...state, shortcutPanelExpanded: true };
 }
 
-export function closeShortcutPanel(state: AppState): AppState {
-  if (!state.shortcutPanelExpanded) {
+const SHORTCUT_FILTER_FOCUS_MODES = new Set<FocusMode>([
+  "revisions",
+  "files",
+  "op-log",
+  "evolog",
+  "inline-confirmation",
+  "diff-viewer",
+  "notifications",
+  "bookmark",
+  "extra",
+  "shortcut-filter",
+]);
+
+export function canOpenShortcutFilter(state: AppState): boolean {
+  return SHORTCUT_FILTER_FOCUS_MODES.has(state.focusMode);
+}
+
+export function openShortcutFilter(state: AppState): AppState {
+  if (!canOpenShortcutFilter(state)) {
     return state;
   }
 
-  return { ...state, shortcutPanelExpanded: false };
+  if (state.focusMode === "shortcut-filter" && state.shortcutPanelExpanded) {
+    return state;
+  }
+
+  const nextState = {
+    ...state,
+    shortcutPanelExpanded: true,
+  };
+  return replaceFocusModeStack(nextState, [
+    ...resolveFocusModeStack(nextState),
+    "shortcut-filter",
+  ]);
+}
+
+export function setShortcutFilterQuery(state: AppState, query: string): AppState {
+  if (state.focusMode !== "shortcut-filter" || state.shortcutFilterQuery === query) {
+    return state;
+  }
+
+  return { ...state, shortcutFilterQuery: query };
+}
+
+function restoreShortcutFilterFocus(state: AppState): AppState {
+  if (state.focusMode !== "shortcut-filter") {
+    return state;
+  }
+
+  return replaceFocusModeStack(
+    state,
+    resolveFocusModeStack(state).filter((mode) => mode !== "shortcut-filter"),
+  );
+}
+
+export function clearShortcutFilter(state: AppState): AppState {
+  const restored = restoreShortcutFilterFocus(state);
+  if (restored.shortcutFilterQuery === "") {
+    return restored;
+  }
+
+  return { ...restored, shortcutFilterQuery: "" };
+}
+
+export function applyShortcutFilter(state: AppState): AppState {
+  if (state.focusMode !== "shortcut-filter") {
+    return state;
+  }
+
+  if (state.shortcutFilterQuery.trim() === "") {
+    return clearShortcutFilter(state);
+  }
+
+  return restoreShortcutFilterFocus(state);
+}
+
+export function closeShortcutPanel(state: AppState): AppState {
+  if (
+    !state.shortcutPanelExpanded &&
+    state.shortcutFilterQuery === "" &&
+    state.focusMode !== "shortcut-filter"
+  ) {
+    return state;
+  }
+
+  return {
+    ...clearShortcutFilter(state),
+    shortcutPanelExpanded: false,
+  };
 }
 
 export function toggleShortcutPanel(state: AppState): AppState {
@@ -1479,6 +1563,10 @@ function restoreSearchStartFocus(state: AppState): AppState {
 }
 
 export function cancelOrBlurState(state: AppState): AppState {
+  if (state.focusMode === "shortcut-filter" || state.shortcutFilterQuery !== "") {
+    return clearShortcutFilter(state);
+  }
+
   if (state.focusMode === "search") {
     return closeSearch(state);
   }

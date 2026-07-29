@@ -90,6 +90,17 @@ test("AppStore exposes shortcut panel actions", () => {
   store.actions.toggleShortcutPanel();
   expect(store.state.shortcutPanelExpanded).toBeFalse();
 
+  store.actions.openShortcutFilter();
+  expect(store.state.shortcutPanelExpanded).toBeTrue();
+  expect(store.state.focusMode).toBe("shortcut-filter");
+
+  store.actions.setShortcutFilterQuery("restore");
+  expect(store.state.shortcutFilterQuery).toBe("restore");
+
+  store.actions.applyShortcutFilter();
+  expect(store.state.shortcutFilterQuery).toBe("restore");
+  expect(store.state.focusMode).toBe("revisions");
+
   store.dispose();
 });
 

@@ -24,6 +24,7 @@ export type FocusMode =
   | "revset"
   | "file-search"
   | "search"
+  | "shortcut-filter"
   | "diff-viewer"
   | "notifications"
   | "bookmark"
@@ -204,6 +205,7 @@ export type AppState = Readonly<{
   focusModeStack: readonly FocusMode[];
   inlineConfirmation?: InlineConfirmation | null;
   shortcutPanelExpanded: boolean;
+  shortcutFilterQuery: string;
   focusedRevisionIndex: number;
   revisionScrollRequest: number;
   focusedOperationLogIndex: number;

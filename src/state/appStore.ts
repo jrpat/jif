@@ -68,6 +68,9 @@ import {
   setSearchText,
   openSearch,
   openFastJump,
+  openShortcutFilter,
+  applyShortcutFilter,
+  setShortcutFilterQuery,
   finalizeSearch,
   nextSearchMatch,
   prevSearchMatch,
@@ -428,6 +431,15 @@ export function createAppStore(
       },
       openShortcutPanel() {
         mutate((currentState) => openShortcutPanel(currentState));
+      },
+      openShortcutFilter() {
+        mutate((currentState) => openShortcutFilter(currentState));
+      },
+      setShortcutFilterQuery(query: string) {
+        mutate((currentState) => setShortcutFilterQuery(currentState, query));
+      },
+      applyShortcutFilter() {
+        mutate((currentState) => applyShortcutFilter(currentState));
       },
       closeShortcutPanel() {
         mutate((currentState) => closeShortcutPanel(currentState));

@@ -28,6 +28,10 @@ export function StatusArea(props: {
   config: ResolvedAppConfig;
   loadingIndicatorText?: string | null;
   emptyMessage?: string;
+  shortcutFilterQuery?: string;
+  shortcutFilterEditing?: boolean;
+  onShortcutFilterInput?: (value: string) => void;
+  onShortcutFilterApply?: () => void;
 }) {
   const colors = props.config.colorScheme.semanticColors;
   const [loadingFrameIndex, setLoadingFrameIndex] = createSignal(0);
@@ -44,6 +48,9 @@ export function StatusArea(props: {
   );
   const scrollAcceleration = createMemo(() =>
     makeScrollAcceleration(props.config.scroll.step, props.config.scroll.acceleration)
+  );
+  const shortcutFilterVisible = createMemo(() =>
+    props.shortcutFilterEditing === true || (props.shortcutFilterQuery ?? "") !== ""
   );
 
   createEffect(() => {
@@ -140,27 +147,49 @@ export function StatusArea(props: {
           paddingX={1}
           backgroundColor={colors.chromeFillTwo}
         >
-          <text fg={colors.textPrimary} attributes={TextAttributes.BOLD}>
-            Shortcuts
-          </text>
-          <text fg={colors.textTertiary}>{` ${props.currentModeLabel}`}</text>
-          <Show when={stateChipText() !== null}>
-            <box width={1} />
-            <text
-              fg={colors.statusInfo}
-              bg={colors.statusInfoFill}
-              attributes={TextAttributes.BOLD}
-            >
-              {stateChipText()!}
-            </text>
-          </Show>
-          <box flexGrow={1} />
-          <Show when={loadingIndicator() !== null}>
-            <text fg={getStatusColor("info", colors)} truncate>{loadingIndicator()}</text>
-            <box width={1} />
-          </Show>
-          <Show when={props.actionLabel !== null && props.actionLabel !== undefined}>
-            <text fg={colors.textTertiary}>{props.actionLabel}</text>
+          <Show
+            when={shortcutFilterVisible()}
+            fallback={
+              <>
+                <text fg={colors.textPrimary} attributes={TextAttributes.BOLD}>
+                  Shortcuts
+                </text>
+                <text fg={colors.textTertiary}>{` ${props.currentModeLabel}`}</text>
+                <Show when={stateChipText() !== null}>
+                  <box width={1} />
+                  <text
+                    fg={colors.statusInfo}
+                    bg={colors.statusInfoFill}
+                    attributes={TextAttributes.BOLD}
+                  >
+                    {stateChipText()!}
+                  </text>
+                </Show>
+                <box flexGrow={1} />
+                <Show when={loadingIndicator() !== null}>
+                  <text fg={getStatusColor("info", colors)} truncate>{loadingIndicator()}</text>
+                  <box width={1} />
+                </Show>
+                <Show when={props.actionLabel !== null && props.actionLabel !== undefined}>
+                  <text fg={colors.textTertiary}>{props.actionLabel}</text>
+                </Show>
+              </>
+            }
+          >
+            <input
+              id="shortcut-filter-input"
+              flexGrow={1}
+              value={props.shortcutFilterQuery ?? ""}
+              placeholder="Type to filter"
+              focused={props.shortcutFilterEditing === true}
+              textColor={colors.textPrimary}
+              focusedTextColor={colors.textPrimary}
+              placeholderColor={colors.textQuaternary}
+              cursorColor={colors.chromeBorderFocus}
+              cursorStyle={{ style: "line" }}
+              onInput={(value) => props.onShortcutFilterInput?.(value)}
+              onSubmit={() => props.onShortcutFilterApply?.()}
+            />
           </Show>
         </box>
         <box width="100%" height={1} backgroundColor={colors.chromeFillTwo} />
@@ -229,6 +258,7 @@ function ShortcutGridBody(props: {
             <For each={row}>
               {(entry) => (
                 <box
+                  id={`shortcut-entry:${entry.id}`}
                   width={props.grid.columnWidth}
                   minWidth={0}
                   flexDirection="row"

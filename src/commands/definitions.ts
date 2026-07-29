@@ -1,4 +1,4 @@
-import { getAdjacentBookmarkRevisionIndex, getAdjacentWorkspaceRevisionIndex, getExpandedRevision, getFocusedChildRevision, getFocusedFile, getFocusedNotification, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
+import { canOpenShortcutFilter, getAdjacentBookmarkRevisionIndex, getAdjacentWorkspaceRevisionIndex, getExpandedRevision, getFocusedChildRevision, getFocusedFile, getFocusedNotification, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
 import type { AppState, RebaseSourceKind, RebaseTargetKind } from "../domain/types.ts";
 import { canSearchState } from "../search/matching.ts";
 import { isPreviewingSingleFile } from "../domain/preview.ts";
@@ -98,6 +98,7 @@ export type CommandController = Readonly<{
   openFileFilter: () => void;
   restrictRevsetToFocusedFile: () => void;
   toggleShortcutPanel: () => void;
+  openShortcutFilter: () => void;
   commit: () => void;
   describe: () => void;
   showRevisionDiff: () => void;
@@ -427,8 +428,16 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   {
     id: "shortcut-panel",
     title: "Shortcuts",
-    description: "Expand or collapse the shortcut panel",
+    description: "Open the shortcut panel or focus its visible filter",
     run: (controller) => controller.toggleShortcutPanel(),
+    group: "global",
+  },
+  {
+    id: "filter-shortcuts",
+    title: "Filter Shortcuts",
+    description: "Focus a fuzzy filter for the shortcuts panel",
+    canExecute: canOpenShortcutFilter,
+    run: (controller) => controller.openShortcutFilter(),
     group: "global",
   },
   {
