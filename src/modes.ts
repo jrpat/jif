@@ -3,6 +3,7 @@ import type { CommandDefinition } from "./commands/definitions.ts";
 
 export type Mode =
   | "log"
+  | "revision-log-nav"
   | "revision-draft"
   | "revision-log"
   | "revision-files"
@@ -39,15 +40,28 @@ export type ModeDefinition = Readonly<{
 export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   // Abstract parent for scrollable log modes. It is never itself active.
   log: { id: "log", inputPassthrough: false, label: "Log" },
+  // Abstract parent for revision-list focus movement. It is shared by normal
+  // browsing, bookmark composition, and every revision operation draft.
+  "revision-log-nav": {
+    id: "revision-log-nav",
+    parent: "log",
+    inputPassthrough: false,
+    label: "Revision Log Navigation",
+  },
   // Abstract parent for revision operation composers. It keeps draft mechanics
   // separate from both the shared log controls and revision-log-only commands.
   "revision-draft": {
     id: "revision-draft",
-    parent: "log",
+    parent: "revision-log-nav",
     inputPassthrough: false,
     label: "Revision Draft",
   },
-  "revision-log": { id: "revision-log", parent: "log", inputPassthrough: false, label: "Revisions" },
+  "revision-log": {
+    id: "revision-log",
+    parent: "revision-log-nav",
+    inputPassthrough: false,
+    label: "Revisions",
+  },
   "revision-files": { id: "revision-files", inputPassthrough: false, label: "Files" },
   "op-log": { id: "op-log", parent: "log", inputPassthrough: false, label: "Op Log" },
   evolog: { id: "evolog", parent: "log", inputPassthrough: false, label: "Evolog" },
@@ -66,7 +80,12 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   search: { id: "search", inputPassthrough: true, label: "Search" },
   "diff-viewer": { id: "diff-viewer", inputPassthrough: false, label: "Diff" },
   notifications: { id: "notifications", inputPassthrough: false, label: "Notifications" },
-  bookmark: { id: "bookmark", parent: "log", inputPassthrough: false, label: "Bookmark" },
+  bookmark: {
+    id: "bookmark",
+    parent: "revision-log-nav",
+    inputPassthrough: false,
+    label: "Bookmark",
+  },
   "bookmark-move": { id: "bookmark-move", parent: "revision-draft", inputPassthrough: false, label: "Bookmark Move" },
   "set-parents": { id: "set-parents", parent: "revision-draft", inputPassthrough: false, label: "Set Parents" },
   "new-between": { id: "new-between", parent: "revision-draft", inputPassthrough: false, label: "New Between" },
@@ -134,11 +153,7 @@ export const defaultKeymap: Keymap = {
     "-": "toggle-flags",
     ...previewBindings,
   },
-  "revision-draft": {
-    enter: "confirm",
-    " ": "toggle-revision-selection",
-  },
-  "revision-log": {
+  "revision-log-nav": {
     J: "move-parent",
     K: "move-child",
     "alt-j": "jump-to-next-divergent",
@@ -146,6 +161,13 @@ export const defaultKeymap: Keymap = {
     "[": "move-to-prev-bookmark",
     "}": "move-to-next-workspace",
     "{": "move-to-prev-workspace",
+    "@": "jump-to-working-copy",
+  },
+  "revision-draft": {
+    enter: "confirm",
+    " ": "toggle-revision-selection",
+  },
+  "revision-log": {
     tab: "switch-active-workspace",
     Z: alias("suspend"),
     l: "expand",
@@ -175,7 +197,6 @@ export const defaultKeymap: Keymap = {
     _: "cycle-layout",
     u: "undo",
     "alt-u": "redo",
-    "@": "jump-to-working-copy",
     L: "edit-revset",
     "ctrl-l": alias("edit-revset"),
     "ctrl-f": "find-file",
@@ -229,7 +250,6 @@ export const defaultKeymap: Keymap = {
     enter: "confirm",
   },
   rebase: {
-    "alt-j": "jump-to-next-divergent",
     s: "rebase-descendants",
     B: "rebase-source-branch",
     b: "rebase-target-before",
@@ -251,12 +271,10 @@ export const defaultKeymap: Keymap = {
   },
   restore: {},
   squash: {
-    "alt-j": "jump-to-next-divergent",
     s: "squash-from-anchor",
     S: alias("squash-from-anchor"),
   },
   interdiff: {
-    "alt-j": "jump-to-next-divergent",
     "=": "interdiff-swap",
   },
   diff: {},

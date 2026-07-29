@@ -62,6 +62,7 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(typesText).toContain("dryRun: boolean");
   expect(typesText).toContain("toggleDryRun: () => void");
   expect(typesText).toContain("type UserKeyBinding = string | UserAliasBinding | UserKeybindingCommand | null");
+  expect(typesText).toContain('| "revision-log-nav"');
   expect(typesText).toContain('| "revision-draft"');
 });
 

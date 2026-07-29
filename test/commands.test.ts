@@ -253,7 +253,9 @@ test("split bindings resolve only in revision-log mode", () => {
 });
 
 test("revision draft modes inherit Revision Draft instead of Normal", () => {
-  expect(modeDefinitions["revision-draft"].parent).toBe("log");
+  expect(modeDefinitions["revision-log-nav"].parent).toBe("log");
+  expect(modeDefinitions["revision-log"].parent).toBe("revision-log-nav");
+  expect(modeDefinitions["revision-draft"].parent).toBe("revision-log-nav");
 
   const modes = [
     "rebase",
@@ -275,10 +277,59 @@ test("revision draft modes inherit Revision Draft instead of Normal", () => {
     expect(resolveCommand(mode, "n")).toBeNull();
   }
 
-  expect(modeDefinitions.bookmark.parent).toBe("log");
+  expect(modeDefinitions.bookmark.parent).toBe("revision-log-nav");
 });
 
-test("Log owns retry and flag bindings while Revision Draft owns draft mechanics", () => {
+test("Revision Log Navigation owns revision focus movement", () => {
+  const expectedBindings = {
+    J: "move-parent",
+    K: "move-child",
+    "alt-j": "jump-to-next-divergent",
+    "]": "move-to-next-bookmark",
+    "[": "move-to-prev-bookmark",
+    "}": "move-to-next-workspace",
+    "{": "move-to-prev-workspace",
+    "@": "jump-to-working-copy",
+  } as const;
+
+  for (const [key, command] of Object.entries(expectedBindings)) {
+    expect(defaultKeymap["revision-log-nav"][key]).toBe(command);
+    expect(defaultKeymap.log[key]).toBeUndefined();
+    expect(defaultKeymap["revision-log"][key]).toBeUndefined();
+  }
+
+  const modes = [
+    "revision-log",
+    "revision-draft",
+    "bookmark",
+    "rebase",
+    "duplicate",
+    "revert",
+    "restore",
+    "squash",
+    "interdiff",
+    "diff",
+    "absorb",
+    "bookmark-move",
+    "set-parents",
+    "new-between",
+  ] satisfies Mode[];
+
+  for (const mode of modes) {
+    for (const [key, command] of Object.entries(expectedBindings)) {
+      expect(resolveCommand(mode, key)).toBe(command);
+    }
+  }
+
+  expect(resolveCommand("log", "@")).toBeNull();
+  expect(resolveCommand("evolog", "@")).toBeNull();
+  expect(resolveCommand("op-log", "@")).toBe("jump-to-current-operation");
+  expect(defaultKeymap.rebase["alt-j"]).toBeUndefined();
+  expect(defaultKeymap.squash["alt-j"]).toBeUndefined();
+  expect(defaultKeymap.interdiff["alt-j"]).toBeUndefined();
+});
+
+test("Log owns generic retry and flag bindings while Revision Draft owns draft mechanics", () => {
   expect(defaultKeymap.log["!"]).toBe("force-last-command");
   expect(defaultKeymap.log["-"]).toBe("toggle-flags");
   expect(defaultKeymap["revision-log"]["!"]).toBeUndefined();
@@ -350,7 +401,6 @@ test("getDirectCommandsForMode returns only rebase-specific bindings", () => {
   const commands = getDirectCommandsForMode("rebase", defaultKeymap, commandDefinitions);
 
   expect(commands.map((command) => command.id).sort()).toEqual([
-    "jump-to-next-divergent",
     "rebase-descendants",
     "rebase-source-branch",
     "rebase-target-after",

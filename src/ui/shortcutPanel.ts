@@ -275,6 +275,8 @@ export function shortcutModeLabel(mode: Mode): string {
   switch (mode) {
     case "log":
       return "Log";
+    case "revision-log-nav":
+      return "Revision Log Navigation";
     case "revision-draft":
       return "Revision Draft";
     case "revision-log":

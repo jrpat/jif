@@ -471,6 +471,20 @@ test("resolveConfiguredKeymap supports bindings shared by revision drafts", () =
   expect(resolveCommand("rebase", "x", resolved.keymap)).toBe("confirm");
 });
 
+test("resolveConfiguredKeymap supports bindings shared by revision log navigation", () => {
+  const resolved = resolveConfiguredKeymap({
+    "revision-log-nav": {
+      x: "jump-to-working-copy",
+    },
+  });
+
+  expect(resolved.keymap["revision-log-nav"].x).toBe("jump-to-working-copy");
+  expect(resolveCommand("revision-log", "x", resolved.keymap)).toBe("jump-to-working-copy");
+  expect(resolveCommand("rebase", "x", resolved.keymap)).toBe("jump-to-working-copy");
+  expect(resolveCommand("bookmark", "x", resolved.keymap)).toBe("jump-to-working-copy");
+  expect(resolveCommand("evolog", "x", resolved.keymap)).toBeNull();
+});
+
 test("resolveConfiguredKeymap deep-merges user bindings into the default keymap", () => {
   const resolved = resolveConfiguredKeymap({
     "revision-log": {

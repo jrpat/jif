@@ -290,6 +290,7 @@ test("computeShortcutPanelHeight follows the adaptive terminal-height rule", () 
 
 test("shortcutModeLabel formats the current mode for the panel header", () => {
   expect(shortcutModeLabel("revision-log")).toBe("Revisions");
+  expect(shortcutModeLabel("revision-log-nav")).toBe("Revision Log Navigation");
   expect(shortcutModeLabel("revision-draft")).toBe("Revision Draft");
   expect(shortcutModeLabel("revision-files")).toBe("Files");
   expect(shortcutModeLabel("command")).toBe("Command");
@@ -492,9 +493,23 @@ test("evolog has no direct bindings and inherits everything from the log parent"
   expect(inherited).toContain("!");
   expect(inherited).toContain("-");
   expect(inherited).toContain("q");
+  expect(inherited).not.toContain("@");
 });
 
-test("normal still surfaces the shared log keys alongside its revision commands", () => {
+test("revision drafts surface shared revision navigation", () => {
+  const keys = collectCanonicalBindingsForMode("rebase", defaultKeymap).map((b) => b.key);
+  expect(keys).toContain("J");
+  expect(keys).toContain("K");
+  expect(keys).toContain("alt-j");
+  expect(keys).toContain("]");
+  expect(keys).toContain("[");
+  expect(keys).toContain("}");
+  expect(keys).toContain("{");
+  expect(keys).toContain("@");
+  expect(keys).not.toContain("tab");
+});
+
+test("normal still surfaces the shared log and revision navigation keys alongside its commands", () => {
   const keys = collectCanonicalBindingsForMode("revision-log", defaultKeymap).map((b) => b.key);
   // Shared log keys — inherited from the `log` parent, must still be present
   expect(keys).toContain(":");
@@ -507,6 +522,11 @@ test("normal still surfaces the shared log keys alongside its revision commands"
   expect(keys).toContain("ctrl-[");
   expect(keys).toContain("!");
   expect(keys).toContain("-");
+  // Shared revision navigation — inherited through `revision-log-nav`
+  expect(keys).toContain("J");
+  expect(keys).toContain("K");
+  expect(keys).toContain("alt-j");
+  expect(keys).toContain("@");
   // Revision-specific keys remain directly on normal
   expect(keys).toContain("s");
   expect(keys).toContain("n");

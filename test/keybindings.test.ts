@@ -914,7 +914,7 @@ test("dispatchGlobalKey routes alt-j to jump-to-next-divergent", () => {
   expect(calls).toEqual(["moveFocusToNextDivergentSibling"]);
 });
 
-test("dispatchGlobalKey routes alt-j while composing rebase, squash, and interdiff", () => {
+test("dispatchGlobalKey routes alt-j from every revision draft mode", () => {
   const base = createState();
   const divergentState: AppState = {
     ...base,
@@ -925,7 +925,7 @@ test("dispatchGlobalKey routes alt-j while composing rebase, squash, and interdi
     ],
   };
 
-  for (const config of [draftConfigs.rebase, draftConfigs.squash, draftConfigs.interdiff]) {
+  for (const config of Object.values(draftConfigs)) {
     const calls: string[] = [];
     const state = startCommandDraft(divergentState, config);
     const handled = dispatchGlobalKey({
@@ -938,6 +938,37 @@ test("dispatchGlobalKey routes alt-j while composing rebase, squash, and interdi
     expect(handled).toBeTrue();
     expect(calls).toEqual(["moveFocusToNextDivergentSibling"]);
   }
+});
+
+test("dispatchGlobalKey routes graph navigation while composing a rebase", () => {
+  const base = createState();
+
+  const parentCalls: string[] = [];
+  const atChild = startCommandDraft({
+    ...base,
+    selectedRowIds: [base.revisions[0]!.rowId],
+  }, draftConfigs.rebase);
+  expect(dispatchGlobalKey({
+    normalizedKey: "J",
+    state: atChild,
+    commands: commandDefinitions,
+    controller: createController(parentCalls),
+  })).toBeTrue();
+  expect(parentCalls).toEqual(["moveFocusToParent"]);
+
+  const childCalls: string[] = [];
+  const atParent = startCommandDraft({
+    ...base,
+    focusedRevisionIndex: 1,
+    selectedRowIds: [base.revisions[1]!.rowId],
+  }, draftConfigs.rebase);
+  expect(dispatchGlobalKey({
+    normalizedKey: "K",
+    state: atParent,
+    commands: commandDefinitions,
+    controller: createController(childCalls),
+  })).toBeTrue();
+  expect(childCalls).toEqual(["moveFocusToChild"]);
 });
 
 test("dispatchGlobalKey routes y to duplicate and alt-r to revert", () => {
@@ -1460,6 +1491,22 @@ test("dispatchGlobalKey routes s to rebase-descendants in rebase mode", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["setRebaseSourceKind(source)"]);
+});
+
+test("dispatchGlobalKey routes @ to the working copy in rebase mode", () => {
+  const calls: string[] = [];
+  let state = createState();
+  state = startCommandDraft(state, draftConfigs.rebase, { descendantRevisionIds: ["aaaaaaaa"] });
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "@",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["focusWorkingCopy"]);
 });
 
 test("a null mode binding suppresses the inherited and global binding", () => {

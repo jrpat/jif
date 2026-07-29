@@ -72,7 +72,7 @@ Press `?` in jif at any time to show keybindings for the current mode.
 
 Keybindings are per-mode. Global bindings are available in every mode and may be overridden by a mode-specific binding for the same key.
 
-Log-oriented modes share a common **Log** binding set: movement, the command bar, search, fast jump, help, preview, retry, and flag controls. Normal, Operation Log, Evolog, and Bookmark inherit Log directly. Revision operation composers such as Rebase and Squash inherit an abstract **Revision Draft** mode, which adds `enter` to confirm and `space` to select revisions on top of Log without inheriting revision-log-only commands from Normal. Each mode is annotated below with what, if anything, it inherits.
+Log-oriented modes share a common **Log** binding set: linear movement, the command bar, search, fast jump, help, preview, retry, and flag controls. Revision-backed modes additionally inherit **Revision Log Navigation**: graph movement (`J`/`K`), divergent sibling cycling (`alt-j`), bookmark and workspace jumps (`[`/`]`, `{`/`}`), and the working-copy jump (`@`). Normal and Bookmark inherit Revision Log Navigation; revision operation composers such as Rebase and Squash inherit it through an abstract **Revision Draft** mode, which adds `enter` to confirm and `space` to select revisions without inheriting revision-log-only commands from Normal. Operation Log and Evolog inherit only Log. Each mode is annotated below with what, if anything, it inherits.
 
 ### Global
 
@@ -130,6 +130,8 @@ Viewing and navigating the revision log.
 | `tab` | switch-active-workspace | Make the focused workspace marker the active workspace |
 | `@` | jump-to-working-copy | Jump to the working-copy revision |
 | `G` | jump-to-bottom | Jump to the last revision in the log |
+
+`J`/`K`, `alt-j`, `[`/`]`, `{`/`}`, and `@` come from the shared Revision Log Navigation bindings, so they remain available while composing revision operations such as Rebase or Squash. `tab` is Normal-only because it changes the active workspace rather than merely moving revision focus.
 
 When the focused revision has multiple workspace chips, `tab` switches to the first one if none is active; otherwise it moves to the chip after the active workspace, wrapping to the first.
 
@@ -220,7 +222,6 @@ Active while previewing a rebase. Inherits Revision Draft, not Normal revision o
 
 | Key | Command | Description |
 |-----|---------|-------------|
-| `alt-j` | jump-to-next-divergent | When the focused revision is divergent, cycle to the next visible sibling sharing its change-id |
 | `s` | rebase-descendants | Toggle `--source` (move the focused revision and its descendants) |
 | `B` | rebase-source-branch | Toggle `--branch` (rebase the whole branch containing the focused revision) |
 | `b` | rebase-target-before | Toggle `--insert-before` on the target |
@@ -261,7 +262,6 @@ Two keys from Normal mode enter squash mode:
 
 | Key | Command | Description |
 |-----|---------|-------------|
-| `alt-j` | jump-to-next-divergent | When the focused revision is divergent, cycle to the next visible sibling sharing its change-id |
 | `s` | squash-from-anchor | Toggle whether the source extends to a range `<source>::<anchor>`, where `<anchor>` is `@` if the working copy is non-empty, otherwise `@-`. `S` is an alias here, so you can keep toggling with either case |
 
 ### Restore
@@ -274,7 +274,6 @@ Active while previewing an interdiff. Inherits Revision Draft, not Normal. Compo
 
 | Key | Command | Description |
 |-----|---------|-------------|
-| `alt-j` | jump-to-next-divergent | When the focused revision is divergent, cycle to the next visible sibling sharing its change-id |
 | `=` | interdiff-swap | Swap which side is `--from` and which is `--to`: the selected revision becomes `--to` and the focused revision becomes `--from`. Press again to swap back |
 
 ### Diff
@@ -291,7 +290,7 @@ Active while composing an absorb. Inherits Revision Draft, not Normal. The sourc
 
 ### Set Parents
 
-Pressing `M` from Normal mode enters Set Parents mode against the focused revision — the **subject** of the operation, tagged with a `subject` chip and the command-target highlight. Inherits Revision Draft, not Normal, so navigate with the shared log keys (and incremental search with `/`). Use `space` to toggle a revision into the working parent set: a revision that is already a parent of the subject is tagged `remove` and will be dropped, while any other revision is tagged `add` and will be joined in as a co-parent — this is how you build a "megamerge". The command bar previews `jj rebase -r <subject> -d <parent> …` with the resulting parent set; `enter` runs it, `escape` cancels. The preview reflects today's parents until you change something, and running is blocked while the change would leave the subject with no parents. If the rebase is refused as immutable, retry it with `!`.
+Pressing `M` from Normal mode enters Set Parents mode against the focused revision — the **subject** of the operation, tagged with a `subject` chip and the command-target highlight. Inherits Revision Draft, not Normal, so navigate with the shared Log and Revision Log Navigation keys (and incremental search with `/`). Use `space` to toggle a revision into the working parent set: a revision that is already a parent of the subject is tagged `remove` and will be dropped, while any other revision is tagged `add` and will be joined in as a co-parent — this is how you build a "megamerge". The command bar previews `jj rebase -r <subject> -d <parent> …` with the resulting parent set; `enter` runs it, `escape` cancels. The preview reflects today's parents until you change something, and running is blocked while the change would leave the subject with no parents. If the rebase is refused as immutable, retry it with `!`.
 
 ### New Between
 
@@ -301,7 +300,7 @@ Use `space` to pin one or more explicit `--insert-before` targets: pinned revisi
 
 ### Bookmark
 
-Pressing `b` from Normal mode enters Bookmark mode and waits for the next keystroke. It inherits Log, not Normal. Each sub-key opens a `jj bookmark` flow scoped to the focused revision. Press Escape to leave Bookmark mode without doing anything.
+Pressing `b` from Normal mode enters Bookmark mode and waits for the next keystroke. It inherits Revision Log Navigation, not Normal. Each sub-key opens a `jj bookmark` flow scoped to the focused revision. Press Escape to leave Bookmark mode without doing anything.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -635,9 +634,9 @@ export default {
 } satisfies Jif.Config;
 ```
 
-Besides the concrete per-mode scopes (`revision-log`, `revision-files`, `op-log`, `evolog`, …) and `_global`, there are two shared scopes. `log` is inherited by Normal, Operation Log, Evolog, Bookmark, and Revision Draft. `revision-draft` inherits `log` and is itself inherited by operation composers such as Rebase and Squash. Binding a key under either shared scope rebinds it for every descendant; a same-key binding in a child mode still overrides the inherited binding there.
+Besides the concrete per-mode scopes (`revision-log`, `revision-files`, `op-log`, `evolog`, …) and `_global`, there are three shared scopes. `log` contains behavior common to scrollable history surfaces. `revision-log-nav` inherits `log` and adds revision-specific focus movement; Normal and Bookmark inherit it directly. `revision-draft` inherits `revision-log-nav` and is itself inherited by operation composers such as Rebase and Squash. Binding a key under a shared scope rebinds it for every descendant; a same-key binding in a child mode still overrides the inherited binding there.
 
-The default jj command bindings (`:` / `ctrl-;`) and shell command bindings (`>` / `ctrl-.`) live in `log`, so they are available from every one of those descendants. Opening a prompt preserves the current log surface behind it. The global `ctrl-\` binding toggles dry-run mode.
+The default revision graph, bookmark, workspace, divergent-sibling, and working-copy navigation bindings live in `revision-log-nav`. The jj command bindings (`:` / `ctrl-;`) and shell command bindings (`>` / `ctrl-.`) live in `log`. Opening a prompt preserves the current log surface behind it. The global `ctrl-\` binding toggles dry-run mode.
 
 When dry-run mode is enabled, an action that would run a jj command directly opens the jj command prompt with that command prefilled instead. You can edit the command or press `enter` to submit it. Commands submitted from the prompt, internal repository reads, and shell commands continue normally. A bold `:` chip remains visible in the status area while the mode is enabled.
 
