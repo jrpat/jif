@@ -214,6 +214,9 @@ export const defaultKeymap: Keymap = {
   "revision-files": {
     j: "move-down",
     down: alias("move-down"),
+    // `l` opens the file list from the revision log; pressing it again keeps
+    // moving forward through that list rather than dead-ending.
+    l: alias("move-down"),
     k: "move-up",
     up: alias("move-up"),
     h: "collapse",

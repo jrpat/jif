@@ -202,7 +202,7 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 
 | Key | Command | Description |
 |-----|---------|-------------|
-| `j` / `↓` | move-down | Focus the next file |
+| `j` / `↓` / `l` | move-down | Focus the next file |
 | `k` / `↑` | move-up | Focus the previous file |
 | `h` / `←` | collapse | Collapse the file list and return to the revision |
 | `space` | toggle-file-selection | Add or remove the focused file from the selection |

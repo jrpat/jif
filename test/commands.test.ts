@@ -502,6 +502,14 @@ test("files mode does not inherit Normal revision commands", () => {
   expect(resolveForState("ctrl-f", state)).toBe("restrict-revset-to-focused-file");
 });
 
+test("l moves to the next file in files mode", () => {
+  const state = createFilesState();
+  // `l` expands a revision into its files from Normal; pressing it again inside
+  // the file list keeps going forward, so it aliases move-down here.
+  expect(resolveForState("l", state)).toBe("move-down");
+  expect(defaultKeymap["revision-files"].l).toEqual({ command: "move-down", canonical: false });
+});
+
 test("restrict-revset-to-focused-file requires a focused file", () => {
   const command = commandDefinitions.find((c) => c.id === "restrict-revset-to-focused-file");
   expect(command).toBeDefined();
