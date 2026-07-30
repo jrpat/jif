@@ -183,6 +183,12 @@ When the active revset is only `files(...)`, the collapsed status bar shows a `f
 | `alt-u` | redo | Redo the last undone operation |
 | `space` | toggle-revision-selection | Add or remove the focused revision from the selection |
 
+After the first selection, focus moves down. Later selections move focus in the
+same direction as the step from the previously selected revision to the newly
+selected one, so selecting upward continues upward and selecting downward
+continues downward. Removing a revision from the selection leaves focus in
+place.
+
 The split bindings are available only in the revision log, not while composing another operation or focusing an expanded file.
 
 #### Miscellaneous

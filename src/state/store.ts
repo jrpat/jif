@@ -2129,12 +2129,23 @@ export function toggleRevisionSelection(state: AppState): AppState {
   // pin the focus. Reviewers step through the preselected list, so advance the
   // focus on every toggle regardless of direction, mirroring normal selection.
   const isAbsorbDraft = state.commandDraft?.config.kind === "absorb";
+  const previousMarkedRowId = markedIds.at(-1);
+  const previousMarkedIndex = previousMarkedRowId === undefined
+    ? -1
+    : state.revisions.findIndex((revision) => revision.rowId === previousMarkedRowId);
+  const selectionDirection = previousMarkedIndex >= 0 &&
+      state.focusedRevisionIndex < previousMarkedIndex
+    ? -1
+    : 1;
 
   return {
     ...state,
     focusedRevisionIndex: isMarked && !isAbsorbDraft
       ? state.focusedRevisionIndex
-      : clampIndex(state.focusedRevisionIndex + 1, state.revisions.length),
+      : clampIndex(
+        state.focusedRevisionIndex + (isAbsorbDraft ? 1 : selectionDirection),
+        state.revisions.length,
+      ),
     selectedRowIds: selectingImplicitDraftSource
       ? ids
       : isSelected

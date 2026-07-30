@@ -1880,6 +1880,30 @@ test("toggleRevisionSelection works without a command draft", () => {
   expect(state.focusedRevisionIndex).toBe(1);
 });
 
+test("toggleRevisionSelection advances in the direction between successive selections", () => {
+  let state = focusRevisionAt(createAbsorbDescendantState(), 3);
+
+  state = toggleRevisionSelection(state);
+  expect(state.selectedRowIds).toEqual([ABSORB_STACK_FOCUSED_ROW_ID]);
+  expect(state.focusedRevisionIndex).toBe(4);
+
+  state = moveFocus(state, -2);
+  state = toggleRevisionSelection(state);
+  expect(state.selectedRowIds).toEqual([
+    ABSORB_STACK_FOCUSED_ROW_ID,
+    ABSORB_STACK_SIDE_ROW_ID,
+  ]);
+  expect(state.focusedRevisionIndex).toBe(1);
+
+  state = toggleRevisionSelection(state);
+  expect(state.selectedRowIds).toEqual([
+    ABSORB_STACK_FOCUSED_ROW_ID,
+    ABSORB_STACK_SIDE_ROW_ID,
+    ABSORB_STACK_CHILD_ROW_ID,
+  ]);
+  expect(state.focusedRevisionIndex).toBe(0);
+});
+
 test("toggleFileSelection adds and removes file paths", () => {
   let state = createState();
   state = openFocusedRevision(state);
