@@ -3,6 +3,19 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.5.2 — 2026-07-29
+
+### All changes
+
+- Add a shortcut to restart jif
+- Use # for the dry-run status chip
+- Bind l to next-file navigation in files mode
+- Align shortcut columns across panel sections
+- Keep inherited navigation visible in draft shortcut panels
+- Share revision navigation across command drafts
+- Enable undo and redo in revision files
+- Rate-limit repository refreshes under heavy churn
+
 ## v0.5.1 — 2026-07-24
 
 ### Highlights
