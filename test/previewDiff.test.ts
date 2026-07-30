@@ -113,7 +113,7 @@ describe("splitPatchIntoDiffSections", () => {
   });
 
   test("formats omitted-context separators with a trailing rule", () => {
-    expect(formatOmittedLineSeparator(1)).toBe("⋮⋮⋮ 1 more lines ⋮⋮⋮");
+    expect(formatOmittedLineSeparator(1)).toBe("⋮⋮⋮ 1 more line ⋮⋮⋮");
     expect(formatOmittedLineSeparator(37)).toBe("⋮⋮⋮ 37 more lines ⋮⋮⋮");
     expect(formatOmittedLineSeparator(37, 30)).toBe("⋮⋮⋮⋮⋮⋮⋮ 37 more lines ⋮⋮⋮⋮⋮⋮⋮⋮");
     expect(formatOmittedLineSeparator(37, 30)).toHaveLength(30);

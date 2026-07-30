@@ -178,11 +178,15 @@ export function splitPatchIntoDiffSections(patch: string): DiffSection[] {
 }
 
 export function formatOmittedLineSeparator(omittedLineCount: number, width = 0): string {
-  const label = ` ${omittedLineCount} more lines `;
+  const label = ` ${formatOmittedLineLabel(omittedLineCount)} `;
   const ruleWidth = Math.max(6, width - label.length);
   const leftWidth = Math.floor(ruleWidth / 2);
   const rightWidth = ruleWidth - leftWidth;
   return `${"⋮".repeat(leftWidth)}${label}${"⋮".repeat(rightWidth)}`;
+}
+
+export function formatOmittedLineLabel(omittedLineCount: number): string {
+  return `${omittedLineCount} more ${omittedLineCount === 1 ? "line" : "lines"}`;
 }
 
 // Extra columns a `<diff>` adds around content: the line-number gutter plus the

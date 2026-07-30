@@ -5,6 +5,7 @@ import {
   countDiffRows,
   estimateDiffWidth,
   fileTypeForPath,
+  formatOmittedLineLabel,
   formatOmittedLineSeparator,
   splitGitDiff,
   splitPatchIntoDiffSections,
@@ -240,7 +241,7 @@ function buildOmittedLineSeparatorText(
   ruleColor: string | undefined,
 ): StyledText {
   const content = formatOmittedLineSeparator(omittedLineCount, width);
-  const label = ` ${omittedLineCount} more lines `;
+  const label = ` ${formatOmittedLineLabel(omittedLineCount)} `;
   const labelStart = content.indexOf(label);
   if (labelStart === -1) {
     return new StyledText([styledChunk(content, ruleColor)]);
