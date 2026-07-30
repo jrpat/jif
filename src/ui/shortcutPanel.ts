@@ -1,7 +1,7 @@
 import type { CommandDefinition } from "../commands/definitions.ts";
 import type { AppState } from "../domain/types.ts";
-import { modeDefinitions, revisionLogNavCommandIds, type CanonicalKeyBinding, type Mode } from "../modes.ts";
-import { commandCanExecute, getExpandedRevision, getFocusedChildRevision, getFocusedParentRevision, getFocusedRevision } from "../state/store.ts";
+import { isFileFocusMode, modeDefinitions, revisionLogNavCommandIds, type CanonicalKeyBinding, type Mode } from "../modes.ts";
+import { commandCanExecute, getFocusedChildRevision, getFocusedFile, getFocusedParentRevision, getFocusedRevision } from "../state/store.ts";
 
 const MODIFIER_PREFIXES = new Set([
   "a",
@@ -540,11 +540,10 @@ function hasCancelableState(state: AppState): boolean {
     state.focusMode === "bookmark" ||
     state.commandDraft !== null ||
     state.selectedRowIds.length > 0 ||
-    state.focusMode === "files"
+    isFileFocusMode(state.focusMode)
   );
 }
 
 function currentFocusedFileExists(state: AppState): boolean {
-  const expandedRevision = getExpandedRevision(state);
-  return expandedRevision !== null && expandedRevision.files[state.focusedFileIndex] !== undefined;
+  return getFocusedFile(state) !== null;
 }

@@ -145,6 +145,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     openSearch: () => calls.push("openSearch"),
     openFastJump: () => calls.push("openFastJump"),
     openFileSearch: () => calls.push("openFileSearch"),
+    openFileFilter: () => calls.push("openFileFilter"),
     restrictRevsetToFocusedFile: () => calls.push("restrictRevsetToFocusedFile"),
     nextSearchMatch: () => calls.push("nextSearchMatch"),
     prevSearchMatch: () => calls.push("prevSearchMatch"),
@@ -1859,6 +1860,77 @@ test("dispatchGlobalKey routes / to openSearch in normal mode", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["openSearch"]);
+});
+
+test("dispatchGlobalKey routes / to openFileFilter in files mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "files",
+    focusModeStack: ["revisions", "files"],
+    expandedRowId: "aaaaaaaa",
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "/",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["openFileFilter"]);
+});
+
+test("dispatchGlobalKey lets printable keys through to the file filter input", () => {
+  const state: AppState = {
+    ...createState(),
+    focusMode: "file-filter",
+    focusModeStack: ["revisions", "files", "file-filter"],
+    expandedRowId: "aaaaaaaa",
+  };
+
+  // `a`, `d`, and `r` are Files-mode commands; the filter input must receive
+  // them as text instead. `q` would otherwise quit.
+  for (const key of ["a", "d", "r", "q", "/", " "]) {
+    const calls: string[] = [];
+    const handled = dispatchGlobalKey({
+      normalizedKey: key,
+      state,
+      commands: commandDefinitions,
+      controller: createController(calls),
+    });
+
+    expect(handled).toBeFalse();
+    expect(calls).toEqual([]);
+  }
+});
+
+test("dispatchGlobalKey keeps escape and arrow navigation working while filtering files", () => {
+  const state: AppState = {
+    ...createState(),
+    focusMode: "file-filter",
+    focusModeStack: ["revisions", "files", "file-filter"],
+    expandedRowId: "aaaaaaaa",
+  };
+
+  for (const [key, expected] of [
+    ["escape", "cancelOrBlur"],
+    ["ctrl-c", "cancelOrBlur"],
+    ["down", "moveFocus"],
+    ["up", "moveFocus"],
+  ] as const) {
+    const calls: string[] = [];
+    const handled = dispatchGlobalKey({
+      normalizedKey: key,
+      state,
+      commands: commandDefinitions,
+      controller: createController(calls),
+    });
+
+    expect(handled).toBeTrue();
+    expect(calls).toEqual([expected]);
+  }
 });
 
 test("dispatchGlobalKey routes f to openFastJump in normal mode", () => {

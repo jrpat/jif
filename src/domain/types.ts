@@ -16,6 +16,7 @@ export type InlineConfirmation = Readonly<{
 export type FocusMode =
   | "revisions"
   | "files"
+  | "file-filter"
   | "op-log"
   | "evolog"
   | "inline-confirmation"
@@ -208,6 +209,9 @@ export type AppState = Readonly<{
   focusedEvologIndex: number;
   expandedRowId: string | null;
   focusedFileIndex: number;
+  // Case-insensitive substring narrowing the expanded revision's file list.
+  // Scoped to that revision: collapsing or moving to another one clears it.
+  fileFilterQuery: string;
   selectedRowIds: readonly string[];
   markedRowIds: readonly string[];
   selectedFilePaths: readonly string[];

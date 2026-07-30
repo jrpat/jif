@@ -56,6 +56,7 @@ async function scrollDuringSearch() {
         <For each={store.state.revisions}>
           {(revision, index) => (
             <RevisionItem
+              fileFilterActions={store.actions}
               state={store.state}
               revision={revision}
               revisionChangeIdDisplayLength={4}

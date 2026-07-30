@@ -222,8 +222,27 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 | `u` | undo | Undo the last operation |
 | `alt-u` | redo | Redo the last undone operation |
 | `ctrl-f` | restrict-revset-to-focused-file | Show revisions that changed the focused file |
+| `/` | filter-files | Narrow the changed-file list to paths matching what you type |
 | `:` | command-bar | Run a jj subcommand |
 | `>` / `ctrl-.` | shell-command-bar | Run a shell command |
+
+`a` (select-all-files) is scoped to the files currently visible, so while a filter is active it selects — or clears — only the matching files and leaves selections made under an earlier query alone.
+
+### Filter Files
+
+Press `/` in Files mode to filter the changed-file list. A `/ ` prompt appears at the top of the list and narrows it to files whose path contains what you type, matched case-insensitively; the matching part of each path is highlighted with inverse video. Renames match on either side of their `src/{old => new}.ext` display form.
+
+Self-contained and input-first: every printable key is filter text, so none of the Files actions are bound here. Only the keys a text input cannot produce stay live — `escape`/`ctrl-c` and the arrows below, plus the `_global` shortcuts.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `↓` | move-down | Focus the next matching file |
+| `↑` | move-up | Focus the previous matching file |
+
+- **Enter** dismisses the input but keeps the filter applied. You return to Files mode with the list still narrowed, so `space`, `r`, `ctrl-u`, and the rest operate on the matches.
+- **Escape (first press)** clears the filter and restores the full list. From Files mode a committed filter is cleared the same way, before a second Escape collapses the revision.
+- File selections survive filtering, including selections on files the query hides — the composed command still names every selected file.
+- Collapsing the revision, or moving to another one, drops the filter.
 
 ### Rebase
 

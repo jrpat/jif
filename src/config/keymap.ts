@@ -2,7 +2,7 @@ import { commandDefinitions, type CommandDefinition, type UserCommandController 
 import type { AppState as BaseAppState, ChangedFile, RevisionSummary } from "../domain/types.ts";
 import { getRevisionArg } from "../domain/revisionIds.ts";
 import { defaultKeymap, keymapScopes, type Keymap, type KeymapBinding, type KeymapScope } from "../modes.ts";
-import { getExpandedRevision } from "../state/store.ts";
+import { getFocusedFile } from "../state/store.ts";
 
 type MutableKeymap = {
   [Scope in KeymapScope]: Record<string, KeymapBinding>;
@@ -60,10 +60,10 @@ export function createUserAppState(state: BaseAppState): UserAppState {
           .map((revision) => getRevisionArg(revision.revisionId, revision.changeIdPrefixLength));
       }
       if (property === "focusedFile") {
-        return getExpandedRevision(target)?.files[target.focusedFileIndex] ?? null;
+        return getFocusedFile(target);
       }
       if (property === "file") {
-        return getExpandedRevision(target)?.files[target.focusedFileIndex]?.path ?? "";
+        return getFocusedFile(target)?.path ?? "";
       }
 
       return Reflect.get(target, property, receiver);

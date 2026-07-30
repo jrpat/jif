@@ -1,4 +1,4 @@
-import { getAdjacentBookmarkRevisionIndex, getAdjacentWorkspaceRevisionIndex, getExpandedRevision, getFocusedChildRevision, getFocusedNotification, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
+import { getAdjacentBookmarkRevisionIndex, getAdjacentWorkspaceRevisionIndex, getExpandedRevision, getFocusedChildRevision, getFocusedFile, getFocusedNotification, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
 import type { AppState, RebaseSourceKind, RebaseTargetKind } from "../domain/types.ts";
 import { canSearchState } from "../search/matching.ts";
 
@@ -92,6 +92,7 @@ export type CommandController = Readonly<{
   focusWorkingCopy: () => void;
   openRevsetInput: (initialQuery?: string) => void;
   openFileSearch: () => void;
+  openFileFilter: () => void;
   restrictRevsetToFocusedFile: () => void;
   toggleShortcutPanel: () => void;
   commit: () => void;
@@ -149,8 +150,7 @@ function focusedIsElided(state: AppState): boolean {
 
 function focusedFileExists(state: AppState): boolean {
   if (focusedIsElided(state)) return false;
-  const expanded = getExpandedRevision(state);
-  return expanded !== null && expanded.files[state.focusedFileIndex] !== undefined;
+  return getFocusedFile(state) !== null;
 }
 
 function helpToastVisible(state: AppState): boolean {
@@ -858,6 +858,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Find revisions that changed a file",
     run: (controller) => controller.openFileSearch(),
     group: "global",
+  },
+  {
+    id: "filter-files",
+    title: "Filter Files",
+    description: "Narrow the changed-file list to paths matching what you type",
+    canExecute: (state) => getExpandedRevision(state) !== null,
+    run: (controller) => controller.openFileFilter(),
+    group: "mode",
   },
   {
     id: "restrict-revset-to-focused-file",

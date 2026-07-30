@@ -1,12 +1,17 @@
 import type { AppState } from "./domain/types.ts";
 import type { CommandDefinition } from "./commands/definitions.ts";
 
+export function isFileFocusMode(focusMode: AppState["focusMode"]): boolean {
+  return focusMode === "files" || focusMode === "file-filter";
+}
+
 export type Mode =
   | "log"
   | "revision-log-nav"
   | "revision-draft"
   | "revision-log"
   | "revision-files"
+  | "revision-files-filter"
   | "op-log"
   | "evolog"
   | "inline-confirmation"
@@ -63,6 +68,13 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
     label: "Revisions",
   },
   "revision-files": { id: "revision-files", inputPassthrough: false, label: "Files" },
+  // Deliberately parentless: while the filter input has focus every printable
+  // key must reach it, so it inherits none of the Files action bindings.
+  "revision-files-filter": {
+    id: "revision-files-filter",
+    inputPassthrough: true,
+    label: "Filter Files",
+  },
   "op-log": { id: "op-log", parent: "log", inputPassthrough: false, label: "Op Log" },
   evolog: { id: "evolog", parent: "log", inputPassthrough: false, label: "Evolog" },
   "inline-confirmation": { id: "inline-confirmation", inputPassthrough: false, label: "Confirm" },
@@ -228,6 +240,7 @@ export const defaultKeymap: Keymap = {
     u: "undo",
     "alt-u": "redo",
     "ctrl-f": "restrict-revset-to-focused-file",
+    "/": "filter-files",
     " ": "toggle-file-selection",
     a: "select-all-files",
     ":": "command-bar",
@@ -237,6 +250,12 @@ export const defaultKeymap: Keymap = {
     "?": "shortcut-panel",
     "ctrl-enter": "toggle-preview-full-file",
     ...previewBindings,
+  },
+  // Only keys a text input never produces: everything printable is filter text.
+  "revision-files-filter": {
+    "ctrl-c": alias("cancel"),
+    down: "move-down",
+    up: "move-up",
   },
   // Inherits movement/search/preview from `log`; only the operation-specific
   // actions live here.
@@ -368,6 +387,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "op-log") return "op-log";
   if (state.focusMode === "evolog") return "evolog";
   if (state.focusMode === "notifications") return "notifications";
+  if (state.focusMode === "file-filter") return "revision-files-filter";
   if (state.focusMode === "files") return "revision-files";
   if (state.commandDraft?.config.kind === "rebase") return "rebase";
   if (state.commandDraft?.config.kind === "duplicate") return "duplicate";

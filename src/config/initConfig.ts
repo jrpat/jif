@@ -195,7 +195,7 @@ function renderConfigTypes(): string {
 declare global {
 namespace Jif {
   type AppLayout = "loose" | "normal" | "tight";
-  type FocusMode = "revisions" | "files" | "op-log" | "evolog" | "inline-confirmation" | "command" | "revset" | "file-search" | "search" | "diff-viewer" | "notifications";
+  type FocusMode = "revisions" | "files" | "file-filter" | "op-log" | "evolog" | "inline-confirmation" | "command" | "revset" | "file-search" | "search" | "diff-viewer" | "notifications";
   type SearchScopeId = "revision-log" | "operation-log" | "evolog";
   type SearchMode = "search" | "fast-jump";
   type StatusLevel = "info" | "success" | "warning" | "error";
@@ -289,6 +289,7 @@ namespace Jif {
     focusedRevisionIndex: number;
     expandedRowId: string | null;
     focusedFileIndex: number;
+    fileFilterQuery: string;
     selectedRowIds: readonly string[];
     markedRowIds: readonly string[];
     selectedFilePaths: readonly string[];
@@ -391,6 +392,7 @@ namespace Jif {
     focusWorkingCopy: () => void;
     openRevsetInput: (initialQuery?: string) => void;
     openFileSearch: () => void;
+    openFileFilter: () => void;
     restrictRevsetToFocusedFile: () => void;
     toggleShortcutPanel: () => void;
     commit: () => void;

@@ -29,6 +29,7 @@ import {
   draftConfigs,
   getDisplayedCommandText,
   getExpandedRevision,
+  getFocusedFile,
   getFocusedNotification,
   getFocusedOperationLogEntry,
   getFocusedRevision,
@@ -415,10 +416,12 @@ export function createJifCommandController(args: Readonly<{
     openFileSearch() {
       store.actions.openFileSearch();
     },
+    openFileFilter() {
+      store.actions.openFileFilter();
+    },
     restrictRevsetToFocusedFile() {
       const state = store.snapshot();
-      const revision = getExpandedRevision(state);
-      const file = revision?.files[state.focusedFileIndex];
+      const file = getFocusedFile(state);
       if (!file) {
         store.actions.pushEvent("Cannot filter by file: no file focused", "warning");
         return;
@@ -681,7 +684,7 @@ export function createJifCommandController(args: Readonly<{
       const state = store.snapshot();
       const revisionArg = getFocusedRevisionArg(state);
       if (!revisionArg) return;
-      const file = getExpandedRevision(state)?.files[state.focusedFileIndex];
+      const file = getFocusedFile(state);
       if (!file) return;
       void args.runInteractiveJjCommand(
         quoteCommand(["diff", "-r", revisionArg, join(state.repoPath, file.path)]),
@@ -811,7 +814,7 @@ export function createJifCommandController(args: Readonly<{
       }
 
       const revisionArg = getRevisionArg(revision.revisionId, revision.changeIdPrefixLength);
-      const focusedPath = revision.files[state.focusedFileIndex]?.path;
+      const focusedPath = getFocusedFile(state)?.path;
       const filePaths = state.selectedFilePaths.length > 0
         ? state.selectedFilePaths
         : focusedPath ? [focusedPath] : [];
@@ -834,7 +837,7 @@ export function createJifCommandController(args: Readonly<{
         return;
       }
 
-      const focusedPath = revision.files[state.focusedFileIndex]?.path;
+      const focusedPath = getFocusedFile(state)?.path;
       const filePaths = state.selectedFilePaths.length > 0
         ? state.selectedFilePaths
         : focusedPath ? [focusedPath] : [];

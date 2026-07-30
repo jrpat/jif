@@ -56,6 +56,10 @@ import {
   closeRevsetInput,
   openFileSearch,
   closeFileSearch,
+  openFileFilter,
+  setFileFilterText,
+  finalizeFileFilter,
+  clearFileFilter,
   closeSearch,
   closeShortcutPanel,
   setRevsetQuery,
@@ -461,6 +465,18 @@ export function createAppStore(
       },
       closeFileSearch() {
         mutate((currentState) => closeFileSearch(currentState));
+      },
+      openFileFilter() {
+        mutate((currentState) => openFileFilter(currentState));
+      },
+      setFileFilterText(query: string) {
+        mutate((currentState) => setFileFilterText(currentState, query));
+      },
+      finalizeFileFilter() {
+        mutate((currentState) => finalizeFileFilter(currentState));
+      },
+      clearFileFilter() {
+        mutate((currentState) => clearFileFilter(currentState));
       },
       setRevsetQuery(query: string) {
         mutate((currentState) => setRevsetQuery(currentState, query));

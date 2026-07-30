@@ -59,6 +59,7 @@ async function renderRevisionStack(
       <For each={store.state.revisions}>
         {(revision, index) => (
           <RevisionItem
+            fileFilterActions={store.actions}
             state={store.state}
             revision={revision}
             index={index()}
@@ -111,6 +112,7 @@ async function renderFocusedRevisionBackgrounds(layout: AppLayout) {
   const rendered = await testRender(() => (
     <box width={32} flexDirection="column">
       <RevisionItem
+        fileFilterActions={store.actions}
         state={store.state}
         revision={store.state.revisions[0]!}
         index={0}
@@ -155,6 +157,7 @@ async function renderFocusedFileBackgrounds(selected: boolean) {
   const rendered = await testRender(() => (
     <box width={40} flexDirection="column">
       <RevisionItem
+        fileFilterActions={store.actions}
         state={store.state}
         revision={store.state.revisions[0]!}
         index={0}
@@ -203,6 +206,7 @@ async function renderLayoutCycleAfterMount() {
   const rendered = await testRender(() => (
     <box width={32} flexDirection="column">
       <RevisionItem
+        fileFilterActions={store.actions}
         state={store.state}
         revision={store.state.revisions[0]!}
         index={0}
@@ -240,6 +244,7 @@ async function captureRetainedRevisionSlots() {
   const rendered = await testRender(() => (
     <box width={32} flexDirection="column">
       <RevisionLogSurface
+        fileFilterActions={store.actions}
         visible={visible()}
         state={store.state}
         config={config}
@@ -307,6 +312,7 @@ async function renderLongSuperCondensedDescription() {
   const rendered = await testRender(() => (
     <box width={24} flexDirection="column">
       <RevisionItem
+        fileFilterActions={store.actions}
         state={store.state}
         revision={store.state.revisions[0]!}
         index={0}
@@ -345,6 +351,7 @@ async function renderLongSuperCondensedDescriptionAfterResize() {
   const rendered = await testRender(() => (
     <box width={width()} flexDirection="column">
       <RevisionItem
+        fileFilterActions={store.actions}
         state={store.state}
         revision={store.state.revisions[0]!}
         index={0}
@@ -392,6 +399,7 @@ async function renderDateChipWithLongDescription(layout: AppLayout) {
   const rendered = await testRender(() => (
     <box width={40} flexDirection="column">
       <RevisionItem
+        fileFilterActions={store.actions}
         state={store.state}
         revision={store.state.revisions[0]!}
         index={0}
@@ -429,6 +437,7 @@ async function renderDivergentFocusedRevision() {
       <For each={store.state.revisions}>
         {(revision, index) => (
           <RevisionItem
+            fileFilterActions={store.actions}
             state={store.state}
             revision={revision}
             index={index()}
@@ -467,6 +476,7 @@ async function renderExpandedRevisionWithChips() {
   const rendered = await testRender(() => (
     <box width={64} flexDirection="column">
       <RevisionItem
+        fileFilterActions={store.actions}
         state={store.state}
         revision={store.state.revisions[0]!}
         index={0}
@@ -506,6 +516,7 @@ async function renderOversizedSideChip(
   const rendered = await testRender(() => (
     <box width={20} flexDirection="column">
       <RevisionItem
+        fileFilterActions={store.actions}
         state={store.state}
         revision={store.state.revisions[0]!}
         index={0}
@@ -552,6 +563,7 @@ async function renderBookmarkChipAfterRefresh(layout: AppLayout) {
       <For each={store.state.revisions}>
         {(revision, index) => (
           <RevisionItem
+            fileFilterActions={store.actions}
             state={store.state}
             revision={revision}
             index={index()}
@@ -613,6 +625,7 @@ async function renderCommandDraftChips(
       <For each={store.state.revisions}>
         {(revision, index) => (
           <RevisionItem
+            fileFilterActions={store.actions}
             state={store.state}
             revision={revision}
             index={index()}

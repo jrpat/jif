@@ -71,6 +71,7 @@ const SEARCH_SCOPE_DEFINITIONS: Readonly<Record<SearchScopeId, SearchScopeDefini
 const SEARCH_SCOPE_LIST = Object.values(SEARCH_SCOPE_DEFINITIONS);
 const SEARCH_VISIBLE_THROUGH_FOCUS_MODES = new Set<AppState["focusMode"]>([
   "command",
+  "file-filter",
   "inline-confirmation",
   "revset",
   "search",

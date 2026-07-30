@@ -69,6 +69,7 @@ async function renderChipBackgrounds(args: {
   const rendered = await testRender(() => (
     <box width={48} flexDirection="column">
       <RevisionItem
+        fileFilterActions={store.actions}
         state={store.state}
         revision={store.state.revisions[0]!}
         index={0}
@@ -123,6 +124,7 @@ const rendered = await testRender(() => {
   return (
     <box width={48} flexDirection="column">
       <RevisionItem
+        fileFilterActions={store.actions}
         state={store.state}
         revision={store.state.revisions[0]!}
         index={0}

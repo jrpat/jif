@@ -77,6 +77,7 @@ async function renderRevisionSearch(query: string) {
         <For each={store.state.revisions}>
           {(revision, index) => (
             <RevisionItem
+              fileFilterActions={store.actions}
               state={store.state}
               revision={revision}
               revisionChangeIdDisplayLength={4}
@@ -139,6 +140,7 @@ async function renderInactiveRevisionWithEmoji() {
         <For each={store.state.revisions}>
           {(revision, index) => (
             <RevisionItem
+              fileFilterActions={store.actions}
               state={store.state}
               revision={revision}
               revisionChangeIdDisplayLength={4}

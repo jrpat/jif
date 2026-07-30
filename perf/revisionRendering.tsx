@@ -42,6 +42,7 @@ const rendered = await testRender(() => (
     <scrollbox width="100%" height="100%" scrollY>
       <box width="100%" flexDirection="column">
         <RevisionLogSurface
+          fileFilterActions={store.actions}
           visible={showRevisionLog()}
           state={store.state}
           config={config}

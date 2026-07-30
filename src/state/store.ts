@@ -25,6 +25,7 @@ import type {
   StatusMessageVariant,
 } from "../domain/types.ts";
 import { getChangeIdFromRevisionId, getRevisionArg, isDivergentRevisionId } from "../domain/revisionIds.ts";
+import { filterChangedFiles } from "../domain/fileFilter.ts";
 import {
   clampSearchIndex,
   getActiveSearchScope,
@@ -34,6 +35,7 @@ import {
   setFocusedSearchIndex,
   textMatchesQuery,
 } from "../search/matching.ts";
+import { isFileFocusMode } from "../modes.ts";
 
 export const DRAFT_PLACEHOLDER = "░░░░";
 export const INLINE_CONFIRMATION_FILES_PLACEHOLDER = "…files…";
@@ -222,6 +224,7 @@ export function createInitialState(
     focusedEvologIndex: 0,
     expandedRowId: null,
     focusedFileIndex: 0,
+    fileFilterQuery: "",
     selectedRowIds: [],
     markedRowIds: [],
     selectedFilePaths: [],
@@ -402,6 +405,71 @@ export function closeFileSearch(state: AppState): AppState {
   return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
 }
 
+export function openFileFilter(state: AppState): AppState {
+  if (state.expandedRowId === null) {
+    return state;
+  }
+
+  const nextState = {
+    ...state,
+    inlineConfirmation: null,
+  };
+  return replaceFocusModeStack(nextState, [...getBrowseFocusModeStack(nextState), "file-filter"]);
+}
+
+export function setFileFilterText(state: AppState, query: string): AppState {
+  // Only the focused filter input drives the query. The inline input mounts and
+  // unmounts with the filter row, and OpenTUI's <input> emits a synthetic INPUT
+  // event when its initial `value` is applied — without this guard that spurious
+  // empty event would wipe a filter the user just committed with Enter.
+  if (state.focusMode !== "file-filter") {
+    return state;
+  }
+
+  return applyFileFilterQuery(state, query);
+}
+
+// Leaves the filter applied and returns to the file list, so the narrowed list
+// stays on screen for the operation the user opened it for.
+export function finalizeFileFilter(state: AppState): AppState {
+  if (state.focusMode !== "file-filter") {
+    return state;
+  }
+
+  return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
+}
+
+export function clearFileFilter(state: AppState): AppState {
+  const cleared = applyFileFilterQuery(state, "");
+  if (state.focusMode !== "file-filter") {
+    return cleared;
+  }
+
+  return replaceFocusModeStack(cleared, getBrowseFocusModeStack(cleared));
+}
+
+function applyFileFilterQuery(state: AppState, query: string): AppState {
+  if (query === state.fileFilterQuery) {
+    return state;
+  }
+
+  // Keep the cursor on the same file whenever it survives the new query, so
+  // typing does not silently retarget the pending file operation.
+  const focusedPath = getFocusedFile(state)?.path ?? null;
+  const nextState: AppState = { ...state, fileFilterQuery: query };
+  const visibleFiles = getVisibleExpandedFiles(nextState);
+  const retainedIndex = focusedPath === null
+    ? -1
+    : visibleFiles.findIndex((file) => file.path === focusedPath);
+
+  return {
+    ...nextState,
+    focusedFileIndex: retainedIndex === -1
+      ? clampIndex(state.focusedFileIndex, visibleFiles.length)
+      : retainedIndex,
+  };
+}
+
 export function createEmptyCommandBar(): CommandBarState {
   return {
     kind: "jj",
@@ -456,10 +524,9 @@ export function applyRepositoryData(
   const rowIdSet = new Set(revisions.map((r) => r.rowId));
   const selectedRowIds = state.selectedRowIds.filter((id) => rowIdSet.has(id));
   const markedRowIds = state.markedRowIds.filter((id) => rowIdSet.has(id));
-  const selectedFilePaths =
-    state.expandedRowId !== null && expandedRowId !== null
-      ? state.selectedFilePaths
-      : [];
+  const keepsExpandedRevision = state.expandedRowId !== null && expandedRowId !== null;
+  const selectedFilePaths = keepsExpandedRevision ? state.selectedFilePaths : [];
+  const fileFilterQuery = keepsExpandedRevision ? state.fileFilterQuery : "";
 
   return normalizeFocusState({
     ...state,
@@ -469,7 +536,11 @@ export function applyRepositoryData(
     inlineConfirmation,
     focusedRevisionIndex,
     expandedRowId,
-    focusedFileIndex: clampIndex(state.focusedFileIndex, getExpandedFilesCount(revisions, expandedRowId)),
+    fileFilterQuery,
+    focusedFileIndex: clampIndex(
+      state.focusedFileIndex,
+      getVisibleExpandedFilesCount(revisions, expandedRowId, fileFilterQuery),
+    ),
     selectedRowIds,
     markedRowIds,
     selectedFilePaths,
@@ -499,7 +570,7 @@ export function setRevisionFiles(
     selectedFilePaths,
     focusedFileIndex:
       state.expandedRowId === rowId
-        ? clampIndex(state.focusedFileIndex, files.length)
+        ? clampIndex(state.focusedFileIndex, filterChangedFiles(files, state.fileFilterQuery).length)
         : state.focusedFileIndex,
   };
 }
@@ -539,11 +610,13 @@ export function moveFocus(state: AppState, delta: number): AppState {
     };
   }
 
-  if (state.focusMode === "files" && state.expandedRowId !== null) {
-    const revision = getExpandedRevision(state);
+  if (isFileFocusMode(state.focusMode) && state.expandedRowId !== null) {
     return {
       ...state,
-      focusedFileIndex: clampIndex(state.focusedFileIndex + delta, revision?.files.length ?? 0),
+      focusedFileIndex: clampIndex(
+        state.focusedFileIndex + delta,
+        getVisibleExpandedFiles(state).length,
+      ),
     };
   }
 
@@ -721,6 +794,7 @@ export function focusRevisionAt(state: AppState, index: number): AppState {
     expandedRowId: collapseExpandedRevision ? null : state.expandedRowId,
     focusedRevisionIndex: clamped,
     focusedFileIndex: 0,
+    fileFilterQuery: collapseExpandedRevision ? "" : state.fileFilterQuery,
     selectedFilePaths: collapseExpandedRevision ? [] : state.selectedFilePaths,
   };
 
@@ -830,6 +904,7 @@ export function openFocusedRevision(state: AppState): AppState {
     inlineConfirmation: null,
     expandedRowId: revision.rowId,
     focusedFileIndex: 0,
+    fileFilterQuery: "",
     selectedFilePaths: [],
   };
 
@@ -1070,6 +1145,7 @@ export function closeFocusedRevision(state: AppState): AppState {
     inlineConfirmation: null,
     expandedRowId: null,
     focusedFileIndex: 0,
+    fileFilterQuery: "",
     selectedFilePaths: [],
   }, ["revisions"]);
 }
@@ -1400,6 +1476,10 @@ export function cancelOrBlurState(state: AppState): AppState {
     return closeFileSearch(state);
   }
 
+  if (state.focusMode === "file-filter") {
+    return clearFileFilter(state);
+  }
+
   if (state.focusMode === "inline-confirmation") {
     return closeInlineConfirmation(state);
   }
@@ -1451,6 +1531,12 @@ export function cancelOrBlurState(state: AppState): AppState {
     return clearRevisionSelection(state);
   }
 
+  // A filter committed with Enter outlives its input, so unwind it before
+  // collapsing the revision it narrows.
+  if (state.fileFilterQuery !== "") {
+    return clearFileFilter(state);
+  }
+
   if (state.focusMode === "files") {
     return closeFocusedRevision(state);
   }
@@ -1467,16 +1553,12 @@ export function clearRevisionSelection(state: AppState): AppState {
 }
 
 export function toggleFileSelection(state: AppState): AppState {
-  if (state.focusMode !== "files" || state.expandedRowId === null) {
+  if (!isFileFocusMode(state.focusMode) || state.expandedRowId === null) {
     return state;
   }
 
-  const revision = getExpandedRevision(state);
-  if (!revision) {
-    return state;
-  }
-
-  const file = revision.files[state.focusedFileIndex];
+  const visibleFiles = getVisibleExpandedFiles(state);
+  const file = visibleFiles[state.focusedFileIndex];
   if (!file) {
     return state;
   }
@@ -1486,7 +1568,7 @@ export function toggleFileSelection(state: AppState): AppState {
     ...state,
     focusedFileIndex: isSelected
       ? state.focusedFileIndex
-      : clampIndex(state.focusedFileIndex + 1, revision.files.length),
+      : clampIndex(state.focusedFileIndex + 1, visibleFiles.length),
     selectedFilePaths: isSelected
       ? state.selectedFilePaths.filter((p) => p !== file.path)
       : [...state.selectedFilePaths, file.path],
@@ -1494,21 +1576,27 @@ export function toggleFileSelection(state: AppState): AppState {
 }
 
 export function selectAllFiles(state: AppState): AppState {
-  if (state.focusMode !== "files" || state.expandedRowId === null) {
+  if (!isFileFocusMode(state.focusMode) || state.expandedRowId === null) {
     return state;
   }
 
-  const revision = getExpandedRevision(state);
-  if (!revision || revision.files.length === 0) {
+  // Scoped to the visible files: while a filter is active this selects (or
+  // clears) exactly what is on screen and leaves selections made under an
+  // earlier query untouched.
+  const visiblePaths = getVisibleExpandedFiles(state).map((file) => file.path);
+  if (visiblePaths.length === 0) {
     return state;
   }
 
-  const allPaths = revision.files.map((file) => file.path);
-  const allSelected = allPaths.every((path) => state.selectedFilePaths.includes(path));
+  const visiblePathSet = new Set(visiblePaths);
+  const selectedPathSet = new Set(state.selectedFilePaths);
+  const allSelected = visiblePaths.every((path) => selectedPathSet.has(path));
 
   return {
     ...state,
-    selectedFilePaths: allSelected ? [] : allPaths,
+    selectedFilePaths: allSelected
+      ? state.selectedFilePaths.filter((path) => !visiblePathSet.has(path))
+      : [...state.selectedFilePaths, ...visiblePaths.filter((path) => !selectedPathSet.has(path))],
   };
 }
 
@@ -2435,6 +2523,22 @@ export function getExpandedRevision(state: AppState): RevisionSummary | null {
   );
 }
 
+// The expanded revision's files after the active filter. Everything that reads
+// or moves file focus goes through this list, so `focusedFileIndex` always
+// indexes what is on screen rather than the unfiltered set.
+export function getVisibleExpandedFiles(state: AppState): readonly ChangedFile[] {
+  const revision = getExpandedRevision(state);
+  if (!revision) {
+    return [];
+  }
+
+  return filterChangedFiles(revision.files, state.fileFilterQuery);
+}
+
+export function getFocusedFile(state: AppState): ChangedFile | null {
+  return getVisibleExpandedFiles(state)[state.focusedFileIndex] ?? null;
+}
+
 export function getInlineConfirmation(state: AppState): InlineConfirmation | null {
   return state.inlineConfirmation ?? null;
 }
@@ -3032,15 +3136,17 @@ export function commandCanExecute(state: AppState): boolean {
   return state.selectedRowIds.length > 0;
 }
 
-function getExpandedFilesCount(
+function getVisibleExpandedFilesCount(
   revisions: readonly RevisionSummary[],
   expandedRowId: string | null,
+  fileFilterQuery: string,
 ): number {
   if (!expandedRowId) {
     return 0;
   }
 
-  return revisions.find((revision) => revision.rowId === expandedRowId)?.files.length ?? 0;
+  const files = revisions.find((revision) => revision.rowId === expandedRowId)?.files ?? [];
+  return filterChangedFiles(files, fileFilterQuery).length;
 }
 
 function reconcileRowId(
@@ -3186,7 +3292,7 @@ function normalizeFocusModeStack(
   state: Pick<AppState, "expandedRowId" | "inlineConfirmation" | "diffViewer">,
 ): FocusMode[] {
   const nextStack = stack.filter((mode) => {
-    if (mode === "files") {
+    if (isFileFocusMode(mode)) {
       return state.expandedRowId !== null;
     }
 

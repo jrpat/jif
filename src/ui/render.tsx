@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { MouseButton, TextAttributes, type MouseEvent, type ScrollBoxRenderable } from "@opentui/core";
+import { MouseButton, RGBA, StyledText, TextAttributes, type MouseEvent, type ScrollBoxRenderable, type TextChunk } from "@opentui/core";
 import { For, Index, Show, createEffect, createMemo, createRenderEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { useKeyboard, useRenderer } from "@opentui/solid";
@@ -17,12 +17,14 @@ import {
   getDisplayedCommandText,
   getExpandedRevision,
   getFocusTone,
+  getFocusedFile,
   getFocusedRevision,
   getFocusedOperationLogEntry,
   getFocusedRevisionArg,
   getMarkedRowIds,
   getDisplayedNotifications,
   getOperationAffectedRowIds,
+  getVisibleExpandedFiles,
   type CommandSegment,
 } from "../state/store.ts";
 import { logShortcutDebug } from "../debug.ts";
@@ -100,8 +102,15 @@ import {
   collectDirectCanonicalBindingsForMode,
   collectInheritedAndGlobalCanonicalBindings,
   getActiveMode,
+  isFileFocusMode,
 } from "../modes.ts";
-import { getChangedFileRowState, getChangedFilesPlaceholderText } from "./revisionFiles.ts";
+import {
+  buildChangedFileNameSegments,
+  getChangedFileRowState,
+  getChangedFilesPlaceholderText,
+  showsChangedFilesFilter,
+} from "./revisionFiles.ts";
+import { filterChangedFiles } from "../domain/fileFilter.ts";
 import { resolveOpHeadsPath } from "../jj/opHeads.ts";
 import { bindAutoRefresh, bindOpHeadsWatcher, bindRefreshOnFocus, createRepositoryRefresher } from "./repositoryRefresh.ts";
 import { createFocusClickGuard } from "./focusClickGuard.ts";
@@ -474,7 +483,7 @@ export function JifView(props: {
       }
     } else if (mode === "files") {
       const revArg = getFocusedRevisionArg(store.state);
-      const file = getExpandedRevision(store.state)?.files[store.state.focusedFileIndex];
+      const file = getFocusedFile(store.state);
       if (revArg && file) {
         const absolutePath = join(store.state.repoPath, file.path);
         const fullFile = store.state.previewFullFile;
@@ -889,7 +898,7 @@ export function JifView(props: {
   });
 
   createRenderEffect(() => {
-    if (store.state.focusMode !== "files" || !logViewport) {
+    if (!isFileFocusMode(store.state.focusMode) || !logViewport) {
       return;
     }
 
@@ -898,8 +907,7 @@ export function JifView(props: {
       return;
     }
 
-    const revision = getExpandedRevision(store.state);
-    const fileCount = revision?.files.length ?? 0;
+    const fileCount = getVisibleExpandedFiles(store.state).length;
     if (fileCount === 0) {
       return;
     }
@@ -1031,6 +1039,7 @@ export function JifView(props: {
               <box width="100%" flexDirection="column">
                 <RevisionLogSurface
                   visible={logSurfaceMode() === "revisions" || logSurfaceMode() === "files"}
+                  fileFilterActions={store.actions}
                   state={store.state}
                   config={config}
                   revisionChangeIdDisplayLength={revisionChangeIdDisplayLength()}
@@ -1286,6 +1295,7 @@ export function JifView(props: {
 
 export function RevisionLogSurface(props: {
   visible: boolean;
+  fileFilterActions: FileFilterActions;
   state: AppStore["state"];
   config: ResolvedAppConfig;
   revisionChangeIdDisplayLength?: number;
@@ -1306,6 +1316,7 @@ export function RevisionLogSurface(props: {
       <For each={props.state.revisions}>
         {(revision, index) => (
           <RevisionItem
+            fileFilterActions={props.fileFilterActions}
             state={props.state}
             revision={revision}
             revisionChangeIdDisplayLength={props.revisionChangeIdDisplayLength}
@@ -1326,6 +1337,7 @@ export function RevisionLogSurface(props: {
 }
 
 export function RevisionItem(props: {
+  fileFilterActions: FileFilterActions;
   state: AppStore["state"];
   revision: RevisionSummary;
   revisionChangeIdDisplayLength?: number;
@@ -1361,7 +1373,10 @@ export function RevisionItem(props: {
       )
   );
   const commandChipText = createMemo(() => getCommandChipTextForRevision(props.state, props.revision.rowId));
-  const changedFileRows = createMemo(() => isExpanded() ? buildChangedFileDisplayRows(props.revision) : []);
+  const changedFileRows = createMemo(() =>
+    isExpanded() ? buildChangedFileDisplayRows(props.revision, props.state.fileFilterQuery) : []
+  );
+  const showsFileFilter = createMemo(() => isExpanded() && showsChangedFilesFilter(props.state));
   const rowState = createMemo(() =>
     getRevisionRowState(props.revision.rowId, props.focusedRowId, props.selectedRowIds) ?? "default",
   );
@@ -1371,8 +1386,11 @@ export function RevisionItem(props: {
   const nextRowState = createMemo(() =>
     getRevisionRowState(props.nextRowId, props.focusedRowId, props.selectedRowIds),
   );
+  // Every row the expanded detail area draws below the header: the filter
+  // input, the (filtered) file rows or their placeholder, and any inline
+  // confirmation. The graph gutter is extended to cover exactly these.
   const detailRowCount = () => isExpanded()
-    ? Math.max(props.revision.files.length, 1) + (inlineConfirmation() ? 1 : 0)
+    ? changedFileRows().length + (showsFileFilter() ? 1 : 0) + (inlineConfirmation() ? 1 : 0)
     : 0;
   const sideChips = createMemo(() => buildRevisionSideChips(props.revision));
   const layoutPlan = createMemo(() => getRevisionLayoutPlan(props.state.layout));
@@ -1570,7 +1588,7 @@ export function RevisionItem(props: {
     graphRows: props.revision.graphRows,
     baseGraphRowCount: layoutPlan().graph.baseRowCount,
     visibleGraphMode: visibleGraphMode(),
-    detailRowCount: changedFileRows().length + (inlineConfirmation() ? 1 : 0),
+    detailRowCount: detailRowCount(),
     ownsTop: false,
     ownsBottom: false,
     previousGraphBottom: null,
@@ -1838,8 +1856,10 @@ export function RevisionItem(props: {
             >
               {isExpanded() ? (
                 <ChangedFiles
+                  fileFilterActions={props.fileFilterActions}
                   state={props.state}
                   revision={props.revision}
+                  rows={changedFileRows()}
                   config={props.config}
                 />
               ) : null}
@@ -1977,15 +1997,28 @@ type ChangedFileDisplayRow =
   | Readonly<{ kind: "placeholder"; text: string }>
   | Readonly<{ kind: "file"; file: ChangedFile; index: number }>;
 
+type FileFilterActions = Pick<
+  AppStore["actions"],
+  "finalizeFileFilter" | "setFileFilterText"
+>;
+
 function buildChangedFileDisplayRows(
   revision: Pick<RevisionSummary, "isEmpty" | "filesLoaded" | "files">,
+  filterQuery: string,
 ): readonly ChangedFileDisplayRow[] {
   const placeholderText = getChangedFilesPlaceholderText(revision);
   if (placeholderText) {
     return [{ kind: "placeholder", text: placeholderText }];
   }
 
-  return revision.files.map((file, index) => ({ kind: "file", file, index }));
+  const visibleFiles = filterChangedFiles(revision.files, filterQuery);
+  if (visibleFiles.length === 0) {
+    return [{ kind: "placeholder", text: "No matching files" }];
+  }
+
+  // The index is the row's position in the filtered list, which is what
+  // `focusedFileIndex` counts.
+  return visibleFiles.map((file, index) => ({ kind: "file", file, index }));
 }
 
 function RevisionSideChips(props: {
@@ -2012,6 +2045,103 @@ function RevisionSideChips(props: {
       </For>
     </box>
   );
+}
+
+// The `/` filter input, drawn as the first row of the expanded file list. It
+// stays mounted (unfocused) after Enter commits a query so the narrowed list
+// keeps showing what narrowed it.
+function ChangedFilesFilterRow(props: {
+  actions: FileFilterActions;
+  config: ResolvedAppConfig;
+  focused: boolean;
+  query: string;
+}) {
+  const colors = props.config.colorScheme.semanticColors;
+
+  useKeyboard((event) => {
+    if (event.eventType === "release" || !props.focused) {
+      return;
+    }
+
+    if (event.name === "return") {
+      event.preventDefault();
+      props.actions.finalizeFileFilter();
+    }
+  }, { release: true });
+
+  return (
+    <box width="100%" flexDirection="row">
+      <text flexShrink={0} fg={colors.textTertiary}>/ </text>
+      <input
+        flexGrow={1}
+        minWidth={0}
+        value={props.query}
+        placeholder="filter files"
+        focused={props.focused}
+        textColor={colors.textPrimary}
+        focusedTextColor={colors.textPrimary}
+        placeholderColor={colors.textQuaternary}
+        cursorColor={colors.chromeBorderFocus}
+        cursorStyle={{ style: "line" }}
+        onInput={(value: string) => {
+          props.actions.setFileFilterText(value);
+        }}
+      />
+    </box>
+  );
+}
+
+// Matches are drawn as inverse video, the same treatment the revision-log
+// search overlay uses, so "this text matched" reads the same everywhere.
+function ChangedFileName(props: {
+  file: ChangedFile;
+  filterQuery: string;
+  color: string | undefined;
+  config: ResolvedAppConfig;
+}) {
+  const colors = props.config.colorScheme.semanticColors;
+  let textRef: any;
+
+  createEffect(() => {
+    if (!textRef) {
+      return;
+    }
+
+    const baseColor = parseStyledColor(props.color);
+    const matchFg = parseStyledColor(colors.chromeFillOne);
+    const matchBg = parseStyledColor(colors.textPrimary);
+    const chunks: TextChunk[] = buildChangedFileNameSegments(props.file, props.filterQuery)
+      .map((segment) => ({
+        __isChunk: true as const,
+        text: segment.text,
+        fg: segment.matched ? matchFg : baseColor,
+        ...(segment.matched ? { bg: matchBg } : {}),
+      }));
+    textRef.content = new StyledText(chunks);
+  });
+
+  return (
+    <text
+      ref={textRef}
+      flexShrink={1}
+      minWidth={0}
+      wrapMode="none"
+      fg={props.color}
+      truncate
+    />
+  );
+}
+
+function parseStyledColor(value: string | undefined): RGBA {
+  if (!value) {
+    return RGBA.fromValues(1, 1, 1, 1);
+  }
+
+  try {
+    return RGBA.fromHex(value);
+  } catch {
+    return RGBA.fromValues(1, 1, 1, 1);
+  }
 }
 
 function ChangedFileRowContent(props: {
@@ -2061,15 +2191,12 @@ function ChangedFileRowContent(props: {
         {rowState().selected ? "✓" : " "}
       </text>
       <text flexShrink={0} fg={colors.fileStatusAccent}>{row.file.status}</text>
-      <text
-        flexShrink={1}
-        minWidth={0}
-        wrapMode="none"
-        fg={rowState().selected || rowState().focused ? colors.textPrimary : colors.textSecondary}
-        truncate
-      >
-        {row.file.displayPath ?? row.file.path}
-      </text>
+      <ChangedFileName
+        file={row.file}
+        filterQuery={props.state.fileFilterQuery}
+        color={rowState().selected || rowState().focused ? colors.textPrimary : colors.textSecondary}
+        config={props.config}
+      />
       <Show when={row.file.hasConflict}>
         <text fg={colors.statusError} attributes={TextAttributes.BOLD}> conflict</text>
       </Show>
@@ -2078,11 +2205,12 @@ function ChangedFileRowContent(props: {
 }
 
 function ChangedFiles(props: {
+  fileFilterActions: FileFilterActions;
   state: AppStore["state"];
   revision: RevisionSummary;
+  rows: readonly ChangedFileDisplayRow[];
   config: ResolvedAppConfig;
 }) {
-  const rows = createMemo(() => buildChangedFileDisplayRows(props.revision));
   const inlineConfirmation = createMemo(() =>
     props.state.inlineConfirmation?.rowId === props.revision.rowId
       ? props.state.inlineConfirmation
@@ -2091,7 +2219,15 @@ function ChangedFiles(props: {
 
   return (
     <box width="100%" flexDirection="column">
-      <For each={rows()}>
+      <Show when={showsChangedFilesFilter(props.state)}>
+        <ChangedFilesFilterRow
+          actions={props.fileFilterActions}
+          config={props.config}
+          focused={props.state.focusMode === "file-filter"}
+          query={props.state.fileFilterQuery}
+        />
+      </Show>
+      <For each={props.rows}>
         {(row) => (
           <ChangedFileRowContent
             state={props.state}
