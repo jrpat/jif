@@ -667,6 +667,11 @@ test("reload config is globally bound to ctrl-comma", () => {
   expect(commandDefinitions.some((command) => command.id === "reload-config")).toBeTrue();
 });
 
+test("restart is globally bound to ctrl-alt-r", () => {
+  expect(defaultKeymap._global["ctrl-alt-r"]).toBe("restart");
+  expect(commandDefinitions.some((command) => command.id === "restart")).toBeTrue();
+});
+
 test("new and edit resolve in normal mode only", () => {
   const state = createState();
   expect(resolveForState("n", state)).toBe("new-revision");

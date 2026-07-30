@@ -69,8 +69,8 @@ export function resolveKeyToken(event: KeyToken): string | null {
     return null;
   }
 
-  const altPrefix = event.option ? "alt-" : "";
   const ctrlPrefix = event.ctrl ? "ctrl-" : "";
+  const altPrefix = event.option ? "alt-" : "";
   let baseKey: string | null;
   if (event.ctrl || event.option) {
     baseKey = event.name === "return" ? "enter" : event.name;
@@ -78,5 +78,5 @@ export function resolveKeyToken(event: KeyToken): string | null {
     baseKey = normalizeKey(event);
   }
 
-  return baseKey === null ? null : `${altPrefix}${ctrlPrefix}${baseKey}`;
+  return baseKey === null ? null : `${ctrlPrefix}${altPrefix}${baseKey}`;
 }

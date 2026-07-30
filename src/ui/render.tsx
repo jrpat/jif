@@ -30,6 +30,7 @@ import { DEFAULT_REPOSITORY_LOAD_LIMIT, type JjClient } from "../jj/client.ts";
 import { JjHelpCache } from "../jj/helpCache.ts";
 import { runInteractiveCommand, runInteractiveShellCommand } from "../jj/process.ts";
 import { isFilesOnlyRevset } from "../revset/files.ts";
+import { restartCurrentJif } from "../restart.ts";
 import type { ChangedFile, RevisionSummary, StatusMessage } from "../domain/types.ts";
 import { createJifCommandController, loadRevisionFiles } from "./controller.ts";
 import { lazyComponent } from "./lazyComponent.ts";
@@ -394,6 +395,7 @@ export function JifView(props: {
     store,
     client,
     destroy: () => renderer.destroy(),
+    restart: () => restartCurrentJif({ destroy: () => renderer.destroy() }),
     suspend: () => suspendProcessToShell({ renderer }),
     executeCurrentCommand: runtime.executeCurrentCommand,
     runJjCommand: runtime.runJjCommand,

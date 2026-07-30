@@ -112,6 +112,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   const refreshOptions: Array<{ workingCopy?: string; force?: boolean }> = [];
   const persistedLayouts: string[] = [];
   let suspendCalls = 0;
+  let restartCalls = 0;
   let executeCurrentCommandCalls = 0;
   const editorTexts: string[] = [];
   let reloadConfigCalls = 0;
@@ -164,6 +165,9 @@ function createControllerHarness(harnessOptions: Readonly<{
       },
     },
     destroy: () => {},
+    restart: () => {
+      restartCalls += 1;
+    },
     suspend: () => {
       suspendCalls += 1;
     },
@@ -260,6 +264,9 @@ function createControllerHarness(harnessOptions: Readonly<{
     get suspendCalls() {
       return suspendCalls;
     },
+    get restartCalls() {
+      return restartCalls;
+    },
     get executeCurrentCommandCalls() {
       return executeCurrentCommandCalls;
     },
@@ -278,6 +285,15 @@ test("suspend delegates to the injected renderer suspend hook", () => {
   harness.controller.suspend();
 
   expect(harness.suspendCalls).toBe(1);
+  harness.store.dispose();
+});
+
+test("restart delegates to the injected process restart hook", () => {
+  const harness = createControllerHarness({ revisions: [] });
+
+  harness.controller.restart();
+
+  expect(harness.restartCalls).toBe(1);
   harness.store.dispose();
 });
 

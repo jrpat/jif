@@ -353,6 +353,7 @@ namespace Jif {
     openFocusedRevision: () => void;
     closeFocusedRevision: () => void;
     quit: () => void;
+    restart: () => void;
     suspend: () => void;
     cancelOrBlur: () => void;
     confirm: () => void;

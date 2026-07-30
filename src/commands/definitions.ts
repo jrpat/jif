@@ -33,6 +33,7 @@ export type CommandController = Readonly<{
   openFocusedRevision: () => void;
   closeFocusedRevision: () => void;
   quit: () => void;
+  restart: () => void;
   suspend: () => void;
   cancelOrBlur: () => void;
   confirm: () => void;
@@ -429,6 +430,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Quit",
     description: "Exit the application",
     run: (controller) => controller.quit(),
+    group: "global",
+  },
+  {
+    id: "restart",
+    title: "Restart",
+    description: "Replace the current process image with a fresh plain jif invocation",
+    run: (controller) => controller.restart(),
     group: "global",
   },
   {

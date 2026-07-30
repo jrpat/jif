@@ -83,6 +83,7 @@ describe("extra mode", () => {
       "quit",
       "refresh-repository",
       "reload-config",
+      "restart",
       "scroll-help-down",
       "scroll-help-up",
       "search-next",

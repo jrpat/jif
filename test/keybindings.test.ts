@@ -74,6 +74,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     openFocusedRevision: () => calls.push("openFocusedRevision"),
     closeFocusedRevision: () => calls.push("closeFocusedRevision"),
     quit: () => calls.push("quit"),
+    restart: () => calls.push("restart"),
     suspend: () => calls.push("suspend"),
     cancelOrBlur: () => calls.push("cancelOrBlur"),
     confirm: () => calls.push("confirm"),

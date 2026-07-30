@@ -26,6 +26,18 @@ test("resolveKeyToken prefixes ctrl combos", () => {
   expect(resolveKeyToken({ name: "\\", sequence: "\x1c", ctrl: true })).toBe("ctrl-\\");
 });
 
+test("resolveKeyToken builds ctrl-alt combos in keymap order", () => {
+  expect(
+    resolveKeyToken({
+      name: "r",
+      sequence: "r",
+      ctrl: true,
+      option: true,
+      meta: true,
+    }),
+  ).toBe("ctrl-alt-r");
+});
+
 test("resolveKeyToken keeps Alt combos even though OpenTUI also sets meta", () => {
   // OpenTUI reports Alt/Option with BOTH option and meta set; the token must
   // still resolve to alt-* rather than being discarded as a Meta combo.

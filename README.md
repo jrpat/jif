@@ -84,6 +84,7 @@ Available in every mode (mode-specific bindings can override these).
 |-----|---------|-------------|
 | `?` | shortcut-panel | Expand or collapse the shortcut panel |
 | `ctrl-r` | refresh-repository | Refresh the revision log |
+| `ctrl+alt+r` | restart | Replace the current process image with a fresh plain `jif` invocation |
 | `ctrl-,` | reload-config | Reload config files and apply runtime settings |
 | `ctrl-\` | toggle-dry-run | Toggle dry-run mode for direct jj commands |
 | `ctrl-z` | suspend | Suspend the application and return to the shell |
@@ -94,6 +95,8 @@ Available in every mode (mode-specific bindings can override these).
 | `escape` | cancel | Cancel command composition, leave input mode, or return from a file filter to the log |
 | `~` | open-notifications | Open the notifications history panel |
 | `` alt-` `` | open-releases | Open the [jif releases page](https://github.com/jrpat/jif/releases) on GitHub in your default browser |
+
+`ctrl+alt+r` atomically replaces the running process image with a fresh plain `jif` invocation. The PID and terminal job stay the same, but no application or Bun runtime state survives; startup flags from the old process are intentionally not repeated.
 
 ### Preview
 
@@ -746,6 +749,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `quit()` | Exit jif |
 | `redo()` | Redo the last undone repository operation |
 | `refreshRepository()` | Refresh repository data |
+| `restart()` | Replace the current process image with a fresh plain `jif` invocation |
 | `restoreFiles()` | Restore the focused file or selected files |
 | `restoreOperation()` | Restore the focused operation |
 | `revertOperation()` | Revert the focused operation |
