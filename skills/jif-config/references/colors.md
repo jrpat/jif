@@ -53,6 +53,8 @@ Group them by what they paint.
 
 **Row states**
 - `rowFocusedFill`
+- `fileGroupFocusedFill` — the subtle fill behind an expanded revision while its file list has focus.
+- `fileFocusedFill` — the stronger fill behind the focused file in an expanded revision.
 - `rowSelectedFill`, `rowSelectedAccent`
 - `rowAffectedFill`
 - `rowCommandTargetBorder`

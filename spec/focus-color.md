@@ -13,6 +13,10 @@ at decreasing opacity. For the focused state today the accent is magenta
 (ANSI 5, the same source as the revision-id prefix), and its surfaces are:
 
 - `rowFocusedFill` — accent at low opacity, mostly background (the faint fill)
+- `fileGroupFocusedFill` — the same accent at lower opacity behind an expanded
+  revision while focus is within its file list
+- `fileFocusedFill` — the same accent at slightly higher opacity behind the
+  focused file in an expanded revision
 - `rowBorderFocus` — accent at medium opacity (the box border)
 - `revsetPrefix` — accent at full opacity (the revision-id prefix)
 

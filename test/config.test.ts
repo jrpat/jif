@@ -29,6 +29,8 @@ test("resolveAppConfig resolves semantic colors from dark fallback palette", () 
   expect(typeof resolved.colorScheme.semanticColors.graphWorkingCopy).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.rowSelectedFill).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.rowSelectedAccent).toBe("string");
+  expect(typeof resolved.colorScheme.semanticColors.fileGroupFocusedFill).toBe("string");
+  expect(typeof resolved.colorScheme.semanticColors.fileFocusedFill).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.promptSuggestionFocusedFill).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.previewPaneFill).toBe("string");
   expect(typeof resolved.colorScheme.semanticColors.statusError).toBe("string");
@@ -199,6 +201,22 @@ test("resolveAppConfig keeps the focused row fill subtle", () => {
   expect(light.colorScheme.semanticColors.rowFocusedFill).toBe("#e8e8e8");
   expect(dark.colorScheme.semanticColors.rowDraftFocusedFill).toBe("#120012");
   expect(light.colorScheme.semanticColors.rowDraftFocusedFill).toBe("#fbe8fb");
+});
+
+test("resolveAppConfig steps from preview to file group to focused file fills", () => {
+  const dark = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
+  const light = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_LIGHT,
+  });
+
+  expect(dark.colorScheme.semanticColors.fileGroupFocusedFill).toBe("#0e0e0e");
+  expect(light.colorScheme.semanticColors.fileGroupFocusedFill).toBe("#f0f0f0");
+  expect(dark.colorScheme.semanticColors.fileFocusedFill).toBe("#1b1b1b");
+  expect(light.colorScheme.semanticColors.fileFocusedFill).toBe("#e0e0e0");
+  expect(dark.colorScheme.semanticColors.previewPaneFill).toBe("#070707");
+  expect(light.colorScheme.semanticColors.previewPaneFill).toBe("#f7f7f7");
 });
 
 test("resolveAppConfig keeps prompt suggestion focus on the old blue fill", () => {

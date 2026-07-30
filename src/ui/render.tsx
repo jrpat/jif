@@ -1512,7 +1512,10 @@ export function RevisionItem(props: {
   // its role colors under the cursor.
   const focusFillColor = createMemo(() => {
     switch (focusTone()) {
-      case "browse": return colors().rowFocusedFill;
+      case "browse":
+        return props.state.focusMode === "files" && isExpanded()
+          ? colors().fileGroupFocusedFill
+          : colors().rowFocusedFill;
       case "draft": return colors().rowDraftFocusedFill;
       case "target": return colors().rowPinnedTargetFill;
     }

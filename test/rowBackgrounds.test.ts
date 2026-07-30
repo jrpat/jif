@@ -3,6 +3,7 @@ import { getChangedFileRowBackgroundColor, getRevisionRowBackgroundColor } from 
 
 const colors = {
   rowFocusedFill: "focused",
+  fileFocusedFill: "file-focused",
   rowSelectedFill: "selected",
   rowAffectedFill: "affected",
 };
@@ -47,12 +48,20 @@ test("getRevisionRowBackgroundColor tints unfocused chip rows with their role fi
   })).toBe("role");
 });
 
-test("getChangedFileRowBackgroundColor lets focus override selection", () => {
+test("getChangedFileRowBackgroundColor lets selection override focus", () => {
   expect(getChangedFileRowBackgroundColor({
     focused: true,
     selected: true,
     colors,
-  })).toBe("focused");
+  })).toBe("selected");
+});
+
+test("getChangedFileRowBackgroundColor uses the stronger file focus fill", () => {
+  expect(getChangedFileRowBackgroundColor({
+    focused: true,
+    selected: false,
+    colors,
+  })).toBe("file-focused");
 });
 
 test("getChangedFileRowBackgroundColor uses selection when unfocused", () => {

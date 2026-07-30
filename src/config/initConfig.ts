@@ -216,7 +216,7 @@ namespace Jif {
     | "chromeFillOne" | "chromeFillTwo" | "chromeFillThree" | "chromeScrollbarThumb"
     | "chromeBorderIdle" | "chromeBorderFocus"
     | "promptSuggestionFocusedFill" | "previewPaneFill"
-    | "rowFocusedFill" | "rowDraftFocusedFill" | "rowSelectedFill" | "rowSelectedAccent" | "rowPinnedTargetFill" | "rowPinnedTargetAccent" | "rowAffectedFill"
+    | "rowFocusedFill" | "rowDraftFocusedFill" | "rowSelectedFill" | "rowSelectedAccent" | "rowPinnedTargetFill" | "rowPinnedTargetAccent" | "rowAffectedFill" | "fileGroupFocusedFill" | "fileFocusedFill"
     | "rowCommandTargetBorder" | "rowBorderIdle" | "rowBorderFocus" | "rowBorderDraftFocus" | "rowBorderSelected" | "rowBorderPinnedTarget" | "rowBorderCommandTarget"
     | "graphWorkingCopy" | "graphPlain" | "graphImmutable" | "graphBookmark"
     | "bookmarkTagFill" | "bookmarkTagText" | "workspaceTagFill" | "workspaceTagText"

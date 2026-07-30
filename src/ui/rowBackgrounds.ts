@@ -34,14 +34,14 @@ export function getRevisionRowBackgroundColor(options: Readonly<{
 export function getChangedFileRowBackgroundColor(options: Readonly<{
   focused: boolean;
   selected: boolean;
-  colors: Pick<SemanticColors, "rowFocusedFill" | "rowSelectedFill">;
+  colors: Pick<SemanticColors, "fileFocusedFill" | "rowSelectedFill">;
 }>): string | undefined {
-  if (options.focused) {
-    return options.colors.rowFocusedFill;
-  }
-
   if (options.selected) {
     return options.colors.rowSelectedFill;
+  }
+
+  if (options.focused) {
+    return options.colors.fileFocusedFill;
   }
 
   return undefined;

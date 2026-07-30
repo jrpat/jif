@@ -135,6 +135,61 @@ async function renderFocusedRevisionBackgrounds(layout: AppLayout) {
   };
 }
 
+async function renderFocusedFileBackgrounds(selected: boolean) {
+  const revisions = [
+    createRevision("curr", "branch", ["@  ", "│  "], {
+      marker: "working-copy",
+    }),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout: "normal" });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+  store.actions.setRevisionFiles("curr", [{ status: "M", path: "src/file.ts" }]);
+  store.actions.openFocusedRevision();
+  if (selected) {
+    store.actions.selectAllFiles();
+  }
+
+  const rendered = await testRender(() => (
+    <box width={40} flexDirection="column">
+      <RevisionItem
+        state={store.state}
+        revision={store.state.revisions[0]!}
+        index={0}
+        previousRowId={null}
+        nextRowId={null}
+        config={resolveAppConfig({
+          commands: { layout: "normal" },
+          colorScheme: {
+            colors: {
+              fileGroupFocusedFill: "#111111",
+              previewPaneFill: "#555555",
+              fileFocusedFill: "#222222",
+              rowFocusedFill: "#444444",
+              rowSelectedFill: "#333333",
+            },
+          },
+        })}
+        focusedRowId="curr"
+        selectedRowIds={new Set()}
+        expandedRowId="curr"
+        commandTargetRowId={null}
+      />
+    </box>
+  ), { width: 40, height: 6 });
+
+  await rendered.renderOnce();
+  const spans = rendered.captureSpans();
+  rendered.renderer.destroy();
+
+  return {
+    groupBg: findLineSpan(spans, "cu branch", "cu").bg.toInts(),
+    fileBg: findLineSpan(spans, "src/file.ts", "src/file.ts").bg.toInts(),
+  };
+}
+
 async function renderLayoutCycleAfterMount() {
   const revisions = [
     createRevision("curr", "branch", ["│ ○  ", "├─╯  "]),
@@ -586,6 +641,8 @@ const tight = await renderRevisionStack("tight", "curr");
 const tightExpanded = await renderRevisionStack("tight", "curr", "curr");
 const normalFocusedBackgrounds = await renderFocusedRevisionBackgrounds("normal");
 const tightFocusedBackgrounds = await renderFocusedRevisionBackgrounds("tight");
+const focusedFileBackgrounds = await renderFocusedFileBackgrounds(false);
+const selectedFocusedFileBackgrounds = await renderFocusedFileBackgrounds(true);
 const cycledToTight = await renderLayoutCycleAfterMount();
 const longTight = await renderLongSuperCondensedDescription();
 const resizedLongTight = await renderLongSuperCondensedDescriptionAfterResize();
@@ -613,6 +670,8 @@ console.log(JSON.stringify({
   tightExpanded,
   normalFocusedBackgrounds,
   tightFocusedBackgrounds,
+  focusedFileBackgrounds,
+  selectedFocusedFileBackgrounds,
   cycledToTight,
   longTight,
   resizedLongTight,

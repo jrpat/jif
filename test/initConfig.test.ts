@@ -50,6 +50,8 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(typesText).toContain("type Config = Readonly<{");
   expect(typesText).toContain('"promptSuggestionFocusedFill"');
   expect(typesText).toContain('"previewPaneFill"');
+  expect(typesText).toContain('"fileGroupFocusedFill"');
+  expect(typesText).toContain('"fileFocusedFill"');
   expect(typesText).toContain("scroll?: Readonly<{");
   expect(typesText).toContain("step?: number");
   expect(typesText).toContain("acceleration?: boolean");
