@@ -131,6 +131,7 @@ import { executeShellCommand as executeShellTextCommand } from "../jj/process.ts
 import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 import { switchWorkspace } from "./workspaceSwitch.ts";
 import { resolveLogSurfaceMode } from "./logSurface.ts";
+import "./scrollboxRegistration.ts";
 
 const EXTRA_EMPTY_MESSAGE = "No extra bindings defined. Bind keys under `keymap.extra` in your config.";
 

@@ -28,6 +28,8 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
     scrollWidth: number | null;
     scrollHeight: number | null;
     viewportWidth: number | null;
+    viewportHeight: number | null;
+    sliderViewportSize: number | null;
     afterScrollLeft: number | null;
     linesAfterScrollDown: string[] | null;
     scrollTopAfter: number | null;
@@ -153,6 +155,7 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
   // top, then scrolls out of view as the diff scrolls down.
   const scrolling = result.scrollingHeader;
   expect(scrolling.lines.join("\n")).toContain("ZZHEADERZZ");
+  expect(scrolling.sliderViewportSize).toBe(scrolling.viewportHeight);
   expect(scrolling.scrollTopAfter ?? 0).toBeGreaterThan(0);
   expect((scrolling.linesAfterScrollDown ?? []).join("\n")).not.toContain("ZZHEADERZZ");
 

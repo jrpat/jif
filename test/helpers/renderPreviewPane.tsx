@@ -7,6 +7,7 @@ import {
 } from "../../src/config/index.ts";
 import { PreviewPane } from "../../src/ui/PreviewPane.tsx";
 import { REVISION_PREVIEW_METADATA_LINE_COUNT } from "../../src/ui/revisionHeader.ts";
+import "../../src/ui/scrollboxRegistration.ts";
 
 const originalConsoleLog = console.log;
 console.log = (...args: unknown[]) => {
@@ -155,6 +156,8 @@ async function capture(
     await new Promise((resolve) => setTimeout(resolve, 10));
     await rendered.renderOnce();
   }
+  const viewportHeight = scrollbox?.viewport.height ?? null;
+  const sliderViewportSize = scrollbox?.verticalScrollBar.slider.viewPortSize ?? null;
   rendered.renderer.destroy();
 
   const rgb = (color: RGBA): [number, number, number] => {
@@ -173,6 +176,8 @@ async function capture(
     scrollWidth,
     scrollHeight,
     viewportWidth,
+    viewportHeight,
+    sliderViewportSize,
     afterScrollLeft,
     linesAfterScrollDown,
     scrollTopAfter,
