@@ -3,6 +3,26 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.6.0 — 2026-07-31
+
+### Highlights
+
+- Press `?` while the shortcuts panel is visible to fuzzy-filter commands by key, name, description, or alias.
+- Press `shift+p` while the preview pane is visible to enter Preview mode and access scrolling, resizing, wrapping, positioning, and full-file context controls.
+- Press `/` in Files mode to narrow the expanded revision's changed-file list by path.
+- Project config in the default Jujutsu workspace now applies automatically to linked workspaces, with per-workspace overrides layered on top.
+
+### All changes
+
+- Add fuzzy filtering to the shortcuts panel
+- Keep scrollbar thumbs proportional to visible content
+- Add a dedicated preview control mode
+- Share project config across Jujutsu workspaces
+- Add a / filter for the expanded revision's changed-file list
+- Refine focus fills in revision file lists
+- Pluralize omitted diff line labels
+- Follow revision selection direction when advancing focus
+
 ## v0.5.2 — 2026-07-29
 
 ### All changes
