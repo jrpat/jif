@@ -3,6 +3,23 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.7.0 — 2026-07-31
+
+### Highlights
+
+- Press `d` on a revision, file, or evolog entry to read its diff in full-screen Preview mode.
+- Wide preview panes now render diffs side by side; set `preview.splitViewWidth` to choose the threshold, or `0` to keep unified diffs.
+- Press `ctrl-d` to compose an inclusive diff across a revision range, with `=` for a tree-to-tree comparison and `s` to include every descendant.
+- The `?` shortcut panel now lists your configured keybindings in their own section above the built-in bindings.
+- Scrolling through a multi-file diff now keeps the current filename pinned at the top of the preview.
+
+### All changes
+
+- Render diffs in the preview pane instead of a pager
+- Pin the preview pane's current filename to the top row
+- Give user-defined keybindings their own shortcut panel section
+- Preserve revision file context across repository reloads
+
 ## v0.6.0 — 2026-07-31
 
 ### Highlights
