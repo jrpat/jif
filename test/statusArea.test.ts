@@ -219,3 +219,37 @@ test("collapsed status area shows file chip and escape log shortcut", async () =
   expect(frame).toContain("esc log");
   expect(frame).not.toContain("esclog");
 });
+
+test("expanded panel renders user-defined bindings in a section above the built-ins", async () => {
+  const proc = Bun.spawn({
+    cmd: ["bun", "run", "test/helpers/renderShortcutSections.tsx"],
+    cwd: process.cwd(),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+
+  expect(exitCode).toBe(0);
+  expect(stderr).toBe("");
+
+  const { frame } = JSON.parse(stdout) as { frame: string };
+  const lineOf = (text: string) =>
+    frame.split("\n").findIndex((line) => line.includes(text));
+  // Section dividers sit inside the panel border, so they start with `│ ─`.
+  const dividerLines = frame
+    .split("\n")
+    .flatMap((line, index) => (line.startsWith("│ ──────") ? [index] : []));
+
+  expect(lineOf("Deploy Service")).toBeGreaterThan(-1);
+  expect(lineOf("Deploy Service")).toBeLessThan(lineOf("Squash Revision"));
+  expect(lineOf("Squash Revision")).toBeLessThan(lineOf("Quit Jif"));
+  // One divider under the user section, one under the mode's own bindings.
+  expect(dividerLines.length).toBe(2);
+  expect(dividerLines[0]).toBeGreaterThan(lineOf("Deploy Service"));
+  expect(dividerLines[0]).toBeLessThan(lineOf("Squash Revision"));
+  expect(dividerLines[1]).toBeLessThan(lineOf("Quit Jif"));
+});

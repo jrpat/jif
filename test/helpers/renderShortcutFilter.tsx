@@ -49,8 +49,7 @@ const rendered = await testRender(() => {
       shortcutSummary=""
       shortcutSummarySegments={[]}
       shortcutLayout={{
-        kind: "single",
-        grid: buildShortcutGrid(buildShortcutEntries(bindings, query()), 76),
+        sections: [buildShortcutGrid(buildShortcutEntries(bindings, query()), 76)],
       }}
       expanded
       currentModeLabel="Revisions"

@@ -16,8 +16,10 @@ export {
 export { loadAppConfig } from "./loadConfig.ts";
 export {
   createUserAppState,
+  isUserDefinedBinding,
   resolveConfiguredKeymap,
   type ResolvedConfiguredKeymap,
+  type UserBindingIndex,
   type UserAppState,
   type UserKeyBinding,
   type UserKeybindingCommand,

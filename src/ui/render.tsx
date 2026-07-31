@@ -5,7 +5,7 @@ import { createStore, reconcile } from "solid-js/store";
 import { useKeyboard, useRenderer } from "@opentui/solid";
 import { createCommandRunner } from "../commands/runner.ts";
 import type { AppConfig, ResolvedAppConfig } from "../config/schema.ts";
-import { resolveConfiguredKeymap } from "../config/index.ts";
+import { isUserDefinedBinding, resolveConfiguredKeymap } from "../config/index.ts";
 import type { AppStore } from "../state/appStore.ts";
 import { createPersistenceService } from "../persistence/service.ts";
 import {
@@ -78,6 +78,7 @@ import {
   buildAlignedShortcutGrids,
   buildShortcutEntries,
   buildShortcutGrid,
+  buildShortcutPanelSectionEntries,
   buildShortcutSummary,
   buildShortcutSummarySegments,
   buildStateChipLabel,
@@ -88,6 +89,7 @@ import {
   shortcutLayoutRowCount,
   shortcutModeLabel,
   stateChipSummaryWidth,
+  type ShortcutPanelBindingInput,
   type ShortcutPanelLayout,
   type ShortcutSummarySegment,
 } from "./shortcutPanel.ts";
@@ -645,8 +647,7 @@ export function JifView(props: {
     buildShortcutGrid(shortcutEntries(), shortcutContentWidth())
   );
   const shortcutLayout = createMemo<ShortcutPanelLayout>(() => ({
-    kind: "single",
-    grid: shortcutGrid(),
+    sections: [shortcutGrid()],
   }));
   const shortcutPanelHeight = createMemo(() =>
     computeShortcutPanelHeight(terminalSize().height)
@@ -696,40 +697,38 @@ export function JifView(props: {
         (showsCommandPreview() || store.state.focusMode === "bookmark"))
     )
   );
-  const expandedShortcutBindings = createMemo(() =>
-    showsTransientShortcutPanel() ? modeShortcutBindings() : shortcutBindings()
+  const splitsInheritedShortcuts = createMemo(() =>
+    store.state.shortcutFilterQuery.trim() === "" &&
+    shouldSplitShortcutPanelLayout({
+      showsPersistentShortcutPanel: showsPersistentShortcutPanel(),
+      showsTransientShortcutPanel: showsTransientShortcutPanel(),
+      hasCommandDraft: store.state.commandDraft !== null,
+      activeMode: activeMode(),
+    })
   );
-  const expandedShortcutEntries = createMemo(() =>
-    buildShortcutEntries(expandedShortcutBindings(), store.state.shortcutFilterQuery)
+  // A transient panel narrows to the mode's own bindings unless it is already
+  // splitting them out from the inherited ones.
+  const expandedInheritedBindings = createMemo(() =>
+    showsTransientShortcutPanel() && !splitsInheritedShortcuts()
+      ? []
+      : shortcutInheritedBindings()
   );
-  const expandedShortcutGrid = createMemo(() =>
-    buildShortcutGrid(expandedShortcutEntries(), shortcutContentWidth())
-  );
-  const alignedShortcutGrids = createMemo(() =>
-    buildAlignedShortcutGrids(
-      buildShortcutEntries(modeShortcutBindings(), store.state.shortcutFilterQuery),
-      buildShortcutEntries(shortcutInheritedBindings(), store.state.shortcutFilterQuery),
-      shortcutContentWidth(),
-    )
-  );
-  const expandedShortcutLayout = createMemo<ShortcutPanelLayout>(() => {
-    if (
-      store.state.shortcutFilterQuery.trim() === "" &&
-      shouldSplitShortcutPanelLayout({
-        showsPersistentShortcutPanel: showsPersistentShortcutPanel(),
-        showsTransientShortcutPanel: showsTransientShortcutPanel(),
-        hasCommandDraft: store.state.commandDraft !== null,
-        activeMode: activeMode(),
-      })
-    ) {
-      return {
-        kind: "split",
-        topGrid: alignedShortcutGrids().topGrid,
-        bottomGrid: alignedShortcutGrids().bottomGrid,
-      };
-    }
-    return { kind: "single", grid: expandedShortcutGrid() };
+  const isUserDefinedShortcut = createMemo(() => {
+    const { userBindings } = configuredKeymap();
+    return (binding: ShortcutPanelBindingInput) => isUserDefinedBinding(userBindings, binding);
   });
+  const expandedShortcutLayout = createMemo<ShortcutPanelLayout>(() => ({
+    sections: buildAlignedShortcutGrids(
+      buildShortcutPanelSectionEntries({
+        directBindings: modeShortcutBindings(),
+        inheritedBindings: expandedInheritedBindings(),
+        isUserDefined: isUserDefinedShortcut(),
+        splitInheritedBindings: splitsInheritedShortcuts(),
+        query: store.state.shortcutFilterQuery,
+      }),
+      shortcutContentWidth(),
+    ),
+  }));
   const expandedShortcutPanelBodyHeight = createMemo(() =>
     Math.max(
       1,

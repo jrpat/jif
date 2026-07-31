@@ -1,6 +1,6 @@
 import type { CommandDefinition } from "../commands/definitions.ts";
 import type { AppState, FocusMode } from "../domain/types.ts";
-import { isFileFocusMode, modeDefinitions, revisionLogNavCommandIds, type CanonicalKeyBinding, type Mode } from "../modes.ts";
+import { isFileFocusMode, modeDefinitions, revisionLogNavCommandIds, type CanonicalKeyBinding, type KeymapScope, type Mode } from "../modes.ts";
 import { commandCanExecute, getFocusedChildRevision, getFocusedFile, getFocusedParentRevision, getFocusedRevision } from "../state/store.ts";
 import { hasMatch, score } from "fzy.js";
 
@@ -117,9 +117,9 @@ export type ShortcutSummarySegment = Readonly<{
   label: string;
 }>;
 
-export type ShortcutPanelLayout =
-  | Readonly<{ kind: "single"; grid: ShortcutGrid }>
-  | Readonly<{ kind: "split"; topGrid: ShortcutGrid; bottomGrid: ShortcutGrid }>;
+// Sections render top to bottom with a divider between each populated pair.
+// Empty sections are skipped entirely rather than reserving a blank band.
+export type ShortcutPanelLayout = Readonly<{ sections: readonly ShortcutGrid[] }>;
 
 // A split panel keeps a mode's own bindings above the ones it inherits. That is
 // only worth the extra section when the mode was entered from somewhere — the
@@ -135,13 +135,17 @@ export function shouldSplitShortcutPanelLayout(args: Readonly<{
     : args.showsPersistentShortcutPanel && args.activeMode !== "revision-log";
 }
 
+export function populatedShortcutSections(
+  layout: ShortcutPanelLayout,
+): readonly ShortcutGrid[] {
+  return layout.sections.filter((grid) => grid.rows.length > 0);
+}
+
 export function shortcutLayoutRowCount(layout: ShortcutPanelLayout): number {
-  if (layout.kind === "single") return layout.grid.rows.length;
-  const topRows = layout.topGrid.rows.length;
-  const bottomRows = layout.bottomGrid.rows.length;
-  if (topRows === 0) return bottomRows;
-  if (bottomRows === 0) return topRows;
-  return topRows + bottomRows + 1;
+  const sections = populatedShortcutSections(layout);
+  if (sections.length === 0) return 0;
+  const rowCount = sections.reduce((total, grid) => total + grid.rows.length, 0);
+  return rowCount + sections.length - 1;
 }
 
 export function normalizeShortcutSortKey(keyLabel: string): string {
@@ -339,19 +343,14 @@ export function buildShortcutGrid(
   );
 }
 
+// One grid per group, all sharing a single column geometry so the key column
+// stays aligned across the dividers that separate the panel's sections.
 export function buildAlignedShortcutGrids(
-  topEntries: readonly ShortcutEntry[],
-  bottomEntries: readonly ShortcutEntry[],
+  entryGroups: readonly (readonly ShortcutEntry[])[],
   availableWidth: number,
-): Readonly<{ topGrid: ShortcutGrid; bottomGrid: ShortcutGrid }> {
-  const geometry = resolveShortcutGridGeometry(
-    [topEntries, bottomEntries],
-    availableWidth,
-  );
-  return {
-    topGrid: buildShortcutGridWithGeometry(topEntries, geometry),
-    bottomGrid: buildShortcutGridWithGeometry(bottomEntries, geometry),
-  };
+): readonly ShortcutGrid[] {
+  const geometry = resolveShortcutGridGeometry(entryGroups, availableWidth);
+  return entryGroups.map((entries) => buildShortcutGridWithGeometry(entries, geometry));
 }
 
 type ShortcutGridGeometry = Readonly<{
@@ -401,7 +400,9 @@ function buildShortcutGridWithGeometry(
   geometry: ShortcutGridGeometry,
 ): ShortcutGrid {
   const { columnCount, columnWidth, keyWidth, gap } = geometry;
-  const rowCount = Math.max(1, Math.ceil(entries.length / columnCount));
+  // An entryless group yields no rows at all, so callers can tell an empty
+  // section from one holding a single row.
+  const rowCount = Math.ceil(entries.length / columnCount);
   const rows: ShortcutEntry[][] = Array.from({ length: rowCount }, () => []);
   if (entries.some((entry) => entry.relevance !== null)) {
     entries.forEach((entry, index) => {
@@ -429,6 +430,7 @@ function buildShortcutGridWithGeometry(
 
 export type ShortcutPanelBindingInput = Readonly<{
   key: string;
+  scope: KeymapScope;
   command: CommandDefinition;
 }>;
 
@@ -439,11 +441,36 @@ export function resolveShortcutPanelBindings(
   commandsById: ReadonlyMap<string, CommandDefinition>,
 ): readonly ShortcutPanelBindingInput[] {
   const resolved: ShortcutPanelBindingInput[] = [];
-  for (const { key, commandId } of bindings) {
+  for (const { key, commandId, scope } of bindings) {
     const command = commandsById.get(commandId);
-    if (command) resolved.push({ key, command });
+    if (command) resolved.push({ key, scope, command });
   }
   return resolved;
+}
+
+// The expanded panel's sections, in render order. Bindings the user configured
+// themselves always lead, so custom keys are the first thing the panel answers
+// with instead of being scattered through the built-in defaults. Below them the
+// built-ins either stay whole or split into the mode's own bindings and the ones
+// it inherits.
+export function buildShortcutPanelSectionEntries(args: Readonly<{
+  directBindings: readonly ShortcutPanelBindingInput[];
+  inheritedBindings: readonly ShortcutPanelBindingInput[];
+  isUserDefined: (binding: ShortcutPanelBindingInput) => boolean;
+  splitInheritedBindings: boolean;
+  query: string;
+}>): readonly (readonly ShortcutEntry[])[] {
+  const { directBindings, inheritedBindings, isUserDefined, query } = args;
+  const userBindings = [...directBindings, ...inheritedBindings].filter(isUserDefined);
+  const directBuiltIns = directBindings.filter((binding) => !isUserDefined(binding));
+  const inheritedBuiltIns = inheritedBindings.filter((binding) => !isUserDefined(binding));
+  const builtInGroups = args.splitInheritedBindings
+    ? [directBuiltIns, inheritedBuiltIns]
+    : [[...directBuiltIns, ...inheritedBuiltIns]];
+
+  return [userBindings, ...builtInGroups].map((bindings) =>
+    buildShortcutEntries(bindings, query)
+  );
 }
 
 export function getShortcutPanelBindings(

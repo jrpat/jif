@@ -12,14 +12,13 @@ const rendered = await testRender(() => (
       { keyLabel: ":", label: "command" },
     ]}
     shortcutLayout={{
-      kind: "single",
-      grid: {
+      sections: [{
         rows: [],
         columnCount: 1,
         columnWidth: 1,
         keyWidth: 1,
         gap: 2,
-      },
+      }],
     }}
     expanded={false}
     currentModeLabel="Revisions"

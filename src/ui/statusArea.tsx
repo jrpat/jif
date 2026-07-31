@@ -3,6 +3,7 @@ import type { ScrollBoxRenderable } from "@opentui/core";
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import type { StatusMessage } from "../domain/types.ts";
 import type { ResolvedAppConfig } from "../config/schema.ts";
+import { populatedShortcutSections } from "./shortcutPanel.ts";
 import type { ShortcutGrid, ShortcutPanelLayout, ShortcutSummarySegment } from "./shortcutPanel.ts";
 import { ScrollableAnsiBody } from "./scrollableAnsiBody.tsx";
 import { observeScrollboxInteraction } from "./scroll.ts";
@@ -214,20 +215,7 @@ export function StatusArea(props: {
               </box>
             }
           >
-            <Show
-              when={props.shortcutLayout.kind === "single"}
-              fallback={
-                <SplitShortcutBody
-                  layout={props.shortcutLayout as Extract<ShortcutPanelLayout, { kind: "split" }>}
-                  colors={colors}
-                />
-              }
-            >
-              <ShortcutGridBody
-                grid={(props.shortcutLayout as Extract<ShortcutPanelLayout, { kind: "single" }>).grid}
-                colors={colors}
-              />
-            </Show>
+            <ShortcutSectionsBody layout={props.shortcutLayout} colors={colors} />
           </Show>
         </scrollbox>
       </box>
@@ -236,14 +224,13 @@ export function StatusArea(props: {
 }
 
 function isLayoutEmpty(layout: ShortcutPanelLayout): boolean {
-  if (layout.kind === "single") return layout.grid.rows.length === 0;
-  return layout.topGrid.rows.length === 0 && layout.bottomGrid.rows.length === 0;
+  return populatedShortcutSections(layout).length === 0;
 }
 
-function dividerWidth(topGrid: ShortcutGrid, bottomGrid: ShortcutGrid): number {
+function dividerWidth(grids: readonly ShortcutGrid[]): number {
   const span = (grid: ShortcutGrid) =>
     grid.columnCount * grid.columnWidth + Math.max(0, grid.columnCount - 1) * grid.gap;
-  return Math.max(1, span(topGrid), span(bottomGrid));
+  return Math.max(1, ...grids.map(span));
 }
 
 function ShortcutGridBody(props: {
@@ -292,27 +279,27 @@ function ShortcutGridBody(props: {
   );
 }
 
-function SplitShortcutBody(props: {
-  layout: Extract<ShortcutPanelLayout, { kind: "split" }>;
+function ShortcutSectionsBody(props: {
+  layout: ShortcutPanelLayout;
   colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
 }) {
-  const hasTop = () => props.layout.topGrid.rows.length > 0;
-  const hasBottom = () => props.layout.bottomGrid.rows.length > 0;
+  const sections = createMemo(() => populatedShortcutSections(props.layout));
   return (
     <box width="100%" flexDirection="column">
-      <Show when={hasTop()}>
-        <ShortcutGridBody grid={props.layout.topGrid} colors={props.colors} />
-      </Show>
-      <Show when={hasTop() && hasBottom()}>
-        <box width="100%" height={1} paddingX={1}>
-          <text fg={props.colors.chromeBorderIdle} truncate>
-            {"─".repeat(dividerWidth(props.layout.topGrid, props.layout.bottomGrid))}
-          </text>
-        </box>
-      </Show>
-      <Show when={hasBottom()}>
-        <ShortcutGridBody grid={props.layout.bottomGrid} colors={props.colors} />
-      </Show>
+      <For each={sections()}>
+        {(grid, index) => (
+          <>
+            <Show when={index() > 0}>
+              <box width="100%" height={1} paddingX={1}>
+                <text fg={props.colors.chromeBorderIdle} truncate>
+                  {"─".repeat(dividerWidth(sections()))}
+                </text>
+              </box>
+            </Show>
+            <ShortcutGridBody grid={grid} colors={props.colors} />
+          </>
+        )}
+      </For>
     </box>
   );
 }

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { resolveConfiguredKeymap } from "../src/config/index.ts";
+import { isUserDefinedBinding, resolveConfiguredKeymap } from "../src/config/index.ts";
 import { commandDefinitions, type CommandDefinition } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
 import { createInitialState, draftConfigs, openFocusedRevision, startCommandDraft } from "../src/state/store.ts";
@@ -17,6 +17,7 @@ import {
   buildAlignedShortcutGrids,
   buildShortcutEntries,
   buildShortcutGrid,
+  buildShortcutPanelSectionEntries,
   buildShortcutSummary,
   buildShortcutSummarySegments,
   buildStateChipLabel,
@@ -27,8 +28,10 @@ import {
   resolveShortcutPanelBindings,
   shouldSplitShortcutPanelLayout,
   shortcutBindingMatchesQuery,
+  shortcutLayoutRowCount,
   shortcutModeLabel,
   stateChipSummaryWidth,
+  type ShortcutGrid,
   type ShortcutPanelBinding,
   type ShortcutPanelBindingInput,
 } from "../src/ui/shortcutPanel.ts";
@@ -320,17 +323,158 @@ test("buildAlignedShortcutGrids shares column geometry across section breaks", (
     makeBinding("confirm", "Confirm", "ctrl-enter"),
   ]);
 
-  const { topGrid, bottomGrid } = buildAlignedShortcutGrids(
-    topEntries,
-    bottomEntries,
+  const [topGrid, bottomGrid] = buildAlignedShortcutGrids(
+    [topEntries, bottomEntries],
     80,
-  );
+  ) as [ShortcutGrid, ShortcutGrid];
 
   expect(topGrid.columnCount).toBe(3);
   expect(topGrid.columnCount).toBe(bottomGrid.columnCount);
   expect(topGrid.columnWidth).toBe(bottomGrid.columnWidth);
   expect(topGrid.keyWidth).toBe(bottomGrid.keyWidth);
   expect(topGrid.gap).toBe(bottomGrid.gap);
+});
+
+test("buildShortcutGrid reports no rows when there is nothing to show", () => {
+  expect(buildShortcutGrid([], 80).rows).toEqual([]);
+});
+
+test("buildAlignedShortcutGrids leaves an entryless section with no rows", () => {
+  const [emptyGrid, populatedGrid] = buildAlignedShortcutGrids(
+    [[], buildShortcutEntries([makeBinding("a", "Alpha", "a")])],
+    80,
+  ) as [ShortcutGrid, ShortcutGrid];
+
+  expect(emptyGrid.rows).toEqual([]);
+  expect(populatedGrid.rows.length).toBe(1);
+});
+
+test("shortcutLayoutRowCount counts a divider only between populated sections", () => {
+  const grid = (rowCount: number): ShortcutGrid => ({
+    rows: Array.from({ length: rowCount }, () => []),
+    columnCount: 1,
+    columnWidth: 20,
+    keyWidth: 3,
+    gap: 2,
+  });
+
+  expect(shortcutLayoutRowCount({ sections: [] })).toBe(0);
+  expect(shortcutLayoutRowCount({ sections: [grid(0)] })).toBe(0);
+  expect(shortcutLayoutRowCount({ sections: [grid(0), grid(4)] })).toBe(4);
+  expect(shortcutLayoutRowCount({ sections: [grid(2), grid(4)] })).toBe(7);
+  expect(shortcutLayoutRowCount({ sections: [grid(1), grid(2), grid(4)] })).toBe(9);
+});
+
+test("buildShortcutPanelSectionEntries leads with the user's own bindings", () => {
+  const resolved = resolveConfiguredKeymap({
+    "revision-log": {
+      Y: { title: "Deploy", run: () => {} },
+    },
+    _global: {
+      "ctrl-y": { title: "Sync", run: () => {} },
+    },
+  });
+  const commandsById = new Map(resolved.commands.map((command) => [command.id, command] as const));
+  const directBindings = resolveShortcutPanelBindings(
+    collectDirectCanonicalBindingsForMode("revision-log", resolved.keymap),
+    commandsById,
+  );
+  const inheritedBindings = resolveShortcutPanelBindings(
+    collectInheritedAndGlobalCanonicalBindings("revision-log", resolved.keymap),
+    commandsById,
+  );
+
+  const sections = buildShortcutPanelSectionEntries({
+    directBindings,
+    inheritedBindings,
+    isUserDefined: (binding) => isUserDefinedBinding(resolved.userBindings, binding),
+    splitInheritedBindings: true,
+    query: "",
+  });
+
+  expect(sections.length).toBe(3);
+  expect(sections[0]!.map((entry) => entry.title)).toEqual(["Deploy", "Sync"]);
+  for (const builtInSection of sections.slice(1)) {
+    expect(builtInSection.map((entry) => entry.title)).not.toContain("Deploy");
+    expect(builtInSection.map((entry) => entry.title)).not.toContain("Sync");
+  }
+  // The mode's own bindings still sit above the ones it inherits.
+  expect(sections[1]!.map((entry) => entry.commandId)).toContain("squash");
+  expect(sections[2]!.map((entry) => entry.commandId)).toContain("quit");
+});
+
+test("buildShortcutPanelSectionEntries keeps the user section when built-ins stay whole", () => {
+  const resolved = resolveConfiguredKeymap({
+    "revision-log": {
+      Y: { title: "Deploy", run: () => {} },
+    },
+  });
+  const commandsById = new Map(resolved.commands.map((command) => [command.id, command] as const));
+
+  const sections = buildShortcutPanelSectionEntries({
+    directBindings: resolveShortcutPanelBindings(
+      collectDirectCanonicalBindingsForMode("revision-log", resolved.keymap),
+      commandsById,
+    ),
+    inheritedBindings: resolveShortcutPanelBindings(
+      collectInheritedAndGlobalCanonicalBindings("revision-log", resolved.keymap),
+      commandsById,
+    ),
+    isUserDefined: (binding) => isUserDefinedBinding(resolved.userBindings, binding),
+    splitInheritedBindings: false,
+    query: "",
+  });
+
+  expect(sections.length).toBe(2);
+  expect(sections[0]!.map((entry) => entry.title)).toEqual(["Deploy"]);
+  expect(sections[1]!.map((entry) => entry.commandId)).toContain("quit");
+});
+
+test("buildShortcutPanelSectionEntries treats rebound built-in keys as user bindings", () => {
+  const resolved = resolveConfiguredKeymap({
+    "revision-log": {
+      s: "jump-to-working-copy",
+    },
+  });
+  const commandsById = new Map(resolved.commands.map((command) => [command.id, command] as const));
+
+  const sections = buildShortcutPanelSectionEntries({
+    directBindings: resolveShortcutPanelBindings(
+      collectDirectCanonicalBindingsForMode("revision-log", resolved.keymap),
+      commandsById,
+    ),
+    inheritedBindings: [],
+    isUserDefined: (binding) => isUserDefinedBinding(resolved.userBindings, binding),
+    splitInheritedBindings: false,
+    query: "",
+  });
+
+  expect(sections[0]!.map((entry) => entry.keyLabel)).toEqual(["s"]);
+  expect(sections[1]!.map((entry) => entry.keyLabel)).not.toContain("s");
+});
+
+test("buildShortcutPanelSectionEntries filters every section with the same query", () => {
+  const resolved = resolveConfiguredKeymap({
+    "revision-log": {
+      Y: { title: "Deploy Service", run: () => {} },
+      U: { title: "Unrelated", run: () => {} },
+    },
+  });
+  const commandsById = new Map(resolved.commands.map((command) => [command.id, command] as const));
+
+  const sections = buildShortcutPanelSectionEntries({
+    directBindings: resolveShortcutPanelBindings(
+      collectDirectCanonicalBindingsForMode("revision-log", resolved.keymap),
+      commandsById,
+    ),
+    inheritedBindings: [],
+    isUserDefined: (binding) => isUserDefinedBinding(resolved.userBindings, binding),
+    splitInheritedBindings: false,
+    query: "deploy",
+  });
+
+  expect(sections[0]!.map((entry) => entry.title)).toEqual(["Deploy Service"]);
+  expect(sections[1]).toEqual([]);
 });
 
 test("computeShortcutPanelHeight follows the adaptive terminal-height rule", () => {
@@ -657,6 +801,27 @@ test("collectDirectCanonicalBindingsForMode is mode-specific and excludes parent
   // globals — must NOT appear here
   expect(keys).not.toContain("q");
   expect(keys).not.toContain("ctrl-z");
+});
+
+test("canonical bindings report the scope they were declared in", () => {
+  const direct = collectDirectCanonicalBindingsForMode("op-log", defaultKeymap);
+  expect(direct.every((binding) => binding.scope === "op-log")).toBeTrue();
+
+  const inherited = collectInheritedAndGlobalCanonicalBindings("op-log", defaultKeymap);
+  const scopeByKey = new Map(inherited.map((binding) => [binding.key, binding.scope] as const));
+  // Inherited from the shared `log` parent, not flattened onto op-log.
+  expect(scopeByKey.get(":")).toBe("log");
+  expect(scopeByKey.get("j")).toBe("log");
+  expect(scopeByKey.get("q")).toBe("_global");
+  expect(scopeByKey.get("ctrl-z")).toBe("_global");
+
+  // Two levels up: normal reaches revision-log-nav through log.
+  const normalInherited = collectInheritedAndGlobalCanonicalBindings("revision-log", defaultKeymap);
+  const normalScopeByKey = new Map(
+    normalInherited.map((binding) => [binding.key, binding.scope] as const),
+  );
+  expect(normalScopeByKey.get("J")).toBe("revision-log-nav");
+  expect(normalScopeByKey.get(":")).toBe("log");
 });
 
 test("collectInheritedAndGlobalCanonicalBindings returns globals only when a mode has no parent", () => {

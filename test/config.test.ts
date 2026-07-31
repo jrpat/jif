@@ -5,6 +5,7 @@ import { expect, test } from "bun:test";
 import {
   DEFAULT_PREVIEW_PANE_FILL_OPACITY,
   defaultAppConfig,
+  isUserDefinedBinding,
   loadAppConfig,
   resolveAppConfig,
   resolveConfiguredKeymap,
@@ -501,6 +502,33 @@ test("resolveConfiguredKeymap supports bindings shared by revision log navigatio
   expect(resolveCommand("rebase", "x", resolved.keymap)).toBe("jump-to-working-copy");
   expect(resolveCommand("bookmark", "x", resolved.keymap)).toBe("jump-to-working-copy");
   expect(resolveCommand("evolog", "x", resolved.keymap)).toBeNull();
+});
+
+test("resolveConfiguredKeymap reports which keys each scope took from the user config", () => {
+  const resolved = resolveConfiguredKeymap({
+    "revision-log": {
+      Y: { title: "Deploy", run: () => {} },
+      s: "jump-to-working-copy",
+      "ctrl-o": null,
+    },
+    _global: {
+      "ctrl-y": { command: "move-down", canonical: false },
+    },
+  });
+
+  expect(isUserDefinedBinding(resolved.userBindings, { scope: "revision-log", key: "Y" })).toBeTrue();
+  // Rebinding a built-in command still makes the key the user's own.
+  expect(isUserDefinedBinding(resolved.userBindings, { scope: "revision-log", key: "s" })).toBeTrue();
+  expect(isUserDefinedBinding(resolved.userBindings, { scope: "_global", key: "ctrl-y" })).toBeTrue();
+  // An unbind leaves no binding to attribute, and untouched keys stay built-in.
+  expect(isUserDefinedBinding(resolved.userBindings, { scope: "revision-log", key: "ctrl-o" })).toBeFalse();
+  expect(isUserDefinedBinding(resolved.userBindings, { scope: "revision-log", key: "n" })).toBeFalse();
+  expect(isUserDefinedBinding(resolved.userBindings, { scope: "log", key: "Y" })).toBeFalse();
+});
+
+test("resolveConfiguredKeymap reports no user bindings for an empty config", () => {
+  expect(resolveConfiguredKeymap().userBindings).toEqual({});
+  expect(resolveConfiguredKeymap({}).userBindings).toEqual({});
 });
 
 test("resolveConfiguredKeymap accepts user bindings in every keymap scope", () => {

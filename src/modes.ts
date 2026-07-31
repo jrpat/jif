@@ -471,7 +471,14 @@ export function getDirectCommandsForMode(
   return definitions.filter((def) => ids.has(def.id));
 }
 
-export type CanonicalKeyBinding = Readonly<{ key: string; commandId: string }>;
+// `scope` is where the winning binding was declared, not the mode it applies to.
+// Consumers that care about a binding's origin — notably telling a user's config
+// entries apart from the built-in defaults — need that distinction.
+export type CanonicalKeyBinding = Readonly<{
+  key: string;
+  commandId: string;
+  scope: KeymapScope;
+}>;
 
 export function collectCanonicalBindingsForMode(
   mode: Mode,
@@ -489,14 +496,14 @@ export function collectInheritedAndGlobalCanonicalBindings(
 ): readonly CanonicalKeyBinding[] {
   const directBindings = keymap[mode] ?? {};
   const def = modeDefinitions[mode];
-  const parentBindings = def.parent ? getModeBindings(def.parent, keymap) : {};
+  const parentBindings = def.parent ? getScopedModeBindings(def.parent, keymap) : {};
 
   const results: CanonicalKeyBinding[] = [];
-  for (const [key, binding] of Object.entries(parentBindings)) {
+  for (const [key, { binding, scope }] of Object.entries(parentBindings)) {
     if (key in directBindings) continue;
     if (binding === null) continue;
     if (isCanonicalBinding(binding)) {
-      results.push({ key, commandId: bindingCommand(binding) });
+      results.push({ key, commandId: bindingCommand(binding), scope });
     }
   }
   for (const [key, binding] of Object.entries(keymap._global ?? {})) {
@@ -504,7 +511,7 @@ export function collectInheritedAndGlobalCanonicalBindings(
     if (key in parentBindings) continue;
     if (binding === null) continue;
     if (isCanonicalBinding(binding)) {
-      results.push({ key, commandId: bindingCommand(binding) });
+      results.push({ key, commandId: bindingCommand(binding), scope: "_global" });
     }
   }
   return results;
@@ -518,7 +525,7 @@ export function collectDirectCanonicalBindingsForMode(
   for (const [key, binding] of Object.entries(keymap[mode] ?? {})) {
     if (binding === null) continue;
     if (isCanonicalBinding(binding)) {
-      results.push({ key, commandId: bindingCommand(binding) });
+      results.push({ key, commandId: bindingCommand(binding), scope: mode });
     }
   }
   return results;
@@ -550,10 +557,27 @@ function getModeBindings(
   mode: Mode,
   keymap: Keymap,
 ): Readonly<Record<string, KeymapBinding>> {
+  const bindings: Record<string, KeymapBinding> = {};
+  for (const [key, scoped] of Object.entries(getScopedModeBindings(mode, keymap))) {
+    bindings[key] = scoped.binding;
+  }
+  return bindings;
+}
+
+type ScopedBinding = Readonly<{ binding: KeymapBinding; scope: KeymapScope }>;
+
+// Same inheritance walk as `getModeBindings`, but each winning entry remembers
+// the scope it was declared in.
+function getScopedModeBindings(
+  mode: Mode,
+  keymap: Keymap,
+): Readonly<Record<string, ScopedBinding>> {
   const def = modeDefinitions[mode];
-  const parentBindings = def.parent ? getModeBindings(def.parent, keymap) : {};
-  return {
-    ...parentBindings,
-    ...(keymap[mode] ?? {}),
-  };
+  const bindings: Record<string, ScopedBinding> = def.parent
+    ? { ...getScopedModeBindings(def.parent, keymap) }
+    : {};
+  for (const [key, binding] of Object.entries(keymap[mode] ?? {})) {
+    bindings[key] = { binding, scope: mode };
+  }
+  return bindings;
 }

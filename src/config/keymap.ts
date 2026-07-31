@@ -36,10 +36,23 @@ export type UserAppState = BaseAppState & Readonly<{
   focusedFile: ChangedFile | null;
 }>;
 
+// The keys each scope received from the user's config, so surfaces like the
+// shortcut panel can tell a user's own bindings apart from the built-in ones
+// after the two have been merged into a single keymap.
+export type UserBindingIndex = Readonly<Partial<Record<KeymapScope, ReadonlySet<string>>>>;
+
 export type ResolvedConfiguredKeymap = Readonly<{
   keymap: Keymap;
   commands: readonly CommandDefinition[];
+  userBindings: UserBindingIndex;
 }>;
+
+export function isUserDefinedBinding(
+  userBindings: UserBindingIndex,
+  binding: Readonly<{ scope: KeymapScope; key: string }>,
+): boolean {
+  return userBindings[binding.scope]?.has(binding.key) ?? false;
+}
 
 const USER_COMMAND_ID_PREFIX = "user:";
 
@@ -74,6 +87,10 @@ export function createUserAppState(state: BaseAppState): UserAppState {
 export function resolveConfiguredKeymap(userKeymap?: UserKeyMap): ResolvedConfiguredKeymap {
   const keymap = cloneKeymap(defaultKeymap);
   const commandsById = new Map(commandDefinitions.map((command) => [command.id, command] as const));
+  const userBindings: Partial<Record<KeymapScope, Set<string>>> = {};
+  const recordUserBinding = (scope: KeymapScope, key: string) => {
+    (userBindings[scope] ??= new Set()).add(key);
+  };
 
   for (const scope of keymapScopes) {
     const bindings = userKeymap?.[scope];
@@ -86,6 +103,8 @@ export function resolveConfiguredKeymap(userKeymap?: UserKeyMap): ResolvedConfig
         keymap[scope][key] = null;
         continue;
       }
+
+      recordUserBinding(scope, key);
 
       if (typeof binding === "string") {
         keymap[scope][key] = binding;
@@ -116,6 +135,7 @@ export function resolveConfiguredKeymap(userKeymap?: UserKeyMap): ResolvedConfig
   return {
     keymap: keymap as Keymap,
     commands: [...commandsById.values()],
+    userBindings,
   };
 }
 

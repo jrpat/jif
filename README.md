@@ -76,6 +76,11 @@ cannot stitch letters across spaces. Nonmatches are removed. Matches are ranked
 by fzy relevance and laid out in reading order, left-to-right and then
 top-to-bottom.
 
+Bindings you define yourself in `keymap` get their own section at the top of the
+panel, above the built-in ones, separated by a divider. Rebinding a built-in key
+moves it into that section too. The section is omitted when your config has no
+bindings for the current mode. See [Custom Keybindings](#custom-keybindings).
+
 Press `enter` to apply a nonempty filter. The results and filter text remain
 visible, but the underlying mode regains focus so every displayed shortcut can
 be invoked immediately. Press `?` again to edit the applied filter. The first
@@ -671,7 +676,7 @@ Position, visibility, size, and word wrap can also be changed for the current se
 
 ## Custom Keybindings
 
-Custom keybindings live under the top-level `keymap` field in your config. They can rebind built-in commands or run arbitrary code against the live app state.
+Custom keybindings live under the top-level `keymap` field in your config. They can rebind built-in commands or run arbitrary code against the live app state. The shortcut panel lists them in their own section above the built-in bindings, so `?` always answers what you bound yourself first.
 
 <details>
 <summary>Syntax</summary>
