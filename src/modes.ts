@@ -33,6 +33,7 @@ export type Mode =
   | "bookmark-move"
   | "set-parents"
   | "new-between"
+  | "preview"
   | "extra";
 
 export type ModeDefinition = Readonly<{
@@ -101,6 +102,7 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
   "bookmark-move": { id: "bookmark-move", parent: "revision-draft", inputPassthrough: false, label: "Bookmark Move" },
   "set-parents": { id: "set-parents", parent: "revision-draft", inputPassthrough: false, label: "Set Parents" },
   "new-between": { id: "new-between", parent: "revision-draft", inputPassthrough: false, label: "New Between" },
+  preview: { id: "preview", inputPassthrough: false, label: "Preview" },
   extra: { id: "extra", inputPassthrough: false, label: "Extra" },
 };
 
@@ -126,7 +128,8 @@ const alias = (command: string): KeymapBinding => ({ command, canonical: false }
 // all of them at once.
 const previewBindings = {
   p: "toggle-preview",
-  P: "cycle-preview-position",
+  P: "enter-preview-mode",
+  "alt-p": "cycle-preview-position",
   W: "toggle-preview-word-wrap",
   "ctrl-[": "expand-preview",
   "ctrl-]": "shrink-preview",
@@ -361,6 +364,27 @@ export const defaultKeymap: Keymap = {
   "new-between": {
     " ": "toggle-new-between-before",
   },
+  preview: {
+    P: "exit-preview-mode",
+    j: "preview-mode-scroll-down",
+    k: "preview-mode-scroll-up",
+    J: "scroll-preview-down-large",
+    K: "scroll-preview-up-large",
+    "ctrl-d": "scroll-preview-down-half-page",
+    "ctrl-u": "scroll-preview-up-half-page",
+    "ctrl-f": "scroll-preview-down-page",
+    "ctrl-b": "scroll-preview-up-page",
+    h: "expand-preview-fine",
+    l: "shrink-preview-fine",
+    H: "preview-mode-expand",
+    L: "preview-mode-shrink",
+    "alt-p": "preview-mode-cycle-position",
+    w: "preview-mode-toggle-word-wrap",
+    "ctrl-enter": "preview-mode-toggle-full-file",
+    // In non-root modes the global q binding becomes cancel. Preview mode is
+    // intentionally exited only by escape or shift+p.
+    q: null,
+  },
   extra: {},
 };
 
@@ -389,6 +413,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.focusMode === "notifications") return "notifications";
   if (state.focusMode === "file-filter") return "revision-files-filter";
   if (state.focusMode === "files") return "revision-files";
+  if (state.focusMode === "preview") return "preview";
   if (state.commandDraft?.config.kind === "rebase") return "rebase";
   if (state.commandDraft?.config.kind === "duplicate") return "duplicate";
   if (state.commandDraft?.config.kind === "revert") return "revert";

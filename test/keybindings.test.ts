@@ -136,7 +136,10 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     expandDiffContext: () => calls.push("expandDiffContext"),
     expandPreview: () => calls.push("expandPreview"),
     shrinkPreview: () => calls.push("shrinkPreview"),
+    expandPreviewFine: () => calls.push("expandPreviewFine"),
+    shrinkPreviewFine: () => calls.push("shrinkPreviewFine"),
     scrollPreview: (rowDelta) => calls.push(`scrollPreview(${rowDelta})`),
+    scrollPreviewPage: (pageDelta) => calls.push(`scrollPreviewPage(${pageDelta})`),
     openNotifications: () => calls.push("openNotifications"),
     openReleasesPage: () => calls.push("openReleasesPage"),
     expandNotification: () => calls.push("expandNotification"),
@@ -156,6 +159,8 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     abandonRevision: () => calls.push("abandonRevision"),
     enterBookmarkMode: () => calls.push("enterBookmarkMode"),
     enterExtraMode: () => calls.push("enterExtraMode"),
+    enterPreviewMode: () => calls.push("enterPreviewMode"),
+    exitPreviewMode: () => calls.push("exitPreviewMode"),
     startSetParents: () => calls.push("startSetParents"),
     toggleSetParentsPick: () => calls.push("toggleSetParentsPick"),
     startNewBetween: () => calls.push("startNewBetween"),
@@ -750,6 +755,13 @@ test("reload config preserves the active shortcut context", () => {
   expect(shouldDismissShortcutContextBeforeCommand({
     commandId: "reload-config",
     mode: "extra",
+  })).toBeFalse();
+});
+
+test("entering preview mode defers shortcut dismissal until visibility is known", () => {
+  expect(shouldDismissShortcutContextBeforeCommand({
+    commandId: "enter-preview-mode",
+    mode: "revision-log",
   })).toBeFalse();
 });
 
@@ -2413,4 +2425,62 @@ test("ctrl-enter toggles full-file context in files mode and hints at it in the 
     expect(handled).toBeFalse();
     expect(calls).toEqual([]);
   }
+});
+
+test("preview mode routes manipulation keys without invoking its exit command", () => {
+  const state: AppState = {
+    ...createState(),
+    focusMode: "preview",
+    focusModeStack: ["revisions", "preview"],
+  };
+  const expectedCalls = new Map([
+    ["j", "scrollPreview(1)"],
+    ["k", "scrollPreview(-1)"],
+    ["J", "scrollPreview(10)"],
+    ["K", "scrollPreview(-10)"],
+    ["ctrl-d", "scrollPreviewPage(0.5)"],
+    ["ctrl-u", "scrollPreviewPage(-0.5)"],
+    ["ctrl-f", "scrollPreviewPage(1)"],
+    ["ctrl-b", "scrollPreviewPage(-1)"],
+    ["h", "expandPreviewFine"],
+    ["l", "shrinkPreviewFine"],
+    ["H", "expandPreview"],
+    ["L", "shrinkPreview"],
+    ["alt-p", "cyclePreviewPosition"],
+    ["w", "togglePreviewWordWrap"],
+  ]);
+
+  for (const [normalizedKey, expectedCall] of expectedCalls) {
+    const calls: string[] = [];
+    const handled = dispatchGlobalKey({
+      normalizedKey,
+      state,
+      commands: commandDefinitions,
+      controller: createController(calls),
+    });
+
+    expect(handled).toBeTrue();
+    expect(calls).toEqual([expectedCall]);
+    expect(calls).not.toContain("exitPreviewMode");
+  }
+});
+
+test("ctrl-enter toggles full-file context from preview mode over Files", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    expandedRowId: "aaaaaaaa",
+    focusMode: "preview",
+    focusModeStack: ["revisions", "files", "preview"],
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "ctrl-enter",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["togglePreviewFullFile"]);
 });

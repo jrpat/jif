@@ -323,6 +323,10 @@ export function getShortcutPanelBindings(
 ): readonly ShortcutPanelBindingInput[] {
   const actionable = bindings.filter(({ command }) => commandHasImmediateEffect(state, command));
 
+  if (state.focusMode === "preview") {
+    return actionable;
+  }
+
   if (state.commandDraft !== null) {
     return actionable.filter(({ command }) =>
       NAVIGATION_COMMAND_IDS.has(command.id) ||
@@ -538,6 +542,7 @@ function hasCancelableState(state: AppState): boolean {
     state.focusMode === "command" ||
     state.focusMode === "inline-confirmation" ||
     state.focusMode === "bookmark" ||
+    state.focusMode === "preview" ||
     state.commandDraft !== null ||
     state.selectedRowIds.length > 0 ||
     isFileFocusMode(state.focusMode)

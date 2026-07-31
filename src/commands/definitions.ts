@@ -1,6 +1,7 @@
 import { getAdjacentBookmarkRevisionIndex, getAdjacentWorkspaceRevisionIndex, getExpandedRevision, getFocusedChildRevision, getFocusedFile, getFocusedNotification, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
 import type { AppState, RebaseSourceKind, RebaseTargetKind } from "../domain/types.ts";
 import { canSearchState } from "../search/matching.ts";
+import { isPreviewingSingleFile } from "../domain/preview.ts";
 
 export type JjCommandOptions = Readonly<{
   cwd?: string;
@@ -57,6 +58,8 @@ export type CommandController = Readonly<{
   editRevision: () => void;
   enterBookmarkMode: () => void;
   enterExtraMode: () => void;
+  enterPreviewMode: () => void;
+  exitPreviewMode: () => void;
   startSetParents: () => void;
   toggleSetParentsPick: () => void;
   startNewBetween: () => void;
@@ -111,7 +114,10 @@ export type CommandController = Readonly<{
   expandDiffContext: () => void;
   expandPreview: () => void;
   shrinkPreview: () => void;
+  expandPreviewFine: () => void;
+  shrinkPreviewFine: () => void;
   scrollPreview: (rowDelta: number) => void;
+  scrollPreviewPage: (pageDelta: number) => void;
   openNotifications: () => void;
   openReleasesPage: () => void;
   expandNotification: () => void;
@@ -677,11 +683,32 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     group: "global",
   },
   {
+    id: "enter-preview-mode",
+    title: "Preview Mode",
+    description: "Enter preview mode and show its pane controls",
+    run: (controller) => controller.enterPreviewMode(),
+    group: "global",
+  },
+  {
+    id: "exit-preview-mode",
+    title: "Close",
+    description: "Return to the underlying log view",
+    run: (controller) => controller.exitPreviewMode(),
+    group: "mode",
+  },
+  {
     id: "cycle-preview-position",
     title: "Preview Position",
     description: "Cycle the preview pane between auto, right, and below",
     run: (controller) => controller.cyclePreviewPosition(),
     group: "global",
+  },
+  {
+    id: "preview-mode-cycle-position",
+    title: "Position",
+    description: "Cycle the preview pane between auto, right, and below",
+    run: (controller) => controller.cyclePreviewPosition(),
+    group: "mode",
   },
   {
     id: "toggle-preview-word-wrap",
@@ -691,10 +718,25 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     group: "global",
   },
   {
+    id: "preview-mode-toggle-word-wrap",
+    title: "Word Wrap",
+    description: "Wrap or unwrap long preview diff lines",
+    run: (controller) => controller.togglePreviewWordWrap(),
+    group: "mode",
+  },
+  {
     id: "toggle-preview-full-file",
     title: "Full File Preview",
     description: "Toggle effectively full-file context for file preview diffs",
-    canExecute: (state) => state.focusMode === "files",
+    canExecute: isPreviewingSingleFile,
+    run: (controller) => controller.togglePreviewFullFile(),
+    group: "mode",
+  },
+  {
+    id: "preview-mode-toggle-full-file",
+    title: "Full File",
+    description: "Toggle effectively full-file context for file preview diffs",
+    canExecute: isPreviewingSingleFile,
     run: (controller) => controller.togglePreviewFullFile(),
     group: "mode",
   },
@@ -720,6 +762,34 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     group: "global",
   },
   {
+    id: "preview-mode-expand",
+    title: "Grow",
+    description: "Grow the preview pane",
+    run: (controller) => controller.expandPreview(),
+    group: "mode",
+  },
+  {
+    id: "preview-mode-shrink",
+    title: "Shrink",
+    description: "Shrink the preview pane",
+    run: (controller) => controller.shrinkPreview(),
+    group: "mode",
+  },
+  {
+    id: "expand-preview-fine",
+    title: "Grow 1 Cell",
+    description: "Grow the preview pane by one column or row",
+    run: (controller) => controller.expandPreviewFine(),
+    group: "mode",
+  },
+  {
+    id: "shrink-preview-fine",
+    title: "Shrink 1 Cell",
+    description: "Shrink the preview pane by one column or row",
+    run: (controller) => controller.shrinkPreviewFine(),
+    group: "mode",
+  },
+  {
     id: "scroll-preview-down",
     title: "Scroll Preview Down",
     description: "Scroll the preview pane down",
@@ -732,6 +802,62 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Scroll the preview pane up",
     run: (controller) => controller.scrollPreview(-1),
     group: "global",
+  },
+  {
+    id: "preview-mode-scroll-down",
+    title: "Scroll Down",
+    description: "Scroll the preview pane down",
+    run: (controller) => controller.scrollPreview(1),
+    group: "mode",
+  },
+  {
+    id: "preview-mode-scroll-up",
+    title: "Scroll Up",
+    description: "Scroll the preview pane up",
+    run: (controller) => controller.scrollPreview(-1),
+    group: "mode",
+  },
+  {
+    id: "scroll-preview-down-large",
+    title: "Scroll Down 10",
+    description: "Scroll the preview pane down ten lines",
+    run: (controller) => controller.scrollPreview(10),
+    group: "mode",
+  },
+  {
+    id: "scroll-preview-up-large",
+    title: "Scroll Up 10",
+    description: "Scroll the preview pane up ten lines",
+    run: (controller) => controller.scrollPreview(-10),
+    group: "mode",
+  },
+  {
+    id: "scroll-preview-down-half-page",
+    title: "Half Page Down",
+    description: "Scroll the preview pane down half a page",
+    run: (controller) => controller.scrollPreviewPage(0.5),
+    group: "mode",
+  },
+  {
+    id: "scroll-preview-up-half-page",
+    title: "Half Page Up",
+    description: "Scroll the preview pane up half a page",
+    run: (controller) => controller.scrollPreviewPage(-0.5),
+    group: "mode",
+  },
+  {
+    id: "scroll-preview-down-page",
+    title: "Page Down",
+    description: "Scroll the preview pane down one page",
+    run: (controller) => controller.scrollPreviewPage(1),
+    group: "mode",
+  },
+  {
+    id: "scroll-preview-up-page",
+    title: "Page Up",
+    description: "Scroll the preview pane up one page",
+    run: (controller) => controller.scrollPreviewPage(-1),
+    group: "mode",
   },
   {
     id: "undo",

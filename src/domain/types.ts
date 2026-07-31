@@ -27,6 +27,7 @@ export type FocusMode =
   | "diff-viewer"
   | "notifications"
   | "bookmark"
+  | "preview"
   | "extra";
 export type AppLayout = "loose" | "normal" | "tight";
 export type CommandBarKind = "jj" | "shell";
@@ -77,7 +78,7 @@ export type OperationLogEntry = Readonly<{
 
 export type PreviewPosition = "right" | "below";
 
-// A session position preference set via `shift+p`. Includes `"auto"` so the user
+// A session position preference set via `alt+p`. Includes `"auto"` so the user
 // can cycle back to the responsive layout after pinning a fixed side.
 export type PreviewPositionPreference = PreviewPosition | "auto";
 

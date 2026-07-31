@@ -105,7 +105,8 @@ Controls for the [preview pane](#preview-pane). Available in Normal, secondary r
 | Key | Command | Description |
 |-----|---------|-------------|
 | `p` | toggle-preview | Show or hide the preview pane for this session |
-| `shift+p` | cycle-preview-position | Cycle the pane between auto, right, and below |
+| `shift+p` | enter-preview-mode | Enter Preview mode when the pane is visible and show its controls |
+| `alt+p` | cycle-preview-position | Cycle the pane between auto, right, and below |
 | `shift+w` | toggle-preview-word-wrap | Wrap or unwrap long preview diff lines |
 | `ctrl+enter` | toggle-preview-full-file | In Files mode, toggle effectively full-file preview diffs using a large `jj --context` value |
 | `ctrl+[` | expand-preview | Grow the pane by `preview.resizeStepPercent` |
@@ -114,6 +115,23 @@ Controls for the [preview pane](#preview-pane). Available in Normal, secondary r
 | `ctrl+k` | scroll-preview-up | Scroll the preview up (falls back to the help toast when the pane is hidden) |
 
 `ctrl+[` / `ctrl+]` require a terminal that distinguishes them from other keys via the Kitty keyboard protocol (kitty, Ghostty, WezTerm, recent iTerm2, Alacritty, foot). In terminals without it, `ctrl+[` is indistinguishable from Escape.
+
+Preview mode keeps its shortcut panel open while you manipulate the pane:
+
+| Key | Description |
+|-----|-------------|
+| `j` / `k` | Scroll down / up one line |
+| `shift+j` / `shift+k` | Scroll down / up ten lines |
+| `ctrl+d` / `ctrl+u` | Scroll down / up half a page |
+| `ctrl+f` / `ctrl+b` | Scroll down / up a whole page |
+| `h` / `l` | Grow / shrink by one cell along the pane's split axis (one column when it is on the right) |
+| `shift+h` / `shift+l` | Grow / shrink by `preview.resizeStepPercent`, like `ctrl+[` / `ctrl+]` |
+| `alt+p` | Cycle the pane between auto, right, and below |
+| `w` | Toggle word wrap |
+| `ctrl+enter` | In Files, toggle effectively full-file preview context |
+| `escape` / `shift+p` | Exit Preview mode |
+
+The manipulation keys keep Preview mode active. If the preview pane is hidden, `shift+p` is a no-op.
 
 ### Normal
 
@@ -622,7 +640,7 @@ export default {
     position: "auto",         // "auto" | "right" | "below"; auto uses right on wide terminals, below/hidden on narrow
     showByDefault: false,      // show the pane on startup (toggle in-session with `p`)
     defaultWidthPercent: 50,   // initial size as a percent of the terminal
-    resizeStepPercent: 5,      // percent added/removed by ctrl+[ / ctrl+]
+    resizeStepPercent: 5,      // percent added/removed by ctrl+[ / ctrl+] and Preview mode H / L
     minSizePercent: 15,        // clamp for the size percent
     maxSizePercent: 90,
     narrowWidth: 100,          // in "auto", terminals narrower than this are "too narrow" for the right layout
@@ -632,7 +650,7 @@ export default {
 } satisfies Jif.Config;
 ```
 
-Position, visibility, size, and word wrap can also be changed for the current session with `p`, `shift+p`, `ctrl+[` / `ctrl+]`, and `shift+w`; those session changes are not persisted.
+Position, visibility, size, and word wrap can also be changed for the current session with `p`, `alt+p`, `ctrl+[` / `ctrl+]`, and `shift+w`; `shift+p` opens the pane's dedicated Preview mode. Those session changes are not persisted.
 
 </details>
 
@@ -938,7 +956,7 @@ The pane is active in Normal, Files, Operation Log, and Evolog:
 - **Operation Log** — the diff of the focused operation (`jj operation diff`).
 - **Evolog** — the diff of the focused evolution entry.
 
-In Files mode, `ctrl+enter` toggles the focused file preview between jj's compact diff context and a full-file diff.
+In Files mode, `ctrl+enter` toggles the focused file preview between jj's compact diff context and a full-file diff. The same binding remains available after entering Preview mode.
 
 </details>
 
@@ -954,7 +972,7 @@ By default the pane is placed automatically: on the right in wide terminals and 
 <details>
 <summary>Line Wrapping</summary>
 
-Line wrapping can be toggled in-app with `shift+w` and in config via `preview.wordWrap`. If not wrapped, the diff is horizontally scrollable via the mouse.
+Line wrapping can be toggled in-app with `shift+w`, with `w` in Preview mode, and in config via `preview.wordWrap`. If not wrapped, the diff is horizontally scrollable via the mouse.
 
 </details>
 

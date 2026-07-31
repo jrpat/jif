@@ -19,9 +19,11 @@ import { stripAnsi } from "../search/matching.ts";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import {
   clampPreviewPercent,
+  effectivePreviewPosition,
   effectivePreviewPercent,
   effectivePreviewPositionPreference,
   effectivePreviewVisible,
+  isPreviewingSingleFile,
   nextPreviewPosition,
 } from "../domain/preview.ts";
 import type { AppStore } from "../state/appStore.ts";
@@ -140,6 +142,22 @@ export function createJifCommandController(args: Readonly<{
       previewConfig,
     );
     store.actions.setPreviewSizePercentOverride(next);
+  }
+
+  function adjustPreviewSizeFine(direction: 1 | -1) {
+    const state = store.snapshot();
+    const previewConfig = args.getPreviewConfig();
+    const terminalSize = args.getTerminalSize();
+    const terminalExtent = effectivePreviewPosition(state, previewConfig, terminalSize.width) === "right"
+      ? terminalSize.width
+      : terminalSize.height;
+    const currentPercent = effectivePreviewPercent(state, previewConfig);
+    const currentExtent = Math.max(1, Math.round((terminalExtent * currentPercent) / 100));
+    const nextPercent = clampPreviewPercent(
+      ((currentExtent + direction) * 100) / Math.max(1, terminalExtent),
+      previewConfig,
+    );
+    store.actions.setPreviewSizePercentOverride(nextPercent);
   }
 
   // `jj split` and `jj split --parallel` share the same flow: split the whole
@@ -541,6 +559,17 @@ export function createJifCommandController(args: Readonly<{
     enterExtraMode() {
       store.actions.enterExtraMode();
     },
+    enterPreviewMode() {
+      const state = store.snapshot();
+      if (!effectivePreviewVisible(state, args.getPreviewConfig(), args.getTerminalSize().width)) {
+        return;
+      }
+      store.actions.closeShortcutPanel();
+      store.actions.enterPreviewMode();
+    },
+    exitPreviewMode() {
+      store.actions.exitPreviewMode();
+    },
     startSetParents() {
       const revision = getFocusedRevision(store.snapshot());
       if (!revision) {
@@ -757,7 +786,8 @@ export function createJifCommandController(args: Readonly<{
       preview?.scrollTo({ x: 0, y: preview.scrollTop });
     },
     togglePreviewFullFile() {
-      if (store.snapshot().focusMode !== "files") {
+      const state = store.snapshot();
+      if (!isPreviewingSingleFile(state)) {
         return;
       }
       store.actions.togglePreviewFullFile();
@@ -786,12 +816,27 @@ export function createJifCommandController(args: Readonly<{
     shrinkPreview() {
       adjustPreviewSize(-1);
     },
+    expandPreviewFine() {
+      adjustPreviewSizeFine(1);
+    },
+    shrinkPreviewFine() {
+      adjustPreviewSizeFine(-1);
+    },
     scrollPreview(rowDelta: number) {
       if (effectivePreviewVisible(store.snapshot(), args.getPreviewConfig(), args.getTerminalSize().width)) {
         args.getPreviewViewport()?.scrollBy({ x: 0, y: rowDelta });
       } else {
         args.getHelpViewport()?.scrollBy({ x: 0, y: rowDelta });
       }
+    },
+    scrollPreviewPage(pageDelta: number) {
+      const preview = args.getPreviewViewport();
+      if (!preview || pageDelta === 0) {
+        return;
+      }
+      const direction = Math.sign(pageDelta);
+      const rows = Math.max(1, Math.floor(preview.viewport.height * Math.abs(pageDelta)));
+      preview.scrollBy({ x: 0, y: direction * rows });
     },
     toggleSelection() {
       store.actions.toggleRevisionSelection();

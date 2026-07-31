@@ -22,6 +22,7 @@ export type CommandDispatchDetails = Readonly<{
 // open instead of dismissing it mid-traversal.
 const SHORTCUT_CONTEXT_PRESERVING_COMMAND_IDS = new Set([
   "cancel",
+  "enter-preview-mode",
   "reload-config",
   "shortcut-panel",
   ...revisionLogNavCommandIds,

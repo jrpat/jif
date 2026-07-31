@@ -664,6 +664,7 @@ export function JifView(props: {
   const showsTransientShortcutPanel = createMemo(() =>
     !showsPersistentShortcutPanel() && (
       store.state.focusMode === "extra" ||
+      store.state.focusMode === "preview" ||
       (modeShortcutBindings().length > 0 &&
         (showsCommandPreview() || store.state.focusMode === "bookmark"))
     )

@@ -195,7 +195,7 @@ function renderConfigTypes(): string {
 declare global {
 namespace Jif {
   type AppLayout = "loose" | "normal" | "tight";
-  type FocusMode = "revisions" | "files" | "file-filter" | "op-log" | "evolog" | "inline-confirmation" | "command" | "revset" | "file-search" | "search" | "diff-viewer" | "notifications";
+  type FocusMode = "revisions" | "files" | "file-filter" | "op-log" | "evolog" | "inline-confirmation" | "command" | "revset" | "file-search" | "search" | "diff-viewer" | "notifications" | "bookmark" | "preview" | "extra";
   type SearchScopeId = "revision-log" | "operation-log" | "evolog";
   type SearchMode = "search" | "fast-jump";
   type StatusLevel = "info" | "success" | "warning" | "error";

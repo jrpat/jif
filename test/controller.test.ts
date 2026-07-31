@@ -6,6 +6,7 @@ import { draftConfigs, getDisplayedCommandText } from "../src/state/store.ts";
 import type { ChangedFile, OperationLogEntry, RepositoryData, RevisionSummary } from "../src/domain/types.ts";
 import { quoteCommand } from "../src/jj/process.ts";
 import { createJifCommandController } from "../src/ui/controller.ts";
+import { effectivePreviewCols } from "../src/domain/preview.ts";
 
 const REPO_PATH = "/tmp/repo";
 
@@ -1329,6 +1330,89 @@ test("scrollPreview forwards to the preview scrollbox when the preview is visibl
     { x: 0, y: 1 },
     { x: 0, y: -1 },
   ]);
+  harness.store.dispose();
+});
+
+test("scrollPreviewPage converts half and whole pages to viewport rows", () => {
+  const calls: Array<{ x: number; y: number }> = [];
+  const fakeScrollbox = {
+    viewport: { height: 21 },
+    scrollBy: (delta: { x: number; y: number }) => calls.push(delta),
+  } as unknown as ScrollBoxRenderable;
+  const harness = createControllerHarness({ previewViewport: fakeScrollbox });
+
+  harness.controller.scrollPreviewPage(0.5);
+  harness.controller.scrollPreviewPage(-0.5);
+  harness.controller.scrollPreviewPage(1);
+  harness.controller.scrollPreviewPage(-1);
+
+  expect(calls).toEqual([
+    { x: 0, y: 10 },
+    { x: 0, y: -10 },
+    { x: 0, y: 21 },
+    { x: 0, y: -21 },
+  ]);
+  harness.store.dispose();
+});
+
+test("fine preview resizing changes a right-hand pane by one column", () => {
+  const harness = createControllerHarness({});
+  const previewConfig = {
+    position: "auto" as const,
+    showByDefault: true,
+    defaultWidthPercent: 50,
+    resizeStepPercent: 5,
+    minSizePercent: 15,
+    maxSizePercent: 90,
+    narrowWidth: 100,
+    whenNarrow: "below" as const,
+    wordWrap: false,
+  };
+
+  expect(effectivePreviewCols(harness.store.snapshot(), previewConfig, 120)).toBe(60);
+  harness.controller.expandPreviewFine();
+  expect(effectivePreviewCols(harness.store.snapshot(), previewConfig, 120)).toBe(61);
+  harness.controller.shrinkPreviewFine();
+  expect(effectivePreviewCols(harness.store.snapshot(), previewConfig, 120)).toBe(60);
+  harness.store.dispose();
+});
+
+test("enterPreviewMode only enters while the pane is visible", () => {
+  const harness = createControllerHarness({});
+
+  harness.store.actions.openShortcutPanel();
+  harness.controller.enterPreviewMode();
+  expect(harness.store.snapshot().focusMode).toBe("preview");
+  expect(harness.store.snapshot().shortcutPanelExpanded).toBeFalse();
+  harness.controller.exitPreviewMode();
+  expect(harness.store.snapshot().focusMode).toBe("revisions");
+
+  harness.store.actions.setPreviewVisibleOverride(false);
+  harness.store.actions.openShortcutPanel();
+  harness.controller.enterPreviewMode();
+  expect(harness.store.snapshot().focusMode).toBe("revisions");
+  expect(harness.store.snapshot().shortcutPanelExpanded).toBeTrue();
+  harness.store.dispose();
+});
+
+test("togglePreviewFullFile remains active in preview mode over Files", () => {
+  const revision = createRevision({
+    rowId: "row-1",
+    revisionId: "rev-1",
+    description: "first",
+    filesLoaded: true,
+    files: [{ path: "src/index.ts", status: "M" }],
+  });
+  const harness = createControllerHarness({ revisions: [revision] });
+
+  harness.store.actions.openFocusedRevision();
+  expect(harness.store.snapshot().focusMode).toBe("files");
+  harness.controller.enterPreviewMode();
+  expect(harness.store.snapshot().focusMode).toBe("preview");
+
+  harness.controller.togglePreviewFullFile();
+  expect(harness.store.snapshot().previewFullFile).toBeTrue();
+  expect(harness.store.snapshot().focusMode).toBe("preview");
   harness.store.dispose();
 });
 

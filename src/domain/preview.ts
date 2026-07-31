@@ -1,5 +1,5 @@
 import type { ResolvedAppConfig } from "../config/schema.ts";
-import type { PreviewPosition, PreviewPositionPreference } from "./types.ts";
+import type { AppState, PreviewPosition, PreviewPositionPreference } from "./types.ts";
 
 export type PreviewConfig = ResolvedAppConfig["preview"];
 
@@ -11,10 +11,18 @@ export type PreviewSettings = Readonly<{
   previewSizePercentOverride: number | null;
 }>;
 
-// The order `shift+p` cycles through: auto → right → below → auto.
+export function isPreviewingSingleFile(
+  state: Pick<AppState, "focusMode" | "focusModeStack">,
+): boolean {
+  return state.focusMode === "files" || (
+    state.focusMode === "preview" && state.focusModeStack.includes("files")
+  );
+}
+
+// The order `alt+p` cycles through: auto → right → below → auto.
 const PREVIEW_POSITION_CYCLE: readonly PreviewPositionPreference[] = ["auto", "right", "below"];
 
-/** The next position preference in the `shift+p` cycle. */
+/** The next position preference in the `alt+p` cycle. */
 export function nextPreviewPosition(current: PreviewPositionPreference): PreviewPositionPreference {
   const index = PREVIEW_POSITION_CYCLE.indexOf(current);
   return PREVIEW_POSITION_CYCLE[(index + 1) % PREVIEW_POSITION_CYCLE.length]!;
@@ -34,7 +42,7 @@ export function effectivePreviewPositionPreference(
  * wanted, the `"auto"` layout hides it on a terminal narrower than `narrowWidth`
  * if `whenNarrow` is `"hide"` (the default `"below"` instead relocates it — see
  * {@link effectivePreviewPosition}). An explicit position — a config `position`
- * other than `"auto"`, or a `shift+p` override — takes the pane out of `"auto"`,
+ * other than `"auto"`, or an `alt+p` override — takes the pane out of `"auto"`,
  * so it is always shown at that position regardless of width.
  */
 export function effectivePreviewVisible(
@@ -50,7 +58,7 @@ export function effectivePreviewVisible(
 }
 
 /**
- * Resolve the concrete pane position. A session toggle (`shift+p`) wins;
+ * Resolve the concrete pane position. A session toggle (`alt+p`) wins;
  * otherwise the config value applies, and `"auto"` chooses `right` in a wide
  * terminal and `below` in a narrow one.
  */
@@ -72,7 +80,7 @@ function isNarrowTerminal(preview: PreviewConfig, terminalWidth: number): boolea
 }
 
 // Whether the "auto" layout suppresses the pane on this terminal: only when the
-// effective preference is "auto" (config default or an explicit `shift+p` cycle
+// effective preference is "auto" (config default or an explicit `alt+p` cycle
 // back to auto), the terminal is narrow, and `whenNarrow` is set to hide rather
 // than relocate. A pinned position takes the pane out of "auto", so it stays.
 function hiddenByNarrowTerminal(
