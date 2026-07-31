@@ -1,5 +1,12 @@
-import { RGBA, StyledText, TextAttributes, type ScrollBoxRenderable, type TextChunk } from "@opentui/core";
-import { For, Show, createEffect, createMemo } from "solid-js";
+import {
+  RGBA,
+  StyledText,
+  TextAttributes,
+  type Renderable,
+  type ScrollBoxRenderable,
+  type TextChunk,
+} from "@opentui/core";
+import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import {
   countDiffRows,
@@ -9,6 +16,7 @@ import {
   formatOmittedLineSeparator,
   splitGitDiff,
   splitPatchIntoDiffSections,
+  type PreviewFilePatch,
 } from "../domain/previewDiff.ts";
 import { buildPreviewSyntaxStyle } from "./previewSyntaxStyle.ts";
 import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
@@ -27,6 +35,9 @@ import { makeScrollAcceleration } from "./scrollAcceleration.ts";
  * visible width rather than the (potentially much wider) diff width, which is
  * what sizes the horizontally-scrollable content box. Revision headers can
  * place the same rule used between files after their metadata lines.
+ *
+ * The filename of the file being scrolled through is pinned to the pane's top
+ * row by an overlay outside the scrollbox.
  */
 export function PreviewPane(props: {
   header: string | null;
@@ -71,6 +82,59 @@ export function PreviewPane(props: {
     makeScrollAcceleration(props.config.scroll.step, props.config.scroll.acceleration)
   );
 
+  // The name of the file being scrolled through is pinned to the top row of the
+  // pane. OpenTUI keeps every renderable's absolute `y` in sync with the scroll
+  // translate, so the pinned file is simply the last one whose name row sits at
+  // or above the viewport's top edge — no cumulative row math, and it stays
+  // correct in wrapped mode where diff heights are `auto`.
+  const [pinnedFilePath, setPinnedFilePath] = createSignal<string | null>(null);
+  const fileHeadingRenderables = new Map<PreviewFilePatch, Renderable>();
+  let scrollbox: ScrollBoxRenderable | undefined;
+  let disposeScrollObserver = () => {};
+  let needsLayoutSync = true;
+  const syncPinnedFilePath = () => {
+    // Nothing has scrolled past at the top. This also covers preview target
+    // changes, which reset the scroll to 0 before the new content is laid out
+    // and would otherwise be resolved against stale row positions.
+    if (!scrollbox || scrollbox.scrollTop === 0) {
+      setPinnedFilePath(null);
+      return;
+    }
+
+    const previewFiles = files();
+    const pinnedIndex = findPinnedFileIndex(
+      previewFiles,
+      fileHeadingRenderables,
+      scrollbox.viewport.y,
+    );
+    if (pinnedIndex === null) return;
+    setPinnedFilePath(pinnedIndex < 0 ? null : previewFiles[pinnedIndex]!.path);
+  };
+
+  // File boundaries can move without the scroll offset changing when wrapped
+  // content is resized or replaced. Defer that resync until OpenTUI has applied
+  // the new layout, and keep the render hook otherwise constant-time.
+  createEffect(() => {
+    props.diff;
+    props.header;
+    props.headerDividerAfterLine;
+    props.viewportWidth;
+    props.previewWordWrap;
+    needsLayoutSync = true;
+    scrollbox?.requestRender();
+  });
+  const syncPinnedFilePathAfterLayout = () => {
+    if (!needsLayoutSync) return;
+    needsLayoutSync = false;
+    process.nextTick(syncPinnedFilePath);
+  };
+
+  onCleanup(() => {
+    disposeScrollObserver();
+    scrollbox = undefined;
+    props.registerScrollbox(undefined);
+  });
+
   return (
     <box
       flexDirection="column"
@@ -79,7 +143,13 @@ export function PreviewPane(props: {
       backgroundColor={colors.previewPaneFill}
     >
       <scrollbox
-        ref={(el: ScrollBoxRenderable) => props.registerScrollbox(el)}
+        ref={(el: ScrollBoxRenderable) => {
+          disposeScrollObserver();
+          scrollbox = el;
+          disposeScrollObserver = observeVerticalScroll(el, syncPinnedFilePath);
+          props.registerScrollbox(el);
+        }}
+        renderAfter={syncPinnedFilePathAfterLayout}
         width="100%"
         height="100%"
         flexGrow={1}
@@ -122,6 +192,12 @@ export function PreviewPane(props: {
               {(file, index) => {
                 const rows = countDiffRows(file.patch);
                 const sections = splitPatchIntoDiffSections(file.patch);
+                let fileHeading: Renderable | undefined;
+                onCleanup(() => {
+                  if (fileHeadingRenderables.get(file) === fileHeading) {
+                    fileHeadingRenderables.delete(file);
+                  }
+                });
                 // A blank line + rule separates each file from what sits above
                 // it: the previous file, or — for the first file — the header.
                 // Without a header (a single-file preview) the first file needs
@@ -135,9 +211,14 @@ export function PreviewPane(props: {
                         leadingBlankLine
                       />
                     </Show>
-                    <text fg={colors.diffFileName} attributes={TextAttributes.BOLD} wrapMode="none" truncate>
-                      {file.path}
-                    </text>
+                    <PreviewFileName
+                      path={file.path}
+                      color={colors.diffFileName}
+                      register={(el) => {
+                        fileHeading = el;
+                        fileHeadingRenderables.set(file, el);
+                      }}
+                    />
                     <Show
                       when={rows > 0}
                       fallback={(
@@ -183,7 +264,76 @@ export function PreviewPane(props: {
           </Show>
         </box>
       </scrollbox>
+      {/* Inset on the right so the pinned name never covers the scrollbar. */}
+      <Show when={pinnedFilePath()}>
+        {(path: () => string) => (
+          <box
+            position="absolute"
+            top={0}
+            left={0}
+            right={1}
+            height={1}
+            zIndex={1}
+            paddingX={1}
+            backgroundColor={colors.previewPaneFill}
+          >
+            <PreviewFileName path={path()} color={colors.diffFileName} />
+          </box>
+        )}
+      </Show>
     </box>
+  );
+}
+
+function findPinnedFileIndex(
+  files: readonly PreviewFilePatch[],
+  headings: ReadonlyMap<PreviewFilePatch, Renderable>,
+  viewportTop: number,
+): number | null {
+  let low = 0;
+  let high = files.length - 1;
+  let pinnedIndex = -1;
+
+  while (low <= high) {
+    const index = Math.floor((low + high) / 2);
+    const heading = headings.get(files[index]!);
+    if (!heading) return null;
+
+    if (heading.y <= viewportTop) {
+      pinnedIndex = index;
+      low = index + 1;
+    } else {
+      high = index - 1;
+    }
+  }
+
+  return pinnedIndex;
+}
+
+function observeVerticalScroll(
+  scrollbox: ScrollBoxRenderable,
+  onScroll: () => void,
+): () => void {
+  const scrollbar = scrollbox.verticalScrollBar;
+  scrollbar.on("change", onScroll);
+  return () => scrollbar.off("change", onScroll);
+}
+
+function PreviewFileName(props: {
+  path: string;
+  color: string | undefined;
+  register?: (el: Renderable) => void;
+}) {
+  return (
+    <text
+      ref={(el: Renderable) => props.register?.(el)}
+      fg={props.color}
+      attributes={TextAttributes.BOLD}
+      wrapMode="none"
+      truncate
+    >
+      {props.path}
+    </text>
   );
 }
 

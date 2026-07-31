@@ -1,5 +1,6 @@
 import { testRender } from "@opentui/solid";
 import type { RGBA, ScrollBoxRenderable } from "@opentui/core";
+import { createSignal } from "solid-js";
 import {
   FALLBACK_PALETTE_DARK,
   FALLBACK_PALETTE_LIGHT,
@@ -97,12 +98,15 @@ async function capture(
     config?: typeof config;
     headerDividerAfterLine?: number | null;
     previewWordWrap?: boolean;
+    toggleWordWrapAfterScroll?: boolean;
     waitForExactSpan?: string;
   } = {},
 ) {
   const width = options.width ?? 60;
   const height = options.height ?? 30;
   let scrollbox: ScrollBoxRenderable | undefined;
+  let registered = false;
+  const [previewWordWrap, setPreviewWordWrap] = createSignal(options.previewWordWrap ?? false);
   const rendered = await testRender(() => (
     <PreviewPane
       header={header}
@@ -111,9 +115,10 @@ async function capture(
       loading={false}
       viewportWidth={width - 1}
       config={options.config ?? config}
-      previewWordWrap={options.previewWordWrap ?? false}
+      previewWordWrap={previewWordWrap()}
       registerScrollbox={(el) => {
         scrollbox = el;
+        if (el) registered = true;
       }}
     />
   ), { width, height });
@@ -151,6 +156,15 @@ async function capture(
     scrollTopAfter = scrollbox.scrollTop;
     linesAfterScrollDown = toLines(rendered.captureSpans());
   }
+  let linesAfterWordWrapToggle: string[] | null = null;
+  if (options.toggleWordWrapAfterScroll && scrollbox) {
+    setPreviewWordWrap(!previewWordWrap());
+    scrollbox.scrollTo({ x: 0, y: scrollbox.scrollTop });
+    await rendered.renderOnce();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await rendered.renderOnce();
+    linesAfterWordWrapToggle = toLines(rendered.captureSpans());
+  }
   const settlePasses = options.waitForExactSpan ? 20 : 1;
   for (let i = 0; i < settlePasses; i++) {
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -170,7 +184,7 @@ async function capture(
     .map((s) => ({ text: s.text, fg: rgb(s.fg), bg: rgb(s.bg) }));
 
   return {
-    registered: Boolean(scrollbox),
+    registered,
     lines: toLines(spans),
     coloredSpans,
     scrollWidth,
@@ -180,6 +194,7 @@ async function capture(
     sliderViewportSize,
     afterScrollLeft,
     linesAfterScrollDown,
+    linesAfterWordWrapToggle,
     scrollTopAfter,
   };
 }
@@ -226,6 +241,40 @@ index 1111111..2222222 100644
 ${tallDiffBody}
 `;
 
+// A short file followed by a tall one, with distinctive names and line tokens so
+// the filename pinned to the top row can be told apart from the scrolled body.
+const stickyDiff = `diff --git a/alpha.txt b/alpha.txt
+index 1111111..2222222 100644
+--- a/alpha.txt
++++ b/alpha.txt
+@@ -0,0 +1,3 @@
++alphaline0
++alphaline1
++alphaline2
+diff --git a/beta.txt b/beta.txt
+index 3333333..4444444 100644
+--- a/beta.txt
++++ b/beta.txt
+@@ -0,0 +1,40 @@
+${Array.from({ length: 40 }, (_, i) => `+betaline${i}`).join("\n")}
+`;
+
+// Wrapping the first file's long lines moves the second file below the same
+// scroll offset, so the pinned filename must resync even without another scroll.
+const stickyReflowDiff = `diff --git a/alpha.txt b/alpha.txt
+index 1111111..2222222 100644
+--- a/alpha.txt
++++ b/alpha.txt
+@@ -0,0 +1,3 @@
+${Array.from({ length: 3 }, (_, i) => `+alphaline${i} ${"long content ".repeat(12)}`).join("\n")}
+diff --git a/beta.txt b/beta.txt
+index 3333333..4444444 100644
+--- a/beta.txt
++++ b/beta.txt
+@@ -0,0 +1,40 @@
+${Array.from({ length: 40 }, (_, i) => `+betaline${i}`).join("\n")}
+`;
+
 const withHeader = await capture(
   [
     "Change ID: qpvuntsmwlqt",
@@ -246,6 +295,14 @@ const scrollingHeader = await capture("ZZHEADERZZ revision summary", tallDiff, {
 const scrollingSingleFile = await capture(null, tallDiff, {
   height: 8,
   scrollDownBy: 30,
+});
+const stickyFirstFile = await capture(null, stickyDiff, { height: 8, scrollDownBy: 2 });
+const stickySecondFile = await capture(null, stickyDiff, { height: 8, scrollDownBy: 30 });
+const stickyReflow = await capture(null, stickyReflowDiff, {
+  width: 40,
+  height: 8,
+  scrollDownBy: 8,
+  toggleWordWrapAfterScroll: true,
 });
 const singleFile = await capture(null, singleFileDiff);
 const headerSingle = await capture("A single-file revision preview", singleFileDiff);
@@ -281,4 +338,4 @@ const themeColors = {
   configLightRemoved: lightConfig.colorScheme.semanticColors.diffRemovedFill,
 };
 
-console.log(JSON.stringify({ withHeader, singleFile, headerSingle, scrollingHeader, scrollingSingleFile, wide, wideWrapped, multiHunk, wideMultiHunk, themeColors }));
+console.log(JSON.stringify({ withHeader, singleFile, headerSingle, scrollingHeader, scrollingSingleFile, stickyFirstFile, stickySecondFile, stickyReflow, wide, wideWrapped, multiHunk, wideMultiHunk, themeColors }));

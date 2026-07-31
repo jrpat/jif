@@ -32,6 +32,7 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
     sliderViewportSize: number | null;
     afterScrollLeft: number | null;
     linesAfterScrollDown: string[] | null;
+    linesAfterWordWrapToggle: string[] | null;
     scrollTopAfter: number | null;
   };
   type RGB = [number, number, number];
@@ -45,6 +46,9 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
     multiHunk: Scenario;
     wideMultiHunk: Scenario;
     scrollingSingleFile: Scenario;
+    stickyFirstFile: Scenario;
+    stickySecondFile: Scenario;
+    stickyReflow: Scenario;
     themeColors: {
       darkAdded: RGB | null;
       darkRemoved: RGB | null;
@@ -166,6 +170,27 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
   expect(singleScrolling.lines.join("\n")).toContain("▀");
   expect(singleScrolling.scrollTopAfter ?? 0).toBeGreaterThan(0);
   expect((singleScrolling.linesAfterScrollDown ?? []).join("\n")).toContain("▀");
+
+  // The name of the file being scrolled through sticks to the top row of the
+  // pane once its own name row scrolls above the top edge, and hands over to the
+  // next file's name when that file's name row does the same.
+  const stickyFirst = result.stickyFirstFile;
+  const stickyFirstScrolled = stickyFirst.linesAfterScrollDown ?? [];
+  expect(stickyFirst.lines[0]).toContain("alpha.txt");
+  expect(stickyFirstScrolled[0]).toContain("alpha.txt");
+  // Two content rows scrolled away, so the body really did move under the name.
+  expect(stickyFirstScrolled[1]).toContain("alphaline2");
+
+  const stickySecondScrolled = result.stickySecondFile.linesAfterScrollDown ?? [];
+  expect(stickySecondScrolled[0]).toContain("beta.txt");
+  expect(stickySecondScrolled[0]).not.toContain("betaline");
+  expect(stickySecondScrolled.join("\n")).toContain("betaline");
+
+  // Wrapped layout can move file boundaries without changing scrollTop. The
+  // pinned filename follows that reflow without waiting for another scroll.
+  const stickyReflow = result.stickyReflow;
+  expect(stickyReflow.linesAfterScrollDown?.[0]).toContain("beta.txt");
+  expect(stickyReflow.linesAfterWordWrapToggle?.[0]).toContain("alpha.txt");
 
   // The diff body adapts to the terminal theme rather than using OpenTUI's
   // hardcoded dark-background line fills (#1a4d1a added / #4d1a1a removed).

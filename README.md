@@ -978,6 +978,8 @@ The pane is active in Normal, Files, Operation Log, and Evolog:
 - **Operation Log** — the diff of the focused operation (`jj operation diff`).
 - **Evolog** — the diff of the focused evolution entry.
 
+After a file heading scrolls past the top of a multi-file diff, its name remains pinned until the next file reaches the top.
+
 In Files mode, `ctrl+enter` toggles the focused file preview between jj's compact diff context and a full-file diff. The same binding remains available after entering Preview mode.
 
 </details>
