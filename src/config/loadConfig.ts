@@ -1,6 +1,6 @@
-import { access, copyFile, unlink } from "node:fs/promises";
+import { access, copyFile, readFile, stat, unlink } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, extname, join, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { TerminalColors } from "@opentui/core";
 import { runCommand } from "../jj/process.ts";
@@ -37,9 +37,9 @@ export async function loadAppConfig(options: Readonly<{
     ? await loadConfigFile(resolveConfigFilePath(options.replaceUserConfigPath))
     : await discoverUserConfig(options.configDir);
 
-  const projectLayer = options.projectStartDir !== undefined
-    ? await discoverProjectLocalConfig(options.projectStartDir)
-    : {};
+  const projectLayers = options.projectStartDir !== undefined
+    ? await discoverProjectConfigLayers(options.projectStartDir)
+    : [];
 
   const baseLayers: AppConfig[] = [];
   for (const path of baseLayerPaths) {
@@ -55,7 +55,7 @@ export async function loadAppConfig(options: Readonly<{
     defaultAppConfig,
     ...baseLayers,
     userLayer,
-    projectLayer,
+    ...projectLayers,
     ...overrideLayers,
   ]);
 
@@ -75,10 +75,24 @@ export function projectConfigDir(workspaceRoot: string): string {
   return join(workspaceRoot, ".jj", "jif");
 }
 
-async function discoverProjectLocalConfig(startDir: string): Promise<AppConfig> {
+async function discoverProjectConfigLayers(startDir: string): Promise<AppConfig[]> {
   const workspaceRoot = await resolveWorkspaceRoot(startDir);
-  if (workspaceRoot === null) return {};
+  if (workspaceRoot === null) return [];
 
+  const defaultWorkspaceRoot = await resolveDefaultWorkspaceRoot(workspaceRoot);
+  const workspaceRoots = defaultWorkspaceRoot !== null && defaultWorkspaceRoot !== workspaceRoot
+    ? [defaultWorkspaceRoot, workspaceRoot]
+    : [workspaceRoot];
+
+  const layers: AppConfig[] = [];
+  for (const root of workspaceRoots) {
+    const layer = await discoverProjectConfig(root);
+    if (layer !== null) layers.push(layer);
+  }
+  return layers;
+}
+
+async function discoverProjectConfig(workspaceRoot: string): Promise<AppConfig | null> {
   const configDir = projectConfigDir(workspaceRoot);
   for (const candidate of CONFIG_CANDIDATES) {
     const configPath = join(configDir, candidate);
@@ -87,7 +101,26 @@ async function discoverProjectLocalConfig(startDir: string): Promise<AppConfig> 
     }
   }
 
-  return {};
+  return null;
+}
+
+async function resolveDefaultWorkspaceRoot(workspaceRoot: string): Promise<string | null> {
+  const repoMarker = join(workspaceRoot, ".jj", "repo");
+
+  try {
+    const marker = await stat(repoMarker);
+    if (marker.isDirectory()) return workspaceRoot;
+
+    const pointer = (await readFile(repoMarker, "utf8")).trim();
+    if (pointer.length === 0) return null;
+
+    const repoDir = isAbsolute(pointer)
+      ? resolve(pointer)
+      : resolve(workspaceRoot, ".jj", pointer);
+    return dirname(dirname(repoDir));
+  } catch {
+    return null;
+  }
 }
 
 export async function resolveWorkspaceRoot(startDir: string): Promise<string | null> {

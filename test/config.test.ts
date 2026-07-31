@@ -917,6 +917,84 @@ test("loadAppConfig project-local layer overrides user but is overridden by --co
   }
 }, 20000);
 
+test("loadAppConfig inherits default-workspace config before current-workspace config", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-workspace-config-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+
+  try {
+    const xdgDir = join(tempDir, "xdg");
+    await mkdir(join(xdgDir, "jif"), { recursive: true });
+    process.env.XDG_CONFIG_HOME = xdgDir;
+
+    const defaultWorkspace = await initJjWorkspace(tempDir, "main");
+    const currentWorkspace = join(tempDir, "secondary");
+    await runCommand(defaultWorkspace, ["jj", "workspace", "add", currentWorkspace]);
+
+    await mkdir(join(defaultWorkspace, ".jj", "jif"), { recursive: true });
+    await writeFile(
+      join(defaultWorkspace, ".jj", "jif", "config.ts"),
+      "export default { log: { scrollMargin: 31, revisionIdAdditionalChars: 4 } };\n",
+      "utf8",
+    );
+    await mkdir(join(currentWorkspace, ".jj", "jif"), { recursive: true });
+    await writeFile(
+      join(currentWorkspace, ".jj", "jif", "config.ts"),
+      "export default { log: { scrollMargin: 32 } };\n",
+      "utf8",
+    );
+
+    const { resolved } = await loadAppConfig({ projectStartDir: currentWorkspace });
+
+    expect(resolved.log.scrollMargin).toBe(32);
+    expect(resolved.log.revisionIdAdditionalChars).toBe(4);
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}, 20000);
+
+test("loadAppConfig follows an absolute .jj/repo pointer to default-workspace config", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "jif-absolute-workspace-config-"));
+  const previousXdg = process.env.XDG_CONFIG_HOME;
+
+  try {
+    const xdgDir = join(tempDir, "xdg");
+    await mkdir(join(xdgDir, "jif"), { recursive: true });
+    process.env.XDG_CONFIG_HOME = xdgDir;
+
+    const defaultWorkspace = await initJjWorkspace(tempDir, "main");
+    const currentWorkspace = join(tempDir, "secondary");
+    await runCommand(defaultWorkspace, ["jj", "workspace", "add", currentWorkspace]);
+    await writeFile(
+      join(currentWorkspace, ".jj", "repo"),
+      join(defaultWorkspace, ".jj", "repo"),
+      "utf8",
+    );
+
+    await mkdir(join(defaultWorkspace, ".jj", "jif"), { recursive: true });
+    await writeFile(
+      join(defaultWorkspace, ".jj", "jif", "config.ts"),
+      "export default { log: { scrollMargin: 33 } };\n",
+      "utf8",
+    );
+
+    const { resolved } = await loadAppConfig({ projectStartDir: currentWorkspace });
+
+    expect(resolved.log.scrollMargin).toBe(33);
+  } finally {
+    if (previousXdg === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdg;
+    }
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}, 20000);
+
 test("loadAppConfig prefers .jj/jif/config.ts over .jj/jif/config.js when both exist", async () => {
   const tempDir = await mkdtemp(join(tmpdir(), "jif-project-precedence-"));
   const previousXdg = process.env.XDG_CONFIG_HOME;

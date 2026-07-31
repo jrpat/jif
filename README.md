@@ -503,9 +503,11 @@ jif loads the first existing file in this order from that directory:
 
 If the workspace's `.jj/jif/` directory contains a `config.ts` (or `config.js`), jif loads it automatically as a layer just above your user config. This is for settings that should travel with a particular workspace — say, a tweaked keymap for one repo — without putting anything jif-specific on a tracked path.
 
+In a workspace created with `jj workspace add`, jif first loads the default workspace's `.jj/jif/` config, then merges the current workspace's config on top if it has one. Put shared repository settings in the default workspace and keep only workspace-specific overrides in the other workspaces.
+
 `.jj` is jj's own untracked workspace metadata directory, so a checkout of a third-party repository can never deliver TypeScript that jif will execute. Anything in there got there because you put it there.
 
-Workspace resolution uses `jj workspace root`, so this works from any subdirectory of the workspace and respects whatever jj considers the workspace root.
+Workspace resolution uses `jj workspace root`, so this works from any subdirectory of the workspace and respects whatever jj considers the workspace root. Jif follows the current workspace's `.jj/repo` pointer to locate the default workspace.
 
 </details>
 
@@ -519,8 +521,9 @@ The stack, from lowest to highest precedence:
 1. Built-in defaults
 2. `--config-base FILE` layers, in the order they appear on the command line
 3. The user config (the file discovered in the jif config directory, or the file passed to `--config`)
-4. The project-local config at `<workspace>/.jj/jif.config.{ts,js}`, if present
-5. `--config-override FILE` layers, in the order they appear on the command line
+4. The default workspace's project config at `<default-workspace>/.jj/jif/config.{ts,js}`, if the current workspace is not the default
+5. The current workspace's project config at `<workspace>/.jj/jif/config.{ts,js}`, if present
+6. `--config-override FILE` layers, in the order they appear on the command line
 
 The merge is recursive for plain objects, but arrays and any object that contains a function value (most notably an inline keymap binding with `run` or `canExecute`) are replaced wholesale rather than merged. This keeps a layer that redefines a single key from producing a Frankenstein binding spliced together from two layers.
 
