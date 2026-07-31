@@ -212,6 +212,9 @@ export type AppState = Readonly<{
   focusedEvologIndex: number;
   expandedRowId: string | null;
   focusedFileIndex: number;
+  // Stable identity for file focus. Unlike the display index, this survives
+  // the brief empty list while a rewritten revision reloads its files.
+  focusedFilePath: string | null;
   // Case-insensitive substring narrowing the expanded revision's file list.
   // Scoped to that revision: collapsing or moving to another one clears it.
   fileFilterQuery: string;

@@ -290,6 +290,7 @@ namespace Jif {
     focusedRevisionIndex: number;
     expandedRowId: string | null;
     focusedFileIndex: number;
+    focusedFilePath: string | null;
     fileFilterQuery: string;
     selectedRowIds: readonly string[];
     markedRowIds: readonly string[];

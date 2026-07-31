@@ -24,6 +24,7 @@ import {
   focusEvologEntryAt,
   focusOperationLogEntryAt,
   focusRevisionAt,
+  getFocusedFile,
   getFocusedRevisionArg,
   getFocusedWorkspaceSwitchTargetName,
   getFocusedInsertArg,
@@ -2218,6 +2219,45 @@ test("applyRepositoryData keeps the file list open when the expanded revision's 
   expect(refreshed.expandedRowId).toBe(newRowId);
   expect(refreshed.focusedRevisionIndex).toBe(0);
   expect(refreshed.selectedFilePaths).toEqual(["src/a.ts"]);
+});
+
+test("repository refresh restores the focused file by path and keeps surviving selections", () => {
+  let state = openFocusedRevision(createState());
+  state = setRevisionFiles(state, FIRST_ROW_ID, [
+    { status: "M", path: "src/a.ts" },
+    { status: "M", path: "src/b.ts" },
+    { status: "M", path: "src/c.ts" },
+  ]);
+  state = toggleFileSelection(state);
+  state = toggleFileSelection(state);
+
+  const newCommitId = "99999999";
+  const newRowId = createRowId(newCommitId, "aaaaaaaa");
+  state = applyRepositoryData(state, {
+    repoPath: state.repoPath,
+    revisions: [
+      {
+        ...state.revisions[0]!,
+        rowId: newRowId,
+        commitId: newCommitId,
+        filesLoaded: false,
+        files: [],
+      },
+      state.revisions[1]!,
+    ],
+  });
+
+  expect(state.focusMode).toBe("files");
+  expect(state.selectedFilePaths).toEqual(["src/a.ts", "src/b.ts"]);
+
+  state = setRevisionFiles(state, newRowId, [
+    { status: "M", path: "src/a.ts" },
+    { status: "M", path: "src/c.ts" },
+  ]);
+
+  expect(getFocusedFile(state)?.path).toBe("src/c.ts");
+  expect(state.focusedFileIndex).toBe(1);
+  expect(state.selectedFilePaths).toEqual(["src/a.ts"]);
 });
 
 test("applyRepositoryData preserves the focused row by rowId when revision ids collide", () => {

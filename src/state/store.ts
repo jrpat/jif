@@ -225,6 +225,7 @@ export function createInitialState(
     focusedEvologIndex: 0,
     expandedRowId: null,
     focusedFileIndex: 0,
+    focusedFilePath: null,
     fileFilterQuery: "",
     selectedRowIds: [],
     markedRowIds: [],
@@ -539,18 +540,21 @@ function applyFileFilterQuery(state: AppState, query: string): AppState {
 
   // Keep the cursor on the same file whenever it survives the new query, so
   // typing does not silently retarget the pending file operation.
-  const focusedPath = getFocusedFile(state)?.path ?? null;
+  const focusedPath = getFocusedFile(state)?.path ?? state.focusedFilePath;
   const nextState: AppState = { ...state, fileFilterQuery: query };
   const visibleFiles = getVisibleExpandedFiles(nextState);
   const retainedIndex = focusedPath === null
     ? -1
     : visibleFiles.findIndex((file) => file.path === focusedPath);
 
+  const focusedFileIndex = retainedIndex === -1
+    ? clampIndex(state.focusedFileIndex, visibleFiles.length)
+    : retainedIndex;
+
   return {
     ...nextState,
-    focusedFileIndex: retainedIndex === -1
-      ? clampIndex(state.focusedFileIndex, visibleFiles.length)
-      : retainedIndex,
+    focusedFileIndex,
+    focusedFilePath: visibleFiles[focusedFileIndex]?.path ?? null,
   };
 }
 
@@ -609,8 +613,31 @@ export function applyRepositoryData(
   const selectedRowIds = state.selectedRowIds.filter((id) => rowIdSet.has(id));
   const markedRowIds = state.markedRowIds.filter((id) => rowIdSet.has(id));
   const keepsExpandedRevision = state.expandedRowId !== null && expandedRowId !== null;
-  const selectedFilePaths = keepsExpandedRevision ? state.selectedFilePaths : [];
   const fileFilterQuery = keepsExpandedRevision ? state.fileFilterQuery : "";
+  const expandedRevision = expandedRowId
+    ? revisions.find((revision) => revision.rowId === expandedRowId) ?? null
+    : null;
+  const visibleFiles = filterChangedFiles(expandedRevision?.files ?? [], fileFilterQuery);
+  const previousFocusedFilePath = getFocusedFile(state)?.path ?? state.focusedFilePath;
+  const retainedFocusedFileIndex = previousFocusedFilePath === null
+    ? -1
+    : visibleFiles.findIndex((file) => file.path === previousFocusedFilePath);
+  const focusedFileIndex = retainedFocusedFileIndex === -1
+    ? clampIndex(state.focusedFileIndex, visibleFiles.length)
+    : retainedFocusedFileIndex;
+  const focusedFilePath = !keepsExpandedRevision
+    ? null
+    : visibleFiles[focusedFileIndex]?.path ?? (
+      expandedRevision?.filesLoaded ? null : previousFocusedFilePath
+    );
+  const availableFilePaths = expandedRevision?.filesLoaded
+    ? new Set(expandedRevision.files.map((file) => file.path))
+    : null;
+  const selectedFilePaths = keepsExpandedRevision
+    ? availableFilePaths
+      ? state.selectedFilePaths.filter((path) => availableFilePaths.has(path))
+      : state.selectedFilePaths
+    : [];
 
   return normalizeFocusState({
     ...state,
@@ -621,10 +648,8 @@ export function applyRepositoryData(
     focusedRevisionIndex,
     expandedRowId,
     fileFilterQuery,
-    focusedFileIndex: clampIndex(
-      state.focusedFileIndex,
-      getVisibleExpandedFilesCount(revisions, expandedRowId, fileFilterQuery),
-    ),
+    focusedFileIndex,
+    focusedFilePath,
     selectedRowIds,
     markedRowIds,
     selectedFilePaths,
@@ -648,14 +673,22 @@ export function setRevisionFiles(
       ? state.selectedFilePaths.filter((p) => filePaths.has(p))
       : state.selectedFilePaths;
 
+  const visibleFiles = filterChangedFiles(files, state.fileFilterQuery);
+  const retainedFocusedFileIndex = state.focusedFilePath === null
+    ? -1
+    : visibleFiles.findIndex((file) => file.path === state.focusedFilePath);
+  const focusedFileIndex = retainedFocusedFileIndex === -1
+    ? clampIndex(state.focusedFileIndex, visibleFiles.length)
+    : retainedFocusedFileIndex;
+
   return {
     ...state,
     revisions,
     selectedFilePaths,
-    focusedFileIndex:
-      state.expandedRowId === rowId
-        ? clampIndex(state.focusedFileIndex, filterChangedFiles(files, state.fileFilterQuery).length)
-        : state.focusedFileIndex,
+    focusedFileIndex: state.expandedRowId === rowId ? focusedFileIndex : state.focusedFileIndex,
+    focusedFilePath: state.expandedRowId === rowId
+      ? visibleFiles[focusedFileIndex]?.path ?? null
+      : state.focusedFilePath,
   };
 }
 
@@ -695,12 +728,15 @@ export function moveFocus(state: AppState, delta: number): AppState {
   }
 
   if (isFileFocusMode(state.focusMode) && state.expandedRowId !== null) {
+    const visibleFiles = getVisibleExpandedFiles(state);
+    const focusedFileIndex = clampIndex(
+      state.focusedFileIndex + delta,
+      visibleFiles.length,
+    );
     return {
       ...state,
-      focusedFileIndex: clampIndex(
-        state.focusedFileIndex + delta,
-        getVisibleExpandedFiles(state).length,
-      ),
+      focusedFileIndex,
+      focusedFilePath: visibleFiles[focusedFileIndex]?.path ?? null,
     };
   }
 
@@ -712,6 +748,7 @@ export function moveFocus(state: AppState, delta: number): AppState {
     ),
     revisionScrollRequest: state.revisionScrollRequest + 1,
     focusedFileIndex: 0,
+    focusedFilePath: null,
   };
 }
 
@@ -731,6 +768,7 @@ export function moveFocusToParent(state: AppState): AppState {
     expandedRowId: null,
     focusedRevisionIndex: state.revisions.findIndex((revision) => revision.rowId === parentRevision.rowId),
     focusedFileIndex: 0,
+    focusedFilePath: null,
     selectedFilePaths: [],
   }, ["revisions"]);
 }
@@ -751,6 +789,7 @@ export function moveFocusToChild(state: AppState): AppState {
     expandedRowId: null,
     focusedRevisionIndex: state.revisions.findIndex((revision) => revision.rowId === childRevision.rowId),
     focusedFileIndex: 0,
+    focusedFilePath: null,
     selectedFilePaths: [],
   }, ["revisions"]);
 }
@@ -767,6 +806,7 @@ export function moveFocusToNextDivergentSibling(state: AppState): AppState {
     expandedRowId: null,
     focusedRevisionIndex: nextIndex,
     focusedFileIndex: 0,
+    focusedFilePath: null,
     selectedFilePaths: [],
   }, ["revisions"]);
 }
@@ -840,6 +880,7 @@ function moveFocusToIndex(state: AppState, nextIndex: number | null): AppState {
     expandedRowId: null,
     focusedRevisionIndex: nextIndex,
     focusedFileIndex: 0,
+    focusedFilePath: null,
     selectedFilePaths: [],
   }, ["revisions"]);
 }
@@ -878,6 +919,7 @@ export function focusRevisionAt(state: AppState, index: number): AppState {
     expandedRowId: collapseExpandedRevision ? null : state.expandedRowId,
     focusedRevisionIndex: clamped,
     focusedFileIndex: 0,
+    focusedFilePath: collapseExpandedRevision ? null : state.focusedFilePath,
     fileFilterQuery: collapseExpandedRevision ? "" : state.fileFilterQuery,
     selectedFilePaths: collapseExpandedRevision ? [] : state.selectedFilePaths,
   };
@@ -929,6 +971,7 @@ export function focusWorkingCopy(state: AppState): AppState {
     focusedRevisionIndex: index,
     revisionScrollRequest: state.revisionScrollRequest + 1,
     focusedFileIndex: 0,
+    focusedFilePath: null,
   };
 }
 
@@ -974,6 +1017,7 @@ export function focusLogBottom(state: AppState): AppState {
     ...state,
     focusedRevisionIndex: state.revisions.length - 1,
     focusedFileIndex: 0,
+    focusedFilePath: null,
   };
 }
 
@@ -988,6 +1032,7 @@ export function openFocusedRevision(state: AppState): AppState {
     inlineConfirmation: null,
     expandedRowId: revision.rowId,
     focusedFileIndex: 0,
+    focusedFilePath: revision.files[0]?.path ?? null,
     fileFilterQuery: "",
     selectedFilePaths: [],
   };
@@ -1248,6 +1293,7 @@ export function closeFocusedRevision(state: AppState): AppState {
     inlineConfirmation: null,
     expandedRowId: null,
     focusedFileIndex: 0,
+    focusedFilePath: null,
     fileFilterQuery: "",
     selectedFilePaths: [],
   }, ["revisions"]);
@@ -1675,11 +1721,13 @@ export function toggleFileSelection(state: AppState): AppState {
   }
 
   const isSelected = state.selectedFilePaths.includes(file.path);
+  const focusedFileIndex = isSelected
+    ? state.focusedFileIndex
+    : clampIndex(state.focusedFileIndex + 1, visibleFiles.length);
   return {
     ...state,
-    focusedFileIndex: isSelected
-      ? state.focusedFileIndex
-      : clampIndex(state.focusedFileIndex + 1, visibleFiles.length),
+    focusedFileIndex,
+    focusedFilePath: visibleFiles[focusedFileIndex]?.path ?? null,
     selectedFilePaths: isSelected
       ? state.selectedFilePaths.filter((p) => p !== file.path)
       : [...state.selectedFilePaths, file.path],
@@ -3245,19 +3293,6 @@ export function commandCanExecute(state: AppState): boolean {
   }
 
   return state.selectedRowIds.length > 0;
-}
-
-function getVisibleExpandedFilesCount(
-  revisions: readonly RevisionSummary[],
-  expandedRowId: string | null,
-  fileFilterQuery: string,
-): number {
-  if (!expandedRowId) {
-    return 0;
-  }
-
-  const files = revisions.find((revision) => revision.rowId === expandedRowId)?.files ?? [];
-  return filterChangedFiles(files, fileFilterQuery).length;
 }
 
 function reconcileRowId(

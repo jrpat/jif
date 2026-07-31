@@ -132,6 +132,7 @@ import { executeShellCommand as executeShellTextCommand } from "../jj/process.ts
 import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 import { switchWorkspace } from "./workspaceSwitch.ts";
 import { resolveLogSurfaceMode } from "./logSurface.ts";
+import { getPreviewTargetKey, resolvePreviewScrollPosition } from "./previewRefresh.ts";
 import "./scrollboxRegistration.ts";
 
 const EXTRA_EMPTY_MESSAGE = "No extra bindings defined. Bind keys under `keymap.extra` in your config.";
@@ -267,6 +268,7 @@ export function JifView(props: {
   let diffViewport: ScrollBoxRenderable | undefined;
   let helpViewport: ScrollBoxRenderable | undefined;
   let previewViewport: ScrollBoxRenderable | undefined;
+  let renderedPreviewTargetKey: string | null = null;
   const detectAndApplyPalette = createPaletteDetector({
     renderer,
     rawConfig,
@@ -453,11 +455,14 @@ export function JifView(props: {
     const mode = logSurfaceMode();
     const visible = previewVisible();
     const activeRoot = store.state.repoPath;
+    const targetKey = getPreviewTargetKey(store.state, mode);
+    const seq = ++previewSeq;
 
     if (
       !visible ||
       (mode !== "revisions" && mode !== "files" && mode !== "op-log" && mode !== "evolog")
     ) {
+      renderedPreviewTargetKey = null;
       setPreviewHeader(null);
       setPreviewDiff("");
       setPreviewLoading(false);
@@ -514,22 +519,37 @@ export function JifView(props: {
     setPreviewHeader(placeholderHeader);
 
     if (!fetcher) {
+      // A rewritten revision temporarily has no loaded files. Keep showing the
+      // same logical file preview until its refreshed file list arrives; this
+      // also prevents the scrollbox from clamping its position against an
+      // empty payload in the meantime.
+      if (mode === "files" && targetKey !== null && targetKey === renderedPreviewTargetKey) {
+        setPreviewLoading(true);
+        return;
+      }
+
+      renderedPreviewTargetKey = null;
       setPreviewDiff("");
       setPreviewLoading(false);
       return;
     }
 
     const runFetch = fetcher;
-    const seq = ++previewSeq;
     const timer = setTimeout(() => {
       setPreviewLoading(true);
       void (async () => {
         try {
           const result = await runFetch();
           if (seq === previewSeq && store.state.repoPath === activeRoot) {
+            const scrollPosition = resolvePreviewScrollPosition(
+              renderedPreviewTargetKey,
+              targetKey,
+              previewViewport,
+            );
             setPreviewDiff(result.diff);
             setPreviewHeader(result.header);
-            previewViewport?.scrollTo({ x: 0, y: 0 });
+            renderedPreviewTargetKey = targetKey;
+            previewViewport?.scrollTo(scrollPosition);
           }
         } catch (error) {
           if (seq === previewSeq && store.state.repoPath === activeRoot) {
