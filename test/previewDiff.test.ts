@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   countDiffRows,
+  countSplitDiffRows,
   fileTypeForPath,
   formatOmittedLineSeparator,
   splitGitDiff,
@@ -146,6 +147,74 @@ describe("countDiffRows", () => {
 index 1111111..2222222 100644
 Binary files a/img.png and b/img.png differ`;
     expect(countDiffRows(patch)).toBe(0);
+  });
+});
+
+describe("countSplitDiffRows", () => {
+  test("pairs each removal with an addition into one row", () => {
+    const files = splitGitDiff(threeFile);
+    // context + (old paired with new) + the unpaired extra addition.
+    expect(countSplitDiffRows(files[0]!.patch)).toBe(3);
+    expect(countDiffRows(files[0]!.patch)).toBe(4);
+  });
+
+  test("a one-sided change occupies a row opposite a blank", () => {
+    expect(countSplitDiffRows(splitGitDiff(threeFile)[1]!.patch)).toBe(1);
+    expect(countSplitDiffRows(splitGitDiff(threeFile)[2]!.patch)).toBe(1);
+  });
+
+  test("an uneven run is as tall as its longer side", () => {
+    const patch = `diff --git a/f b/f
+--- a/f
++++ b/f
+@@ -1,4 +1,2 @@
+ keep
+-one
+-two
+-three
++only
+ tail`;
+    // keep + max(3 removals, 1 addition) + tail
+    expect(countSplitDiffRows(patch)).toBe(5);
+    expect(countDiffRows(patch)).toBe(6);
+  });
+
+  test("separate runs are counted independently, not merged", () => {
+    const patch = `diff --git a/f b/f
+--- a/f
++++ b/f
+@@ -1,5 +1,5 @@
+-a
++b
+ context
+-c
++d`;
+    expect(countSplitDiffRows(patch)).toBe(3);
+  });
+
+  test("counts every hunk and ignores '\\ No newline' markers", () => {
+    // Three context lines, plus one paired row in each of the two hunks.
+    expect(countSplitDiffRows(twoHunkFile)).toBe(5);
+    expect(countDiffRows(twoHunkFile)).toBe(7);
+
+    const noNewline = `diff --git a/f b/f
+--- a/f
++++ b/f
+@@ -1,2 +1,2 @@
+ keep
+-remove
+\\ No newline at end of file
++addit
+\\ No newline at end of file`;
+    // The marker splits nothing: the removal and addition still pair up.
+    expect(countSplitDiffRows(noNewline)).toBe(2);
+  });
+
+  test("binary/no-hunk patch has zero rows", () => {
+    const patch = `diff --git a/img.png b/img.png
+index 1111111..2222222 100644
+Binary files a/img.png and b/img.png differ`;
+    expect(countSplitDiffRows(patch)).toBe(0);
   });
 });
 

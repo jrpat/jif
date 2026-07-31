@@ -128,7 +128,6 @@ const alias = (command: string): KeymapBinding => ({ command, canonical: false }
 // all of them at once.
 const previewBindings = {
   p: "toggle-preview",
-  P: "enter-preview-mode",
   "alt-p": "cycle-preview-position",
   W: "toggle-preview-word-wrap",
   "ctrl-[": "expand-preview",
@@ -210,7 +209,7 @@ export const defaultKeymap: Keymap = {
     E: "diff-edit-revision",
     c: "commit",
     D: "describe",
-    d: "show-revision-diff",
+    d: "show-diff",
     " ": "toggle-revision-selection",
     _: "cycle-layout",
     u: "undo",
@@ -238,7 +237,7 @@ export const defaultKeymap: Keymap = {
     h: "collapse",
     left: alias("collapse"),
     r: "restore",
-    d: "show-file-diff",
+    d: "show-diff",
     "ctrl-u": "untrack",
     u: "undo",
     "alt-u": "redo",
@@ -267,8 +266,10 @@ export const defaultKeymap: Keymap = {
     R: "revert-operation",
     d: "show-operation-diff",
   },
-  // Fully covered by the shared `log` bindings — it has no keys of its own.
-  evolog: {},
+  // Otherwise covered by the shared `log` bindings.
+  evolog: {
+    d: "show-diff",
+  },
   "inline-confirmation": {
     h: "inline-confirmation-prev-option",
     left: alias("inline-confirmation-prev-option"),
@@ -304,7 +305,10 @@ export const defaultKeymap: Keymap = {
   interdiff: {
     "=": "interdiff-swap",
   },
-  diff: {},
+  diff: {
+    "=": "diff-cycle-range-kind",
+    s: "diff-descendants",
+  },
   absorb: {
     s: "absorb-descendants",
   },
@@ -362,8 +366,9 @@ export const defaultKeymap: Keymap = {
   "new-between": {
     " ": "toggle-new-between-before",
   },
+  // Reading controls only: the pane is sized from the log, where the layout it
+  // shares is visible, so nothing here resizes it.
   preview: {
-    P: "exit-preview-mode",
     j: "preview-mode-scroll-down",
     k: "preview-mode-scroll-up",
     J: "scroll-preview-down-large",
@@ -372,15 +377,15 @@ export const defaultKeymap: Keymap = {
     "ctrl-u": "scroll-preview-up-half-page",
     "ctrl-f": "scroll-preview-down-page",
     "ctrl-b": "scroll-preview-up-page",
-    h: "expand-preview-fine",
-    l: "shrink-preview-fine",
-    H: "preview-mode-expand",
-    L: "preview-mode-shrink",
     "alt-p": "preview-mode-cycle-position",
     w: "preview-mode-toggle-word-wrap",
     "ctrl-enter": "preview-mode-toggle-full-file",
+    " ": "toggle-preview-full-screen",
+    // Bound explicitly, though the global escape already unwinds to the same
+    // place, so the mode's own panel says how to leave it.
+    escape: "exit-preview-mode",
     // In non-root modes the global q binding becomes cancel. Preview mode is
-    // intentionally exited only by escape or shift+p.
+    // intentionally exited only by escape.
     q: null,
   },
   extra: {},

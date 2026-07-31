@@ -5,10 +5,14 @@ import {
   effectivePreviewCols,
   effectivePreviewPercent,
   effectivePreviewPosition,
+  effectivePreviewDiffView,
   effectivePreviewVisible,
+  isPreviewFullScreen,
+  isPreviewPaneShown,
   nextPreviewPosition,
   type PreviewSettings,
 } from "../src/domain/preview.ts";
+import type { FocusMode } from "../src/domain/types.ts";
 import {
   createInitialState,
   setPreviewPositionOverride,
@@ -138,6 +142,73 @@ describe("effectivePreviewPercent / cols", () => {
   test("cols are a rounded percentage of terminal width", () => {
     expect(effectivePreviewCols(settings(), c, 200)).toBe(100);
     expect(effectivePreviewCols(settings({ previewSizePercentOverride: 30 }), c, 100)).toBe(30);
+  });
+});
+
+describe("effectivePreviewDiffView", () => {
+  test("splits once the pane is at least splitViewWidth wide", () => {
+    const c = cfg({ splitViewWidth: 160 });
+    expect(effectivePreviewDiffView(c, 159)).toBe("unified");
+    expect(effectivePreviewDiffView(c, 160)).toBe("split");
+    expect(effectivePreviewDiffView(c, 400)).toBe("split");
+  });
+
+  test("0 is the sentinel for never splitting", () => {
+    const c = cfg({ splitViewWidth: 0 });
+    expect(effectivePreviewDiffView(c, 1)).toBe("unified");
+    expect(effectivePreviewDiffView(c, 10_000)).toBe("unified");
+  });
+
+  test("the default threshold is 160 columns", () => {
+    expect(base.preview.splitViewWidth).toBe(160);
+    expect(effectivePreviewDiffView(base.preview, 160)).toBe("split");
+    expect(effectivePreviewDiffView(base.preview, 159)).toBe("unified");
+  });
+
+  test("a configured threshold is floored and never negative", () => {
+    expect(resolveAppConfig({ preview: { splitViewWidth: 200.7 } }).preview.splitViewWidth).toBe(200);
+    expect(resolveAppConfig({ preview: { splitViewWidth: -5 } }).preview.splitViewWidth).toBe(0);
+  });
+});
+
+describe("full-screen takeover", () => {
+  const WIDE = 200;
+  function pane(over: Partial<PreviewSettings> & { focusMode?: FocusMode; previewFullScreen?: boolean } = {}) {
+    return {
+      ...settings(),
+      focusMode: "revisions" as FocusMode,
+      previewFullScreen: false,
+      ...over,
+    };
+  }
+
+  test("the takeover only counts while preview mode is active", () => {
+    expect(isPreviewFullScreen(pane({ focusMode: "preview", previewFullScreen: true }))).toBe(true);
+    expect(isPreviewFullScreen(pane({ focusMode: "preview" }))).toBe(false);
+    // A flag left set on another surface must not blank the log.
+    expect(isPreviewFullScreen(pane({ previewFullScreen: true }))).toBe(false);
+  });
+
+  test("the takeover shows the pane even when the split pane is switched off", () => {
+    const hidden = { previewVisibleOverride: false, focusMode: "preview" as FocusMode };
+    expect(isPreviewPaneShown(pane({ ...hidden }), cfg({}), WIDE)).toBe(false);
+    expect(
+      isPreviewPaneShown(pane({ ...hidden, previewFullScreen: true }), cfg({}), WIDE),
+    ).toBe(true);
+  });
+
+  test("the takeover ignores the narrow-terminal rule that hides the split pane", () => {
+    const narrow = cfg({ showByDefault: true, whenNarrow: "hide", narrowWidth: 100 });
+    expect(isPreviewPaneShown(pane({ focusMode: "preview" }), narrow, 80)).toBe(false);
+    expect(
+      isPreviewPaneShown(pane({ focusMode: "preview", previewFullScreen: true }), narrow, 80),
+    ).toBe(true);
+  });
+
+  test("the diff viewer suppresses the split pane", () => {
+    const visible = cfg({ showByDefault: true });
+    expect(isPreviewPaneShown(pane({ focusMode: "diff-viewer" }), visible, WIDE)).toBe(false);
+    expect(isPreviewPaneShown(pane({ focusMode: "revisions" }), visible, WIDE)).toBe(true);
   });
 });
 

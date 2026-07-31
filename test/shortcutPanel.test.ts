@@ -157,7 +157,7 @@ test("buildShortcutSummary creates a collapsed single-line help string", () => {
     makeBinding("move-parent", "Move to Parent", "K"),
     makeBinding("edit-revision", "Edit Revision", "e"),
     makeBinding("new-revision", "New Revision", "n"),
-    makeBinding("show-revision-diff", "Diff", "d"),
+    makeBinding("show-diff", "Diff", "d"),
     makeBinding("commit", "Commit", "c"),
   ]);
   const baseSummary = ": command   ? help   j/k move";
@@ -177,7 +177,7 @@ test("buildShortcutSummary skips missing higher-priority actions and keeps fitti
     makeBinding("move-up", "Move Up", "k"),
     makeBinding("edit-revision", "Edit Revision", "e"),
     makeBinding("new-revision", "New Revision", "n"),
-    makeBinding("show-revision-diff", "Diff", "d"),
+    makeBinding("show-diff", "Diff", "d"),
   ]);
   const expected = ": command   ? help   j/k move   e edit   n new   d diff";
 
@@ -883,9 +883,9 @@ test("op-log inherits the shared log keys and globals below the divider", () => 
   expect(keys).not.toContain("R");
 });
 
-test("evolog has no direct bindings and inherits everything from the log parent", () => {
+test("evolog binds only its own diff key and inherits the rest from the log parent", () => {
   const direct = collectDirectCanonicalBindingsForMode("evolog", defaultKeymap).map((b) => b.key);
-  expect(direct).toEqual([]);
+  expect(direct).toEqual(["d"]);
 
   const inherited = collectInheritedAndGlobalCanonicalBindings("evolog", defaultKeymap).map((b) => b.key);
   expect(inherited).toContain(":");

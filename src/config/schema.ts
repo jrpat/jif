@@ -111,6 +111,7 @@ export type AppConfig = Readonly<{
     narrowWidth?: number;
     whenNarrow?: PreviewNarrowBehavior;
     wordWrap?: boolean;
+    splitViewWidth?: number;
   }>;
 }>;
 
@@ -154,6 +155,7 @@ export type ResolvedAppConfig = Readonly<{
     narrowWidth: number;
     whenNarrow: PreviewNarrowBehavior;
     wordWrap: boolean;
+    splitViewWidth: number;
   }>;
 }>;
 
@@ -375,6 +377,8 @@ export function resolveAppConfig(
       narrowWidth: Math.max(1, Math.floor(config.preview?.narrowWidth ?? 100)),
       whenNarrow: config.preview?.whenNarrow ?? "below",
       wordWrap: config.preview?.wordWrap ?? false,
+      // 0 is the sentinel for "never split": no pane is ever 0 columns wide.
+      splitViewWidth: Math.max(0, Math.floor(config.preview?.splitViewWidth ?? 160)),
     },
   };
 }

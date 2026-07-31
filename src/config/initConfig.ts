@@ -315,6 +315,7 @@ namespace Jif {
     searchIdOnly: boolean;
     searchMode: SearchMode;
     previewFullFile: boolean;
+    previewFullScreen: boolean;
     /** Focused revision's jj argument, or "" when nothing is focused. e.g. \`edit \${app.rev}\`. */
     rev: string;
     /** Focused file's path, or "" when nothing is focused. e.g. \`diff \${app.file}\`. */
@@ -385,8 +386,11 @@ namespace Jif {
     toggleRebaseSelectionKind: () => void;
     toggleSquashAnchor: () => void;
     toggleInterdiffSwap: () => void;
+    cycleDiffRangeKind: () => void;
+    toggleDiffDescendants: () => void;
     togglePreviewWordWrap: () => void;
     togglePreviewFullFile: () => void;
+    togglePreviewFullScreen: () => void;
     expandDiffContext: () => void;
     selectAbsorbDescendants: () => void;
     undo: () => void;
@@ -400,8 +404,7 @@ namespace Jif {
     openShortcutFilter: () => void;
     commit: () => void;
     describe: () => void;
-    showRevisionDiff: () => void;
-    showFileDiff: () => void;
+    showDiff: () => void;
     openSearch: () => void;
     openFastJump: () => void;
     nextSearchMatch: () => void;
@@ -471,6 +474,8 @@ ${keymapScopes.map((scope) => `    | "${scope}"`).join("\n")};
       narrowWidth?: number;
       whenNarrow?: "below" | "hide";
       wordWrap?: boolean;
+      /** Pane width at which diffs switch to side-by-side. 0 never splits. */
+      splitViewWidth?: number;
     }>;
   }>;
 }

@@ -11,6 +11,9 @@ export type PreviewFilePatch = Readonly<{
   patch: string;
 }>;
 
+/** OpenTUI `<diff>`'s two layouts: one column of changes, or old beside new. */
+export type DiffView = "unified" | "split";
+
 export type DiffSection =
   | Readonly<{ kind: "hunk"; patch: string }>
   | Readonly<{ kind: "omission"; omittedLineCount: number }>;
@@ -121,6 +124,59 @@ export function countDiffRows(patch: string): number {
   return rows;
 }
 
+/**
+ * Count how many rows OpenTUI's `<diff>` renders for the same patch in
+ * `view="split"`. The two sides are built in lockstep: a context line takes one
+ * row on both, and a run of consecutive `-`/`+` lines pairs removals against
+ * additions, so it is as tall as its longer side with blanks opposite the
+ * shorter one. `\ No newline…` markers are skipped without breaking a run.
+ * Requires `wrapMode="none"`; wrapped split view inserts alignment padding.
+ */
+export function countSplitDiffRows(patch: string): number {
+  const lines = patch.split("\n");
+  let inHunk = false;
+  let rows = 0;
+  let removals = 0;
+  let additions = 0;
+
+  const flushRun = () => {
+    rows += Math.max(removals, additions);
+    removals = 0;
+    additions = 0;
+  };
+
+  for (const line of lines) {
+    if (line.startsWith("@@")) {
+      flushRun();
+      inHunk = true;
+      continue;
+    }
+    if (!inHunk) {
+      continue;
+    }
+    const first = line[0];
+    if (first === "-") {
+      removals += 1;
+      continue;
+    }
+    if (first === "+") {
+      additions += 1;
+      continue;
+    }
+    if (first === "\\") {
+      continue;
+    }
+    if (first === " ") {
+      flushRun();
+      rows += 1;
+      continue;
+    }
+    break;
+  }
+  flushRun();
+  return rows;
+}
+
 export function splitPatchIntoDiffSections(patch: string): DiffSection[] {
   const lines = patch.split("\n");
   const firstHunkIndex = lines.findIndex((line) => line.startsWith("@@"));
@@ -197,6 +253,10 @@ const DIFF_CHROME_WIDTH = 12;
  * Estimate the widest rendered line across all files' diffs, so the preview's
  * horizontally-scrollable content box can be sized to fit long lines. Slightly
  * over-estimates (empty scroll space is harmless; truncation is not).
+ *
+ * Unified view only: `<diff>` sizes each side of a split view at 50%, so
+ * widening the content box there would push the new side off the pane instead
+ * of making room. Split view stays pinned to the viewport.
  */
 export function estimateDiffWidth(files: readonly PreviewFilePatch[]): number {
   let max = 0;

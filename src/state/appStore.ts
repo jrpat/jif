@@ -8,6 +8,7 @@ import type {
   CommandDraftConfig,
   FailedCommand,
   InlineConfirmation,
+  PreviewPin,
   PreviewPositionPreference,
   RebaseSourceKind,
   RebaseTargetKind,
@@ -119,8 +120,12 @@ import {
   touchStatusMessage,
   setRebaseSourceKind,
   setRebaseTargetKind,
+  cycleDiffRangeKind,
+  openPreviewPin,
+  toggleDiffDescendants,
   toggleInterdiffSwap,
   togglePreviewFullFile,
+  togglePreviewFullScreen,
   togglePreviewWordWrap,
   toggleRebaseSelection,
   toggleRebaseSelectionKind,
@@ -362,11 +367,17 @@ export function createAppStore(
       exitExtraMode() {
         mutate((currentState) => exitExtraMode(currentState));
       },
-      enterPreviewMode() {
-        mutate((currentState) => enterPreviewMode(currentState));
+      enterPreviewMode(options?: { fullScreen?: boolean }) {
+        mutate((currentState) => enterPreviewMode(currentState, options));
       },
       exitPreviewMode() {
         mutate((currentState) => exitPreviewMode(currentState));
+      },
+      togglePreviewFullScreen() {
+        mutate((currentState) => togglePreviewFullScreen(currentState));
+      },
+      openPreviewPin(pin: PreviewPin) {
+        mutate((currentState) => openPreviewPin(currentState, pin));
       },
       startBookmarkPrompt(
         prefill: string,
@@ -467,6 +478,12 @@ export function createAppStore(
       },
       toggleInterdiffSwap() {
         mutate((currentState) => toggleInterdiffSwap(currentState));
+      },
+      cycleDiffRangeKind() {
+        mutate((currentState) => cycleDiffRangeKind(currentState));
+      },
+      toggleDiffDescendants(descendantIds?: readonly string[]) {
+        mutate((currentState) => toggleDiffDescendants(currentState, descendantIds));
       },
       focusWorkingCopy() {
         mutate((currentState) => focusWorkingCopy(currentState));

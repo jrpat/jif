@@ -41,6 +41,8 @@ import {
   effectivePreviewPosition,
   effectivePreviewRows,
   effectivePreviewVisible,
+  isPreviewFullScreen,
+  isPreviewPaneShown,
 } from "../domain/preview.ts";
 import {
   getRevisionBorderPolicy,
@@ -196,6 +198,9 @@ export function JifView(props: {
   let previewSeq = 0;
   const previewVisible = () =>
     effectivePreviewVisible(store.state, config.preview, terminalSize().width);
+  const previewFullScreen = () => isPreviewFullScreen(store.state);
+  const previewShown = () =>
+    isPreviewPaneShown(store.state, config.preview, terminalSize().width);
   const previewPosition = () =>
     effectivePreviewPosition(store.state, config.preview, terminalSize().width);
   const previewCols = () =>
@@ -205,7 +210,7 @@ export function JifView(props: {
   // The scrollable width inside the pane: full width below (minus scrollbar),
   // or the pane columns minus the left divider and scrollbar on the right.
   const previewViewportWidth = () =>
-    previewPosition() === "below"
+    previewFullScreen() || previewPosition() === "below"
       ? Math.max(1, terminalSize().width - 1)
       : Math.max(1, previewCols() - 2);
   const logScrollAcceleration = createMemo(() =>
@@ -455,10 +460,21 @@ export function JifView(props: {
   // token discards stale async results.
   createEffect(() => {
     const mode = logSurfaceMode();
-    const visible = previewVisible();
+    const visible = previewShown();
     const activeRoot = store.state.repoPath;
     const targetKey = getPreviewTargetKey(store.state, mode);
     const seq = ++previewSeq;
+
+    // A pinned diff was fetched by whoever composed it, so it stands in for the
+    // focus-derived content until Preview mode ends.
+    const pin = store.state.previewPin;
+    if (pin) {
+      setPreviewHeader(pin.header);
+      setPreviewDiff(pin.diff);
+      setPreviewLoading(false);
+      previewViewport?.scrollTo({ x: 0, y: 0 });
+      return;
+    }
 
     if (
       !visible ||
@@ -1073,7 +1089,13 @@ export function JifView(props: {
           minHeight={0}
           flexDirection={previewPosition() === "below" ? "column" : "row"}
         >
-          <box flexGrow={1} minWidth={0} minHeight={0}>
+          {/*
+            Hidden rather than unmounted during the full-screen takeover:
+            `visible={false}` sets Yoga `display: none`, so the column costs no
+            layout space, but every revision row — and the scrollbox's position
+            — survives, making the takeover cheap to dismiss.
+          */}
+          <box visible={!previewFullScreen()} flexGrow={1} minWidth={0} minHeight={0}>
         <Show
           when={store.state.focusMode === "diff-viewer" && store.state.diffViewer}
           fallback={(
@@ -1181,12 +1203,13 @@ export function JifView(props: {
           </box>
         </Show>
           </box>
-          <Show when={previewVisible() && store.state.focusMode !== "diff-viewer"}>
+          <Show when={previewShown()}>
             <box
               flexShrink={0}
-              width={previewPosition() === "below" ? "100%" : previewCols()}
-              height={previewPosition() === "below" ? previewRows() : "100%"}
-              border={previewPosition() === "below" ? ["top"] : ["left"]}
+              flexGrow={previewFullScreen() ? 1 : 0}
+              width={previewFullScreen() || previewPosition() === "below" ? "100%" : previewCols()}
+              height={previewFullScreen() || previewPosition() !== "below" ? "100%" : previewRows()}
+              border={previewFullScreen() ? [] : previewPosition() === "below" ? ["top"] : ["left"]}
               borderStyle="single"
               borderColor={config.colorScheme.semanticColors.chromeBorderIdle}
               backgroundColor={config.colorScheme.semanticColors.previewPaneFill}
@@ -1194,7 +1217,7 @@ export function JifView(props: {
               <PreviewPane
                 header={previewHeader()}
                 headerDividerAfterLine={
-                  logSurfaceMode() === "revisions"
+                  store.state.previewPin === null && logSurfaceMode() === "revisions"
                     ? REVISION_PREVIEW_METADATA_LINE_COUNT
                     : null
                 }

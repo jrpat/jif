@@ -267,8 +267,13 @@ export class JjClient {
     return result.stdout;
   }
 
-  async loadInterdiff(commandArgs: readonly string[]): Promise<string> {
-    const result = await this.runJj(["--color", "always", ...commandArgs], { color: true });
+  /**
+   * Run a composed `jj diff`/`jj interdiff` and return it in git format, ready
+   * for the preview pane. `--git` goes last so it wins over any formatting flag
+   * the composition already carries.
+   */
+  async loadComposedDiff(commandArgs: readonly string[]): Promise<string> {
+    const result = await this.runJj([...commandArgs, "--git"], { workingCopy: "read-only" });
     return result.stdout;
   }
 

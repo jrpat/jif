@@ -125,7 +125,7 @@ Controls for the [preview pane](#preview-pane). Available in Normal, secondary r
 | Key | Command | Description |
 |-----|---------|-------------|
 | `p` | toggle-preview | Show or hide the preview pane for this session |
-| `shift+p` | enter-preview-mode | Enter Preview mode when the pane is visible and show its controls |
+| `d` | show-diff | Enter Preview mode with the pane taking over the whole screen |
 | `alt+p` | cycle-preview-position | Cycle the pane between auto, right, and below |
 | `shift+w` | toggle-preview-word-wrap | Wrap or unwrap long preview diff lines |
 | `ctrl+enter` | toggle-preview-full-file | In Files mode, toggle effectively full-file preview diffs using a large `jj --context` value |
@@ -136,7 +136,7 @@ Controls for the [preview pane](#preview-pane). Available in Normal, secondary r
 
 `ctrl+[` / `ctrl+]` require a terminal that distinguishes them from other keys via the Kitty keyboard protocol (kitty, Ghostty, WezTerm, recent iTerm2, Alacritty, foot). In terminals without it, `ctrl+[` is indistinguishable from Escape.
 
-Preview mode keeps its shortcut panel open while you manipulate the pane:
+Preview mode is entered with `d` and keeps its shortcut panel open while you read:
 
 | Key | Description |
 |-----|-------------|
@@ -144,14 +144,21 @@ Preview mode keeps its shortcut panel open while you manipulate the pane:
 | `shift+j` / `shift+k` | Scroll down / up ten lines |
 | `ctrl+d` / `ctrl+u` | Scroll down / up half a page |
 | `ctrl+f` / `ctrl+b` | Scroll down / up a whole page |
-| `h` / `l` | Grow / shrink by one cell along the pane's split axis (one column when it is on the right) |
-| `shift+h` / `shift+l` | Grow / shrink by `preview.resizeStepPercent`, like `ctrl+[` / `ctrl+]` |
 | `alt+p` | Cycle the pane between auto, right, and below |
 | `w` | Toggle word wrap |
 | `ctrl+enter` | In Files, toggle effectively full-file preview context |
-| `escape` / `shift+p` | Exit Preview mode |
+| `space` | Toggle between the full-screen preview and the split pane |
+| `escape` | Exit Preview mode |
 
-The manipulation keys keep Preview mode active. If the preview pane is hidden, `shift+p` is a no-op.
+Every key but `escape` keeps Preview mode active. Preview mode does not resize the pane — `space` picks between the two layouts, and `ctrl+[` / `ctrl+]` size the split from the log, where the space it is taking from is visible.
+
+#### Full-screen preview
+
+`d` enters Preview mode with the pane taking over the whole screen — the same content, controls, and mode the split pane offers, just without the log beside it. It works in Normal, Files, and Evolog, and it does not need the split pane to be on screen first: the takeover is independent of `p` and of the narrow-terminal rules in [`preview.whenNarrow`](#configuration). `space` switches to the split layout from there, so one key reaches both.
+
+Leaving the takeover with `space` always lands on a visible split pane: if the pane was hidden for this session it is shown, and if the `auto` layout would still hide it on this terminal, its position is pinned to the side that layout resolves to (announced with the usual position toast).
+
+`escape` exits Preview mode entirely, dropping both the takeover and any pinned diff. The composers `ctrl+d` and `i` pin their result here rather than in the [diff viewer](#diff-viewer); while a diff is pinned the pane shows it instead of following the cursor, and the header carries the exact `jj` command that produced it.
 
 ### Normal
 
@@ -200,8 +207,8 @@ When the active revset is only `files(...)`, the collapsed status bar shows a `f
 | `a` | abandon | Abandon the selected revisions, or the focused revision when nothing is selected |
 | `A` | absorb | Start an absorb operation, preselecting the default target revisions |
 | `c` | commit | Commit the working-copy revision (`@`) |
-| `d` | show-diff | Show diff for the focused revision or file |
-| `ctrl-d` | diff | Show the diff between two revisions (`jj diff --from <source> --to <focused>`) |
+| `d` | show-diff | Show the focused revision's or file's diff as a [full-screen preview](#full-screen-preview) |
+| `ctrl-d` | diff | Show the combined diff of a range of revisions (`jj diff -r <first>::<last>`) |
 | `D` | describe | Edit description of the focused revision |
 | `e` | edit-revision | Edit the focused revision |
 | `E` | diff-edit-revision | Touch up the focused revision's changes in your configured diff editor (`jj diffedit -r <focused>`) |
@@ -254,7 +261,7 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 | `h` / `←` | collapse | Collapse the file list and return to the revision |
 | `space` | toggle-file-selection | Add or remove the focused file from the selection |
 | `a` | select-all-files | Select every changed file, or clear the selection if all are already selected |
-| `d` | show-file-diff | Show the diff for the focused file |
+| `d` | show-diff | Show the focused file's diff as a [full-screen preview](#full-screen-preview) |
 | `r` | restore | Restore selected files to their state before this change |
 | `ctrl-u` | untrack | Stop tracking the focused file, or all selected files (`jj file untrack <paths>`) |
 | `u` | undo | Undo the last operation |
@@ -338,7 +345,7 @@ Active while previewing a restore. Inherits Revision Draft, not Normal. Composes
 
 ### Interdiff
 
-Active while previewing an interdiff. Inherits Revision Draft, not Normal. Composes `jj interdiff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run. The output opens in the diff viewer.
+Active while previewing an interdiff. Inherits Revision Draft, not Normal. Composes `jj interdiff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run. The output is pinned into a [full-screen preview](#full-screen-preview).
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -346,7 +353,16 @@ Active while previewing an interdiff. Inherits Revision Draft, not Normal. Compo
 
 ### Diff
 
-Active while previewing a diff between two revisions. Inherits Revision Draft, not Normal. Composes `jj diff -f <source> -t <focused>`; navigate to choose the target revision, then `enter` to run. The output opens in the diff viewer.
+Active while previewing the diff of a range of revisions. Inherits Revision Draft, not Normal.
+
+Pressing `ctrl-d` makes the focused revision the **first** revision of the range and moves the cursor to its child, since a range only reads forward through the graph; navigate to choose the **last** revision, then `enter` to run. The default composition is `jj diff -r <first>::<last>`, whose endpoints are *both* part of the result — the chips say `first` and `last` to make that readable at a glance. The output is pinned into a [full-screen preview](#full-screen-preview).
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `=` | diff-cycle-range-kind | Switch between the inclusive range and `jj diff -f <source> -t <focused>`, which compares the two trees and so leaves out the source's own change (chips become `from` and `to`) |
+| `s` | diff-descendants | Stretch the range over every descendant of the first revision (`jj diff -r <first>::`), dropping the `last` chip and marking every revision the range folds together |
+
+A range is empty unless the last revision descends from the first, and an empty range produces an empty diff rather than an error — press `=` to compare two revisions that are not related that way. `s` handles a fan-out too: when the descendants have several heads, jj merges them into a single diff rather than refusing.
 
 ### Absorb
 
@@ -420,10 +436,11 @@ Active while the operation log panel is open. Inherits the shared **Log** bindin
 
 ### Evolog
 
-Active while the evolog panel is open. Opened from Normal with `ctrl-e` for the focused revision. Inherits the shared **Log** bindings (movement, `:`, `>`, `/`, `f`, `?`, and the preview controls); it does **not** inherit Normal. Every key below comes from the shared Log set — evolog has no keys of its own.
+Active while the evolog panel is open. Opened from Normal with `ctrl-e` for the focused revision. Inherits the shared **Log** bindings (movement, `:`, `>`, `/`, `f`, `?`, and the preview controls); it does **not** inherit Normal. Apart from `d`, every key below comes from the shared Log set.
 
 | Key | Command | Description |
 |-----|---------|-------------|
+| `d` | show-diff | Show the focused entry's diff as a [full-screen preview](#full-screen-preview) |
 | `j` / `↓` | move-down | Focus the next evolog entry |
 | `k` / `↑` | move-up | Focus the previous evolog entry |
 | `G` | jump-to-bottom | Jump to the last evolog entry |
@@ -448,7 +465,7 @@ Active while the notifications history panel is open. Does not inherit Normal.
 
 ### Diff Viewer
 
-Active while the full-screen diff viewer is open. Does not inherit Normal.
+Active while the full-screen diff viewer is open. Does not inherit Normal. The operation log's `d` opens it, so that `jj op diff` keeps the "Changed commits" annotations wrapped around its patches — every other diff now renders in the [full-screen preview](#full-screen-preview) instead.
 
 | Key | Command | Description |
 |-----|---------|-------------|
@@ -666,11 +683,16 @@ export default {
     narrowWidth: 100,          // in "auto", terminals narrower than this are "too narrow" for the right layout
     whenNarrow: "below",       // in "auto", what to do when too narrow: "below" (relocate) or "hide"
     wordWrap: false,           // wrap long preview diff lines by default
+    splitViewWidth: 160,       // pane width at which diffs go side-by-side; 0 always keeps them unified
   },
 } satisfies Jif.Config;
 ```
 
-Position, visibility, size, and word wrap can also be changed for the current session with `p`, `alt+p`, `ctrl+[` / `ctrl+]`, and `shift+w`; `shift+p` opens the pane's dedicated Preview mode. Those session changes are not persisted.
+Diffs render unified in a narrow pane and side-by-side once it is at least `preview.splitViewWidth` columns wide — side-by-side gives each half of a diff only half the pane, so it needs roughly twice the room to stay readable. The threshold follows the pane, not the terminal, so growing the pane with `ctrl+[` or opening a diff [full-screen](#full-screen-preview) can switch a diff to side-by-side on its own. Set `splitViewWidth: 0` to keep every diff unified at any width.
+
+Unified diffs scroll horizontally to reach lines longer than the pane; side-by-side ones cannot — the two halves are each pinned to half the pane, so widening the content would push the new side off the edge instead of making room. Long lines truncate there; use `shift+w` to wrap them.
+
+Position, visibility, size, and word wrap can also be changed for the current session with `p`, `alt+p`, `ctrl+[` / `ctrl+]`, and `shift+w`; `d` opens the pane's dedicated Preview mode [full-screen](#full-screen-preview), and `space` switches that to the split layout. Those session changes are not persisted.
 
 </details>
 
@@ -830,9 +852,8 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `selectAbsorbDescendants()` | Select absorb targets from the focused revision, stopping before the absorb source |
 | `setRebaseSourceKind(kind)` | Set rebase source kind: `"revisions"`, `"source"`, or `"branch"` |
 | `setRebaseTargetKind(kind)` | Set rebase target kind: `"destination"`, `"insert-before"`, `"insert-after"`, or `"insert-between"` |
-| `showFileDiff()` | Show the focused file diff |
+| `showDiff()` | Show the focused item's diff as a full-screen preview |
 | `showOperationDiff()` | Show the focused operation diff |
-| `showRevisionDiff()` | Show the focused revision diff |
 | `startAbsorb()` | Start an absorb operation |
 | `startBookmarkCreate()` | Open the bookmark create prompt for the focused revision |
 | `startBookmarkDelete()` | Open the bookmark delete prompt |
@@ -842,7 +863,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `startBookmarkSet()` | Open the bookmark set prompt for the focused revision |
 | `startBookmarkTrack()` | Open the bookmark track prompt |
 | `startBookmarkUntrack()` | Open the bookmark untrack prompt |
-| `startDiff()` | Start composing a diff between two revisions |
+| `startDiff()` | Start composing the diff of a range of revisions |
 | `startInterdiff()` | Start composing an interdiff |
 | `startNewRevision()` | Create a new revision from the focused revision |
 | `startRebase()` | Start composing a rebase from the focused revision |
@@ -854,7 +875,10 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `toggleFileSelection()` | Toggle the focused file selection |
 | `toggleDryRun()` | Toggle previewing direct jj commands in the command prompt before execution |
 | `toggleInterdiffSwap()` | Swap interdiff `--from` and `--to` roles |
+| `cycleDiffRangeKind()` | Switch a diff draft between the inclusive `A::B` range and the `--from`/`--to` comparison |
+| `toggleDiffDescendants()` | Stretch a diff draft's range over every descendant of its first revision |
 | `togglePreviewFullFile()` | Toggle effectively full-file context for file preview diffs |
+| `togglePreviewFullScreen()` | Toggle the preview between the full-screen takeover and the split pane |
 | `togglePreviewWordWrap()` | Wrap or unwrap long preview diff lines |
 | `toggleRebaseSelection()` | Toggle the focused revision as a rebase subject or additional target, per the current spacebar behavior |
 | `toggleRebaseSelectionKind()` | Toggle whether rebase selection adds subjects or additional targets |
@@ -914,6 +938,7 @@ The `app` argument is a read-only snapshot of jif state, plus the ergonomic `rev
 | `operationLogEntries` | `readonly OperationLogEntry[]` | Loaded operation log entries |
 | `operationLogLoading` | `boolean` | Whether the operation log is loading |
 | `previewFullFile` | `boolean` | Whether preview diffs use effectively full-file context for this session |
+| `previewFullScreen` | `boolean` | Whether the preview pane has taken over the whole screen |
 | `previewWordWrap` | `boolean` | Whether preview diff word wrap is enabled for this session |
 | `repoPath` | `string` | Active workspace root jif is operating on |
 | `revisions` | `readonly RevisionSummary[]` | Visible revision rows |

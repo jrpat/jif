@@ -29,6 +29,10 @@ export type ShortcutFilterKeyAction =
 const SHORTCUT_CONTEXT_PRESERVING_COMMAND_IDS = new Set([
   "cancel",
   "enter-preview-mode",
+  // Preview mode binds escape directly, so leaving it must unwind exactly as
+  // the global cancel it shadows did — without also closing a panel the user
+  // opened for the log underneath.
+  "exit-preview-mode",
   "reload-config",
   "shortcut-panel",
   ...revisionLogNavCommandIds,

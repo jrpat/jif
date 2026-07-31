@@ -1,4 +1,5 @@
 import type { ResolvedAppConfig } from "../config/schema.ts";
+import type { DiffView } from "./previewDiff.ts";
 import type { AppState, PreviewPosition, PreviewPositionPreference } from "./types.ts";
 
 export type PreviewConfig = ResolvedAppConfig["preview"];
@@ -17,6 +18,37 @@ export function isPreviewingSingleFile(
   return state.focusMode === "files" || (
     state.focusMode === "preview" && state.focusModeStack.includes("files")
   );
+}
+
+/**
+ * Whether the pane has taken over the whole screen. The takeover belongs to
+ * Preview mode, so it is never in effect outside it however the flag was left.
+ */
+export function isPreviewFullScreen(
+  state: Pick<AppState, "focusMode" | "previewFullScreen">,
+): boolean {
+  return state.focusMode === "preview" && state.previewFullScreen;
+}
+
+/**
+ * Whether the pane is on screen at all: as the log's split companion, or as the
+ * full-screen takeover — which is opened deliberately (`d`, or a composed diff)
+ * and so ignores both the session visibility toggle and the narrow-terminal
+ * rules that govern the split pane.
+ */
+export function isPreviewPaneShown(
+  state: Pick<AppState, "focusMode" | "previewFullScreen"> & PreviewSettings,
+  preview: PreviewConfig,
+  terminalWidth: number,
+): boolean {
+  if (isPreviewFullScreen(state)) {
+    return true;
+  }
+  // The diff viewer owns the whole log column, leaving no room to split.
+  if (state.focusMode === "diff-viewer") {
+    return false;
+  }
+  return effectivePreviewVisible(state, preview, terminalWidth);
 }
 
 // The order `alt+p` cycles through: auto → right → below → auto.
@@ -93,6 +125,22 @@ function hiddenByNarrowTerminal(
     preview.whenNarrow === "hide" &&
     isNarrowTerminal(preview, terminalWidth)
   );
+}
+
+/**
+ * Which `<diff>` layout the pane's diffs use. Side-by-side needs roughly twice
+ * the columns to stay readable, so it only kicks in once the pane is at least
+ * `splitViewWidth` columns wide. `0` means "never split": no pane is ever zero
+ * columns, so the comparison can never succeed.
+ */
+export function effectivePreviewDiffView(
+  preview: PreviewConfig,
+  viewportWidth: number,
+): DiffView {
+  if (preview.splitViewWidth <= 0) {
+    return "unified";
+  }
+  return viewportWidth >= preview.splitViewWidth ? "split" : "unified";
 }
 
 /** The pane size as a percentage of the relevant terminal dimension. */

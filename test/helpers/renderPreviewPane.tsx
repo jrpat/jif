@@ -311,6 +311,36 @@ const wideWrapped = await capture(null, wideDiff, { width: 40, scrollX: true, pr
 const multiHunk = await capture(null, multiHunkDiff);
 const wideMultiHunk = await capture(null, wideMultiHunkDiff, { width: 40 });
 
+// Wide enough for the default 160-column threshold to select split view, plus
+// a control at the same width with splitting switched off by the 0 sentinel.
+const splitWide = await capture(null, themedDiff, { width: 200 });
+const unifiedWide = await capture(null, themedDiff, {
+  width: 200,
+  config: resolveAppConfig({ preview: { splitViewWidth: 0 } }),
+});
+
+// A line far longer than the pane, next to a one-sided addition. Sizing the
+// split content box to that line would start the new side past the right edge,
+// leaving the addition's row blank.
+const gapDiff = `diff --git a/gap.txt b/gap.txt
+index 1111111..2222222 100644
+--- a/gap.txt
++++ b/gap.txt
+@@ -1,2 +1,3 @@
+ ${"verylongcontext".repeat(20)}
++onlyaddedtoken
+ tailcontext
+`;
+const splitGap = await capture(null, gapDiff, { width: 200 });
+const unifiedGap = await capture(null, gapDiff, {
+  width: 200,
+  config: resolveAppConfig({ preview: { splitViewWidth: 0 } }),
+});
+
+// Stacked sections in split view: each `<diff>` gets its own fixed height, so a
+// wrong split row count would clip or overlap the hunks around the separator.
+const splitMultiHunk = await capture(null, multiHunkDiff, { width: 200 });
+
 const darkThemed = await capture(null, themedDiff, { config: darkConfig });
 const lightThemed = await capture(null, themedDiff, { config: lightConfig });
 const darkSyntax = await capture(null, syntaxDiff, { config: darkConfig, waitForExactSpan: "const" });
@@ -338,4 +368,4 @@ const themeColors = {
   configLightRemoved: lightConfig.colorScheme.semanticColors.diffRemovedFill,
 };
 
-console.log(JSON.stringify({ withHeader, singleFile, headerSingle, scrollingHeader, scrollingSingleFile, stickyFirstFile, stickySecondFile, stickyReflow, wide, wideWrapped, multiHunk, wideMultiHunk, themeColors }));
+console.log(JSON.stringify({ withHeader, singleFile, headerSingle, scrollingHeader, scrollingSingleFile, stickyFirstFile, stickySecondFile, stickyReflow, wide, wideWrapped, multiHunk, wideMultiHunk, splitWide, unifiedWide, splitMultiHunk, splitGap, unifiedGap, themeColors }));

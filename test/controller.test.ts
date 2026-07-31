@@ -71,11 +71,13 @@ function createControllerHarness(harnessOptions: Readonly<{
   operationLogEntries?: readonly OperationLogEntry[];
   evologEntries?: readonly OperationLogEntry[];
   evologCalls?: string[];
+  terminalSize?: { width: number; height: number };
+  previewWhenNarrow?: "below" | "hide";
   diffViewport?: ScrollBoxRenderable;
   helpViewport?: ScrollBoxRenderable;
   previewViewport?: ScrollBoxRenderable;
-  interdiffOutput?: string;
-  interdiffCalls?: Array<readonly string[]>;
+  composedDiffOutput?: string;
+  composedDiffCalls?: Array<readonly string[]>;
   anchorRange?: readonly string[];
   absorbTargets?: readonly string[];
   openReleasesPageError?: Error;
@@ -138,9 +140,9 @@ function createControllerHarness(harnessOptions: Readonly<{
       async loadOperationDiff() {
         return "fake diff";
       },
-      async loadInterdiff(commandArgs: readonly string[]) {
-        harnessOptions.interdiffCalls?.push(commandArgs);
-        return harnessOptions.interdiffOutput ?? "fake interdiff";
+      async loadComposedDiff(commandArgs: readonly string[]) {
+        harnessOptions.composedDiffCalls?.push(commandArgs);
+        return harnessOptions.composedDiffOutput ?? "fake interdiff";
       },
       async resolveDescendants() {
         return ["bbbbbbbb"];
@@ -228,7 +230,7 @@ function createControllerHarness(harnessOptions: Readonly<{
     getDiffViewport: () => harnessOptions.diffViewport,
     getHelpViewport: () => harnessOptions.helpViewport,
     getPreviewViewport: () => harnessOptions.previewViewport,
-    getTerminalSize: () => ({ width: 120, height: 40 }),
+    getTerminalSize: () => harnessOptions.terminalSize ?? { width: 120, height: 40 },
     getPreviewConfig: () => ({
       position: "auto",
       showByDefault: true,
@@ -237,8 +239,9 @@ function createControllerHarness(harnessOptions: Readonly<{
       minSizePercent: 15,
       maxSizePercent: 90,
       narrowWidth: 100,
-      whenNarrow: "below",
+      whenNarrow: harnessOptions.previewWhenNarrow ?? "below",
       wordWrap: false,
+      splitViewWidth: 160,
     }),
     logShortcutPanelToggle: () => {},
   });
@@ -482,15 +485,15 @@ test("shi defaults cwd to repoPath for user-defined commands", () => {
   harness.store.dispose();
 });
 
-test("confirm on an interdiff draft loads the diff into the in-app viewer", async () => {
-  const interdiffCalls: Array<readonly string[]> = [];
+test("confirm on an interdiff draft pins the diff into a full-screen preview", async () => {
+  const composedDiffCalls: Array<readonly string[]> = [];
   const harness = createControllerHarness({
     revisions: [
       createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "source revision" }),
       createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "target revision" }),
     ],
-    interdiffOutput: "interdiff body",
-    interdiffCalls,
+    composedDiffOutput: "interdiff body",
+    composedDiffCalls,
   });
 
   harness.store.actions.toggleRevisionSelection();
@@ -503,30 +506,32 @@ test("confirm on an interdiff draft loads the diff into the in-app viewer", asyn
 
   expect(harness.runInteractiveCommands).toEqual([]);
   expect(harness.executeCurrentCommandCalls).toBe(0);
-  expect(interdiffCalls).toHaveLength(1);
-  expect(interdiffCalls[0]?.join(" ")).toBe(expectedCommand);
+  expect(composedDiffCalls).toHaveLength(1);
+  expect(composedDiffCalls[0]?.join(" ")).toBe(expectedCommand);
 
   const state = harness.store.snapshot();
-  expect(state.focusMode).toBe("diff-viewer");
-  expect(state.diffViewer?.content).toBe("interdiff body");
+  expect(state.focusMode).toBe("preview");
+  expect(state.previewFullScreen).toBeTrue();
+  expect(state.previewPin).toEqual({ header: `jj ${expectedCommand}`, diff: "interdiff body" });
   expect(state.commandDraft).toBeNull();
   harness.store.dispose();
 });
 
-test("confirm on a diff draft loads jj diff output into the in-app viewer", async () => {
+test("confirm on a diff draft pins the composed range into a full-screen preview", async () => {
   const diffCalls: Array<readonly string[]> = [];
   const harness = createControllerHarness({
     revisions: [
-      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "source revision" }),
-      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "target revision" }),
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "target revision" }),
+      createRevision({ rowId: "bbbbbbbb", revisionId: "bbbbbbbb", description: "source revision" }),
     ],
-    interdiffOutput: "diff body",
-    interdiffCalls: diffCalls,
+    composedDiffOutput: "diff body",
+    composedDiffCalls: diffCalls,
   });
 
-  harness.store.actions.toggleRevisionSelection();
-  harness.store.actions.startCommandDraft(draftConfigs.diff);
+  harness.store.actions.focusRevisionAt(1);
+  harness.controller.startDiff();
   const expectedCommand = getDisplayedCommandText(harness.store.snapshot()).trim();
+  expect(expectedCommand).toBe("diff -r b::a");
 
   harness.controller.confirm();
   await Promise.resolve();
@@ -539,8 +544,9 @@ test("confirm on a diff draft loads jj diff output into the in-app viewer", asyn
   expect(diffCalls[0]?.join(" ")).toBe(expectedCommand);
 
   const state = harness.store.snapshot();
-  expect(state.focusMode).toBe("diff-viewer");
-  expect(state.diffViewer?.content).toBe("diff body");
+  expect(state.focusMode).toBe("preview");
+  expect(state.previewFullScreen).toBeTrue();
+  expect(state.previewPin).toEqual({ header: "jj diff -r b::a", diff: "diff body" });
   expect(state.commandDraft).toBeNull();
   harness.store.dispose();
 });
@@ -961,7 +967,7 @@ test("openFocusedRevision loads changed files and conflict flags for unloaded re
   harness.store.dispose();
 });
 
-test("showFileDiff uses an absolute file path for focused files", async () => {
+test("showDiff takes over the screen without shelling out to a pager", () => {
   const harness = createControllerHarness({
     revisions: [
       createRevision({
@@ -976,11 +982,63 @@ test("showFileDiff uses an absolute file path for focused files", async () => {
 
   harness.store.actions.openFocusedRevision();
 
-  harness.controller.showFileDiff();
+  harness.controller.showDiff();
 
-  expect(harness.runInteractiveCommands).toEqual([
-    quoteCommand(["diff", "-r", "a", join(REPO_PATH, "src/app.ts")]),
-  ]);
+  expect(harness.runInteractiveCommands).toEqual([]);
+  const state = harness.store.snapshot();
+  expect(state.focusMode).toBe("preview");
+  expect(state.previewFullScreen).toBeTrue();
+  // The file surface stays underneath, so the pane keeps previewing that file.
+  expect(state.focusModeStack).toEqual(["revisions", "files", "preview"]);
+  harness.store.dispose();
+});
+
+test("leaving the takeover reveals a session-hidden split pane", () => {
+  const harness = createControllerHarness({
+    revisions: [createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "a" })],
+  });
+
+  harness.store.actions.setPreviewVisibleOverride(false);
+  harness.controller.showDiff();
+  harness.controller.togglePreviewFullScreen();
+
+  const state = harness.store.snapshot();
+  expect(state.previewFullScreen).toBeFalse();
+  expect(state.previewVisibleOverride).toBeTrue();
+  expect(state.previewPositionOverride).toBeNull();
+  harness.store.dispose();
+});
+
+test("leaving the takeover pins the position when auto would still hide the pane", () => {
+  const harness = createControllerHarness({
+    revisions: [createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "a" })],
+    // Narrower than narrowWidth, with the layout set to hide rather than relocate.
+    terminalSize: { width: 80, height: 40 },
+    previewWhenNarrow: "hide",
+  });
+
+  harness.controller.showDiff();
+  harness.controller.togglePreviewFullScreen();
+
+  const state = harness.store.snapshot();
+  expect(state.previewFullScreen).toBeFalse();
+  expect(state.previewVisibleOverride).toBeTrue();
+  // Pinned out of "auto", so the narrow-terminal rule no longer applies.
+  expect(state.previewPositionOverride).toBe("below");
+  expect(state.statusMessages.at(-1)?.text).toBe("Preview position: below");
+  harness.store.dispose();
+});
+
+test("showDiff opens the takeover even while the split pane is hidden", () => {
+  const harness = createControllerHarness({
+    revisions: [createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "a" })],
+  });
+
+  harness.store.actions.setPreviewVisibleOverride(false);
+  harness.controller.showDiff();
+
+  expect(harness.store.snapshot().focusMode).toBe("preview");
+  expect(harness.store.snapshot().previewFullScreen).toBeTrue();
   harness.store.dispose();
 });
 
@@ -1352,28 +1410,6 @@ test("scrollPreviewPage converts half and whole pages to viewport rows", () => {
     { x: 0, y: 21 },
     { x: 0, y: -21 },
   ]);
-  harness.store.dispose();
-});
-
-test("fine preview resizing changes a right-hand pane by one column", () => {
-  const harness = createControllerHarness({});
-  const previewConfig = {
-    position: "auto" as const,
-    showByDefault: true,
-    defaultWidthPercent: 50,
-    resizeStepPercent: 5,
-    minSizePercent: 15,
-    maxSizePercent: 90,
-    narrowWidth: 100,
-    whenNarrow: "below" as const,
-    wordWrap: false,
-  };
-
-  expect(effectivePreviewCols(harness.store.snapshot(), previewConfig, 120)).toBe(60);
-  harness.controller.expandPreviewFine();
-  expect(effectivePreviewCols(harness.store.snapshot(), previewConfig, 120)).toBe(61);
-  harness.controller.shrinkPreviewFine();
-  expect(effectivePreviewCols(harness.store.snapshot(), previewConfig, 120)).toBe(60);
   harness.store.dispose();
 });
 

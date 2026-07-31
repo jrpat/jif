@@ -45,6 +45,11 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
     wideWrapped: Scenario;
     multiHunk: Scenario;
     wideMultiHunk: Scenario;
+    splitWide: Scenario;
+    unifiedWide: Scenario;
+    splitMultiHunk: Scenario;
+    splitGap: Scenario;
+    unifiedGap: Scenario;
     scrollingSingleFile: Scenario;
     stickyFirstFile: Scenario;
     stickySecondFile: Scenario;
@@ -244,4 +249,44 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
 
   expect(result.themeColors.darkPaneBackground).toEqual(hexToRgb(result.themeColors.configDarkPaneFill));
   expect(result.themeColors.lightPaneBackground).toEqual(hexToRgb(result.themeColors.configLightPaneFill));
+
+  // A pane past `preview.splitViewWidth` puts the removal and its replacement on
+  // one row, side by side, instead of stacking them.
+  const pairedRow = (scenario: Scenario) =>
+    scenario.lines.find((line) => line.includes("removedtoken") && line.includes("addedtoken"));
+  expect(pairedRow(result.splitWide)).toBeDefined();
+  expect(pairedRow(result.splitWide)!.indexOf("removedtoken"))
+    .toBeLessThan(pairedRow(result.splitWide)!.indexOf("addedtoken"));
+
+  // The 0 sentinel keeps the same wide pane unified: one line each, stacked.
+  expect(pairedRow(result.unifiedWide)).toBeUndefined();
+  expect(result.unifiedWide.lines.some((line) => line.includes("removedtoken"))).toBeTrue();
+  expect(result.unifiedWide.lines.some((line) => line.includes("addedtoken"))).toBeTrue();
+
+  // Pairing also makes the rendered block one row shorter, which the
+  // fixed-height `<diff>` only gets right if it is sized with the split count.
+  const renderedRows = (scenario: Scenario) =>
+    scenario.lines.filter((line) => line.trim().length > 0).length;
+  expect(renderedRows(result.splitWide)).toBe(renderedRows(result.unifiedWide) - 1);
+
+  // Each hunk is its own fixed-height `<diff>`, so an undersized split count
+  // would swallow rows around the omission separator between them.
+  const splitLines = result.splitMultiHunk.lines.filter((line) => line.trim().length > 0);
+  const rowWith = (needle: string) => splitLines.findIndex((line) => line.includes(needle));
+  expect(rowWith("context")).toBeGreaterThanOrEqual(0);
+  expect(rowWith("more line")).toBeGreaterThan(rowWith("context"));
+  expect(rowWith("keep")).toBeGreaterThan(rowWith("more line"));
+  // Both hunks pair their change onto a single row.
+  expect(splitLines.filter((line) => line.includes("old") && line.includes("new"))).toHaveLength(1);
+  expect(splitLines.filter((line) => line.includes("before") && line.includes("after"))).toHaveLength(1);
+
+  // `<diff>` puts each side at 50% of its own width, so a content box wider
+  // than the pane starts the new side off-screen and every row only that side
+  // touches renders blank. Split view stays pinned to the viewport instead.
+  expect(result.splitGap.scrollWidth).toBeLessThanOrEqual(result.splitGap.viewportWidth!);
+  expect(result.splitGap.lines.some((line) => line.includes("onlyaddedtoken"))).toBeTrue();
+
+  // Unified still widens its content box so long lines can be scrolled to.
+  expect(result.unifiedGap.scrollWidth).toBeGreaterThan(result.unifiedGap.viewportWidth!);
+  expect(result.unifiedGap.lines.some((line) => line.includes("onlyaddedtoken"))).toBeTrue();
 });

@@ -270,8 +270,8 @@ test("only the focused filter input can change the query", () => {
 
 test("file commands report no focused file when the filter hides everything", () => {
   const state = filtered(createExpandedState(), "nothing-matches-this");
-  const showFileDiff = commandDefinitions.find((definition) => definition.id === "show-file-diff")!;
+  const showDiff = commandDefinitions.find((definition) => definition.id === "show-diff")!;
 
   expect(getFocusedFile(state)).toBeNull();
-  expect(showFileDiff.canExecute?.(state)).toBe(false);
+  expect(showDiff.canExecute?.(state)).toBe(false);
 });

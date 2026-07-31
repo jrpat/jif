@@ -2,6 +2,7 @@ import { canOpenShortcutFilter, getAdjacentBookmarkRevisionIndex, getAdjacentWor
 import type { AppState, RebaseSourceKind, RebaseTargetKind } from "../domain/types.ts";
 import { canSearchState } from "../search/matching.ts";
 import { isPreviewingSingleFile } from "../domain/preview.ts";
+import { isFileFocusMode } from "../modes.ts";
 
 export type JjCommandOptions = Readonly<{
   cwd?: string;
@@ -90,6 +91,8 @@ export type CommandController = Readonly<{
   toggleRebaseSelectionKind: () => void;
   toggleSquashAnchor: () => void;
   toggleInterdiffSwap: () => void;
+  cycleDiffRangeKind: () => void;
+  toggleDiffDescendants: () => void;
   undo: () => void;
   redo: () => void;
   focusWorkingCopy: () => void;
@@ -101,8 +104,7 @@ export type CommandController = Readonly<{
   openShortcutFilter: () => void;
   commit: () => void;
   describe: () => void;
-  showRevisionDiff: () => void;
-  showFileDiff: () => void;
+  showDiff: () => void;
   restoreOperation: () => void;
   revertOperation: () => void;
   showOperationDiff: () => void;
@@ -112,11 +114,10 @@ export type CommandController = Readonly<{
   cyclePreviewPosition: () => void;
   togglePreviewWordWrap: () => void;
   togglePreviewFullFile: () => void;
+  togglePreviewFullScreen: () => void;
   expandDiffContext: () => void;
   expandPreview: () => void;
   shrinkPreview: () => void;
-  expandPreviewFine: () => void;
-  shrinkPreviewFine: () => void;
   scrollPreview: (rowDelta: number) => void;
   scrollPreviewPage: (pageDelta: number) => void;
   openNotifications: () => void;
@@ -563,8 +564,8 @@ export const commandDefinitions: readonly CommandDefinition[] = [
   },
   {
     id: "diff",
-    title: "Diff",
-    description: "Show the diff between the focused revision and another",
+    title: "Diff Range",
+    description: "Show the combined diff of a range of revisions, from the focused one to another",
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.startDiff(),
     group: "global",
@@ -609,19 +610,12 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     group: "global",
   },
   {
-    id: "show-revision-diff",
+    id: "show-diff",
     title: "Diff",
-    description: "Show diff for the focused revision",
-    canExecute: (state) => !focusedIsElided(state),
-    run: (controller) => controller.showRevisionDiff(),
-    group: "global",
-  },
-  {
-    id: "show-file-diff",
-    title: "Diff",
-    description: "Show diff for the focused file",
-    canExecute: (state) => focusedFileExists(state),
-    run: (controller) => controller.showFileDiff(),
+    description: "Show the focused item's diff as a full-screen preview",
+    canExecute: (state) =>
+      isFileFocusMode(state.focusMode) ? focusedFileExists(state) : !focusedIsElided(state),
+    run: (controller) => controller.showDiff(),
     group: "global",
   },
   {
@@ -750,6 +744,13 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     group: "mode",
   },
   {
+    id: "toggle-preview-full-screen",
+    title: "Full Screen",
+    description: "Toggle the preview between taking over the screen and sharing it with the log",
+    run: (controller) => controller.togglePreviewFullScreen(),
+    group: "mode",
+  },
+  {
     id: "expand-diff-context",
     title: "Diff Context",
     description: "Expand diff context — available when viewing a single file's diff",
@@ -769,34 +770,6 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Shrink the preview pane",
     run: (controller) => controller.shrinkPreview(),
     group: "global",
-  },
-  {
-    id: "preview-mode-expand",
-    title: "Grow",
-    description: "Grow the preview pane",
-    run: (controller) => controller.expandPreview(),
-    group: "mode",
-  },
-  {
-    id: "preview-mode-shrink",
-    title: "Shrink",
-    description: "Shrink the preview pane",
-    run: (controller) => controller.shrinkPreview(),
-    group: "mode",
-  },
-  {
-    id: "expand-preview-fine",
-    title: "Grow 1 Cell",
-    description: "Grow the preview pane by one column or row",
-    run: (controller) => controller.expandPreviewFine(),
-    group: "mode",
-  },
-  {
-    id: "shrink-preview-fine",
-    title: "Shrink 1 Cell",
-    description: "Shrink the preview pane by one column or row",
-    run: (controller) => controller.shrinkPreviewFine(),
-    group: "mode",
   },
   {
     id: "scroll-preview-down",
@@ -950,6 +923,20 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Squash To Anchor",
     description: "Extend the squash source to a range ending at @ (or @- if @ is empty)",
     run: (controller) => controller.toggleSquashAnchor(),
+    group: "mode",
+  },
+  {
+    id: "diff-cycle-range-kind",
+    title: "Endpoints",
+    description: "Switch between the inclusive `A::B` range and the `--from`/`--to` comparison, which leaves out the first revision's own change",
+    run: (controller) => controller.cycleDiffRangeKind(),
+    group: "mode",
+  },
+  {
+    id: "diff-descendants",
+    title: "Descendants",
+    description: "Stretch the range over every descendant of the first revision (`A::`)",
+    run: (controller) => controller.toggleDiffDescendants(),
     group: "mode",
   },
   {

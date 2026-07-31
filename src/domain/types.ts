@@ -79,6 +79,14 @@ export type OperationLogEntry = Readonly<{
 
 export type PreviewPosition = "right" | "below";
 
+// An ad-hoc diff pinned into the preview pane (a composed `jj diff`/`jj
+// interdiff` result). While one is pinned the pane shows it instead of the
+// diff derived from whatever row is focused; leaving Preview mode drops it.
+export type PreviewPin = Readonly<{
+  header: string;
+  diff: string;
+}>;
+
 // A session position preference set via `alt+p`. Includes `"auto"` so the user
 // can cycle back to the responsive layout after pinning a fixed side.
 export type PreviewPositionPreference = PreviewPosition | "auto";
@@ -113,6 +121,19 @@ export type CommandBarBookmarkContext = Readonly<{
   suggestions: readonly BookmarkSuggestion[];
 }>;
 
+/**
+ * How a diff draft turns its picked revisions into a `jj diff` invocation.
+ *
+ * - `range` — `jj diff -r A::B`, the combined change of every revision from A
+ *   through B, both endpoints included. The default, because it is the reading
+ *   of "diff these revisions" that a chip pair can state unambiguously.
+ * - `between` — `jj diff --from A --to B`, comparing the two trees. A's own
+ *   change is *not* part of the result, and A and B need not be related.
+ * - `descendants` — `jj diff -r A::`, A plus everything descended from it. jj
+ *   merges the heads when the descendants fan out.
+ */
+export type DiffRangeKind = "range" | "between" | "descendants";
+
 export type RebaseSourceKind = "revisions" | "source" | "branch";
 export type RebaseTargetKind = "destination" | "insert-before" | "insert-after" | "insert-between";
 export type RebaseSelectionKind = "subject" | "target";
@@ -133,6 +154,7 @@ export type CommandDraft = Readonly<{
   // cursor-following target.
   rebaseTargetRowIds?: readonly string[];
   interdiffSwapped?: boolean;
+  diffRangeKind?: DiffRangeKind;
   absorbDefaultRowIds?: readonly string[];
   absorbSourceRevisionId?: string;
   setParentsSubjectRevisionId?: string;
@@ -253,6 +275,10 @@ export type AppState = Readonly<{
   previewSizePercentOverride: number | null;
   previewWordWrap: boolean;
   previewFullFile: boolean;
+  // Preview mode only: the pane takes over the whole screen instead of sharing
+  // it with the log. Cleared on leaving Preview mode.
+  previewFullScreen: boolean;
+  previewPin: PreviewPin | null;
 }>;
 
 export type SampleRepoMaterialization = Readonly<{

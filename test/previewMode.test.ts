@@ -6,6 +6,8 @@ import {
   createInitialState,
   enterPreviewMode,
   exitPreviewMode,
+  openPreviewPin,
+  togglePreviewFullScreen,
 } from "../src/state/store.ts";
 import {
   collectDirectCanonicalBindingsForMode,
@@ -15,6 +17,7 @@ import {
   resolveCommand,
 } from "../src/modes.ts";
 import { commandDefinitions } from "../src/commands/definitions.ts";
+import { draftConfigs } from "../src/state/store.ts";
 
 const ROW_ONE = createRowId("11111111", "aaaaaaaa");
 
@@ -67,10 +70,54 @@ describe("preview mode", () => {
     expect(cancelOrBlurState(enterPreviewMode(createState())).focusMode).toBe("revisions");
   });
 
-  test("preview mode exposes only the requested manipulation bindings", () => {
+  test("enterPreviewMode opts into the full-screen takeover", () => {
+    const split = enterPreviewMode(createState());
+    expect(split.previewFullScreen).toBeFalse();
+
+    const full = enterPreviewMode(createState(), { fullScreen: true });
+    expect(full.focusMode).toBe("preview");
+    expect(full.previewFullScreen).toBeTrue();
+    expect(full.focusModeStack).toEqual(["revisions", "preview"]);
+  });
+
+  test("togglePreviewFullScreen flips the takeover only inside preview mode", () => {
+    const full = enterPreviewMode(createState(), { fullScreen: true });
+    expect(togglePreviewFullScreen(full).previewFullScreen).toBeFalse();
+    expect(togglePreviewFullScreen(togglePreviewFullScreen(full)).previewFullScreen).toBeTrue();
+
+    const browsing = createState();
+    expect(togglePreviewFullScreen(browsing)).toBe(browsing);
+  });
+
+  test("leaving preview mode drops the takeover and any pinned diff", () => {
+    const pinned = openPreviewPin(createState(), { header: "jj diff -r a::b", diff: "patch" });
+    expect(pinned.focusMode).toBe("preview");
+    expect(pinned.previewFullScreen).toBeTrue();
+    expect(pinned.previewPin).toEqual({ header: "jj diff -r a::b", diff: "patch" });
+
+    for (const exited of [exitPreviewMode(pinned), cancelOrBlurState(pinned)]) {
+      expect(exited.focusMode).toBe("revisions");
+      expect(exited.previewFullScreen).toBeFalse();
+      expect(exited.previewPin).toBeNull();
+    }
+  });
+
+  test("openPreviewPin clears a draft so the pinned diff replaces its composition", () => {
+    const drafting = {
+      ...createState(),
+      selectedRowIds: [ROW_ONE],
+      markedRowIds: [ROW_ONE],
+      commandDraft: { config: draftConfigs.diff },
+    };
+    const pinned = openPreviewPin(drafting, { header: "jj diff -r a::b", diff: "patch" });
+    expect(pinned.commandDraft).toBeNull();
+    expect(pinned.selectedRowIds).toEqual([]);
+    expect(pinned.focusModeStack).toEqual(["revisions", "preview"]);
+  });
+
+  test("preview mode exposes only reading controls, no pane resizing", () => {
     const bindings = collectDirectCanonicalBindingsForMode("preview", defaultKeymap);
     expect(Object.fromEntries(bindings.map(({ key, commandId }) => [key, commandId]))).toEqual({
-      P: "exit-preview-mode",
       j: "preview-mode-scroll-down",
       k: "preview-mode-scroll-up",
       J: "scroll-preview-down-large",
@@ -79,24 +126,42 @@ describe("preview mode", () => {
       "ctrl-u": "scroll-preview-up-half-page",
       "ctrl-f": "scroll-preview-down-page",
       "ctrl-b": "scroll-preview-up-page",
-      h: "expand-preview-fine",
-      l: "shrink-preview-fine",
-      H: "preview-mode-expand",
-      L: "preview-mode-shrink",
       "alt-p": "preview-mode-cycle-position",
       w: "preview-mode-toggle-word-wrap",
       "ctrl-enter": "preview-mode-toggle-full-file",
+      " ": "toggle-preview-full-screen",
+      escape: "exit-preview-mode",
     });
   });
 
-  test("q is inert so only escape and P exit preview mode", () => {
-    expect(isKeyExplicitlyUnbound("preview", "q", defaultKeymap)).toBeTrue();
-    expect(resolveCommand("preview", "q", defaultKeymap)).toBeNull();
+  test("resizing is only reachable from the log, where the split is visible", () => {
+    for (const key of ["h", "l", "H", "L"]) {
+      expect(resolveCommand("preview", key, defaultKeymap)).toBeNull();
+    }
+    for (const mode of ["revision-log", "revision-files", "op-log", "evolog"] as const) {
+      expect(resolveCommand(mode, "ctrl-[", defaultKeymap)).toBe("expand-preview");
+      expect(resolveCommand(mode, "ctrl-]", defaultKeymap)).toBe("shrink-preview");
+    }
   });
 
-  test("P enters preview mode while alt-p owns position cycling in browse modes", () => {
+  test("d opens the full-screen preview from every surface the pane follows", () => {
+    for (const mode of ["revision-log", "revision-files", "evolog"] as const) {
+      expect(resolveCommand(mode, "d", defaultKeymap)).toBe("show-diff");
+    }
+    // The operation log keeps its own richer `jj op diff` viewer.
+    expect(resolveCommand("op-log", "d", defaultKeymap)).toBe("show-operation-diff");
+  });
+
+  test("escape is the only way out: q is inert and P is no longer bound", () => {
+    expect(isKeyExplicitlyUnbound("preview", "q", defaultKeymap)).toBeTrue();
+    expect(resolveCommand("preview", "q", defaultKeymap)).toBeNull();
+    expect(resolveCommand("preview", "escape", defaultKeymap)).toBe("exit-preview-mode");
+    expect(resolveCommand("preview", "P", defaultKeymap)).toBeNull();
+  });
+
+  test("P no longer enters preview mode, while alt-p still cycles position", () => {
     for (const mode of ["revision-log", "revision-files", "op-log", "evolog"] as const) {
-      expect(resolveCommand(mode, "P", defaultKeymap)).toBe("enter-preview-mode");
+      expect(resolveCommand(mode, "P", defaultKeymap)).toBeNull();
       expect(resolveCommand(mode, "alt-p", defaultKeymap)).toBe("cycle-preview-position");
     }
   });
@@ -133,10 +198,6 @@ describe("preview mode", () => {
       "preview-mode-cycle-position",
       "preview-mode-toggle-word-wrap",
       "preview-mode-toggle-full-file",
-      "preview-mode-expand",
-      "preview-mode-shrink",
-      "expand-preview-fine",
-      "shrink-preview-fine",
       "preview-mode-scroll-down",
       "preview-mode-scroll-up",
       "scroll-preview-down-large",
@@ -145,15 +206,13 @@ describe("preview mode", () => {
       "scroll-preview-up-half-page",
       "scroll-preview-down-page",
       "scroll-preview-up-page",
+      "toggle-preview-full-screen",
     ].map((id) => [id, titleById.get(id)]))).toEqual({
       "exit-preview-mode": "Close",
       "preview-mode-cycle-position": "Position",
       "preview-mode-toggle-word-wrap": "Word Wrap",
       "preview-mode-toggle-full-file": "Full File",
-      "preview-mode-expand": "Grow",
-      "preview-mode-shrink": "Shrink",
-      "expand-preview-fine": "Grow 1 Cell",
-      "shrink-preview-fine": "Shrink 1 Cell",
+      "toggle-preview-full-screen": "Full Screen",
       "preview-mode-scroll-down": "Scroll Down",
       "preview-mode-scroll-up": "Scroll Up",
       "scroll-preview-down-large": "Scroll Down 10",

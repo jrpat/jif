@@ -571,16 +571,17 @@ test("toggleInterdiffSwap is a no-op outside interdiff drafts", () => {
   expect(toggleInterdiffSwap(drafted)).toBe(drafted);
 });
 
-test("ctrl-d starts diff in normal mode and composes jj diff -f/-t", () => {
+test("ctrl-d starts diff in normal mode and composes an inclusive jj diff range", () => {
   const state = createState();
   expect(resolveForState("ctrl-d", state)).toBe("diff");
 
   const drafted = startCommandDraft(state, draftConfigs.diff);
   expect(getActiveMode(drafted)).toBe("diff");
   expect(drafted.commandDraft?.config.kind).toBe("diff");
-  expect(drafted.commandDraft?.config.sourceBadgeText).toBe("from");
-  expect(drafted.commandDraft?.config.badgeText).toBe("to");
+  expect(drafted.commandDraft?.config.sourceBadgeText).toBe("first");
+  expect(drafted.commandDraft?.config.badgeText).toBe("last");
   expect(drafted.commandDraft?.config.template).toContain("diff");
+  expect(drafted.commandDraft?.config.template).toContain("-r --revisions");
   expect(drafted.commandDraft?.config.template).toContain("-f --from");
   expect(drafted.commandDraft?.config.template).toContain("-t --to");
 });

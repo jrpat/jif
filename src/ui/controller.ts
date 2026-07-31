@@ -39,6 +39,7 @@ import {
   getFocusedWorkspaceSwitchTargetName,
   getInlineConfirmation,
   getInlineConfirmationActualCommand,
+  getDiffRangeKind,
   getRebaseSelectionKind,
   getSelectedRevisionArgs,
   getSelectedRevisionIds,
@@ -52,7 +53,7 @@ type ControllerClient = Readonly<{
   loadOperationLog(): Promise<readonly OperationLogEntry[]>;
   loadEvolog(revisionArg: string): Promise<readonly OperationLogEntry[]>;
   loadOperationDiff(operationId: string): Promise<string>;
-  loadInterdiff(commandArgs: readonly string[]): Promise<string>;
+  loadComposedDiff(commandArgs: readonly string[]): Promise<string>;
   resolveDescendants(revisionId: string): Promise<readonly string[]>;
   resolveRange(from: string, to: string): Promise<readonly string[]>;
   resolveAbsorbTargets(source: string): Promise<readonly string[]>;
@@ -144,20 +145,33 @@ export function createJifCommandController(args: Readonly<{
     store.actions.setPreviewSizePercentOverride(next);
   }
 
-  function adjustPreviewSizeFine(direction: 1 | -1) {
-    const state = store.snapshot();
+  /**
+   * Force the split pane onto the screen. The session visibility toggle is the
+   * usual obstacle, but `"auto"` also hides the pane outright on a terminal
+   * narrower than `narrowWidth` when `whenNarrow` is `"hide"`; pinning the side
+   * that layout resolves to takes the pane out of `"auto"` so it appears. The
+   * pin is announced, since it outlives the keypress that caused it.
+   */
+  function revealSplitPreview() {
     const previewConfig = args.getPreviewConfig();
-    const terminalSize = args.getTerminalSize();
-    const terminalExtent = effectivePreviewPosition(state, previewConfig, terminalSize.width) === "right"
-      ? terminalSize.width
-      : terminalSize.height;
-    const currentPercent = effectivePreviewPercent(state, previewConfig);
-    const currentExtent = Math.max(1, Math.round((terminalExtent * currentPercent) / 100));
-    const nextPercent = clampPreviewPercent(
-      ((currentExtent + direction) * 100) / Math.max(1, terminalExtent),
-      previewConfig,
+    const terminalWidth = args.getTerminalSize().width;
+    if (effectivePreviewVisible(store.snapshot(), previewConfig, terminalWidth)) {
+      return;
+    }
+
+    store.actions.setPreviewVisibleOverride(true);
+    const state = store.snapshot();
+    if (effectivePreviewVisible(state, previewConfig, terminalWidth)) {
+      return;
+    }
+
+    const position = effectivePreviewPosition(state, previewConfig, terminalWidth);
+    store.actions.setPreviewPositionOverride(position);
+    store.actions.upsertStatusMessage(
+      PREVIEW_POSITION_TOAST_ID,
+      `Preview position: ${position}`,
+      "success",
     );
-    store.actions.setPreviewSizePercentOverride(nextPercent);
   }
 
   // `jj split` and `jj split --parallel` share the same flow: split the whole
@@ -394,9 +408,8 @@ export function createJifCommandController(args: Readonly<{
         }
         void (async () => {
           try {
-            const content = await client.loadInterdiff(commandArgs);
-            store.actions.cancelCommand();
-            store.actions.openDiffViewer(content.length > 0 ? content : "(no differences)");
+            const diff = await client.loadComposedDiff(commandArgs);
+            store.actions.openPreviewPin({ header: `jj ${commandText}`, diff });
           } catch (error) {
             reportError(store, error);
           }
@@ -504,7 +517,36 @@ export function createJifCommandController(args: Readonly<{
         return;
       }
 
-      store.actions.startCommandDraft(draftConfigs.diff);
+      // The focused revision becomes the range's first member, so the cursor
+      // starts on its child: `A::B` only reads forward through the graph.
+      store.actions.startCommandDraft(draftConfigs.diff, { focusDirection: "up" });
+    },
+    cycleDiffRangeKind() {
+      store.actions.cycleDiffRangeKind();
+    },
+    toggleDiffDescendants() {
+      const state = store.snapshot();
+      if (state.commandDraft?.config.kind !== "diff") {
+        return;
+      }
+      if (getDiffRangeKind(state) === "descendants") {
+        store.actions.toggleDiffDescendants();
+        return;
+      }
+
+      // Resolving the fan-out is what lets the log mark every revision the
+      // range folds together, so the extent of `A::` is visible before running.
+      const sources = getSelectedRevisionIds(state);
+      void (async () => {
+        try {
+          const descendants = await Promise.all(
+            sources.map((revisionId) => client.resolveDescendants(revisionId)),
+          );
+          store.actions.toggleDiffDescendants([...new Set(descendants.flat())]);
+        } catch (error) {
+          reportError(store, error);
+        }
+      })();
     },
     startRebase() {
       const revision = getFocusedRevision(store.snapshot());
@@ -569,6 +611,14 @@ export function createJifCommandController(args: Readonly<{
     },
     exitPreviewMode() {
       store.actions.exitPreviewMode();
+    },
+    togglePreviewFullScreen() {
+      // Leaving the takeover must land on a pane that is actually on screen,
+      // rather than collapsing into a Preview mode with nothing to look at.
+      if (store.snapshot().previewFullScreen) {
+        revealSplitPreview();
+      }
+      store.actions.togglePreviewFullScreen();
     },
     startSetParents() {
       const revision = getFocusedRevision(store.snapshot());
@@ -703,21 +753,11 @@ export function createJifCommandController(args: Readonly<{
       if (!revisionArg) return;
       void args.runInteractiveJjCommand(`describe -r ${revisionArg}`);
     },
-    showRevisionDiff() {
-      const state = store.snapshot();
-      const revisionArg = getFocusedRevisionArg(state);
-      if (!revisionArg) return;
-      void args.runInteractiveJjCommand(`show -r ${revisionArg}`);
-    },
-    showFileDiff() {
-      const state = store.snapshot();
-      const revisionArg = getFocusedRevisionArg(state);
-      if (!revisionArg) return;
-      const file = getFocusedFile(state);
-      if (!file) return;
-      void args.runInteractiveJjCommand(
-        quoteCommand(["diff", "-r", revisionArg, join(state.repoPath, file.path)]),
-      );
+    showDiff() {
+      store.actions.closeShortcutPanel();
+      // Unlike `P`, this does not need the split pane to be on screen: the
+      // takeover is the whole point, and the pane's own visibility is untouched.
+      store.actions.enterPreviewMode({ fullScreen: true });
     },
     restoreOperation() {
       const operation = getFocusedOperationLogEntry(store.snapshot());
@@ -815,12 +855,6 @@ export function createJifCommandController(args: Readonly<{
     },
     shrinkPreview() {
       adjustPreviewSize(-1);
-    },
-    expandPreviewFine() {
-      adjustPreviewSizeFine(1);
-    },
-    shrinkPreviewFine() {
-      adjustPreviewSizeFine(-1);
     },
     scrollPreview(rowDelta: number) {
       if (effectivePreviewVisible(store.snapshot(), args.getPreviewConfig(), args.getTerminalSize().width)) {

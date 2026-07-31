@@ -10,6 +10,7 @@ import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "so
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import {
   countDiffRows,
+  countSplitDiffRows,
   estimateDiffWidth,
   fileTypeForPath,
   formatOmittedLineLabel,
@@ -18,6 +19,7 @@ import {
   splitPatchIntoDiffSections,
   type PreviewFilePatch,
 } from "../domain/previewDiff.ts";
+import { effectivePreviewDiffView } from "../domain/preview.ts";
 import { buildPreviewSyntaxStyle } from "./previewSyntaxStyle.ts";
 import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
 import { makeScrollAcceleration } from "./scrollAcceleration.ts";
@@ -65,14 +67,29 @@ export function PreviewPane(props: {
       afterDivider: lines.slice(splitAfter).join("\n"),
     };
   });
+  // Side-by-side once the pane is wide enough to give each side a readable
+  // half; see {@link effectivePreviewDiffView}.
+  const diffView = createMemo(() =>
+    effectivePreviewDiffView(props.config.preview, props.viewportWidth)
+  );
   // At least the viewport width so short diffs fill the pane; wider than it (so
   // the scrollbox scrolls horizontally) when a diff line is longer. Wrapped
   // mode keeps content at the viewport width so OpenTUI can actually wrap.
+  //
+  // Split view also pins to the viewport: `<diff>` lays its two sides out at
+  // 50% each, so a content box wider than the pane puts the right side past
+  // the right edge — every row that only the new side touches then reads as a
+  // blank gap. Long lines truncate instead; `w` wraps them, and the pane is
+  // wide by definition whenever split view is on.
   const contentWidth = createMemo(() =>
-    props.previewWordWrap
+    props.previewWordWrap || diffView() === "split"
       ? Math.max(1, props.viewportWidth)
       : Math.max(props.viewportWidth, estimateDiffWidth(files()))
   );
+  // Split view pairs each removal with an addition, so it is shorter than the
+  // unified row count the fixed-height `<diff>` would otherwise be given.
+  const countRows = (patch: string) =>
+    diffView() === "split" ? countSplitDiffRows(patch) : countDiffRows(patch);
   // The header lives inside the (possibly very wide) content box, so pin its
   // width to the viewport minus the content box's horizontal padding, keeping it
   // readable without horizontal scrolling.
@@ -190,7 +207,7 @@ export function PreviewPane(props: {
           >
             <For each={files()}>
               {(file, index) => {
-                const rows = countDiffRows(file.patch);
+                const rows = countRows(file.patch);
                 const sections = splitPatchIntoDiffSections(file.patch);
                 let fileHeading: Renderable | undefined;
                 onCleanup(() => {
@@ -238,7 +255,7 @@ export function PreviewPane(props: {
                         ) : (
                           <diff
                             diff={section.patch}
-                            view="unified"
+                            view={diffView()}
                             wrapMode={diffWrapMode()}
                             showLineNumbers
                             filetype={fileTypeForPath(file.path)}
@@ -251,7 +268,7 @@ export function PreviewPane(props: {
                             removedSignColor={colors.diffRemovedSign}
                             lineNumberFg={colors.diffLineNumber}
                             width="100%"
-                            height={props.previewWordWrap ? "auto" : countDiffRows(section.patch)}
+                            height={props.previewWordWrap ? "auto" : countRows(section.patch)}
                             flexShrink={0}
                           />
                         )}

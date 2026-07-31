@@ -112,6 +112,8 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     toggleRebaseSelectionKind: () => calls.push("toggleRebaseSelectionKind"),
     toggleSquashAnchor: () => calls.push("toggleSquashAnchor"),
     toggleInterdiffSwap: () => calls.push("toggleInterdiffSwap"),
+    cycleDiffRangeKind: () => calls.push("cycleDiffRangeKind"),
+    toggleDiffDescendants: () => calls.push("toggleDiffDescendants"),
     selectAbsorbDescendants: () => calls.push("selectAbsorbDescendants"),
     undo: () => calls.push("undo"),
     redo: () => calls.push("redo"),
@@ -123,8 +125,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     forceLastCommand: () => calls.push("forceLastCommand"),
     commit: () => calls.push("commit"),
     describe: () => calls.push("describe"),
-    showRevisionDiff: () => calls.push("showRevisionDiff"),
-    showFileDiff: () => calls.push("showFileDiff"),
+    showDiff: () => calls.push("showDiff"),
     restoreOperation: () => calls.push("restoreOperation"),
     revertOperation: () => calls.push("revertOperation"),
     showOperationDiff: () => calls.push("showOperationDiff"),
@@ -135,11 +136,10 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     cyclePreviewPosition: () => calls.push("cyclePreviewPosition"),
     togglePreviewWordWrap: () => calls.push("togglePreviewWordWrap"),
     togglePreviewFullFile: () => calls.push("togglePreviewFullFile"),
+    togglePreviewFullScreen: () => calls.push("togglePreviewFullScreen"),
     expandDiffContext: () => calls.push("expandDiffContext"),
     expandPreview: () => calls.push("expandPreview"),
     shrinkPreview: () => calls.push("shrinkPreview"),
-    expandPreviewFine: () => calls.push("expandPreviewFine"),
-    shrinkPreviewFine: () => calls.push("shrinkPreviewFine"),
     scrollPreview: (rowDelta) => calls.push(`scrollPreview(${rowDelta})`),
     scrollPreviewPage: (pageDelta) => calls.push(`scrollPreviewPage(${pageDelta})`),
     openNotifications: () => calls.push("openNotifications"),
@@ -764,6 +764,13 @@ test("entering preview mode defers shortcut dismissal until visibility is known"
   expect(shouldDismissShortcutContextBeforeCommand({
     commandId: "enter-preview-mode",
     mode: "revision-log",
+  })).toBeFalse();
+});
+
+test("leaving preview mode keeps a shortcut panel opened for the log underneath", () => {
+  expect(shouldDismissShortcutContextBeforeCommand({
+    commandId: "exit-preview-mode",
+    mode: "preview",
   })).toBeFalse();
 });
 
@@ -2495,10 +2502,6 @@ test("preview mode routes manipulation keys without invoking its exit command", 
     ["ctrl-u", "scrollPreviewPage(-0.5)"],
     ["ctrl-f", "scrollPreviewPage(1)"],
     ["ctrl-b", "scrollPreviewPage(-1)"],
-    ["h", "expandPreviewFine"],
-    ["l", "shrinkPreviewFine"],
-    ["H", "expandPreview"],
-    ["L", "shrinkPreview"],
     ["alt-p", "cyclePreviewPosition"],
     ["w", "togglePreviewWordWrap"],
   ]);

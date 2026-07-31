@@ -7,12 +7,14 @@ import type {
   CommandBarKind,
   CommandBarState,
   CommandDraftConfig,
+  DiffRangeKind,
   EventLogEntry,
   FailedCommand,
   FocusMode,
   InlineConfirmation,
   InlineConfirmationOptionId,
   OperationLogEntry,
+  PreviewPin,
   PreviewPositionPreference,
   RebaseSelectionKind,
   RebaseSourceKind,
@@ -88,9 +90,12 @@ export const draftConfigs = {
   },
   diff: {
     kind: "diff" as const,
-    template: "diff ${selected.map(s => `${arg('-f --from')} ${s}`).join(' ')} ${arg('-t --to')} ${target}",
-    badgeText: "to",
-    sourceBadgeText: "from",
+    // `range`/`descendants` compose `-r A::B` / `-r A::`, whose endpoints are
+    // both included; `between` falls back to the tree comparison, which omits
+    // the source's own change. See {@link DiffRangeKind}.
+    template: "diff ${diffRangeKind === 'between' ? `${selected.map(s => `${arg('-f --from')} ${s}`).join(' ')} ${arg('-t --to')} ${target}` : `${arg('-r --revisions')} ${diffRangeRoot()}::${diffRangeKind === 'descendants' ? '' : target}`}",
+    badgeText: "last",
+    sourceBadgeText: "first",
   },
   absorb: {
     kind: "absorb" as const,
@@ -136,6 +141,10 @@ export type TemplateContext = Readonly<{
   skipEmptied: boolean;
   forceApply: boolean;
   swapped: boolean;
+  diffRangeKind: DiffRangeKind;
+  // The `A::` left-hand side of a diff draft's revset: the lone source, or
+  // several unioned into one group.
+  diffRangeRoot: () => string;
   absorbConstrained: boolean;
   absorbTargets: string | Tagged;
   absorbFromSource: boolean;
@@ -258,6 +267,8 @@ export function createInitialState(
     previewSizePercentOverride: null,
     previewWordWrap: options?.previewWordWrap ?? false,
     previewFullFile: false,
+    previewFullScreen: false,
+    previewPin: null,
   };
 }
 
@@ -1078,23 +1089,55 @@ export function exitExtraMode(state: AppState): AppState {
   return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
 }
 
-export function enterPreviewMode(state: AppState): AppState {
+export function enterPreviewMode(
+  state: AppState,
+  options?: { fullScreen?: boolean },
+): AppState {
+  const fullScreen = options?.fullScreen ?? false;
   if (state.focusMode === "preview") {
-    return state;
+    return state.previewFullScreen === fullScreen
+      ? state
+      : { ...state, previewFullScreen: fullScreen };
   }
 
   return replaceFocusModeStack({
     ...state,
     inlineConfirmation: null,
+    previewFullScreen: fullScreen,
   }, [...getBrowseFocusModeStack(state), "preview"]);
 }
 
+// The full-screen takeover and any pinned diff belong to the Preview mode
+// visit that created them: leaving restores the split layout and the
+// focus-derived preview content.
 export function exitPreviewMode(state: AppState): AppState {
   if (state.focusMode !== "preview") {
     return state;
   }
 
-  return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
+  return replaceFocusModeStack({
+    ...state,
+    previewFullScreen: false,
+    previewPin: null,
+  }, getBrowseFocusModeStack(state));
+}
+
+export function togglePreviewFullScreen(state: AppState): AppState {
+  if (state.focusMode !== "preview") {
+    return state;
+  }
+
+  return { ...state, previewFullScreen: !state.previewFullScreen };
+}
+
+/**
+ * Show an already-fetched diff in a full-screen preview. Used by the composers
+ * (`ctrl+d`, `i`) whose result is not derived from the focused row, so the
+ * draft that produced it is dismissed as the diff takes over the screen.
+ */
+export function openPreviewPin(state: AppState, pin: PreviewPin): AppState {
+  const withoutDraft = state.commandDraft === null ? state : cancelCommandDraft(state);
+  return enterPreviewMode({ ...withoutDraft, previewPin: pin }, { fullScreen: true });
 }
 
 export function startBookmarkPrompt(
@@ -2260,6 +2303,52 @@ export function toggleInterdiffSwap(state: AppState): AppState {
   };
 }
 
+export function getDiffRangeKind(state: AppState): DiffRangeKind {
+  return state.commandDraft?.config.kind === "diff"
+    ? state.commandDraft.diffRangeKind ?? "range"
+    : "range";
+}
+
+function setDiffRangeKind(state: AppState, kind: DiffRangeKind): AppState {
+  if (state.commandDraft?.config.kind !== "diff") {
+    return state;
+  }
+
+  return {
+    ...state,
+    commandDraft: { ...state.commandDraft, diffRangeKind: kind },
+  };
+}
+
+/**
+ * Swap a diff draft between the inclusive `A::B` range and the exclusive
+ * `--from`/`--to` comparison. `descendants` has no `--from`/`--to` spelling, so
+ * it leaves for the comparison too rather than silently staying put.
+ */
+export function cycleDiffRangeKind(state: AppState): AppState {
+  return setDiffRangeKind(state, getDiffRangeKind(state) === "between" ? "range" : "between");
+}
+
+/** Stretch a diff draft's range over every descendant of its source, or undo that. */
+export function toggleDiffDescendants(
+  state: AppState,
+  descendantIds?: readonly string[],
+): AppState {
+  if (getDiffRangeKind(state) === "descendants") {
+    return setDiffRangeKind(state, "range");
+  }
+
+  const extended = setDiffRangeKind(state, "descendants");
+  if (extended === state || descendantIds === undefined) {
+    return extended;
+  }
+
+  return {
+    ...extended,
+    commandDraft: { ...extended.commandDraft!, descendantRevisionIds: descendantIds },
+  };
+}
+
 export function toggleSquashAnchor(
   state: AppState,
   anchorIds: readonly string[] = [],
@@ -2799,6 +2888,11 @@ export function getCommandTargetRevisionId(state: AppState): string | null {
     return null;
   }
 
+  // `A::` already reaches every descendant, so no endpoint is left to pick.
+  if (getDiffRangeKind(state) === "descendants") {
+    return null;
+  }
+
   const focusedRevision = getFocusedRevision(state);
   if (!focusedRevision || state.selectedRowIds.includes(focusedRevision.rowId)) {
     return null;
@@ -2842,6 +2936,20 @@ export function getCommandChipTextForRevision(
     // A default target that has been deselected still shows a muted reminder.
     if ((draft.absorbDefaultRowIds ?? []).includes(rowId)) {
       return "default";
+    }
+    return null;
+  }
+
+  // A diff draft names its picks after the range form it is composing, so the
+  // chips alone say whether the source's own change is part of the result:
+  // `first`/`last` bracket an inclusive `A::B`, `from`/`to` compare two trees.
+  if (draft.config.kind === "diff") {
+    const rangeKind = getDiffRangeKind(state);
+    if (getCommandTargetRowId(state) === rowId) {
+      return rangeKind === "between" ? "to" : "last";
+    }
+    if (state.selectedRowIds.includes(rowId)) {
+      return rangeKind === "between" ? "from" : "first";
     }
     return null;
   }
@@ -2919,6 +3027,11 @@ export function getCommandTargetRowId(state: AppState): string | null {
 
   // Likewise for pinned rebase targets.
   if ((state.commandDraft.rebaseTargetRowIds ?? []).length > 0) {
+    return null;
+  }
+
+  // `A::` already reaches every descendant, so no endpoint is left to pick.
+  if (getDiffRangeKind(state) === "descendants") {
     return null;
   }
 
@@ -3039,10 +3152,12 @@ function buildContext(
       ? [DRAFT_PLACEHOLDER]
       : [];
 
+  const selected = state.selectedRowIds.map((id) => revisionPrefixFromRowId(state, id));
+
   return {
     template: draft.config.template,
     context: {
-      selected: state.selectedRowIds.map((id) => revisionPrefixFromRowId(state, id)),
+      selected,
       target,
       subject: setParentsSubject,
       destinations: setParentsDestinations,
@@ -3076,9 +3191,23 @@ function buildContext(
       skipEmptied: draft.rebaseSkipEmptied ?? false,
       forceApply: overrides?.forceApply ?? false,
       swapped: draft.interdiffSwapped ?? false,
+      diffRangeKind: getDiffRangeKind(state),
+      diffRangeRoot: () => buildDiffRangeRoot(selected),
       anchorSuffix: squashAnchor ? `::${squashAnchor}` : "",
     },
   };
+}
+
+// Several sources union into a single revset root so `(a|b)::c` stays one
+// argument; a lone source needs no grouping parentheses.
+function buildDiffRangeRoot(sources: readonly (string | Tagged)[]): string {
+  if (sources.length === 0) {
+    return DRAFT_PLACEHOLDER;
+  }
+  if (sources.length === 1) {
+    return String(sources[0]);
+  }
+  return `(${sources.map(String).join("|")})`;
 }
 
 export function getSquashAnchorArg(state: AppState): "@" | "@-" {
@@ -3117,11 +3246,14 @@ function buildTaggedContext(
     (before) => new Tagged(before === DRAFT_PLACEHOLDER ? "" : before, "target"),
   );
 
+  const taggedSelected = (context.selected as string[]).map((s) => new Tagged(s, "selected"));
+
   return {
     template: resolved.template,
     context: {
       ...context,
-      selected: (context.selected as string[]).map((s) => new Tagged(s, "selected")),
+      selected: taggedSelected,
+      diffRangeRoot: () => buildDiffRangeRoot(taggedSelected),
       target: taggedTarget,
       subject: taggedSubject,
       destinations: taggedDestinations,
@@ -3253,6 +3385,18 @@ export function getOperationAffectedRowIds(state: AppState): ReadonlySet<string>
     );
   }
 
+  // `-r A::` folds the whole descendant fan into one diff; marking those rows
+  // is the only on-screen statement of how far the range reaches.
+  if (getDiffRangeKind(state) === "descendants" && state.commandDraft.descendantRevisionIds) {
+    const descendantIds = state.commandDraft.descendantRevisionIds;
+    return new Set([
+      ...state.selectedRowIds,
+      ...state.revisions
+        .filter((revision) => descendantIds.includes(revision.revisionId))
+        .map((revision) => revision.rowId),
+    ]);
+  }
+
   if (state.commandDraft.config.kind === "squash" && state.commandDraft.includeAnchor && state.commandDraft.anchorRevisionIds) {
     const anchorIds = state.commandDraft.anchorRevisionIds;
     const anchorRowIds = state.revisions
@@ -3286,6 +3430,12 @@ export function commandCanExecute(state: AppState): boolean {
   if (state.commandDraft.config.kind === "new-between") {
     return state.selectedRowIds.length > 0 &&
       getNewBetweenBeforeRevisionIds(state).length > 0;
+  }
+
+  // `-r A::` names no endpoint, so the template's `${target}` goes unused and a
+  // null target is the finished state rather than an incomplete one.
+  if (getDiffRangeKind(state) === "descendants") {
+    return state.selectedRowIds.length > 0;
   }
 
   if (state.commandDraft.config.template.includes("${target}")) {
