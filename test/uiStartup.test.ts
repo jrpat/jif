@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import { expect, test } from "bun:test";
 import { CliRenderEvents } from "@opentui/core";
-import { FALLBACK_PALETTE_DARK } from "../src/config/index.ts";
+import { FALLBACK_PALETTE_DARK, FALLBACK_PALETTE_LIGHT } from "../src/config/index.ts";
 import {
   bindViewRendererEvents,
   createPaletteDetector,
@@ -213,6 +213,33 @@ test("createPaletteDetector resolves config from the renderer palette", async ()
   await detectAndApplyPalette();
 
   expect(applyCalls).toBe(1);
+});
+
+test("createPaletteDetector retains current colors when terminal defaults are incomplete", async () => {
+  const unavailablePalettes = [
+    null,
+    { ...FALLBACK_PALETTE_LIGHT, defaultForeground: null },
+    { ...FALLBACK_PALETTE_LIGHT, defaultBackground: null },
+  ];
+  let applyCalls = 0;
+
+  for (const palette of unavailablePalettes) {
+    const detectAndApplyPalette = createPaletteDetector({
+      renderer: {
+        async getPalette() {
+          return palette;
+        },
+      },
+      rawConfig: {},
+      applyResolvedConfig: () => {
+        applyCalls += 1;
+      },
+    });
+
+    await detectAndApplyPalette();
+  }
+
+  expect(applyCalls).toBe(0);
 });
 
 test("bindViewRendererEvents updates size, refreshes palette on theme change, and unsubscribes cleanly", async () => {

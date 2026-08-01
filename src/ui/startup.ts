@@ -20,6 +20,12 @@ type LifecycleRenderer = Readonly<{
   off(event: string, listener: () => void): void;
 }>;
 
+function hasTerminalDefaults(palette: TerminalColors | null): palette is TerminalColors {
+  return palette !== null &&
+    palette.defaultForeground !== null &&
+    palette.defaultBackground !== null;
+}
+
 const DEFAULT_STARTUP_RESERVED_ROWS = 3;
 
 const MIN_REVISION_ROWS_BY_LAYOUT: Readonly<Record<AppLayout, number>> = {
@@ -36,12 +42,19 @@ export function createPaletteDetector(args: {
   return async () => {
     try {
       const palette = await args.renderer.getPalette({ size: 16 });
+      // OpenTUI represents unsupported or timed-out OSC color queries as a
+      // successful palette result with null entries. Keep the last known-good
+      // colors instead of resolving those missing terminal defaults against
+      // jif's dark fallback.
+      if (!hasTerminalDefaults(palette)) {
+        return;
+      }
       const rawConfig = typeof args.rawConfig === "function"
         ? args.rawConfig()
         : args.rawConfig;
       args.applyResolvedConfig(resolveAppConfig(rawConfig, { palette }));
     } catch {
-      // Keep current (fallback) colors
+      // Keep the current colors.
     }
   };
 }
