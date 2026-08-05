@@ -3,6 +3,16 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.7.1 — 2026-08-05
+
+### Highlights
+
+No new features in this patch release.
+
+### All changes
+
+- Preserve the terminal palette when detection is incomplete
+
 ## v0.7.0 — 2026-07-31
 
 ### Highlights
