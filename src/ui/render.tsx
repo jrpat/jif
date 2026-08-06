@@ -283,6 +283,7 @@ export function JifView(props: {
       setConfig(reconcile(nextConfig));
     },
   });
+  onCleanup(() => detectAndApplyPalette.dispose());
   const applyRuntimeConfig = async (projectStartDir: string) => {
     const next = await props.reloadConfig(projectStartDir);
     setRawConfig(next.raw);

@@ -1,7 +1,11 @@
 import { EventEmitter } from "node:events";
 import { expect, test } from "bun:test";
 import { CliRenderEvents } from "@opentui/core";
-import { FALLBACK_PALETTE_DARK, FALLBACK_PALETTE_LIGHT } from "../src/config/index.ts";
+import {
+  FALLBACK_PALETTE_DARK,
+  FALLBACK_PALETTE_LIGHT,
+  type ResolvedAppConfig,
+} from "../src/config/index.ts";
 import {
   bindViewRendererEvents,
   createPaletteDetector,
@@ -240,6 +244,46 @@ test("createPaletteDetector retains current colors when terminal defaults are in
   }
 
   expect(applyCalls).toBe(0);
+});
+
+test("createPaletteDetector applies a terminal background received after palette timeout", async () => {
+  const oscSubscribers = new Set<(sequence: string) => void>();
+  const appliedConfigs: ResolvedAppConfig[] = [];
+  const timedOutPalette = {
+    ...FALLBACK_PALETTE_DARK,
+    defaultForeground: null,
+    defaultBackground: null,
+  };
+
+  const detectAndApplyPalette = createPaletteDetector({
+    renderer: {
+      async getPalette() {
+        return timedOutPalette;
+      },
+      subscribeOsc(handler) {
+        oscSubscribers.add(handler);
+        return () => oscSubscribers.delete(handler);
+      },
+    },
+    rawConfig: {},
+    applyResolvedConfig: (config) => {
+      appliedConfigs.push(config);
+    },
+  });
+
+  await detectAndApplyPalette();
+
+  // The incomplete result represents OpenTUI's startup timeout: it must not
+  // delay readiness or replace the current colors.
+  expect(appliedConfigs).toEqual([]);
+
+  for (const subscriber of oscSubscribers) {
+    subscriber("\u001b]11;rgb:ffff/ffff/ffff\u0007");
+  }
+
+  expect(appliedConfigs).toHaveLength(1);
+  expect(appliedConfigs[0]!.colorScheme.semanticColors.chromeFillOne).toBe("#ffffff");
+  expect(appliedConfigs[0]!.colorScheme.semanticColors.textPrimary).toBe("#121212");
 });
 
 test("bindViewRendererEvents updates size, refreshes palette on theme change, and unsubscribes cleanly", async () => {

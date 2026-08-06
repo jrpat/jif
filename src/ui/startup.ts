@@ -1,6 +1,13 @@
 import { CliRenderEvents, type TerminalColors } from "@opentui/core";
 import type { AppLayout } from "../domain/types.ts";
-import { resolveAppConfig, type AppConfig, type ResolvedAppConfig } from "../config/schema.ts";
+import {
+  FALLBACK_PALETTE_DARK,
+  FALLBACK_PALETTE_LIGHT,
+  resolveAppConfig,
+  type AppConfig,
+  type ResolvedAppConfig,
+} from "../config/schema.ts";
+import { inferThemeModeFromRgb, parseOsc11Response } from "../config/detectTerminalTheme.ts";
 import type { RepositoryRefreshOptions } from "./repositoryRefresh.ts";
 
 export type InitialRepositoryLoad = Readonly<{
@@ -10,6 +17,11 @@ export type InitialRepositoryLoad = Readonly<{
 
 type PaletteRenderer = Readonly<{
   getPalette(options: { size: number }): Promise<TerminalColors | null>;
+  subscribeOsc?(handler: (sequence: string) => void): () => void;
+}>;
+
+export type PaletteDetector = (() => Promise<void>) & Readonly<{
+  dispose(): void;
 }>;
 
 type LifecycleRenderer = Readonly<{
@@ -38,25 +50,120 @@ export function createPaletteDetector(args: {
   renderer: PaletteRenderer;
   rawConfig: AppConfig | (() => AppConfig);
   applyResolvedConfig(config: ResolvedAppConfig): void;
-}): () => Promise<void> {
-  return async () => {
+}): PaletteDetector {
+  let latestPalette: TerminalColors | null = null;
+  let lastAppliedPalette: TerminalColors | null = null;
+  let observedBackground: Readonly<{
+    color: string;
+    rgb: Readonly<{ r: number; g: number; b: number }>;
+    generation: number;
+  }> | null = null;
+  let disposed = false;
+
+  const applyPalette = (palette: TerminalColors) => {
+    if (disposed) {
+      return;
+    }
+    const rawConfig = typeof args.rawConfig === "function"
+      ? args.rawConfig()
+      : args.rawConfig;
+    lastAppliedPalette = palette;
+    args.applyResolvedConfig(resolveAppConfig(rawConfig, { palette }));
+  };
+
+  // OpenTUI stops its palette query listeners when the startup idle timeout
+  // expires. Keep a lightweight OSC observer for the renderer's lifetime so a
+  // delayed default-background reply can still correct the active theme.
+  const unsubscribeOsc = args.renderer.subscribeOsc?.((sequence) => {
+    const background = parseOsc11Response(sequence);
+    if (background === null) {
+      return;
+    }
+
+    observedBackground = {
+      color: rgbToHex(background),
+      rgb: background,
+      generation: (observedBackground?.generation ?? 0) + 1,
+    };
+    if (latestPalette !== null) {
+      applyPalette(withTerminalBackground(
+        latestPalette,
+        lastAppliedPalette,
+        observedBackground.color,
+        observedBackground.rgb,
+      ));
+    }
+  }) ?? (() => {});
+
+  const detect = async () => {
+    const startingBackgroundGeneration = observedBackground?.generation ?? 0;
     try {
       const palette = await args.renderer.getPalette({ size: 16 });
+      latestPalette = palette;
       // OpenTUI represents unsupported or timed-out OSC color queries as a
       // successful palette result with null entries. Keep the last known-good
       // colors instead of resolving those missing terminal defaults against
       // jif's dark fallback.
-      if (!hasTerminalDefaults(palette)) {
+      if (hasTerminalDefaults(palette)) {
+        applyPalette(palette);
         return;
       }
-      const rawConfig = typeof args.rawConfig === "function"
-        ? args.rawConfig()
-        : args.rawConfig;
-      args.applyResolvedConfig(resolveAppConfig(rawConfig, { palette }));
+
+      if (
+        palette !== null &&
+        observedBackground !== null &&
+        observedBackground.generation > startingBackgroundGeneration
+      ) {
+        applyPalette(withTerminalBackground(
+          palette,
+          lastAppliedPalette,
+          observedBackground.color,
+          observedBackground.rgb,
+        ));
+      }
     } catch {
       // Keep the current colors.
     }
   };
+
+  const detector = detect as PaletteDetector;
+  Object.defineProperty(detector, "dispose", {
+    value: () => {
+      if (disposed) {
+        return;
+      }
+      disposed = true;
+      unsubscribeOsc();
+    },
+  });
+  return detector;
+}
+
+function withTerminalBackground(
+  detected: TerminalColors,
+  previous: TerminalColors | null,
+  defaultBackground: string,
+  backgroundRgb: Readonly<{ r: number; g: number; b: number }>,
+): TerminalColors {
+  const fallback = inferThemeModeFromRgb(backgroundRgb) === "light"
+    ? FALLBACK_PALETTE_LIGHT
+    : FALLBACK_PALETTE_DARK;
+  const paletteSize = Math.max(detected.palette.length, previous?.palette.length ?? 0);
+
+  return {
+    ...detected,
+    palette: Array.from({ length: paletteSize }, (_, index) =>
+      detected.palette[index] ?? previous?.palette[index] ?? fallback.palette[index] ?? null
+    ),
+    defaultForeground: detected.defaultForeground ?? fallback.defaultForeground,
+    defaultBackground,
+  };
+}
+
+function rgbToHex(color: Readonly<{ r: number; g: number; b: number }>): string {
+  return `#${[color.r, color.g, color.b]
+    .map((channel) => channel.toString(16).padStart(2, "0"))
+    .join("")}`;
 }
 
 export function bindViewRendererEvents(args: {
