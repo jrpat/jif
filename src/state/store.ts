@@ -2515,17 +2515,20 @@ export function pushEvent(
   text: string,
   level: StatusLevel,
   createdAt = Date.now(),
+  commandText?: string,
 ): AppState {
   const id = `${createdAt}-${state.eventLog.length}`;
   const event: EventLogEntry = {
     id,
     text,
+    commandText,
     level,
     createdAt,
   };
   const statusMessage: StatusMessage = {
     id,
     text,
+    commandText,
     level,
     createdAt,
     lastInteractedAt: createdAt,
@@ -2543,11 +2546,13 @@ export function pushStatusMessage(
   id: string,
   text: string,
   level: StatusLevel,
+  commandText?: string,
 ): AppState {
   const now = Date.now();
   const message: StatusMessage = {
     id,
     text,
+    commandText,
     level,
     createdAt: now,
     lastInteractedAt: now,
@@ -2582,12 +2587,13 @@ export function updateStatusMessage(
   text: string,
   level: StatusLevel,
   variant?: StatusMessageVariant,
+  commandText?: string,
 ): AppState {
   const now = Date.now();
   return {
     ...state,
     statusMessages: state.statusMessages.map((m) =>
-      m.id === id ? { ...m, text, level, variant, lastInteractedAt: now } : m,
+      m.id === id ? { ...m, text, level, variant, commandText, lastInteractedAt: now } : m,
     ),
   };
 }
@@ -2614,11 +2620,13 @@ export function logEvent(
   state: AppState,
   text: string,
   level: StatusLevel,
+  commandText?: string,
 ): AppState {
   const createdAt = Date.now();
   const entry: EventLogEntry = {
     id: `${createdAt}-${state.eventLog.length}`,
     text,
+    commandText,
     level,
     createdAt,
   };

@@ -23,6 +23,8 @@ test("notification cards embed a horizontally-scrollable body for long lines", a
     viewportWidth: number;
     longLineRowIndex: number;
     longLineRowText: string;
+    commandRowIndex: number;
+    ordinaryNotificationRowIndex: number;
     frame: string;
   };
 
@@ -30,8 +32,17 @@ test("notification cards embed a horizontally-scrollable body for long lines", a
 
   expect(result.longLineRowIndex).toBeGreaterThanOrEqual(0);
   expect(result.longLineRowText).toContain("a-very-lon");
+  expect(result.commandRowIndex).toBeGreaterThan(0);
+  expect(result.longLineRowIndex).toBe(result.commandRowIndex + 1);
+  expect(result.frame).not.toContain("more line");
 
   const rows = result.frame.split("\n");
+  expect(rows[result.commandRowIndex - 1]?.replace(/[│ ]/g, "")).toBe("");
+  expect(result.ordinaryNotificationRowIndex).toBeGreaterThan(0);
+  expect(
+    rows[result.ordinaryNotificationRowIndex - 1]?.replace(/[│ ]/g, ""),
+  ).toBe("");
+
   const tailFragmentInOtherRows = rows
     .filter((_row, idx) => idx !== result.longLineRowIndex)
     .some((row) => row.includes("scrolling"));

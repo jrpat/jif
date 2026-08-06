@@ -14,19 +14,25 @@ function createActionLog() {
       cancelCommand() {
         entries.push("cancelCommand");
       },
-      pushEvent(text: string, level: string) {
-        entries.push(`pushEvent:${level}:${text}`);
+      pushEvent(text: string, level: string, commandText?: string) {
+        entries.push(`pushEvent:${level}:${text}${commandText ? `:${commandText}` : ""}`);
       },
-      pushStatusMessage(id: string, text: string, level: string) {
-        entries.push(`pushStatusMessage:${id}:${level}:${text}`);
+      pushStatusMessage(id: string, text: string, level: string, commandText?: string) {
+        entries.push(`pushStatusMessage:${id}:${level}:${text}${commandText ? `:${commandText}` : ""}`);
       },
-      updateStatusMessage(id: string, text: string, level: string, variant?: string) {
+      updateStatusMessage(
+        id: string,
+        text: string,
+        level: string,
+        variant?: string,
+        commandText?: string,
+      ) {
         entries.push(
-          `updateStatusMessage:${id}:${level}:${text}${variant ? `:${variant}` : ""}`,
+          `updateStatusMessage:${id}:${level}:${text}${variant ? `:${variant}` : ""}${commandText ? `:${commandText}` : ""}`,
         );
       },
-      logEvent(text: string, level: string) {
-        entries.push(`logEvent:${level}:${text}`);
+      logEvent(text: string, level: string, commandText?: string) {
+        entries.push(`logEvent:${level}:${text}${commandText ? `:${commandText}` : ""}`);
       },
       setLoading(loading: boolean) {
         entries.push(`setLoading:${loading}`);
@@ -93,7 +99,7 @@ test("command runner marks help output as a persistent help toast on success", a
   });
 
   expect(entries).toContain(
-    "updateStatusMessage:toast-1:success:Usage: jj rebase [OPTIONS]:help",
+    "updateStatusMessage:toast-1:success:Usage: jj rebase [OPTIONS]:help:jj rebase --help",
   );
 });
 
@@ -118,7 +124,7 @@ test("command runner does not mark shell help output as a help toast", async () 
     failureFeedback: "status-toast",
   });
 
-  expect(entries).toContain("updateStatusMessage:toast-1:success:shell usage text");
+  expect(entries).toContain("updateStatusMessage:toast-1:success:shell usage text:ls --help");
   expect(entries).not.toContain(
     "updateStatusMessage:toast-1:success:shell usage text:help",
   );
@@ -164,8 +170,8 @@ test("command runner records history and updates a status toast on success", asy
     "pushStatusMessage:toast-1:info:⠋ describe -r abc",
     "execute:describe -r abc",
     "clearLastFailedCommand",
-    "updateStatusMessage:toast-1:success:ok",
-    "logEvent:success:ok",
+    "updateStatusMessage:toast-1:success:ok:jj describe -r abc",
+    "logEvent:success:ok:jj describe -r abc",
     "refreshRepository",
   ]);
 });
@@ -250,8 +256,8 @@ test("command runner animates the status toast while a command is running", asyn
     "pushStatusMessage:toast-1:info:⠋ describe -r abc",
     "updateStatusMessage:toast-1:info:⠙ describe -r abc",
     "clearLastFailedCommand",
-    "updateStatusMessage:toast-1:success:ok",
-    "logEvent:success:ok",
+    "updateStatusMessage:toast-1:success:ok:jj describe -r abc",
+    "logEvent:success:ok:jj describe -r abc",
     "refreshRepository",
   ]);
 });
@@ -282,8 +288,8 @@ test("command runner records failures and clears loading for event-driven comman
   expect(entries).toEqual([
     "setLoading:true",
     "setLastFailedCommand:false:undo:stderr details:failure-toast",
-    "pushStatusMessage:failure-toast:error:boom",
-    "logEvent:error:boom",
+    "pushStatusMessage:failure-toast:error:boom:jj undo",
+    "logEvent:error:boom:jj undo",
     "setLoading:false",
   ]);
 });
@@ -312,8 +318,8 @@ test("command runner records the failure toast id for retryable status-toast fai
   expect(entries).toEqual([
     "pushStatusMessage:toast-1:info:⠋ undo",
     "setLastFailedCommand:false:undo:stderr details:toast-1",
-    "updateStatusMessage:toast-1:error:boom",
-    "logEvent:error:boom",
+    "updateStatusMessage:toast-1:error:boom:jj undo",
+    "logEvent:error:boom:jj undo",
   ]);
 });
 
@@ -346,7 +352,7 @@ test("shell command runner passes the raw command text to the shell executor", a
   expect(entries).toEqual([
     "shell:printf '%s' \"$PWD\" | cat",
     "clearLastFailedCommand",
-    "pushEvent:success:shell ok",
+    "pushEvent:success:shell ok:printf '%s' \"$PWD\" | cat",
     "refreshRepository",
   ]);
 });

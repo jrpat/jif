@@ -6,6 +6,7 @@ import type { ResolvedAppConfig } from "../config/schema.ts";
 import { populatedShortcutSections } from "./shortcutPanel.ts";
 import type { ShortcutGrid, ShortcutPanelLayout, ShortcutSummarySegment } from "./shortcutPanel.ts";
 import { ScrollableAnsiBody } from "./scrollableAnsiBody.tsx";
+import { getNotificationBodyText } from "./notificationContent.ts";
 import { observeScrollboxInteraction } from "./scroll.ts";
 import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
@@ -386,7 +387,7 @@ function StatusToast(props: {
   const isHelp = () => props.message.variant === "help";
   const bodyHeight = createMemo(() =>
     getStatusToastBodyHeight(
-      props.message.text,
+      getNotificationBodyText(props.message.text, props.message.commandText),
       isHelp() ? props.maxHelpBodyHeight : props.maxBodyHeight,
     )
   );
@@ -440,6 +441,8 @@ function StatusToast(props: {
       <ScrollableAnsiBody
         id={`status-toast-body-${props.message.id}`}
         text={props.message.text}
+        commandText={props.message.commandText}
+        commandColor={borderColor()}
         bodyHeight={bodyHeight()}
         config={props.config}
         backgroundColor={colors.chromeFillOne}

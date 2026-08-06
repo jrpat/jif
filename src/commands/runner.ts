@@ -10,10 +10,16 @@ export type CommandExecutor = "jj" | "shell";
 export type CommandRunnerActions = Readonly<{
   clearLastFailedCommand(): void;
   cancelCommand(): void;
-  pushEvent(text: string, level: StatusLevel): void;
-  pushStatusMessage(id: string, text: string, level: StatusLevel): void;
-  updateStatusMessage(id: string, text: string, level: StatusLevel, variant?: StatusMessageVariant): void;
-  logEvent(text: string, level: StatusLevel): void;
+  pushEvent(text: string, level: StatusLevel, commandText?: string): void;
+  pushStatusMessage(id: string, text: string, level: StatusLevel, commandText?: string): void;
+  updateStatusMessage(
+    id: string,
+    text: string,
+    level: StatusLevel,
+    variant?: StatusMessageVariant,
+    commandText?: string,
+  ): void;
+  logEvent(text: string, level: StatusLevel, commandText?: string): void;
   setLoading(loading: boolean): void;
   setLastFailedCommand(command: FailedCommand): void;
   focusWorkingCopy(): void;
@@ -114,6 +120,7 @@ export function createCommandRunner(args: Readonly<{
         options.failureFeedback === "none"
           ? null
           : toastId ?? args.createToastId?.() ?? `cmd-${Date.now()}`;
+      const executedCommandText = formatExecutedCommandText(command.commandText, executor);
 
       const stopToastSpinner = startStatusToastSpinner(
         args.actions,
@@ -137,7 +144,14 @@ export function createCommandRunner(args: Readonly<{
         }
         const successVariant: StatusMessageVariant | undefined =
           executor === "jj" && isHelpJjCommand(command.commandText) ? "help" : undefined;
-        publishSuccess(args.actions, toastId, resultMessage, options.successFeedback, successVariant);
+        publishSuccess(
+          args.actions,
+          toastId,
+          resultMessage,
+          options.successFeedback,
+          successVariant,
+          executedCommandText,
+        );
         await args.refreshRepository({ workingCopy: "read-only" });
         if (options.focusWorkingCopyAfterRefresh) {
           args.actions.focusWorkingCopy();
@@ -151,7 +165,14 @@ export function createCommandRunner(args: Readonly<{
           error,
           failureToastId ?? undefined,
         );
-        publishFailure(args.actions, failureToastId, toastId, message, options.failureFeedback);
+        publishFailure(
+          args.actions,
+          failureToastId,
+          toastId,
+          message,
+          options.failureFeedback,
+          executedCommandText,
+        );
         if (options.showLoading) {
           args.actions.setLoading(false);
         }
@@ -185,6 +206,10 @@ function startStatusToastSpinner(
 
 function formatRunningCommandText(commandText: string, frameIndex: number): string {
   return formatSpinnerText(commandText, frameIndex);
+}
+
+function formatExecutedCommandText(commandText: string, executor: CommandExecutor): string {
+  return executor === "jj" ? `jj ${commandText}` : commandText;
 }
 
 async function executeInteractive(
@@ -275,18 +300,19 @@ function publishSuccess(
   toastId: string | null,
   message: string,
   feedback: CommandFeedbackMode,
-  variant?: StatusMessageVariant,
+  variant: StatusMessageVariant | undefined,
+  commandText: string,
 ) {
   if (feedback === "status-toast") {
     if (toastId !== null) {
-      actions.updateStatusMessage(toastId, message, "success", variant);
+      actions.updateStatusMessage(toastId, message, "success", variant, commandText);
     }
-    actions.logEvent(message, "success");
+    actions.logEvent(message, "success", commandText);
     return;
   }
 
   if (feedback === "event") {
-    actions.pushEvent(message, "success");
+    actions.pushEvent(message, "success", commandText);
   }
 }
 
@@ -296,21 +322,22 @@ function publishFailure(
   spinnerToastId: string | null,
   message: string,
   feedback: CommandFeedbackMode,
+  commandText: string,
 ) {
   if (feedback === "status-toast") {
     if (spinnerToastId !== null) {
-      actions.updateStatusMessage(spinnerToastId, message, "error");
+      actions.updateStatusMessage(spinnerToastId, message, "error", undefined, commandText);
     }
-    actions.logEvent(message, "error");
+    actions.logEvent(message, "error", commandText);
     return;
   }
 
   if (feedback === "event") {
     if (failureToastId !== null) {
-      actions.pushStatusMessage(failureToastId, message, "error");
-      actions.logEvent(message, "error");
+      actions.pushStatusMessage(failureToastId, message, "error", commandText);
+      actions.logEvent(message, "error", commandText);
     } else {
-      actions.pushEvent(message, "error");
+      actions.pushEvent(message, "error", commandText);
     }
   }
 }

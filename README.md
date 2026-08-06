@@ -452,6 +452,7 @@ Active while the evolog panel is open. Opened from Normal with `ctrl-e` for the 
 ### Notifications
 
 Active while the notifications history panel is open. Does not inherit Normal.
+Command-generated toasts and notification cards show `❯` followed by the executed command immediately above its output, styled in the matching status color. Every notification card leaves a blank line below its status header.
 
 | Key | Command | Description |
 |-----|---------|-------------|

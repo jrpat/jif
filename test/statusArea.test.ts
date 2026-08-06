@@ -83,7 +83,7 @@ test("message overlays clamp long toasts to the configured body height", async (
   expect(result.frame).toContain("status line 3");
 });
 
-test("short multiline toasts render at their content height instead of the cap", async () => {
+test("short command toasts include the command in their content height", async () => {
   const proc = Bun.spawn({
     cmd: ["bun", "run", "test/helpers/renderShortStatusMessageOverlay.tsx"],
     cwd: process.cwd(),
@@ -105,10 +105,18 @@ test("short multiline toasts render at their content height instead of the cap",
     frame: string;
   };
 
-  expect(result.renderedLineCount).toBe(5);
+  expect(result.renderedLineCount).toBe(6);
+  expect(result.frame).toContain("❯ jj describe -r abc");
   expect(result.frame).toContain("alpha");
   expect(result.frame).toContain("beta");
   expect(result.frame).toContain("gamma");
+
+  const rows = result.frame.split("\n");
+  const commandRow = rows.findIndex((row) => row.includes("❯ jj describe -r abc"));
+  const outputRow = rows.findIndex((row) => row.includes("alpha"));
+  expect(commandRow).toBeGreaterThan(0);
+  expect(outputRow).toBe(commandRow + 1);
+  expect(rows[commandRow - 1]).toContain("┌");
 });
 
 test("scrolling a success toast resets its dismiss timer", async () => {

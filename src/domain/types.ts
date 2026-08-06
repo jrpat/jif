@@ -171,6 +171,7 @@ export type StatusMessageVariant = "help";
 export type StatusMessage = Readonly<{
   id: string;
   text: string;
+  commandText?: string;
   level: StatusLevel;
   variant?: StatusMessageVariant;
   createdAt: number;
@@ -180,6 +181,7 @@ export type StatusMessage = Readonly<{
 export type EventLogEntry = Readonly<{
   id: string;
   text: string;
+  commandText?: string;
   level: StatusLevel;
   createdAt: number;
 }>;

@@ -183,27 +183,35 @@ export function createAppStore(
       setEvologLoading(loading: boolean) {
         mutate((currentState) => setEvologLoading(currentState, loading));
       },
-      pushEvent(text: string, level: StatusLevel) {
-        mutate((currentState) => pushEvent(currentState, text, level));
+      pushEvent(text: string, level: StatusLevel, commandText?: string) {
+        mutate((currentState) => pushEvent(currentState, text, level, undefined, commandText));
       },
       reportError(error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
         mutate((currentState) => pushEvent(currentState, message, "error"));
       },
-      pushStatusMessage(id: string, text: string, level: StatusLevel) {
-        mutate((currentState) => pushStatusMessage(currentState, id, text, level));
+      pushStatusMessage(id: string, text: string, level: StatusLevel, commandText?: string) {
+        mutate((currentState) => pushStatusMessage(currentState, id, text, level, commandText));
       },
       upsertStatusMessage(id: string, text: string, level: StatusLevel) {
         mutate((currentState) => upsertStatusMessage(currentState, id, text, level));
       },
-      updateStatusMessage(id: string, text: string, level: StatusLevel, variant?: StatusMessageVariant) {
-        mutate((currentState) => updateStatusMessage(currentState, id, text, level, variant));
+      updateStatusMessage(
+        id: string,
+        text: string,
+        level: StatusLevel,
+        variant?: StatusMessageVariant,
+        commandText?: string,
+      ) {
+        mutate((currentState) =>
+          updateStatusMessage(currentState, id, text, level, variant, commandText)
+        );
       },
       touchStatusMessage(id: string) {
         mutate((currentState) => touchStatusMessage(currentState, id));
       },
-      logEvent(text: string, level: StatusLevel) {
-        mutate((currentState) => logEvent(currentState, text, level));
+      logEvent(text: string, level: StatusLevel, commandText?: string) {
+        mutate((currentState) => logEvent(currentState, text, level, commandText));
       },
       applyRepositoryData(repositoryData: RepositoryData) {
         mutate((currentState) => applyRepositoryData(currentState, repositoryData));

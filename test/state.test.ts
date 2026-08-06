@@ -1706,6 +1706,16 @@ test("pushStatusMessage adds a status message without an event log entry", () =>
   expect(state.eventLog).toHaveLength(0);
 });
 
+test("command feedback carries the executed command into toasts and notification history", () => {
+  let state = createState();
+  state = pushStatusMessage(state, "toast-1", "running command", "info");
+  state = updateStatusMessage(state, "toast-1", "done", "success", undefined, "jj describe -r abc");
+  state = logEvent(state, "done", "success", "jj describe -r abc");
+
+  expect(state.statusMessages[0]?.commandText).toBe("jj describe -r abc");
+  expect(state.eventLog[0]?.commandText).toBe("jj describe -r abc");
+});
+
 test("updateStatusMessage changes text and level of an existing toast", () => {
   let state = createState();
   state = pushStatusMessage(state, "toast-1", "running command", "info");

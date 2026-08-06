@@ -12,8 +12,15 @@ const entries: readonly EventLogEntry[] = [
   {
     id: "evt-0",
     text: `${longLine}\nshort line`,
+    commandText: "jj describe -r abc",
     level: "info",
     createdAt: 0,
+  },
+  {
+    id: "evt-1",
+    text: "ordinary notification",
+    level: "warning",
+    createdAt: 1,
   },
 ];
 
@@ -67,6 +74,8 @@ const lines = frame.trimEnd().split("\n");
 const longLineHead = longLine.slice(0, 10);
 const longLineRowIndex = lines.findIndex((line) => line.includes(longLineHead));
 const longLineRowText = longLineRowIndex >= 0 ? lines[longLineRowIndex]! : "";
+const commandRowIndex = lines.findIndex((line) => line.includes("❯ jj describe -r abc"));
+const ordinaryNotificationRowIndex = lines.findIndex((line) => line.includes("ordinary notification"));
 
 console.log(JSON.stringify({
   scrollboxFound,
@@ -74,5 +83,7 @@ console.log(JSON.stringify({
   viewportWidth,
   longLineRowIndex,
   longLineRowText,
+  commandRowIndex,
+  ordinaryNotificationRowIndex,
   frame,
 }));

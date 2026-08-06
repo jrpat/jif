@@ -3,6 +3,7 @@ import { MouseButton, type MouseEvent } from "@opentui/core";
 import type { ResolvedAppConfig } from "../config/schema.ts";
 import type { EventLogEntry } from "../domain/types.ts";
 import { ScrollableAnsiBody } from "./scrollableAnsiBody.tsx";
+import { getNotificationCommandLineCount } from "./notificationContent.ts";
 import { getStatusColor, getStatusFillColor } from "./statusMessages.ts";
 
 const COLLAPSED_LINE_LIMIT = 5;
@@ -11,6 +12,7 @@ type EntryViewModel = Readonly<{
   entry: EventLogEntry;
   totalLines: number;
   visibleLines: readonly string[];
+  bodyHeight: number;
 }>;
 
 export function NotificationsOverlay(props: Readonly<{
@@ -26,8 +28,17 @@ export function NotificationsOverlay(props: Readonly<{
   const entryViewModels = createMemo<readonly EntryViewModel[]>(() =>
     props.entries.map((entry) => {
       const lines = entry.text.split(/\r\n|\r|\n/);
-      const visibleLines = expandedSet().has(entry.id) ? lines : lines.slice(0, COLLAPSED_LINE_LIMIT);
-      return { entry, totalLines: lines.length, visibleLines };
+      const commandLineCount = getNotificationCommandLineCount(entry.commandText);
+      const visibleOutputLineLimit = Math.max(0, COLLAPSED_LINE_LIMIT - commandLineCount);
+      const visibleLines = expandedSet().has(entry.id)
+        ? lines
+        : lines.slice(0, visibleOutputLineLimit);
+      return {
+        entry,
+        totalLines: lines.length,
+        visibleLines,
+        bodyHeight: visibleLines.length + commandLineCount,
+      };
     }),
   );
 
@@ -92,9 +103,12 @@ function NotificationCard(props: Readonly<{
         <box flexGrow={1} />
         <text fg={colors().textTertiary}>{timestamp()}</text>
       </box>
+      <box width="100%" height={1} />
       <ScrollableAnsiBody
         text={props.model.visibleLines.join("\n")}
-        bodyHeight={props.model.visibleLines.length}
+        commandText={props.model.entry.commandText}
+        commandColor={borderColor()}
+        bodyHeight={props.model.bodyHeight}
         config={props.config}
         backgroundColor={backgroundColor()}
       />

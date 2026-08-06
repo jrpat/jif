@@ -12,6 +12,7 @@ const rendered = await testRender(
           {
             id: "toast-1",
             text: "alpha\nbeta\ngamma",
+            commandText: "jj describe -r abc",
             level: "error",
             createdAt: 0,
             lastInteractedAt: 0,

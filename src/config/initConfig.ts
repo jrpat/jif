@@ -259,6 +259,7 @@ namespace Jif {
   type StatusMessage = Readonly<{
     id: string;
     text: string;
+    commandText?: string;
     level: StatusLevel;
     createdAt: number;
   }>;
@@ -266,6 +267,7 @@ namespace Jif {
   type EventLogEntry = Readonly<{
     id: string;
     text: string;
+    commandText?: string;
     level: StatusLevel;
     createdAt: number;
   }>;
