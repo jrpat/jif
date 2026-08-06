@@ -171,7 +171,7 @@ export default {
     // historyLimit: 50,
   },
   preview: {
-    // wordWrap: false,
+    // wordWrap: true,
   },
   keymap: {
     "revision-log": {

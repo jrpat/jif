@@ -683,7 +683,7 @@ export default {
     maxSizePercent: 90,
     narrowWidth: 100,          // in "auto", terminals narrower than this are "too narrow" for the right layout
     whenNarrow: "below",       // in "auto", what to do when too narrow: "below" (relocate) or "hide"
-    wordWrap: false,           // wrap long preview diff lines by default
+    wordWrap: true,            // wrap long preview diff lines by default
     splitViewWidth: 160,       // pane width at which diffs go side-by-side; 0 always keeps them unified
   },
 } satisfies Jif.Config;
@@ -691,7 +691,7 @@ export default {
 
 Diffs render unified in a narrow pane and side-by-side once it is at least `preview.splitViewWidth` columns wide — side-by-side gives each half of a diff only half the pane, so it needs roughly twice the room to stay readable. The threshold follows the pane, not the terminal, so growing the pane with `ctrl+[` or opening a diff [full-screen](#full-screen-preview) can switch a diff to side-by-side on its own. Set `splitViewWidth: 0` to keep every diff unified at any width.
 
-Unified diffs scroll horizontally to reach lines longer than the pane; side-by-side ones cannot — the two halves are each pinned to half the pane, so widening the content would push the new side off the edge instead of making room. Long lines truncate there; use `shift+w` to wrap them.
+Long diff lines wrap by default. Use `shift+w` to turn wrapping off for the current session; unwrapped unified diffs scroll horizontally, while unwrapped side-by-side diffs truncate because each half stays pinned to half the pane.
 
 Position, visibility, size, and word wrap can also be changed for the current session with `p`, `alt+p`, `ctrl+[` / `ctrl+]`, and `shift+w`; `d` opens the pane's dedicated Preview mode [full-screen](#full-screen-preview), and `space` switches that to the split layout. Those session changes are not persisted.
 

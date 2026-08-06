@@ -73,10 +73,18 @@ test("AppStore seeds layout from config options and cycles through all layouts",
   store.dispose();
 });
 
-test("AppStore seeds preview word wrap from config options", () => {
-  const store = createAppStore("/tmp/repo", { previewWordWrap: true });
+test("AppStore enables preview word wrap by default", () => {
+  const store = createAppStore("/tmp/repo");
 
   expect(store.state.previewWordWrap).toBeTrue();
+
+  store.dispose();
+});
+
+test("AppStore seeds disabled preview word wrap from config options", () => {
+  const store = createAppStore("/tmp/repo", { previewWordWrap: false });
+
+  expect(store.state.previewWordWrap).toBeFalse();
 
   store.dispose();
 });

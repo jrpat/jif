@@ -376,7 +376,7 @@ export function resolveAppConfig(
       maxSizePercent: clampPercent(config.preview?.maxSizePercent ?? 90),
       narrowWidth: Math.max(1, Math.floor(config.preview?.narrowWidth ?? 100)),
       whenNarrow: config.preview?.whenNarrow ?? "below",
-      wordWrap: config.preview?.wordWrap ?? false,
+      wordWrap: config.preview?.wordWrap ?? true,
       // 0 is the sentinel for "never split": no pane is ever 0 columns wide.
       splitViewWidth: Math.max(0, Math.floor(config.preview?.splitViewWidth ?? 160)),
     },

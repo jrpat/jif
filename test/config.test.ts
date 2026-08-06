@@ -302,8 +302,8 @@ test("resolveAppConfig applies refresh.watch", () => {
   expect(resolveAppConfig({ refresh: { watch: true } }).refresh.watch).toBeTrue();
 });
 
-test("resolveAppConfig defaults preview.wordWrap to false", () => {
-  expect(resolveAppConfig(defaultAppConfig).preview.wordWrap).toBeFalse();
+test("resolveAppConfig defaults preview.wordWrap to true", () => {
+  expect(resolveAppConfig(defaultAppConfig).preview.wordWrap).toBeTrue();
 });
 
 test("resolveAppConfig applies preview.wordWrap", () => {

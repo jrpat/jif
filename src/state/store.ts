@@ -265,7 +265,7 @@ export function createInitialState(
     previewPositionOverride: null,
     previewVisibleOverride: null,
     previewSizePercentOverride: null,
-    previewWordWrap: options?.previewWordWrap ?? false,
+    previewWordWrap: options?.previewWordWrap ?? true,
     previewFullFile: false,
     previewFullScreen: false,
     previewPin: null,

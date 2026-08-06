@@ -219,7 +219,7 @@ describe("preview reducers", () => {
     expect(initial.previewPositionOverride).toBeNull();
     expect(initial.previewVisibleOverride).toBeNull();
     expect(initial.previewSizePercentOverride).toBeNull();
-    expect(initial.previewWordWrap).toBeFalse();
+    expect(initial.previewWordWrap).toBeTrue();
   });
 
   test("initial word wrap follows the startup option", () => {
@@ -238,9 +238,9 @@ describe("preview reducers", () => {
   });
 
   test("word wrap toggles without mutating the input state", () => {
-    const wrapped = togglePreviewWordWrap(initial);
-    expect(wrapped.previewWordWrap).toBeTrue();
-    expect(initial.previewWordWrap).toBeFalse();
-    expect(togglePreviewWordWrap(wrapped).previewWordWrap).toBeFalse();
+    const unwrapped = togglePreviewWordWrap(initial);
+    expect(unwrapped.previewWordWrap).toBeFalse();
+    expect(initial.previewWordWrap).toBeTrue();
+    expect(togglePreviewWordWrap(unwrapped).previewWordWrap).toBeTrue();
   });
 });

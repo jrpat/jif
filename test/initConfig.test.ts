@@ -41,7 +41,7 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(configText).toContain("// acceleration: true,");
   expect(configText).toContain("// intervalMs: 0,");
   expect(configText).toContain('// layout: "normal",');
-  expect(configText).toContain("// wordWrap: false,");
+  expect(configText).toContain("// wordWrap: true,");
   expect(configText).toContain("if (!app.rev) return;");
   expect(configText).toContain("return cmd.jji(`show -r ${app.rev}`);");
   expect(typesText).toContain("declare global {");
