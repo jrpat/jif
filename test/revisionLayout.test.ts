@@ -38,7 +38,7 @@ test("loose layout uses direct two-row graph geometry", () => {
     rowCount: 2,
     slots: {
       identity: { row: 0, placement: "flow", grow: false },
-      metadata: { row: 1, placement: "positioned", grow: true },
+      description: { row: 1, placement: "positioned", grow: true },
       date: { row: 0, placement: "flow", grow: false },
       command: { row: 0, placement: "flow", grow: false },
     },
@@ -64,7 +64,7 @@ test("normal layout folds the first two graph rows and overlays the target chip"
     rowCount: 1,
     slots: {
       identity: { row: 0, placement: "flow", grow: false },
-      metadata: { row: 0, placement: "flow", grow: true },
+      description: { row: 0, placement: "flow", grow: true },
       date: { row: 0, placement: "flow", grow: false },
       command: { row: 0, placement: "positioned", grow: false },
     },
@@ -92,7 +92,7 @@ test("tight layout overlays the command chip so it isn't clipped by long descrip
 
   expect(layout.mode).toBe("tight");
   expect(layout.header.rowCount).toBe(1);
-  expect(layout.header.slots.metadata).toEqual({
+  expect(layout.header.slots.description).toEqual({
     row: 0,
     placement: "flow",
     grow: true,

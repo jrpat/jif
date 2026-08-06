@@ -1681,7 +1681,7 @@ export function RevisionItem(props: {
   const activeGraphDetail = () => activeGutterPlan().detail;
   const effectiveHeaderRowCount = () =>
     props.revision.marker === "elided" ? 1 : layoutPlan().header.rowCount;
-  const metadataSlotLayout = () => layoutPlan().header.slots.metadata;
+  const descriptionSlotLayout = () => layoutPlan().header.slots.description;
   const commandSlotLayout = () => layoutPlan().header.slots.command;
   const showsTopNarrowConnector = () =>
     isBoxedLayout() &&
@@ -1841,50 +1841,50 @@ export function RevisionItem(props: {
                     </text>
                   </box>
                 </box>
+                {/*
+                  The chips ride the identity row in every layout, so a wide
+                  bookmark set has to be clipped here rather than pushing the
+                  date and command chips off the right edge. That is what
+                  `flexShrink` buys, and it is why this box must not take a
+                  numeric `height`: opentui's height setter resets `flexShrink`
+                  to 0 whenever it is 1, which would restore the pushing.
+                */}
                 <box
-                  id={`revision-slot-metadata-${props.revision.rowId}`}
-                  position={metadataSlotLayout().placement === "positioned" ? "absolute" : "relative"}
-                  left={metadataSlotLayout().placement === "positioned" ? 0 : undefined}
-                  right={metadataSlotLayout().placement === "positioned" ? 0 : undefined}
-                  top={metadataSlotLayout().row}
-                  flexGrow={metadataSlotLayout().placement === "flow" && metadataSlotLayout().grow ? 1 : 0}
-                  flexBasis={metadataSlotLayout().placement === "flow" && metadataSlotLayout().grow ? 0 : undefined}
+                  id={`revision-slot-side-chips-${props.revision.rowId}`}
+                  flexDirection="row"
+                  overflow="hidden"
+                  minWidth={0}
+                  flexShrink={1}
+                >
+                  <RevisionSideChips chips={sideChips()} colors={colors()} />
+                </box>
+                <box visible={sideChips().length > 0} width={1} />
+                <box
+                  id={`revision-slot-description-${props.revision.rowId}`}
+                  position={descriptionSlotLayout().placement === "positioned" ? "absolute" : "relative"}
+                  left={descriptionSlotLayout().placement === "positioned" ? 0 : undefined}
+                  right={descriptionSlotLayout().placement === "positioned" ? 0 : undefined}
+                  top={descriptionSlotLayout().row}
+                  flexGrow={descriptionSlotLayout().placement === "flow" && descriptionSlotLayout().grow ? 1 : 0}
+                  flexBasis={descriptionSlotLayout().placement === "flow" && descriptionSlotLayout().grow ? 0 : undefined}
                   minWidth={0}
                   height={1}
                   overflow="hidden"
                   flexDirection="row"
                 >
-                  <box
-                    id={`revision-slot-side-chips-${props.revision.rowId}`}
-                    flexDirection="row"
-                    flexShrink={0}
-                  >
-                    <RevisionSideChips chips={sideChips()} colors={colors()} />
-                  </box>
-                  <box visible={sideChips().length > 0} width={1} />
-                  <box
-                    id={`revision-slot-description-${props.revision.rowId}`}
+                  <text
                     flexGrow={1}
                     flexBasis={0}
                     minWidth={0}
-                    height={1}
-                    overflow="hidden"
-                    flexDirection="row"
+                    fg={descriptionColor()}
+                    wrapMode="none"
+                    truncate={true}
                   >
-                    <text
-                      flexGrow={1}
-                      flexBasis={0}
-                      minWidth={0}
-                      fg={descriptionColor()}
-                      wrapMode="none"
-                      truncate={true}
-                    >
-                      {props.revision.description}
-                    </text>
-                  </box>
+                    {props.revision.description}
+                  </text>
                 </box>
                 <box
-                  visible={metadataSlotLayout().placement === "positioned"}
+                  visible={descriptionSlotLayout().placement === "positioned"}
                   flexGrow={1}
                   height={1}
                 />

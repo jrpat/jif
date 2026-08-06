@@ -53,6 +53,9 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     dateChipLongDescriptionLoose,
     dateChipLongDescriptionNormal,
     dateChipLongDescriptionTight,
+    dateChipWideChipsLoose,
+    dateChipWideChipsNormal,
+    dateChipWideChipsTight,
     retainedRevisionSlots,
   } = JSON.parse(stdout) as {
     normalUnfocused: string;
@@ -99,6 +102,9 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     dateChipLongDescriptionLoose: string;
     dateChipLongDescriptionNormal: string;
     dateChipLongDescriptionTight: string;
+    dateChipWideChipsLoose: string;
+    dateChipWideChipsNormal: string;
+    dateChipWideChipsTight: string;
     retainedRevisionSlots: {
       slotIds: string[];
       snapshots: Record<string, Record<string, number | null>>;
@@ -114,6 +120,15 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     ["tight", dateChipLongDescriptionTight],
   ] as const) {
     expect(frame, `date chip should be visible in ${layout} layout with a long description`).toMatch(dateChipPattern);
+  }
+
+  for (const [layout, frame] of [
+    ["loose", dateChipWideChipsLoose],
+    ["normal", dateChipWideChipsNormal],
+    ["tight", dateChipWideChipsTight],
+  ] as const) {
+    expect(frame, `date chip should survive oversized chips in ${layout} layout`).toMatch(dateChipPattern);
+    expect(frame, `oversized chips should be clipped in ${layout} layout`).not.toContain("feature/very-long-bookmark");
   }
 
   expect(normalUnfocused).toContain("│ │ └");
@@ -167,14 +182,19 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
   expect(divergentFocused).toContain("│ │ ┌──────────────────────────┐");
   expect(divergentFocused.split("│ │ ┌──────────────────────────┐").length - 1).toBe(1);
 
-  const looseChipLine = looseChipsInline
-    .trimEnd()
-    .split("\n")
-    .find((line) => line.includes("main") && line.includes("review") && line.includes("branch"));
+  // Loose layout rides the chips on the revision id row and gives the
+  // description a row of its own.
+  const looseChipLines = looseChipsInline.trimEnd().split("\n");
+  const looseChipLine = looseChipLines.find((line) => line.includes("cu"));
+  const looseDescriptionLine = looseChipLines.find((line) => line.includes("branch"));
 
   expect(looseChipLine).toBeDefined();
+  expect(looseChipLine!.indexOf("cu")).toBeLessThan(looseChipLine!.indexOf("review"));
   expect(looseChipLine!.indexOf("review")).toBeLessThan(looseChipLine!.indexOf("main"));
-  expect(looseChipLine!.indexOf("main")).toBeLessThan(looseChipLine!.indexOf("branch"));
+  expect(looseChipLine).not.toContain("branch");
+  expect(looseDescriptionLine).toBeDefined();
+  expect(looseDescriptionLine).not.toContain("review");
+  expect(looseDescriptionLine).not.toContain("main");
 
   for (const [layout, kind, frame] of [
     ["normal", "bookmark", oversizedBookmarkChipNormal],
@@ -188,20 +208,23 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     ).toMatch(/cu  very/);
   }
 
+  // The bookmark chip rides its revision's id row, so a refresh that moves the
+  // bookmark has to move the chip with it instead of leaving a stale copy.
   const initialBookmarkLine = looseBookmarkChipRefresh.initialFrame
     .trimEnd()
     .split("\n")
-    .find((line) => line.includes("source revision") && line.includes("main"));
+    .find((line) => line.includes("main"));
   expect(initialBookmarkLine).toBeDefined();
-  expect(initialBookmarkLine!.indexOf("main")).toBeLessThan(initialBookmarkLine!.indexOf("source revision"));
+  expect(initialBookmarkLine).toContain("sr");
+  expect(initialBookmarkLine).not.toContain("source revision");
 
-  const refreshedBookmarkLine = looseBookmarkChipRefresh.refreshedFrame
+  const refreshedBookmarkLines = looseBookmarkChipRefresh.refreshedFrame
     .trimEnd()
     .split("\n")
-    .find((line) => line.includes("destination revision") && line.includes("main"));
-  expect(refreshedBookmarkLine).toBeDefined();
-  expect(refreshedBookmarkLine!.indexOf("main")).toBeLessThan(refreshedBookmarkLine!.indexOf("destination revision"));
-  expect(looseBookmarkChipRefresh.refreshedFrame).not.toContain("source revision                              main");
+    .filter((line) => line.includes("main"));
+  expect(refreshedBookmarkLines).toHaveLength(1);
+  expect(refreshedBookmarkLines[0]).toContain("ds");
+  expect(refreshedBookmarkLines[0]).not.toContain("destination revision");
 
   expect(rebaseCommandChips).toContain("move");
   expect(rebaseCommandChips).toContain("onto");

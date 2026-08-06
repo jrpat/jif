@@ -258,7 +258,8 @@ async function captureRetainedRevisionSlots() {
     "revision-slot-graph-curr",
     "revision-slot-header-curr",
     "revision-slot-identity-curr",
-    "revision-slot-metadata-curr",
+    "revision-slot-side-chips-curr",
+    "revision-slot-description-curr",
     "revision-slot-date-curr",
     "revision-slot-command-curr",
     "revision-slot-details-curr",
@@ -388,6 +389,52 @@ async function renderDateChipWithLongDescription(layout: AppLayout) {
       "this is a very long commit message that should not push the date chip off the right edge",
       ["@  "],
       { localTimestamp: "2020-01-01 00:00:00", marker: "working-copy" },
+    ),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+
+  const rendered = await testRender(() => (
+    <box width={40} flexDirection="column">
+      <RevisionItem
+        fileFilterActions={store.actions}
+        state={store.state}
+        revision={store.state.revisions[0]!}
+        index={0}
+        previousRowId={null}
+        nextRowId={null}
+        config={resolveAppConfig({ commands: { layout } })}
+        focusedRowId="curr"
+        selectedRowIds={new Set()}
+        expandedRowId={null}
+        commandTargetRowId={null}
+      />
+    </box>
+  ), { width: 40, height: layout === "loose" ? 4 : 3 });
+
+  await rendered.renderOnce();
+  const frame = rendered.captureCharFrame();
+  rendered.renderer.destroy();
+  return frame;
+}
+
+// Chips wider than the row have to be clipped where they sit, not allowed to
+// push the date chip past the right edge.
+async function renderDateChipWithWideChips(layout: AppLayout) {
+  const revisions = [
+    createRevision(
+      "curr",
+      "a description that also wants room",
+      ["@  "],
+      {
+        localTimestamp: "2020-01-01 00:00:00",
+        marker: "working-copy",
+        bookmarks: ["main", "release/v2", "feature/very-long-bookmark"],
+        workspaces: ["review"],
+      },
     ),
   ] as const;
   const store = createAppStore("/tmp/repo", { layout });
@@ -674,6 +721,9 @@ const squashCommandChips = await renderCommandDraftChips("loose", "squash");
 const dateChipLongDescriptionLoose = await renderDateChipWithLongDescription("loose");
 const dateChipLongDescriptionNormal = await renderDateChipWithLongDescription("normal");
 const dateChipLongDescriptionTight = await renderDateChipWithLongDescription("tight");
+const dateChipWideChipsLoose = await renderDateChipWithWideChips("loose");
+const dateChipWideChipsNormal = await renderDateChipWithWideChips("normal");
+const dateChipWideChipsTight = await renderDateChipWithWideChips("tight");
 const retainedRevisionSlots = await captureRetainedRevisionSlots();
 
 console.log(JSON.stringify({
@@ -703,5 +753,8 @@ console.log(JSON.stringify({
   dateChipLongDescriptionLoose,
   dateChipLongDescriptionNormal,
   dateChipLongDescriptionTight,
+  dateChipWideChipsLoose,
+  dateChipWideChipsNormal,
+  dateChipWideChipsTight,
   retainedRevisionSlots,
 }));

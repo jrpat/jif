@@ -12,7 +12,8 @@ export const REVISION_RENDER_SLOT_NAMES = [
   "graph",
   "header",
   "identity",
-  "metadata",
+  "side-chips",
+  "description",
   "date",
   "command",
   "details",
@@ -26,10 +27,13 @@ export type RevisionHeaderSlotLayout = Readonly<{
   grow: boolean;
 }>;
 
+// The bookmark, workspace, and conflict chips always ride the identity row in
+// flow right after the change id, so only the description needs a slot that
+// moves between rows.
 export type RevisionHeaderLayout = Readonly<{
   rowCount: 1 | 2;
   slots: Readonly<Record<
-    "identity" | "metadata" | "date" | "command",
+    "identity" | "description" | "date" | "command",
     RevisionHeaderSlotLayout
   >>;
 }>;
@@ -53,7 +57,7 @@ const REVISION_LAYOUT_PLANS: Readonly<Record<RevisionLayoutMode, RevisionLayoutP
       rowCount: 2,
       slots: {
         identity: { row: 0, placement: "flow", grow: false },
-        metadata: { row: 1, placement: "positioned", grow: true },
+        description: { row: 1, placement: "positioned", grow: true },
         date: { row: 0, placement: "flow", grow: false },
         command: { row: 0, placement: "flow", grow: false },
       },
@@ -70,7 +74,7 @@ const REVISION_LAYOUT_PLANS: Readonly<Record<RevisionLayoutMode, RevisionLayoutP
       rowCount: 1,
       slots: {
         identity: { row: 0, placement: "flow", grow: false },
-        metadata: { row: 0, placement: "flow", grow: true },
+        description: { row: 0, placement: "flow", grow: true },
         date: { row: 0, placement: "flow", grow: false },
         command: { row: 0, placement: "positioned", grow: false },
       },
@@ -87,7 +91,7 @@ const REVISION_LAYOUT_PLANS: Readonly<Record<RevisionLayoutMode, RevisionLayoutP
       rowCount: 1,
       slots: {
         identity: { row: 0, placement: "flow", grow: false },
-        metadata: { row: 0, placement: "flow", grow: true },
+        description: { row: 0, placement: "flow", grow: true },
         date: { row: 0, placement: "flow", grow: false },
         command: { row: 0, placement: "positioned", grow: false },
       },
