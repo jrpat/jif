@@ -3,6 +3,18 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.7.2 — 2026-08-06
+
+### Highlights
+
+- Command-generated toasts and notification history now show the executed command above its output.
+- Loose revision rows now place bookmark, workspace, and conflict chips beside the change ID, leaving the description its own row.
+
+### All changes
+
+- Move revision chips onto the id row in the loose layout
+- Show commands in notification feedback
+
 ## v0.7.1 — 2026-08-05
 
 ### Highlights
