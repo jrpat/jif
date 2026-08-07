@@ -3,6 +3,26 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.8.0 — 2026-08-07
+
+### Highlights
+
+- The `:` command bar now opens in complete-at-point; use `ctrl-h` or a second bare `:` to switch to command history.
+- Press backtick to open and close notification history.
+- Press `alt-enter` on a notification to rerun the command that produced it.
+- Preview diffs now wrap long lines by default; use `shift+w` or set `preview.wordWrap: false` to opt out.
+
+### All changes
+
+- Use backtick for the notification log
+- Use the focused file for unselected file splits
+- Restore file-selection splitting in Files mode
+- Rerun commands from the notification log
+- Prevent notification log expansion jitter.
+- Open the jj command bar in complete-at-point by default
+- Respect late terminal background responses
+- Enable preview diff word wrap by default
+
 ## v0.7.2 — 2026-08-06
 
 ### Highlights
