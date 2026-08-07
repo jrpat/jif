@@ -1,13 +1,14 @@
 import { createEffect, createMemo } from "solid-js";
 import type { ScrollBoxRenderable } from "@opentui/core";
 import type { ResolvedAppConfig } from "../config/schema.ts";
+import type { CommandInvocation } from "../domain/types.ts";
 import { buildNotificationStyledText } from "./notificationContent.ts";
 import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
 
 export function ScrollableAnsiBody(props: Readonly<{
   text: string;
-  commandText?: string;
+  command?: CommandInvocation;
   commandColor?: string;
   bodyHeight: number;
   config: ResolvedAppConfig;
@@ -26,7 +27,7 @@ export function ScrollableAnsiBody(props: Readonly<{
     if (textRef) {
       textRef.content = buildNotificationStyledText({
         text: props.text,
-        commandText: props.commandText,
+        command: props.command,
         commandColor: props.commandColor,
         terminalPalette: props.config.terminalPalette,
       });

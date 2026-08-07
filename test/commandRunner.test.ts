@@ -1,12 +1,19 @@
 import { expect, test } from "bun:test";
 import { createCommandRunner, createTrackedCommand } from "../src/commands/runner.ts";
 import { isHelpJjCommand } from "../src/commands/interactive-subcommands.ts";
+import type { CommandInvocation } from "../src/domain/types.ts";
 
 function createActionLog() {
   const entries: string[] = [];
+  const publishedCommands: CommandInvocation[] = [];
+  const commandSuffix = (command?: CommandInvocation) =>
+    command
+      ? `:${command.executor === "jj" ? "jj " : ""}${command.commandText}`
+      : "";
 
   return {
     entries,
+    publishedCommands,
     actions: {
       clearLastFailedCommand() {
         entries.push("clearLastFailedCommand");
@@ -14,25 +21,26 @@ function createActionLog() {
       cancelCommand() {
         entries.push("cancelCommand");
       },
-      pushEvent(text: string, level: string, commandText?: string) {
-        entries.push(`pushEvent:${level}:${text}${commandText ? `:${commandText}` : ""}`);
+      pushEvent(text: string, level: string, command?: CommandInvocation) {
+        entries.push(`pushEvent:${level}:${text}${commandSuffix(command)}`);
       },
-      pushStatusMessage(id: string, text: string, level: string, commandText?: string) {
-        entries.push(`pushStatusMessage:${id}:${level}:${text}${commandText ? `:${commandText}` : ""}`);
+      pushStatusMessage(id: string, text: string, level: string, command?: CommandInvocation) {
+        entries.push(`pushStatusMessage:${id}:${level}:${text}${commandSuffix(command)}`);
       },
       updateStatusMessage(
         id: string,
         text: string,
         level: string,
         variant?: string,
-        commandText?: string,
+        command?: CommandInvocation,
       ) {
         entries.push(
-          `updateStatusMessage:${id}:${level}:${text}${variant ? `:${variant}` : ""}${commandText ? `:${commandText}` : ""}`,
+          `updateStatusMessage:${id}:${level}:${text}${variant ? `:${variant}` : ""}${commandSuffix(command)}`,
         );
       },
-      logEvent(text: string, level: string, commandText?: string) {
-        entries.push(`logEvent:${level}:${text}${commandText ? `:${commandText}` : ""}`);
+      logEvent(text: string, level: string, command?: CommandInvocation) {
+        entries.push(`logEvent:${level}:${text}${commandSuffix(command)}`);
+        if (command) publishedCommands.push(command);
       },
       setLoading(loading: boolean) {
         entries.push(`setLoading:${loading}`);
@@ -128,6 +136,37 @@ test("command runner does not mark shell help output as a help toast", async () 
   expect(entries).not.toContain(
     "updateStatusMessage:toast-1:success:shell usage text:help",
   );
+});
+
+test("command runner publishes repeatable invocation metadata with notification history", async () => {
+  const { actions, publishedCommands } = createActionLog();
+
+  const runner = createCommandRunner({
+    actions,
+    executeCommandArgs: async () => {
+      throw new Error("jj path should not run");
+    },
+    executeShellCommand: async () => "done",
+    refreshRepository: async () => true,
+    createToastId: () => "toast-1",
+  });
+
+  await runner.run({
+    commandText: "pwd | cat",
+    executor: "shell",
+    cwd: "/tmp/shell-cwd",
+    focusWorkingCopyAfterRefresh: true,
+    successFeedback: "status-toast",
+    failureFeedback: "status-toast",
+  });
+
+  expect(publishedCommands).toEqual([{
+    commandText: "pwd | cat",
+    executor: "shell",
+    interactive: false,
+    cwd: "/tmp/shell-cwd",
+    focusWorkingCopyAfterRefresh: true,
+  }]);
 });
 
 test("command runner records history and updates a status toast on success", async () => {

@@ -1,36 +1,41 @@
 import { RGBA, StyledText, TextAttributes, type TextChunk } from "@opentui/core";
+import type { CommandInvocation } from "../domain/types.ts";
 import { parseAnsiToStyledText } from "./ansiToStyledText.ts";
 
 // The executed command renders as its own line above the output. Both the plain
 // string used for height math and the styled chunk that actually draws derive
 // from this one function, so the measured rows cannot drift from the drawn ones.
-function formatCommandHeader(commandText?: string): string | null {
-  return commandText ? `❯ ${commandText}` : null;
+function formatCommandHeader(command?: CommandInvocation): string | null {
+  if (!command) return null;
+  const commandText = command.executor === "jj"
+    ? `jj ${command.commandText}`
+    : command.commandText;
+  return `❯ ${commandText}`;
 }
 
 export function getNotificationBodyText(
   text: string,
-  commandText?: string,
+  command?: CommandInvocation,
 ): string {
-  const header = formatCommandHeader(commandText);
+  const header = formatCommandHeader(command);
   return header === null ? text : `${header}\n${text}`;
 }
 
 export function getNotificationCommandLineCount(
-  commandText?: string,
+  command?: CommandInvocation,
 ): number {
-  const header = formatCommandHeader(commandText);
+  const header = formatCommandHeader(command);
   return header === null ? 0 : header.split(/\r\n|\r|\n/).length;
 }
 
 export function buildNotificationStyledText(args: Readonly<{
   text: string;
-  commandText?: string;
+  command?: CommandInvocation;
   commandColor?: string;
   terminalPalette?: readonly (string | null)[];
 }>): StyledText {
   const output = parseAnsiToStyledText(args.text, args.terminalPalette);
-  const header = formatCommandHeader(args.commandText);
+  const header = formatCommandHeader(args.command);
   if (header === null) {
     return output;
   }

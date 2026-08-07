@@ -350,6 +350,38 @@ test("Log owns generic retry and flag bindings while Revision Draft owns draft m
   }
 });
 
+test("notifications bind alt-enter only when the focused entry has a command invocation", () => {
+  const state = createState();
+  const commandNotification: AppState = {
+    ...state,
+    focusMode: "notifications",
+    focusModeStack: ["revisions", "notifications"],
+    eventLog: [{
+      id: "event-1",
+      text: "working copy clean",
+      command: {
+        commandText: "status",
+        executor: "jj",
+        interactive: false,
+      },
+      level: "success",
+      createdAt: 1,
+    }],
+  };
+
+  expect(defaultKeymap.notifications["alt-enter"]).toBe("rerun-notification-command");
+  expect(resolveForState("alt-enter", commandNotification)).toBe("rerun-notification-command");
+  expect(resolveForState("alt-enter", {
+    ...commandNotification,
+    eventLog: [{
+      id: "event-2",
+      text: "ordinary notification",
+      level: "info",
+      createdAt: 2,
+    }],
+  })).toBeNull();
+});
+
 test("Log owns jj and shell command entry for every descendant mode", () => {
   expect(defaultKeymap.log[":"]).toBe("command-bar");
   expect(defaultKeymap._global["ctrl-\\"]).toBe("toggle-dry-run");

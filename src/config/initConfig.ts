@@ -259,7 +259,7 @@ namespace Jif {
   type StatusMessage = Readonly<{
     id: string;
     text: string;
-    commandText?: string;
+    command?: CommandInvocation;
     level: StatusLevel;
     createdAt: number;
   }>;
@@ -267,9 +267,17 @@ namespace Jif {
   type EventLogEntry = Readonly<{
     id: string;
     text: string;
-    commandText?: string;
+    command?: CommandInvocation;
     level: StatusLevel;
     createdAt: number;
+  }>;
+
+  type CommandInvocation = Readonly<{
+    commandText: string;
+    executor: "jj" | "shell";
+    interactive: boolean;
+    cwd?: string;
+    focusWorkingCopyAfterRefresh?: boolean;
   }>;
 
   type FailedCommand = Readonly<{
@@ -418,6 +426,7 @@ namespace Jif {
     openNotifications: () => void;
     expandNotification: () => void;
     collapseNotification: () => void;
+    rerunFocusedNotification: () => void;
     jj: (commandText: string, options?: JjCommandOptions) => Promise<void>;
     sh: (commandText: string, options?: ShellCommandOptions) => Promise<void>;
     jji: (commandText: string, options?: InteractiveJjCommandOptions) => Promise<void>;

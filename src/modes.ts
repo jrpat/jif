@@ -346,6 +346,7 @@ export const defaultKeymap: Keymap = {
     right: alias("expand-notification"),
     h: "collapse-notification",
     left: alias("collapse-notification"),
+    "alt-enter": "rerun-notification-command",
     "ctrl-g": "edit-notification",
     "~": "cancel",
   },

@@ -146,6 +146,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     openReleasesPage: () => calls.push("openReleasesPage"),
     expandNotification: () => calls.push("expandNotification"),
     collapseNotification: () => calls.push("collapseNotification"),
+    rerunFocusedNotification: () => calls.push("rerunFocusedNotification"),
     editFocusedNotification: () => calls.push("editFocusedNotification"),
     openSearch: () => calls.push("openSearch"),
     openFastJump: () => calls.push("openFastJump"),

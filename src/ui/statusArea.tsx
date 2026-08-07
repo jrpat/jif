@@ -387,7 +387,7 @@ function StatusToast(props: {
   const isHelp = () => props.message.variant === "help";
   const bodyHeight = createMemo(() =>
     getStatusToastBodyHeight(
-      getNotificationBodyText(props.message.text, props.message.commandText),
+      getNotificationBodyText(props.message.text, props.message.command),
       isHelp() ? props.maxHelpBodyHeight : props.maxBodyHeight,
     )
   );
@@ -441,7 +441,7 @@ function StatusToast(props: {
       <ScrollableAnsiBody
         id={`status-toast-body-${props.message.id}`}
         text={props.message.text}
-        commandText={props.message.commandText}
+        command={props.message.command}
         commandColor={borderColor()}
         bodyHeight={bodyHeight()}
         config={props.config}

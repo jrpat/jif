@@ -124,6 +124,7 @@ export type CommandController = Readonly<{
   openReleasesPage: () => void;
   expandNotification: () => void;
   collapseNotification: () => void;
+  rerunFocusedNotification: () => void;
   editFocusedNotification: () => void;
   openSearch: () => void;
   openFastJump: () => void;
@@ -373,6 +374,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Open the focused notification's text in $EDITOR",
     canExecute: (state) => getFocusedNotification(state) !== null,
     run: (controller) => controller.editFocusedNotification(),
+    group: "mode",
+  },
+  {
+    id: "rerun-notification-command",
+    title: "Re-run Command",
+    description: "Run the command that created the focused notification again",
+    canExecute: (state) => getFocusedNotification(state)?.command !== undefined,
+    run: (controller) => controller.rerunFocusedNotification(),
     group: "mode",
   },
   {

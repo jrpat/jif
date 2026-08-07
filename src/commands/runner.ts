@@ -1,25 +1,43 @@
-import type { FailedCommand, StatusLevel, StatusMessageVariant } from "../domain/types.ts";
+import type {
+  CommandInvocation,
+  FailedCommand,
+  StatusLevel,
+  StatusMessageVariant,
+} from "../domain/types.ts";
 import { tokenizeCommandText, type WorkingCopyRefreshOptions } from "../jj/client.ts";
 import { buildForceRetryPlan } from "../jj/forceRetry.ts";
 import { isHelpJjCommand } from "./interactive-subcommands.ts";
 import { SPINNER_INTERVAL_MS, formatSpinnerText } from "../ui/spinner.ts";
 
 export type CommandFeedbackMode = "status-toast" | "event" | "none";
-export type CommandExecutor = "jj" | "shell";
+export type CommandExecutor = CommandInvocation["executor"];
 
 export type CommandRunnerActions = Readonly<{
   clearLastFailedCommand(): void;
   cancelCommand(): void;
-  pushEvent(text: string, level: StatusLevel, commandText?: string): void;
-  pushStatusMessage(id: string, text: string, level: StatusLevel, commandText?: string): void;
+  pushEvent(
+    text: string,
+    level: StatusLevel,
+    command?: CommandInvocation,
+  ): void;
+  pushStatusMessage(
+    id: string,
+    text: string,
+    level: StatusLevel,
+    command?: CommandInvocation,
+  ): void;
   updateStatusMessage(
     id: string,
     text: string,
     level: StatusLevel,
     variant?: StatusMessageVariant,
-    commandText?: string,
+    command?: CommandInvocation,
   ): void;
-  logEvent(text: string, level: StatusLevel, commandText?: string): void;
+  logEvent(
+    text: string,
+    level: StatusLevel,
+    command?: CommandInvocation,
+  ): void;
   setLoading(loading: boolean): void;
   setLastFailedCommand(command: FailedCommand): void;
   focusWorkingCopy(): void;
@@ -120,7 +138,15 @@ export function createCommandRunner(args: Readonly<{
         options.failureFeedback === "none"
           ? null
           : toastId ?? args.createToastId?.() ?? `cmd-${Date.now()}`;
-      const executedCommandText = formatExecutedCommandText(command.commandText, executor);
+      const invocation: CommandInvocation = {
+        commandText: command.commandText,
+        executor,
+        interactive: command.interactive,
+        ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
+        ...(options.focusWorkingCopyAfterRefresh === undefined
+          ? {}
+          : { focusWorkingCopyAfterRefresh: options.focusWorkingCopyAfterRefresh }),
+      };
 
       const stopToastSpinner = startStatusToastSpinner(
         args.actions,
@@ -150,7 +176,7 @@ export function createCommandRunner(args: Readonly<{
           resultMessage,
           options.successFeedback,
           successVariant,
-          executedCommandText,
+          invocation,
         );
         await args.refreshRepository({ workingCopy: "read-only" });
         if (options.focusWorkingCopyAfterRefresh) {
@@ -171,7 +197,7 @@ export function createCommandRunner(args: Readonly<{
           toastId,
           message,
           options.failureFeedback,
-          executedCommandText,
+          invocation,
         );
         if (options.showLoading) {
           args.actions.setLoading(false);
@@ -206,10 +232,6 @@ function startStatusToastSpinner(
 
 function formatRunningCommandText(commandText: string, frameIndex: number): string {
   return formatSpinnerText(commandText, frameIndex);
-}
-
-function formatExecutedCommandText(commandText: string, executor: CommandExecutor): string {
-  return executor === "jj" ? `jj ${commandText}` : commandText;
 }
 
 async function executeInteractive(
@@ -301,18 +323,18 @@ function publishSuccess(
   message: string,
   feedback: CommandFeedbackMode,
   variant: StatusMessageVariant | undefined,
-  commandText: string,
+  command: CommandInvocation,
 ) {
   if (feedback === "status-toast") {
     if (toastId !== null) {
-      actions.updateStatusMessage(toastId, message, "success", variant, commandText);
+      actions.updateStatusMessage(toastId, message, "success", variant, command);
     }
-    actions.logEvent(message, "success", commandText);
+    actions.logEvent(message, "success", command);
     return;
   }
 
   if (feedback === "event") {
-    actions.pushEvent(message, "success", commandText);
+    actions.pushEvent(message, "success", command);
   }
 }
 
@@ -322,22 +344,28 @@ function publishFailure(
   spinnerToastId: string | null,
   message: string,
   feedback: CommandFeedbackMode,
-  commandText: string,
+  command: CommandInvocation,
 ) {
   if (feedback === "status-toast") {
     if (spinnerToastId !== null) {
-      actions.updateStatusMessage(spinnerToastId, message, "error", undefined, commandText);
+      actions.updateStatusMessage(
+        spinnerToastId,
+        message,
+        "error",
+        undefined,
+        command,
+      );
     }
-    actions.logEvent(message, "error", commandText);
+    actions.logEvent(message, "error", command);
     return;
   }
 
   if (feedback === "event") {
     if (failureToastId !== null) {
-      actions.pushStatusMessage(failureToastId, message, "error", commandText);
-      actions.logEvent(message, "error", commandText);
+      actions.pushStatusMessage(failureToastId, message, "error", command);
+      actions.logEvent(message, "error", command);
     } else {
-      actions.pushEvent(message, "error", commandText);
+      actions.pushEvent(message, "error", command);
     }
   }
 }

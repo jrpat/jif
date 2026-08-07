@@ -1587,3 +1587,64 @@ test("editFocusedNotification is a no-op when there are no notifications", async
   expect(harness.editorTexts).toEqual([]);
   harness.store.dispose();
 });
+
+test("rerunFocusedNotification repeats a jj command with its original options", async () => {
+  const harness = createControllerHarness({});
+
+  harness.store.actions.pushEvent("working copy clean", "success", {
+    commandText: "status",
+    executor: "jj",
+    interactive: false,
+    cwd: "/tmp/other-workspace",
+    focusWorkingCopyAfterRefresh: true,
+  });
+  harness.store.actions.openNotifications();
+
+  harness.controller.rerunFocusedNotification();
+  await Promise.resolve();
+
+  expect(harness.runJjCalls).toEqual([{
+    commandText: "status",
+    options: {
+      cwd: "/tmp/other-workspace",
+      focusWorkingCopyAfterRefresh: true,
+    },
+  }]);
+  harness.store.dispose();
+});
+
+test("rerunFocusedNotification preserves interactive shell execution", async () => {
+  const harness = createControllerHarness({});
+
+  harness.store.actions.pushEvent("editor exited", "error", {
+    commandText: "vim README.md",
+    executor: "shell",
+    interactive: true,
+    cwd: "/tmp/shell-cwd",
+  });
+  harness.store.actions.openNotifications();
+
+  harness.controller.rerunFocusedNotification();
+  await Promise.resolve();
+
+  expect(harness.runInteractiveShellCalls).toEqual([{
+    commandText: "vim README.md",
+    options: { cwd: "/tmp/shell-cwd" },
+  }]);
+  harness.store.dispose();
+});
+
+test("rerunFocusedNotification ignores notifications without command metadata", async () => {
+  const harness = createControllerHarness({});
+
+  harness.store.actions.pushEvent("ordinary notification", "info");
+  harness.store.actions.openNotifications();
+  harness.controller.rerunFocusedNotification();
+  await Promise.resolve();
+
+  expect(harness.runJjCalls).toEqual([]);
+  expect(harness.runShellCalls).toEqual([]);
+  expect(harness.runInteractiveCalls).toEqual([]);
+  expect(harness.runInteractiveShellCalls).toEqual([]);
+  harness.store.dispose();
+});

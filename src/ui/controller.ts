@@ -314,6 +314,33 @@ export function createJifCommandController(args: Readonly<{
     collapseNotification() {
       store.actions.collapseFocusedNotification();
     },
+    rerunFocusedNotification() {
+      const command = getFocusedNotification(store.snapshot())?.command;
+      if (!command) {
+        return;
+      }
+
+      if (command.executor === "jj") {
+        if (command.interactive) {
+          void args.runInteractiveJjCommand(command.commandText, { cwd: command.cwd });
+        } else {
+          void args.runJjCommand(command.commandText, {
+            cwd: command.cwd,
+            focusWorkingCopyAfterRefresh: command.focusWorkingCopyAfterRefresh,
+          });
+        }
+        return;
+      }
+
+      if (command.interactive) {
+        void args.runInteractiveShellCommand(command.commandText, { cwd: command.cwd });
+      } else {
+        void args.runShellCommand(command.commandText, {
+          cwd: command.cwd,
+          focusWorkingCopyAfterRefresh: command.focusWorkingCopyAfterRefresh,
+        });
+      }
+    },
     editFocusedNotification() {
       const notification = getFocusedNotification(store.snapshot());
       if (!notification) {

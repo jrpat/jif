@@ -14,7 +14,11 @@ const entries: readonly EventLogEntry[] = [
   {
     id: "evt-0",
     text: `${longLine}\nshort line`,
-    commandText: "jj describe -r abc",
+    command: {
+      commandText: "describe -r abc",
+      executor: "jj",
+      interactive: false,
+    },
     level: "info",
     createdAt: 0,
   },

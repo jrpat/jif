@@ -461,6 +461,7 @@ Command-generated toasts and notification cards show `❯` followed by the execu
 | `G` | jump-to-bottom | Jump to the last notification |
 | `l` / `→` | expand-notification | Show all lines of the focused notification |
 | `h` / `←` | collapse-notification | Truncate the focused notification |
+| `alt-enter` | rerun-notification-command | Re-run the command that created the focused notification |
 | `ctrl-g` | edit-notification | Open the focused notification's text in `$EDITOR` (falls back to `vi`) |
 | `~` | cancel | Close the notifications panel |
 
@@ -840,6 +841,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `quit()` | Exit jif |
 | `redo()` | Redo the last undone repository operation |
 | `refreshRepository()` | Refresh repository data |
+| `rerunFocusedNotification()` | Re-run the command that created the focused notification |
 | `restart()` | Replace the current process image with a fresh plain `jif` invocation |
 | `restoreFiles()` | Restore the focused file or selected files |
 | `restoreOperation()` | Restore the focused operation |

@@ -7,18 +7,30 @@ import {
 } from "../src/ui/notificationContent.ts";
 
 test("command output prefixes the command without adding layout spacing", () => {
-  expect(getNotificationBodyText("Changed 1 files", "jj restore foo.ts")).toBe(
+  expect(getNotificationBodyText("Changed 1 files", {
+    commandText: "restore foo.ts",
+    executor: "jj",
+    interactive: false,
+  })).toBe(
     "❯ jj restore foo.ts\nChanged 1 files",
   );
   expect(getNotificationBodyText("ordinary message")).toBe("ordinary message");
-  expect(getNotificationCommandLineCount("printf foo\nprintf bar")).toBe(2);
+  expect(getNotificationCommandLineCount({
+    commandText: "printf foo\nprintf bar",
+    executor: "shell",
+    interactive: false,
+  })).toBe(2);
   expect(getNotificationCommandLineCount()).toBe(0);
 });
 
 test("command output styles the command bold in the status color", () => {
   const result = buildNotificationStyledText({
     text: "Changed 1 files",
-    commandText: "jj restore foo.ts",
+    command: {
+      commandText: "restore foo.ts",
+      executor: "jj",
+      interactive: false,
+    },
     commandColor: "#12ab34",
   });
 

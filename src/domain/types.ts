@@ -168,10 +168,18 @@ export type StatusLevel = "info" | "success" | "warning" | "error";
 // blue border, and expand to fit their text up to the available height.
 export type StatusMessageVariant = "help";
 
+export type CommandInvocation = Readonly<{
+  commandText: string;
+  executor: "jj" | "shell";
+  interactive: boolean;
+  cwd?: string;
+  focusWorkingCopyAfterRefresh?: boolean;
+}>;
+
 export type StatusMessage = Readonly<{
   id: string;
   text: string;
-  commandText?: string;
+  command?: CommandInvocation;
   level: StatusLevel;
   variant?: StatusMessageVariant;
   createdAt: number;
@@ -181,7 +189,7 @@ export type StatusMessage = Readonly<{
 export type EventLogEntry = Readonly<{
   id: string;
   text: string;
-  commandText?: string;
+  command?: CommandInvocation;
   level: StatusLevel;
   createdAt: number;
 }>;

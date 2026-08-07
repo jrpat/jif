@@ -5,6 +5,7 @@ import type {
   AppState,
   BookmarkSuggestion,
   ChangedFile,
+  CommandInvocation,
   CommandDraftConfig,
   FailedCommand,
   InlineConfirmation,
@@ -183,15 +184,24 @@ export function createAppStore(
       setEvologLoading(loading: boolean) {
         mutate((currentState) => setEvologLoading(currentState, loading));
       },
-      pushEvent(text: string, level: StatusLevel, commandText?: string) {
-        mutate((currentState) => pushEvent(currentState, text, level, undefined, commandText));
+      pushEvent(
+        text: string,
+        level: StatusLevel,
+        command?: CommandInvocation,
+      ) {
+        mutate((currentState) => pushEvent(currentState, text, level, undefined, command));
       },
       reportError(error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
         mutate((currentState) => pushEvent(currentState, message, "error"));
       },
-      pushStatusMessage(id: string, text: string, level: StatusLevel, commandText?: string) {
-        mutate((currentState) => pushStatusMessage(currentState, id, text, level, commandText));
+      pushStatusMessage(
+        id: string,
+        text: string,
+        level: StatusLevel,
+        command?: CommandInvocation,
+      ) {
+        mutate((currentState) => pushStatusMessage(currentState, id, text, level, command));
       },
       upsertStatusMessage(id: string, text: string, level: StatusLevel) {
         mutate((currentState) => upsertStatusMessage(currentState, id, text, level));
@@ -201,17 +211,21 @@ export function createAppStore(
         text: string,
         level: StatusLevel,
         variant?: StatusMessageVariant,
-        commandText?: string,
+        command?: CommandInvocation,
       ) {
         mutate((currentState) =>
-          updateStatusMessage(currentState, id, text, level, variant, commandText)
+          updateStatusMessage(currentState, id, text, level, variant, command)
         );
       },
       touchStatusMessage(id: string) {
         mutate((currentState) => touchStatusMessage(currentState, id));
       },
-      logEvent(text: string, level: StatusLevel, commandText?: string) {
-        mutate((currentState) => logEvent(currentState, text, level, commandText));
+      logEvent(
+        text: string,
+        level: StatusLevel,
+        command?: CommandInvocation,
+      ) {
+        mutate((currentState) => logEvent(currentState, text, level, command));
       },
       applyRepositoryData(repositoryData: RepositoryData) {
         mutate((currentState) => applyRepositoryData(currentState, repositoryData));

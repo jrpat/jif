@@ -1707,12 +1707,19 @@ test("pushStatusMessage adds a status message without an event log entry", () =>
 
 test("command feedback carries the executed command into toasts and notification history", () => {
   let state = createState();
+  const command = {
+    commandText: "describe -r abc",
+    executor: "jj" as const,
+    interactive: false,
+  };
   state = pushStatusMessage(state, "toast-1", "running command", "info");
-  state = updateStatusMessage(state, "toast-1", "done", "success", undefined, "jj describe -r abc");
-  state = logEvent(state, "done", "success", "jj describe -r abc");
+  state = updateStatusMessage(state, "toast-1", "done", "success", undefined, command);
+  state = logEvent(state, "done", "success", command);
 
-  expect(state.statusMessages[0]?.commandText).toBe("jj describe -r abc");
-  expect(state.eventLog[0]?.commandText).toBe("jj describe -r abc");
+  expect(state.statusMessages[0]?.command).toEqual(command);
+  expect(state.eventLog[0]?.command).toEqual(command);
+  expect("commandText" in state.statusMessages[0]!).toBeFalse();
+  expect("commandText" in state.eventLog[0]!).toBeFalse();
 });
 
 test("updateStatusMessage changes text and level of an existing toast", () => {
