@@ -247,6 +247,67 @@ test("resolveAppConfig defaults log.revisionIdAdditionalChars to 0", () => {
   expect(resolved.log.revisionIdAdditionalChars).toBe(0);
 });
 
+test("resolveAppConfig leaves bookmark and workspace label truncation disabled by default", () => {
+  const resolved = resolveAppConfig(defaultAppConfig);
+
+  expect(resolved.log.bookmarkLabelMaxLength).toEqual({
+    loose: null,
+    normal: null,
+    tight: null,
+  });
+  expect(resolved.log.workspaceLabelMaxLength).toEqual({
+    loose: null,
+    normal: null,
+    tight: null,
+  });
+});
+
+test("resolveAppConfig applies one chip label limit to every layout", () => {
+  const resolved = resolveAppConfig({
+    log: {
+      bookmarkLabelMaxLength: 18,
+      workspaceLabelMaxLength: 12,
+    },
+  });
+
+  expect(resolved.log.bookmarkLabelMaxLength).toEqual({
+    loose: 18,
+    normal: 18,
+    tight: 18,
+  });
+  expect(resolved.log.workspaceLabelMaxLength).toEqual({
+    loose: 12,
+    normal: 12,
+    tight: 12,
+  });
+});
+
+test("resolveAppConfig applies chip label limits independently by layout", () => {
+  const resolved = resolveAppConfig({
+    log: {
+      bookmarkLabelMaxLength: {
+        loose: 24,
+        normal: null,
+        tight: 8,
+      },
+      workspaceLabelMaxLength: {
+        normal: 14,
+      },
+    },
+  });
+
+  expect(resolved.log.bookmarkLabelMaxLength).toEqual({
+    loose: 24,
+    normal: null,
+    tight: 8,
+  });
+  expect(resolved.log.workspaceLabelMaxLength).toEqual({
+    loose: null,
+    normal: 14,
+    tight: null,
+  });
+});
+
 test("resolveAppConfig defaults scroll settings", () => {
   const resolved = resolveAppConfig(defaultAppConfig);
 

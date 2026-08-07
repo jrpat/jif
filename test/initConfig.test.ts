@@ -37,6 +37,8 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
     `// previewPaneFill: { source: "foreground", opacity: ${DEFAULT_PREVIEW_PANE_FILL_OPACITY} },`,
   );
   expect(configText).toContain('// scrollMargin: 1,');
+  expect(configText).toContain("// bookmarkLabelMaxLength: null,");
+  expect(configText).toContain("// workspaceLabelMaxLength: null,");
   expect(configText).toContain("// step: 2,");
   expect(configText).toContain("// acceleration: true,");
   expect(configText).toContain("// intervalMs: 0,");
@@ -53,6 +55,9 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(typesText).toContain('"fileGroupFocusedFill"');
   expect(typesText).toContain('"fileFocusedFill"');
   expect(typesText).toContain("scroll?: Readonly<{");
+  expect(typesText).toContain("type LayoutLabelMaxLength =");
+  expect(typesText).toContain("bookmarkLabelMaxLength?: LayoutLabelMaxLength");
+  expect(typesText).toContain("workspaceLabelMaxLength?: LayoutLabelMaxLength");
   expect(typesText).toContain("step?: number");
   expect(typesText).toContain("acceleration?: boolean");
   expect(typesText).toContain("intervalMs?: number");

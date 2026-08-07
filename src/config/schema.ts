@@ -15,6 +15,13 @@ export type PaletteColorDef = Readonly<{ source: PaletteSource; opacity: number 
 
 export type SemanticColorOverride = string | PaletteColorDef;
 
+export type LayoutLabelMaxLength =
+  | number
+  | null
+  | Readonly<Partial<Record<AppLayout, number | null>>>;
+
+export type ResolvedLayoutLabelMaxLength = Readonly<Record<AppLayout, number | null>>;
+
 export type SemanticColorScheme = Readonly<{
   chromeFillOne: SemanticColorValue;
   chromeFillTwo: SemanticColorValue;
@@ -85,6 +92,8 @@ export type AppConfig = Readonly<{
   log?: Readonly<{
     scrollMargin?: number;
     revisionIdAdditionalChars?: number;
+    bookmarkLabelMaxLength?: LayoutLabelMaxLength;
+    workspaceLabelMaxLength?: LayoutLabelMaxLength;
   }>;
   scroll?: Readonly<{
     step?: number;
@@ -129,6 +138,8 @@ export type ResolvedAppConfig = Readonly<{
   log: Readonly<{
     scrollMargin: number;
     revisionIdAdditionalChars: number;
+    bookmarkLabelMaxLength: ResolvedLayoutLabelMaxLength;
+    workspaceLabelMaxLength: ResolvedLayoutLabelMaxLength;
   }>;
   scroll: Readonly<{
     step: number;
@@ -351,6 +362,12 @@ export function resolveAppConfig(
     log: {
       scrollMargin: config.log?.scrollMargin ?? 1,
       revisionIdAdditionalChars: config.log?.revisionIdAdditionalChars ?? 0,
+      bookmarkLabelMaxLength: resolveLayoutLabelMaxLength(
+        config.log?.bookmarkLabelMaxLength,
+      ),
+      workspaceLabelMaxLength: resolveLayoutLabelMaxLength(
+        config.log?.workspaceLabelMaxLength,
+      ),
     },
     scroll: {
       step: resolveScrollStep(config.scroll?.step),
@@ -381,6 +398,33 @@ export function resolveAppConfig(
       splitViewWidth: Math.max(0, Math.floor(config.preview?.splitViewWidth ?? 160)),
     },
   };
+}
+
+function resolveLayoutLabelMaxLength(
+  value: LayoutLabelMaxLength | undefined,
+): ResolvedLayoutLabelMaxLength {
+  if (typeof value === "number" || value === null || value === undefined) {
+    const resolved = resolveLabelMaxLength(value);
+    return {
+      loose: resolved,
+      normal: resolved,
+      tight: resolved,
+    };
+  }
+
+  return {
+    loose: resolveLabelMaxLength(value.loose),
+    normal: resolveLabelMaxLength(value.normal),
+    tight: resolveLabelMaxLength(value.tight),
+  };
+}
+
+function resolveLabelMaxLength(value: number | null | undefined): number | null {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return null;
+  }
+
+  return Math.max(1, Math.floor(value));
 }
 
 function clampPercent(value: number): number {

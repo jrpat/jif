@@ -652,6 +652,31 @@ export default {
 </details>
 
 <details>
+<summary>Revision Chip Labels</summary>
+
+Bookmark and workspace chip labels are untruncated by default. Set one maximum
+length for every revision layout, or give each layout its own value:
+
+```ts
+export default {
+  log: {
+    bookmarkLabelMaxLength: 24,
+    workspaceLabelMaxLength: {
+      loose: null,
+      normal: 18,
+      tight: 12,
+    },
+  },
+} satisfies Jif.Config;
+```
+
+A number limits the chip's content to that many characters and uses OpenTUI's
+built-in truncation. `null` disables truncation, including for an individual
+layout; layouts omitted from a per-layout object also default to `null`.
+
+</details>
+
+<details>
 <summary>Mouse Wheel Scrolling</summary>
 
 Mouse-wheel scrolling defaults to two lines per wheel notch. On macOS, jif also enables OpenTUI's macOS-style acceleration so quick wheel bursts move farther while slow gestures stay precise:

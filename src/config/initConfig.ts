@@ -154,6 +154,8 @@ export default {
   log: {
     // scrollMargin: 1,
     // revisionIdAdditionalChars: 0,
+    // bookmarkLabelMaxLength: null,
+    // workspaceLabelMaxLength: null,
   },
   scroll: {
     // step: 2,
@@ -195,6 +197,7 @@ function renderConfigTypes(): string {
 declare global {
 namespace Jif {
   type AppLayout = "loose" | "normal" | "tight";
+  type LayoutLabelMaxLength = number | null | Readonly<Partial<Record<AppLayout, number | null>>>;
   type FocusMode = "revisions" | "files" | "file-filter" | "op-log" | "evolog" | "inline-confirmation" | "command" | "revset" | "file-search" | "search" | "shortcut-filter" | "diff-viewer" | "notifications" | "bookmark" | "preview" | "extra";
   type SearchScopeId = "revision-log" | "operation-log" | "evolog";
   type SearchMode = "search" | "fast-jump";
@@ -459,6 +462,8 @@ ${keymapScopes.map((scope) => `    | "${scope}"`).join("\n")};
     log?: Readonly<{
       scrollMargin?: number;
       revisionIdAdditionalChars?: number;
+      bookmarkLabelMaxLength?: LayoutLabelMaxLength;
+      workspaceLabelMaxLength?: LayoutLabelMaxLength;
     }>;
     scroll?: Readonly<{
       step?: number;

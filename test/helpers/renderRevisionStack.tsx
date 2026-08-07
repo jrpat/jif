@@ -7,6 +7,8 @@ import type { RevisionSummary } from "../../src/domain/types.ts";
 import { RevisionItem, RevisionLogSurface } from "../../src/ui/render.tsx";
 import type { AppLayout } from "../../src/domain/types.ts";
 
+type LayoutLabelMaxLength = number | null | Readonly<Partial<Record<AppLayout, number | null>>>;
+
 type CapturedSpans = Awaited<ReturnType<typeof testRender>>["captureSpans"] extends () => infer T ? T : never;
 type CapturedSpan = CapturedSpans["lines"][number]["spans"][number];
 
@@ -584,6 +586,52 @@ async function renderOversizedSideChip(
   return frame;
 }
 
+async function renderSideChipsWithLabelLimits(
+  layout: AppLayout,
+  limits: Readonly<{
+    bookmarkLabelMaxLength: LayoutLabelMaxLength;
+    workspaceLabelMaxLength: LayoutLabelMaxLength;
+  }>,
+) {
+  const revisions = [
+    createRevision("curr", "branch", ["@  ", "│  "], {
+      bookmarks: ["feature/very-long-bookmark"],
+      workspaces: ["workspace-with-a-long-name"],
+    }),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+
+  const rendered = await testRender(() => (
+    <box width={80} flexDirection="column">
+      <RevisionItem
+        fileFilterActions={store.actions}
+        state={store.state}
+        revision={store.state.revisions[0]!}
+        index={0}
+        previousRowId={null}
+        nextRowId={null}
+        config={resolveAppConfig({
+          commands: { layout },
+          log: limits,
+        })}
+        focusedRowId={null}
+        selectedRowIds={new Set()}
+        expandedRowId={null}
+        commandTargetRowId={null}
+      />
+    </box>
+  ), { width: 80, height: layout === "loose" ? 4 : 3 });
+
+  await rendered.renderOnce();
+  const frame = rendered.captureCharFrame();
+  rendered.renderer.destroy();
+  return frame;
+}
+
 async function renderBookmarkChipAfterRefresh(layout: AppLayout) {
   const initialRevisions = [
     createRevision("src", "source revision", ["│ ○  ", "│ │  "], {
@@ -712,6 +760,22 @@ const oversizedBookmarkChipNormal = await renderOversizedSideChip("normal", "boo
 const oversizedBookmarkChipTight = await renderOversizedSideChip("tight", "bookmark");
 const oversizedWorkspaceChipNormal = await renderOversizedSideChip("normal", "workspace");
 const oversizedWorkspaceChipTight = await renderOversizedSideChip("tight", "workspace");
+const sharedLabelLimitsLoose = await renderSideChipsWithLabelLimits("loose", {
+  bookmarkLabelMaxLength: 8,
+  workspaceLabelMaxLength: 10,
+});
+const sharedLabelLimitsTight = await renderSideChipsWithLabelLimits("tight", {
+  bookmarkLabelMaxLength: 8,
+  workspaceLabelMaxLength: 10,
+});
+const perLayoutLabelLimitsNormal = await renderSideChipsWithLabelLimits("normal", {
+  bookmarkLabelMaxLength: { loose: null, normal: 12, tight: 6 },
+  workspaceLabelMaxLength: { loose: 6, normal: 14, tight: null },
+});
+const nullLabelLimitsNormal = await renderSideChipsWithLabelLimits("normal", {
+  bookmarkLabelMaxLength: null,
+  workspaceLabelMaxLength: null,
+});
 const looseBookmarkChipRefresh = await renderBookmarkChipAfterRefresh("loose");
 const rebaseCommandChips = await renderCommandDraftChips("loose", "rebase");
 const rebaseCommandChipsNormal = await renderCommandDraftChips("normal", "rebase");
@@ -744,6 +808,10 @@ console.log(JSON.stringify({
   oversizedBookmarkChipTight,
   oversizedWorkspaceChipNormal,
   oversizedWorkspaceChipTight,
+  sharedLabelLimitsLoose,
+  sharedLabelLimitsTight,
+  perLayoutLabelLimitsNormal,
+  nullLabelLimitsNormal,
   looseBookmarkChipRefresh,
   rebaseCommandChips,
   rebaseCommandChipsNormal,

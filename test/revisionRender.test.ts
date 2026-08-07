@@ -44,6 +44,10 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     oversizedBookmarkChipTight,
     oversizedWorkspaceChipNormal,
     oversizedWorkspaceChipTight,
+    sharedLabelLimitsLoose,
+    sharedLabelLimitsTight,
+    perLayoutLabelLimitsNormal,
+    nullLabelLimitsNormal,
     looseBookmarkChipRefresh,
     rebaseCommandChips,
     rebaseCommandChipsNormal,
@@ -90,6 +94,10 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     oversizedBookmarkChipTight: string;
     oversizedWorkspaceChipNormal: string;
     oversizedWorkspaceChipTight: string;
+    sharedLabelLimitsLoose: string;
+    sharedLabelLimitsTight: string;
+    perLayoutLabelLimitsNormal: string;
+    nullLabelLimitsNormal: string;
     looseBookmarkChipRefresh: {
       initialFrame: string;
       refreshedFrame: string;
@@ -207,6 +215,24 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
       `${kind} chip should keep a separator after the revision id in ${layout} layout`,
     ).toMatch(/cu  very/);
   }
+
+  for (const [layout, frame] of [
+    ["loose", sharedLabelLimitsLoose],
+    ["tight", sharedLabelLimitsTight],
+  ] as const) {
+    expect(frame, `shared bookmark limit should apply in ${layout}`).toContain("fe...ark");
+    expect(frame, `shared workspace limit should apply in ${layout}`).toContain("wor...ame@");
+    expect(frame).not.toContain("feature/very-long-bookmark");
+    expect(frame).not.toContain("workspace-with-a-long-name@");
+  }
+
+  expect(perLayoutLabelLimitsNormal).toContain("feat...kmark");
+  expect(perLayoutLabelLimitsNormal).toContain("works...-name@");
+  expect(perLayoutLabelLimitsNormal).not.toContain("feature/very-long-bookmark");
+  expect(perLayoutLabelLimitsNormal).not.toContain("workspace-with-a-long-name@");
+
+  expect(nullLabelLimitsNormal).toContain("feature/very-long-bookmark");
+  expect(nullLabelLimitsNormal).toContain("workspace-with-a-long-name@");
 
   // The bookmark chip rides its revision's id row, so a refresh that moves the
   // bookmark has to move the chip with it instead of leaving a stale copy.

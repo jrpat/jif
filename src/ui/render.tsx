@@ -1856,7 +1856,16 @@ export function RevisionItem(props: {
                   minWidth={0}
                   flexShrink={1}
                 >
-                  <RevisionSideChips chips={sideChips()} colors={colors()} />
+                  <RevisionSideChips
+                    chips={sideChips()}
+                    colors={colors()}
+                    bookmarkLabelMaxLength={
+                      props.config.log.bookmarkLabelMaxLength[props.state.layout]
+                    }
+                    workspaceLabelMaxLength={
+                      props.config.log.workspaceLabelMaxLength[props.state.layout]
+                    }
+                  />
                 </box>
                 <box visible={sideChips().length > 0} width={1} />
                 <box
@@ -2103,22 +2112,38 @@ function buildChangedFileDisplayRows(
 function RevisionSideChips(props: {
   chips: readonly RevisionSideChip[];
   colors: ResolvedAppConfig["colorScheme"]["semanticColors"];
+  bookmarkLabelMaxLength: number | null;
+  workspaceLabelMaxLength: number | null;
 }) {
   return (
     <box flexDirection="row" flexShrink={0} gap={1}>
       <For each={props.chips}>
         {(chip) => {
+          const maxLength = () => chip.kind === "bookmark"
+            ? props.bookmarkLabelMaxLength
+            : chip.kind === "workspace" ? props.workspaceLabelMaxLength : null;
+          const foregroundColor = () => chip.kind === "conflict"
+            ? props.colors.conflictTagText
+            : chip.kind === "bookmark" ? props.colors.bookmarkTagText : props.colors.workspaceTagText;
+          const backgroundColor = () => chip.kind === "conflict"
+            ? props.colors.conflictTagFill
+            : chip.kind === "bookmark" ? props.colors.bookmarkTagFill : props.colors.workspaceTagFill;
+
           return (
-            <text
-              fg={chip.kind === "conflict" ? props.colors.conflictTagText
-                : chip.kind === "bookmark" ? props.colors.bookmarkTagText
-                : props.colors.workspaceTagText}
-              bg={chip.kind === "conflict" ? props.colors.conflictTagFill
-                : chip.kind === "bookmark" ? props.colors.bookmarkTagFill
-                : props.colors.workspaceTagFill}
+            <box
+              flexShrink={0}
+              paddingX={1}
+              backgroundColor={backgroundColor()}
             >
-              {` ${chip.text} `}
-            </text>
+              <text
+                fg={foregroundColor()}
+                maxWidth={maxLength() ?? undefined}
+                wrapMode="none"
+                truncate={maxLength() !== null}
+              >
+                {chip.text}
+              </text>
+            </box>
           );
         }}
       </For>
