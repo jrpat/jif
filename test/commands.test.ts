@@ -382,6 +382,13 @@ test("notifications bind alt-enter only when the focused entry has a command inv
   })).toBeNull();
 });
 
+test("backtick opens and closes the notifications panel by default", () => {
+  expect(defaultKeymap._global["`"]).toBe("open-notifications");
+  expect(defaultKeymap.notifications["`"]).toBe("cancel");
+  expect(defaultKeymap._global["~"]).toBeUndefined();
+  expect(defaultKeymap.notifications["~"]).toBeUndefined();
+});
+
 test("Log owns jj and shell command entry for every descendant mode", () => {
   expect(defaultKeymap.log[":"]).toBe("command-bar");
   expect(defaultKeymap._global["ctrl-\\"]).toBe("toggle-dry-run");

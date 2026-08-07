@@ -113,7 +113,7 @@ Available in every mode (mode-specific bindings can override these).
 | `ctrl-j` | scroll-help-down | Scroll the visible help toast down one line (in Normal, Files, Operation Log, and Evolog this scrolls the [preview](#preview-pane) instead when it is shown) |
 | `ctrl-k` | scroll-help-up | Scroll the visible help toast up one line (in Normal, Files, Operation Log, and Evolog this scrolls the [preview](#preview-pane) instead when it is shown) |
 | `escape` | cancel | Cancel command composition, leave input mode, or return from a file filter to the log |
-| `~` | open-notifications | Open the notifications history panel |
+| `` ` `` | open-notifications | Open the notifications history panel |
 | `` alt-` `` | open-releases | Open the [jif releases page](https://github.com/jrpat/jif/releases) on GitHub in your default browser |
 
 `ctrl+alt+r` atomically replaces the running process image with a fresh plain `jif` invocation. The PID and terminal job stay the same, but no application or Bun runtime state survives; startup flags from the old process are intentionally not repeated.
@@ -464,7 +464,7 @@ Command-generated toasts and notification cards show `❯` followed by the execu
 | `h` / `←` | collapse-notification | Truncate the focused notification |
 | `alt-enter` | rerun-notification-command | Re-run the command that created the focused notification |
 | `ctrl-g` | edit-notification | Open the focused notification's text in `$EDITOR` (falls back to `vi`) |
-| `~` | cancel | Close the notifications panel |
+| `` ` `` | cancel | Close the notifications panel |
 
 ### Diff Viewer
 

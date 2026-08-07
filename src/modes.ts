@@ -150,7 +150,7 @@ export const defaultKeymap: Keymap = {
     "ctrl-k": "scroll-help-up",
     "?": "shortcut-panel",
     q: "quit",
-    "~": "open-notifications",
+    "`": "open-notifications",
     "alt-`": "open-releases",
   },
   // Shared by scrollable log modes, including revision operation drafts.
@@ -349,7 +349,7 @@ export const defaultKeymap: Keymap = {
     left: alias("collapse-notification"),
     "alt-enter": "rerun-notification-command",
     "ctrl-g": "edit-notification",
-    "~": "cancel",
+    "`": "cancel",
   },
   bookmark: {
     c: "bookmark-create",
