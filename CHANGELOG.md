@@ -3,6 +3,16 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.8.1 — 2026-08-07
+
+### Highlights
+
+- Bookmark and workspace chip labels can now be truncated to configurable maximum lengths with `log.bookmarkLabelMaxLength` and `log.workspaceLabelMaxLength`, either globally or per layout.
+
+### All changes
+
+- Configure revision chip label truncation
+
 ## v0.8.0 — 2026-08-07
 
 ### Highlights
