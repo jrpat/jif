@@ -1260,7 +1260,6 @@ export function JifView(props: {
             client={client}
             helpCache={helpCache}
             composeEnabled={store.state.commandBar.kind === "jj"}
-            startInCompose={store.state.commandBar.startInCompose ?? false}
             workspaceRoot={store.state.repoPath}
             loadHistory={(root) => store.state.commandBar.kind === "shell"
               ? persistence.loadShellHistory(root)

@@ -38,9 +38,6 @@ export function CommandPrompt(props: {
   client?: JjClient;
   helpCache?: JjHelpCache;
   composeEnabled?: boolean;
-  // Open straight into structured completion instead of command history. Only
-  // meaningful when composeEnabled is true (the jj bar).
-  startInCompose?: boolean;
   workspaceRoot: string | null;
   loadHistory: (workspaceRoot: string) => Promise<string[]>;
   removeHistory?: (workspaceRoot: string, entry: string) => Promise<string[]>;
@@ -61,10 +58,10 @@ export function CommandPrompt(props: {
   );
   const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null);
   const [pendingInitialSync, setPendingInitialSync] = createSignal(true);
-  // The jj bar opens in command history when there is any, and in structured
-  // "compose" completion otherwise. The two views toggle via ctrl+h, or via a
-  // bare ':' typed into an empty input (see onInput). historyMode true === the
-  // history view; compose is the jj-only structured completion.
+  // The jj bar always opens in structured "compose" completion; command history
+  // is its alternate view, reached via ctrl+h or a bare ':' typed into an empty
+  // input (see onInput). historyMode true === the history view; compose is the
+  // jj-only structured completion.
   const [composeData, setComposeData] = createSignal<{
     revsetItems: readonly CompletionItem[];
     bookmarks: readonly string[];
@@ -72,10 +69,12 @@ export function CommandPrompt(props: {
   }>({ revsetItems: [], bookmarks: [], commandAliases: [] });
   const [historyMode, setHistoryMode] = createSignal(false);
   const [helpVersion, setHelpVersion] = createSignal(0);
-  const composeActive = () => props.composeEnabled && !props.bookmarkContext && !historyMode();
+  // Both views exist only on the jj bar: the shell bar and bookmark completion
+  // each offer a single list and never toggle.
+  const hasComposeView = () => Boolean(props.composeEnabled) && !props.bookmarkContext;
+  const composeActive = () => hasComposeView() && !historyMode();
+  const historyViewActive = () => hasComposeView() && historyMode();
   let input: TextareaRenderable | undefined;
-  // The initial view is chosen once, after history first loads.
-  let initialViewChosen = false;
   const dimensions = useTerminalDimensions();
 
   // Flip between history and compose. Switching INTO history is a no-op when
@@ -122,19 +121,6 @@ export function CommandPrompt(props: {
 
     void props.loadHistory(workspaceRoot).then((entries) => {
       setHistoryEntries(entries);
-      // On the jj bar, default to the history view when there is history, else
-      // to compose. Chosen only once so it never overrides a manual toggle.
-      // Clear any selection the compose auto-focus may have set during the brief
-      // pre-history-load window, so the history view opens unfocused.
-      if (props.composeEnabled && !initialViewChosen) {
-        initialViewChosen = true;
-        batch(() => {
-          // startInCompose forces complete-at-point even when history exists,
-          // so a prefilled subcommand surfaces its completions immediately.
-          setHistoryMode(props.startInCompose ? false : entries.length > 0);
-          setSelectedIndex(null);
-        });
-      }
     });
   });
 
@@ -320,7 +306,7 @@ export function CommandPrompt(props: {
 
     // ctrl+h toggles between command history and structured completion on the
     // jj bar, regardless of what is already typed.
-    if (props.composeEnabled && !props.bookmarkContext && event.ctrl && event.name === "h") {
+    if (hasComposeView() && event.ctrl && event.name === "h") {
       event.preventDefault();
       toggleHistoryMode();
       return;
@@ -412,10 +398,11 @@ export function CommandPrompt(props: {
       underlineIndex={tabHintIndex()}
       flow={flow}
       focused
-      // Double border is the app-wide signal for complete-at-point (structured
-      // completion); the history view uses the default single border. See
-      // spec/ux-philosophy.md ("Reserve the Double Border for Complete-at-Point").
-      borderStyle={composeActive() ? "double" : "single"}
+      // Double border is the app-wide signal for the alternate view — here the
+      // command history the jj bar toggles into. The default view (compose) and
+      // the single-list bars use the plain single border. See
+      // spec/ux-philosophy.md ("Reserve the Double Border for the Alternate View").
+      borderStyle={historyViewActive() ? "double" : "single"}
       onHeightChange={props.onHeightChange}
     >
       <box width={Array.from(props.prefix).length} flexDirection="row" flexShrink={0}>
@@ -468,7 +455,7 @@ export function CommandPrompt(props: {
           }
           // A bare ':' (the first-and-only character) is a mode-toggle command,
           // not content: swallow it and flip history <-> compose.
-          if (props.composeEnabled && !props.bookmarkContext && value === ":") {
+          if (hasComposeView() && value === ":") {
             syncPromptInput(input, "", 0);
             toggleHistoryMode();
             batch(() => {
@@ -904,10 +891,11 @@ export function RevsetPrompt(props: {
       selectedIndex={selectedIndex()}
       flow={flow}
       focused
-      // Double border marks complete-at-point (revset-token completion); the
-      // history fallback uses the default single border. See spec/ux-philosophy.md
-      // ("Reserve the Double Border for Complete-at-Point").
-      borderStyle={showsHistory() ? "single" : "double"}
+      // Double border marks the alternate view — here the revset history the
+      // prompt toggles into; the default complete-at-point view uses the single
+      // border. See spec/ux-philosophy.md
+      // ("Reserve the Double Border for the Alternate View").
+      borderStyle={showsHistory() ? "double" : "single"}
       onHeightChange={props.onHeightChange}
     >
       <Show when={text().length === 0}>

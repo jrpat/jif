@@ -241,7 +241,7 @@ The split bindings are available only in the revision log, not while composing a
 | Key | Command | Description |
 |-----|---------|-------------|
 | `:` / `ctrl-;` | command-bar | Run a jj subcommand |
-| `g` | git-command-bar | Open the command bar prefilled with `git `, straight into complete-at-point so git subcommands complete immediately |
+| `g` | git-command-bar | Open the command bar prefilled with `git ` so git subcommands complete immediately |
 | `>` | shell-command-bar | Run a shell command |
 | `ctrl-o` | open-operation-log | Open the repository operation log |
 | `ctrl-e` | open-evolog | Open the evolution log for the focused revision |
@@ -498,9 +498,9 @@ Active in the command bar (`:`), revset prompt (`L`), file search prompt (`ctrl-
 | `ctrl-j` / `ctrl-n` / `↓` | Move to the next history entry or suggestion |
 | `ctrl-k` / `ctrl-p` / `↑` | Move to the previous history entry or suggestion |
 | `tab` | In the `:` jj command bar's complete-at-point, insert the current suggestion and advance to the next thing to complete; `shift-tab` still moves to the previous suggestion. In history-style lists (the `>` shell bar, or the `:` bar's history view) `tab` / `shift-tab` move through the list |
-| `ctrl-h` | (`:` jj command bar) Toggle between command history and complete-at-point, regardless of what is typed. The bar opens in history when there is any, otherwise in complete-at-point; switching into history is a no-op when there is none. With an empty input, typing `:` (the first-and-only character) does the same toggle — the `:` is consumed as a command, not inserted as text. Complete-at-point is shown with a double border; the history view uses the default single border |
+| `ctrl-h` | (`:` jj command bar) Toggle between complete-at-point and command history, regardless of what is typed. The bar always opens in complete-at-point; switching into history is a no-op when there is none. With an empty input, typing `:` (the first-and-only character) does the same toggle — the `:` is consumed as a command, not inserted as text. The alternate view (history) is shown with a double border; the default view (complete-at-point) uses the plain single border |
 | `ctrl-x` | Delete the highlighted suggestion from saved history (no-op for suggestions from non-history sources like subcommand, flag, or revset completions) |
-| `ctrl-l` | (revset prompt `L`) Toggle the suggestion list between revset-function completions and previously applied revsets. (file search prompt `ctrl-f`) Open the revset prompt seeded with the selected `files("path")` revset before applying it |
+| `ctrl-l` | (revset prompt `L`) Toggle the suggestion list between revset-function completions (the default view, single border) and previously applied revsets (the alternate view, double border). (file search prompt `ctrl-f`) Open the revset prompt seeded with the selected `files("path")` revset before applying it |
 | `ctrl-'` | (`:` and `>` command bars) Insert the focused item's id at the cursor: the revision's shortest unique change-id prefix in Normal, the operation id in Op Log, the entry id in Evolog |
 | `enter` | Submit the current input (run the command, apply the revset, finalize the search). In the `:` jj command bar's complete-at-point, if you have moved to a suggestion, `Enter` accepts it instead (the same as `Tab`) |
 | `ctrl-c` | Cancel the active prompt, same as Escape |
@@ -1054,7 +1054,7 @@ You get the ergonomics of a TUI porcelain without the CLI being hidden from you,
 
 Press `-` while composing to flip between short and long flag names. Press `:` at any time to drop into the command bar and type a `jj` subcommand directly — if a command is already being composed, `:` preserves it and lets you edit it as text before running.
 
-The `:` command bar has two views: your **command history**, and structured **complete-at-point**. It opens in history when you have any (otherwise it opens in complete-at-point), and you switch between them at any time with `ctrl-h`. With an empty input you can also just press `:` again — a `:` typed as the first-and-only character is treated as the toggle command rather than text, so `:` `:` drops you straight into complete-at-point.
+The `:` command bar has two views: structured **complete-at-point**, and your **command history**. It always opens in complete-at-point, and you switch to history at any time with `ctrl-h`. With an empty input you can also just press `:` again — a `:` typed as the first-and-only character is treated as the toggle command rather than text, so `:` `:` drops you straight into history. History is the alternate view, so it is drawn with a double border; complete-at-point uses the plain single border. Switching into history is a no-op when you have none.
 
 Complete-at-point suggests the next thing a `jj` command needs: subcommands, configured command aliases, flags, revisions, enum values, and bookmark names. `tab` inserts the current suggestion and advances to the next thing to complete; the arrows / `ctrl-n`,`ctrl-p` / `ctrl-j`,`ctrl-k` move through the list. `enter` runs the command, unless you have moved to a suggestion, in which case it accepts that suggestion. The flag and value metadata comes straight from `jj`'s own help, so it matches your installed `jj`; command aliases come from `jj config list aliases`, excluding aliases that start with `util`. The `>` shell command bar is unchanged (history only).
 

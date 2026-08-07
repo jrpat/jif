@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
 
 // ctrl+l toggles the revset prompt between revset-function completions and the
-// repo's revset history. The double border is reserved for complete-at-point
-// (the completions view); history uses the default single border. The active
+// repo's revset history. The double border is reserved for the alternate view
+// (history); the default completions view uses the single border. The active
 // revset is hidden from the list, the most recent entry (bottom) is pre-focused,
 // and selecting an entry replaces the whole input.
-test("ctrl+l shows the revset history with a single border, the current revset hidden, and the bottom entry focused", async () => {
+test("ctrl+l shows the revset history with a double border, the current revset hidden, and the bottom entry focused", async () => {
   const proc = Bun.spawn({
     cmd: ["bun", "run", "test/helpers/renderRevsetHistoryMode.tsx"],
     cwd: process.cwd(),
@@ -44,14 +44,14 @@ test("ctrl+l shows the revset history with a single border, the current revset h
   const t = result.toggles;
 
   // Pre-filled "main" shows revset completions (the matching bookmark), not
-  // history. Completion is complete-at-point, so it carries the double border.
+  // history. Completion is the default view, so it carries the single border.
   expect(t.beforeTogglePrompt).toContain("main");
   expect(t.beforeToggleList).toContain("mainline");
   expect(t.beforeToggleList).not.toContain("alpha()");
-  expect(t.beforeToggleDoubleBorder).toBeTrue();
+  expect(t.beforeToggleDoubleBorder).toBeFalse();
 
-  // ctrl+l switches to history (single border); the active revset "main" is omitted.
-  expect(t.afterToggleDoubleBorder).toBeFalse();
+  // ctrl+l switches to history (double border); the active revset "main" is omitted.
+  expect(t.afterToggleDoubleBorder).toBeTrue();
   expect(t.afterToggleList).toContain("alpha()");
   expect(t.afterToggleList).toContain("beta()");
   expect(t.afterToggleList).not.toContain("mainline");
@@ -63,14 +63,14 @@ test("ctrl+l shows the revset history with a single border, the current revset h
   expect(t.secondPrompt).toContain("beta()");
   expect(t.secondPrompt).not.toContain("alpha()");
 
-  // ctrl+l again returns to completions (double border) and restores the text.
-  expect(t.afterUntoggleDoubleBorder).toBeTrue();
+  // ctrl+l again returns to completions (single border) and restores the text.
+  expect(t.afterUntoggleDoubleBorder).toBeFalse();
   expect(t.afterUntoggleList).toContain("mainline");
   expect(t.afterUntogglePrompt).toContain("main");
 
   // With no history entries, ctrl+l is a silent no-op: still completions, still
-  // the double border.
-  expect(result.noopWhenEmpty.before.doubleBorder).toBeTrue();
-  expect(result.noopWhenEmpty.after.doubleBorder).toBeTrue();
+  // the single border.
+  expect(result.noopWhenEmpty.before.doubleBorder).toBeFalse();
+  expect(result.noopWhenEmpty.after.doubleBorder).toBeFalse();
   expect(result.noopWhenEmpty.after.list).toContain("mainline");
 }, 20000);

@@ -99,7 +99,6 @@ function mountPrompt(opts: {
   history: string[];
   kittyKeyboard?: boolean;
   historyDelayTicks?: number;
-  startInCompose?: boolean;
   initialText?: string;
   onSubmit?: () => void;
 }): Promise<Rendered> {
@@ -119,7 +118,6 @@ function mountPrompt(opts: {
           client={client}
           helpCache={helpCache}
           composeEnabled={true}
-          startInCompose={opts.startInCompose ?? false}
           workspaceRoot="/repo"
           loadHistory={async () => {
             for (let i = 0; i < (opts.historyDelayTicks ?? 0); i++) {
@@ -146,7 +144,7 @@ async function renderComposeFlags() {
     await settle(rendered);
     const openFrame = frameText(rendered);
     const opensInCompose = openFrame.includes("Show revision history");
-    const composeOpensWithDoubleBorder = openFrame.includes("═");
+    const composeOpensWithSingleBorder = !openFrame.includes("═");
 
     await rendered.mockInput.typeText("log ");
     await settle(rendered);
@@ -162,7 +160,7 @@ async function renderComposeFlags() {
 
     return {
       opensInComposeWhenNoHistory: opensInCompose,
-      composeOpensWithDoubleBorder,
+      composeOpensWithSingleBorder,
       flagListHasRevision: flagFrame.includes("--revision"),
       defaultTargetUnderlined: isUnderlined(revisionAttrs),
       nothingFocusedByDefault:
@@ -214,9 +212,10 @@ async function renderEnterAcceptsWhenFocused() {
   }
 }
 
-// With history -> opens in history; a bare ':' toggles to compose and back
-// without ever inserting the ':' character.
-async function renderHistoryDefaultAndColonToggle() {
+// Existing history does not change the default view: the bar still opens in
+// compose. A bare ':' toggles to history and back without ever inserting the
+// ':' character.
+async function renderComposeDefaultAndColonToggle() {
   const rendered = await mountPrompt({ history: ["log -r @"] });
   try {
     await settle(rendered);
@@ -232,44 +231,30 @@ async function renderHistoryDefaultAndColonToggle() {
     const afterSecondColon = frameText(rendered);
 
     return {
-      opensInHistory: openFrame.includes("log -r @"),
-      // Border convention: the history view uses the default single border;
-      // the double border is reserved for compose (complete-at-point).
-      historyUsesSingleBorder: !openFrame.includes("═"),
-      composeUsesDoubleBorder: afterFirstColon.includes("═"),
-      colonTogglesToCompose:
-        afterFirstColon.includes("Show revision history") && !afterFirstColon.includes("-r @"),
-      colonNotInserted: !afterFirstColonLine.includes(":"),
-      colonTogglesBackToHistory: afterSecondColon.includes("log -r @"),
-      historyAgainUsesSingleBorder: !afterSecondColon.includes("═"),
-    };
-  } finally {
-    rendered.renderer.destroy();
-  }
-}
-
-// startInCompose forces complete-at-point on open even when history exists, so
-// a prefilled subcommand surfaces completions right away.
-async function renderStartInComposeWithHistory() {
-  const rendered = await mountPrompt({ history: ["log -r @"], startInCompose: true });
-  try {
-    await settle(rendered);
-    const openFrame = frameText(rendered);
-    return {
-      startInComposeOpensCompose:
+      opensInComposeWithHistory:
         openFrame.includes("Show revision history") && !openFrame.includes("log -r @"),
-      startInComposeUsesDoubleBorder: openFrame.includes("═"),
+      // Border convention: the default view (compose) uses the single border;
+      // the double border is reserved for the alternate view (history).
+      composeUsesSingleBorder: !openFrame.includes("═"),
+      historyUsesDoubleBorder: afterFirstColon.includes("═"),
+      colonTogglesToHistory: afterFirstColon.includes("log -r @"),
+      colonNotInserted: !afterFirstColonLine.includes(":"),
+      colonTogglesBackToCompose:
+        afterSecondColon.includes("Show revision history") && !afterSecondColon.includes("log -r @"),
+      composeAgainUsesSingleBorder: !afterSecondColon.includes("═"),
     };
   } finally {
     rendered.renderer.destroy();
   }
 }
 
-// Opening in history must NOT auto-focus the bottom (most recent) entry, even
-// when help loads before history.
+// Toggling into history must NOT auto-focus the bottom (most recent) entry,
+// even when help loads before history.
 async function renderHistoryNoAutoFocus() {
   const rendered = await mountPrompt({ history: ["alpha-cmd", "beta-cmd"], historyDelayTicks: 6 });
   try {
+    await settle(rendered);
+    await rendered.mockInput.typeText(":");
     await settle(rendered);
     const topBg = rowBg(rendered, "beta-cmd");
     const bottomBg = rowBg(rendered, "alpha-cmd");
@@ -283,31 +268,32 @@ async function renderHistoryNoAutoFocus() {
   }
 }
 
-// ctrl+h toggles to compose even with text already typed, preserving the text.
+// ctrl+h toggles to history even with text already typed, preserving the text.
 async function renderCtrlHWithText() {
   const rendered = await mountPrompt({ history: ["log -r @"], kittyKeyboard: true });
   try {
     await settle(rendered);
     await rendered.mockInput.typeText("lo");
     await settle(rendered);
-    const historyView = frameText(rendered);
+    const composeView = frameText(rendered);
 
     rendered.mockInput.pressKey("h", { ctrl: true });
     await settle(rendered);
-    const composeView = frameText(rendered);
-    const composeLine = promptLine(rendered);
+    const historyView = frameText(rendered);
+    const historyLine = promptLine(rendered);
 
     return {
-      ctrlHFromHistoryToCompose:
-        historyView.includes("log -r @") && composeView.includes("Show revision history"),
-      ctrlHPreservesText: composeLine.includes("lo"),
+      ctrlHFromComposeToHistory:
+        composeView.includes("Show revision history") && historyView.includes("log -r @"),
+      ctrlHPreservesText: historyLine.includes("lo"),
     };
   } finally {
     rendered.renderer.destroy();
   }
 }
 
-// The shell bar (composeEnabled=false) is unchanged: Tab navigates history.
+// The shell bar (composeEnabled=false) is unchanged: it opens in history, has
+// no alternate view (so it keeps the single border), and Tab navigates history.
 async function renderShellTab() {
   const rendered = await testRender(
     () => {
@@ -334,9 +320,14 @@ async function renderShellTab() {
   );
   try {
     await settle(rendered);
+    const openFrame = frameText(rendered);
     rendered.mockInput.pressTab();
     await settle(rendered);
-    return { shellTabNavigatesHistory: promptLine(rendered).includes("pwd") };
+    return {
+      shellOpensInHistory: openFrame.includes("pwd"),
+      shellUsesSingleBorder: !openFrame.includes("═"),
+      shellTabNavigatesHistory: promptLine(rendered).includes("pwd"),
+    };
   } finally {
     rendered.renderer.destroy();
   }
@@ -347,8 +338,7 @@ console.log(
     ...(await renderComposeFlags()),
     ...(await renderEnterSubmitsWhenUnfocused()),
     ...(await renderEnterAcceptsWhenFocused()),
-    ...(await renderHistoryDefaultAndColonToggle()),
-    ...(await renderStartInComposeWithHistory()),
+    ...(await renderComposeDefaultAndColonToggle()),
     ...(await renderHistoryNoAutoFocus()),
     ...(await renderCtrlHWithText()),
     ...(await renderShellTab()),

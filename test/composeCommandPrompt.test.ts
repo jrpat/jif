@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-test("compose command bar: defaults by history, toggles with ':'/ctrl+h, completes flags, and leaves the shell bar unchanged", async () => {
+test("compose command bar: defaults to complete-at-point, toggles with ':'/ctrl+h, completes flags, and leaves the shell bar unchanged", async () => {
   const proc = Bun.spawn({
     cmd: ["bun", "run", "test/helpers/renderComposeCommandPrompt.tsx"],
     cwd: process.cwd(),
@@ -18,10 +18,10 @@ test("compose command bar: defaults by history, toggles with ':'/ctrl+h, complet
 
   const result = JSON.parse(stdout) as Record<string, boolean>;
 
-  // With no history the bar opens straight into structured completion, marked
-  // by the double border reserved for complete-at-point.
+  // The bar opens straight into structured completion, which — being the
+  // default view — carries the plain single border.
   expect(result.opensInComposeWhenNoHistory).toBe(true);
-  expect(result.composeOpensWithDoubleBorder).toBe(true);
+  expect(result.composeOpensWithSingleBorder).toBe(true);
   // Typing `log ` lists that command's flags. The default Tab target (bottom
   // row) is underlined, not focused, and nothing is inserted until Tab.
   expect(result.flagListHasRevision).toBe(true);
@@ -35,21 +35,16 @@ test("compose command bar: defaults by history, toggles with ':'/ctrl+h, complet
   expect(result.enterSubmitsWhenUnfocused).toBe(true);
   expect(result.enterAcceptsFocusedNotSubmits).toBe(true);
 
-  // With history the bar opens in history, and a bare ':' (the first-and-only
-  // character) toggles to compose and back without inserting ':'. The history
-  // view keeps the default single border; only compose gets the double border.
-  expect(result.opensInHistory).toBe(true);
-  expect(result.historyUsesSingleBorder).toBe(true);
-  expect(result.composeUsesDoubleBorder).toBe(true);
-  expect(result.colonTogglesToCompose).toBe(true);
+  // Existing history does not change the default view, and a bare ':' (the
+  // first-and-only character) toggles to history and back without inserting
+  // ':'. History is the alternate view, so it is the one with the double border.
+  expect(result.opensInComposeWithHistory).toBe(true);
+  expect(result.composeUsesSingleBorder).toBe(true);
+  expect(result.historyUsesDoubleBorder).toBe(true);
+  expect(result.colonTogglesToHistory).toBe(true);
   expect(result.colonNotInserted).toBe(true);
-  expect(result.colonTogglesBackToHistory).toBe(true);
-  expect(result.historyAgainUsesSingleBorder).toBe(true);
-
-  // startInCompose forces complete-at-point on open even when history exists,
-  // so the git command binding surfaces completions immediately.
-  expect(result.startInComposeOpensCompose).toBe(true);
-  expect(result.startInComposeUsesDoubleBorder).toBe(true);
+  expect(result.colonTogglesBackToCompose).toBe(true);
+  expect(result.composeAgainUsesSingleBorder).toBe(true);
 
   // The history view opens unfocused (Enter runs the blank/typed input, not the
   // most recent history entry), even when help loads before history.
@@ -58,9 +53,12 @@ test("compose command bar: defaults by history, toggles with ':'/ctrl+h, complet
   expect(result.historyInputBlank).toBe(true);
 
   // ctrl+h toggles even with text typed, preserving the text.
-  expect(result.ctrlHFromHistoryToCompose).toBe(true);
+  expect(result.ctrlHFromComposeToHistory).toBe(true);
   expect(result.ctrlHPreservesText).toBe(true);
 
-  // The shell bar keeps Tab as history navigation.
+  // The shell bar has only the history view: it opens there, keeps the single
+  // border (nothing is "alternate" when there is one view), and Tab navigates.
+  expect(result.shellOpensInHistory).toBe(true);
+  expect(result.shellUsesSingleBorder).toBe(true);
   expect(result.shellTabNavigatesHistory).toBe(true);
 }, 30000);

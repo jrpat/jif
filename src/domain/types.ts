@@ -190,10 +190,6 @@ export type CommandBarState = Readonly<{
   kind: CommandBarKind;
   text: string;
   manual: boolean;
-  // When true the jj bar opens directly in structured "complete at point"
-  // completion instead of command history, so prefilled subcommands immediately
-  // surface their completions.
-  startInCompose?: boolean;
   // Direct commands routed through dry-run mode retain the execution behavior
   // of the action that composed them when the edited prompt is submitted.
   submissionOptions?: Readonly<{

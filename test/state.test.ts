@@ -1022,7 +1022,7 @@ test("previewJjCommand opens an exact editable command with submission options",
   });
 });
 
-test("git command bar prefills `git ` in compose mode for fast git subcommands", () => {
+test("git command bar prefills `git ` for fast git subcommands", () => {
   let state = createState();
   state = focusGitCommandBar(state);
 
@@ -1032,7 +1032,6 @@ test("git command bar prefills `git ` in compose mode for fast git subcommands",
   // The cursor lands at the end of the prefill (after the trailing space), so
   // the displayed command reads `jj git |`.
   expect(getDisplayedCommandText(state)).toBe("git ");
-  expect(state.commandBar.startInCompose).toBe(true);
 });
 
 test("shell command bar starts empty and preserves raw shell text", () => {
