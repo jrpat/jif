@@ -89,3 +89,31 @@ test("bare scrollboxes automatically synchronize their vertical thumbs", async (
     rendered.renderer.destroy();
   }
 });
+
+test("explicit initial scrollbar visibility remains under caller control", async () => {
+  const rendered = await testRender(
+    () => (
+      <scrollbox
+        width="100%"
+        height={4}
+        verticalScrollbarOptions={{ visible: true }}
+        horizontalScrollbarOptions={{ visible: true }}
+      >
+        <box width={1} height={1} />
+      </scrollbox>
+    ),
+    { width: 32, height: 4 },
+  );
+
+  try {
+    const scrollbox = findScrollbox(rendered.renderer.root);
+    expect(scrollbox?.verticalScrollBar.visible).toBeTrue();
+    expect(scrollbox?.horizontalScrollBar.visible).toBeTrue();
+
+    await rendered.renderOnce();
+    expect(scrollbox?.verticalScrollBar.visible).toBeTrue();
+    expect(scrollbox?.horizontalScrollBar.visible).toBeTrue();
+  } finally {
+    rendered.renderer.destroy();
+  }
+});

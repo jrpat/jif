@@ -1,8 +1,10 @@
 import type { ScrollBoxRenderable } from "@opentui/core";
 import { testRender } from "@opentui/solid";
+import { createSignal } from "solid-js";
 import { resolveAppConfig } from "../../src/config/index.ts";
 import type { EventLogEntry } from "../../src/domain/types.ts";
 import { NotificationsOverlay } from "../../src/ui/NotificationsOverlay.tsx";
+import "../../src/ui/scrollboxRegistration.ts";
 
 const config = resolveAppConfig({});
 
@@ -18,23 +20,33 @@ const entries: readonly EventLogEntry[] = [
   },
   {
     id: "evt-1",
-    text: "ordinary notification",
+    text: "ordinary notification\nline two\nline three\nline four\nline five\nline six\nline seven",
     level: "warning",
     createdAt: 1,
   },
 ];
+
+const [expandedIds, setExpandedIds] = createSignal<readonly string[]>([]);
 
 const rendered = await testRender(() => (
   <box width={40} height={20} flexDirection="column">
     <NotificationsOverlay
       entries={entries}
       focusedIndex={0}
-      expandedIds={[]}
+      expandedIds={expandedIds()}
       config={config}
       onFocusEntry={() => {}}
     />
   </box>
 ), { width: 40, height: 20 });
+
+const initialFirstScrollbox = findScrollbox(
+  rendered.renderer.root.findDescendantById("notification-0"),
+);
+const initialVerticalScrollbarVisible =
+  initialFirstScrollbox?.verticalScrollBar.visible ?? null;
+const initialHorizontalScrollbarVisible =
+  initialFirstScrollbox?.horizontalScrollBar.visible ?? null;
 
 await rendered.renderOnce();
 await rendered.renderOnce();
@@ -68,6 +80,30 @@ if (cardEl) {
   }
 }
 
+const firstScrollboxBefore = findScrollbox(cardEl);
+const expandedScrollboxBefore = findScrollbox(
+  rendered.renderer.root.findDescendantById("notification-1"),
+);
+const firstTextContentBefore = (
+  firstScrollboxBefore?.getChildren()[0] as { content?: unknown } | undefined
+)?.content;
+
+setExpandedIds(["evt-1"]);
+
+const firstScrollboxAfter = findScrollbox(
+  rendered.renderer.root.findDescendantById("notification-0"),
+);
+const expandedScrollboxAfter = findScrollbox(
+  rendered.renderer.root.findDescendantById("notification-1"),
+);
+const firstTextContentAfter = (
+  firstScrollboxAfter?.getChildren()[0] as { content?: unknown } | undefined
+)?.content;
+const verticalScrollbarVisibleImmediatelyAfterExpansion =
+  firstScrollboxAfter?.verticalScrollBar.visible ?? null;
+
+await rendered.renderOnce();
+
 rendered.renderer.destroy();
 
 const lines = frame.trimEnd().split("\n");
@@ -85,5 +121,11 @@ console.log(JSON.stringify({
   longLineRowText,
   commandRowIndex,
   ordinaryNotificationRowIndex,
+  initialVerticalScrollbarVisible,
+  initialHorizontalScrollbarVisible,
+  firstScrollboxStable: firstScrollboxBefore === firstScrollboxAfter,
+  expandedScrollboxStable: expandedScrollboxBefore === expandedScrollboxAfter,
+  unrelatedTextContentStable: firstTextContentBefore === firstTextContentAfter,
+  verticalScrollbarVisibleImmediatelyAfterExpansion,
   frame,
 }));

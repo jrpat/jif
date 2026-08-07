@@ -8,13 +8,6 @@ import { getStatusColor, getStatusFillColor } from "./statusMessages.ts";
 
 const COLLAPSED_LINE_LIMIT = 5;
 
-type EntryViewModel = Readonly<{
-  entry: EventLogEntry;
-  totalLines: number;
-  visibleLines: readonly string[];
-  bodyHeight: number;
-}>;
-
 export function NotificationsOverlay(props: Readonly<{
   entries: readonly EventLogEntry[];
   focusedIndex: number;
@@ -24,23 +17,6 @@ export function NotificationsOverlay(props: Readonly<{
 }>) {
   const colors = () => props.config.colorScheme.semanticColors;
   const expandedSet = createMemo(() => new Set(props.expandedIds));
-
-  const entryViewModels = createMemo<readonly EntryViewModel[]>(() =>
-    props.entries.map((entry) => {
-      const lines = entry.text.split(/\r\n|\r|\n/);
-      const commandLineCount = getNotificationCommandLineCount(entry.commandText);
-      const visibleOutputLineLimit = Math.max(0, COLLAPSED_LINE_LIMIT - commandLineCount);
-      const visibleLines = expandedSet().has(entry.id)
-        ? lines
-        : lines.slice(0, visibleOutputLineLimit);
-      return {
-        entry,
-        totalLines: lines.length,
-        visibleLines,
-        bodyHeight: visibleLines.length + commandLineCount,
-      };
-    }),
-  );
 
   return (
     <Show
@@ -52,16 +28,20 @@ export function NotificationsOverlay(props: Readonly<{
       )}
     >
       <box width="100%" flexDirection="column" paddingX={1} paddingY={1}>
-        <For each={entryViewModels()}>
-          {(model, index) => (
-            <NotificationCard
-              id={`notification-${index()}`}
-              model={model}
-              focused={props.focusedIndex === index()}
-              config={props.config}
-              onMouseFocus={() => props.onFocusEntry?.(index())}
-            />
-          )}
+        <For each={props.entries}>
+          {(entry, index) => {
+            const expanded = createMemo(() => expandedSet().has(entry.id));
+            return (
+              <NotificationCard
+                id={`notification-${index()}`}
+                entry={entry}
+                expanded={expanded()}
+                focused={props.focusedIndex === index()}
+                config={props.config}
+                onMouseFocus={() => props.onFocusEntry?.(index())}
+              />
+            );
+          }}
         </For>
       </box>
     </Show>
@@ -70,18 +50,29 @@ export function NotificationsOverlay(props: Readonly<{
 
 function NotificationCard(props: Readonly<{
   id: string;
-  model: EntryViewModel;
+  entry: EventLogEntry;
+  expanded: boolean;
   focused: boolean;
   config: ResolvedAppConfig;
   onMouseFocus?: () => void;
 }>) {
   const colors = () => props.config.colorScheme.semanticColors;
-  const hiddenCount = () => Math.max(0, props.model.totalLines - props.model.visibleLines.length);
-  const borderColor = createMemo(() => getStatusColor(props.model.entry.level, colors()));
-  const backgroundColor = createMemo(() =>
-    props.focused ? getStatusFillColor(props.model.entry.level, colors()) : undefined
+  const lines = createMemo(() => props.entry.text.split(/\r\n|\r|\n/));
+  const commandLineCount = createMemo(() =>
+    getNotificationCommandLineCount(props.entry.commandText)
   );
-  const timestamp = createMemo(() => formatTimestamp(props.model.entry.createdAt));
+  const visibleLines = createMemo(() => {
+    if (props.expanded) return lines();
+    const visibleOutputLineLimit = Math.max(0, COLLAPSED_LINE_LIMIT - commandLineCount());
+    return lines().slice(0, visibleOutputLineLimit);
+  });
+  const bodyHeight = createMemo(() => visibleLines().length + commandLineCount());
+  const hiddenCount = createMemo(() => Math.max(0, lines().length - visibleLines().length));
+  const borderColor = createMemo(() => getStatusColor(props.entry.level, colors()));
+  const backgroundColor = createMemo(() =>
+    props.focused ? getStatusFillColor(props.entry.level, colors()) : undefined
+  );
+  const timestamp = createMemo(() => formatTimestamp(props.entry.createdAt));
 
   return (
     <box
@@ -99,16 +90,16 @@ function NotificationCard(props: Readonly<{
       }}
     >
       <box width="100%" flexDirection="row">
-        <text fg={borderColor()}>{labelForLevel(props.model.entry.level)}</text>
+        <text fg={borderColor()}>{labelForLevel(props.entry.level)}</text>
         <box flexGrow={1} />
         <text fg={colors().textTertiary}>{timestamp()}</text>
       </box>
       <box width="100%" height={1} />
       <ScrollableAnsiBody
-        text={props.model.visibleLines.join("\n")}
-        commandText={props.model.entry.commandText}
+        text={visibleLines().join("\n")}
+        commandText={props.entry.commandText}
         commandColor={borderColor()}
-        bodyHeight={props.model.bodyHeight}
+        bodyHeight={bodyHeight()}
         config={props.config}
         backgroundColor={backgroundColor()}
       />
