@@ -139,7 +139,7 @@ These are the built-in ids you can bind keys to. (Scopes in parentheses are the 
 
 ### Revision ops (Normal)
 - `abandon`, `absorb`, `commit`, `describe`, `edit-revision`, `new-revision`.
-- `rebase`, `restore-revision`, `split`, `squash`, `interdiff`.
+- `rebase`, `restore-revision`, `split`, `squash`, `interdiff` (`split` is also available in `files` scope for the current file selection).
 - `show-revision-diff`, `show-file-diff`.
 - `toggle-revision-selection`, `toggle-file-selection`.
 - `undo`, `redo`.

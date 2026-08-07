@@ -740,7 +740,7 @@ test("getShortcutPanelBindings narrows file mode shortcuts to file-relevant acti
   const bindings = getShortcutPanelBindings(state, bindingsForMode(state));
   const ids = bindings.map(({ command }) => command.id);
 
-  expect(ids).not.toContain("split");
+  expect(ids).toContain("split");
   expect(ids).not.toContain("split-parallel");
   expect(ids).toContain("restore");
   expect(ids).toContain("toggle-file-selection");
@@ -782,6 +782,7 @@ test("getShortcutPanelBindings includes inline configured commands from the merg
 test("collectDirectCanonicalBindingsForMode is mode-specific and excludes parents and globals", () => {
   const keys = collectDirectCanonicalBindingsForMode("revision-files", defaultKeymap).map((b) => b.key);
   // files mode is self-contained: it binds its own navigation and file actions directly
+  expect(keys).toContain("s");
   expect(keys).not.toContain("ctrl-s");
   expect(keys).not.toContain("alt-s");
   expect(keys).toContain("r");

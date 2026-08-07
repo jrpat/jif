@@ -236,6 +236,7 @@ export const defaultKeymap: Keymap = {
     up: alias("move-up"),
     h: "collapse",
     left: alias("collapse"),
+    s: "split",
     r: "restore",
     d: "show-diff",
     "ctrl-u": "untrack",

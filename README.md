@@ -234,7 +234,7 @@ selected one, so selecting upward continues upward and selecting downward
 continues downward. Removing a revision from the selection leaves focus in
 place.
 
-The split bindings are available only in the revision log, not while composing another operation or focusing an expanded file.
+The revision-level split bindings are available only in the revision log, not while composing another operation. Files mode has its own `s` binding for splitting the current file selection.
 
 #### Miscellaneous
 
@@ -261,6 +261,7 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 | `h` / `←` | collapse | Collapse the file list and return to the revision |
 | `space` | toggle-file-selection | Add or remove the focused file from the selection |
 | `a` | select-all-files | Select every changed file, or clear the selection if all are already selected |
+| `s` | split | Split using the current file selection |
 | `d` | show-diff | Show the focused file's diff as a [full-screen preview](#full-screen-preview) |
 | `r` | restore | Restore selected files to their state before this change |
 | `ctrl-u` | untrack | Stop tracking the focused file, or all selected files (`jj file untrack <paths>`) |

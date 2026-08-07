@@ -1725,6 +1725,25 @@ test("dispatchGlobalKey routes ctrl-s to split in normal mode", () => {
   expect(calls).toEqual(["startSplit"]);
 });
 
+test("dispatchGlobalKey routes s to split in files mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "files",
+    expandedRowId: "aaaaaaaa",
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "s",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["startSplit"]);
+});
+
 test("dispatchGlobalKey routes h/l inside inline confirmation mode", () => {
   const calls: string[] = [];
   const state: AppState = {

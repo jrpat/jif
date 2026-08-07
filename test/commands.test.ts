@@ -270,7 +270,7 @@ test("a null mode binding overrides an inherited command", () => {
   expect(resolveCommand("revision-log", "j", keymap)).toBeNull();
 });
 
-test("split bindings resolve only in revision-log mode", () => {
+test("revision-level split bindings resolve only in revision-log mode", () => {
   for (const mode of Object.keys(modeDefinitions) as Mode[]) {
     expect(resolveCommand(mode, "ctrl-s")).toBe(mode === "revision-log" ? "split" : null);
     expect(resolveCommand(mode, "alt-s")).toBe(mode === "revision-log" ? "split-parallel" : null);
@@ -549,7 +549,7 @@ test("files mode does not inherit Normal revision commands", () => {
   expect(resolveForState("k", state)).toBe("move-up");
   expect(resolveForState("h", state)).toBe("collapse");
   expect(resolveForState(" ", state)).toBe("toggle-file-selection");
-  expect(resolveForState("s", state)).toBeNull();
+  expect(resolveForState("s", state)).toBe("split");
   expect(resolveForState("ctrl-s", state)).toBeNull();
   expect(resolveForState("alt-s", state)).toBeNull();
   expect(resolveForState("ctrl-f", state)).toBe("restrict-revset-to-focused-file");
@@ -785,8 +785,10 @@ test("files mode keeps its self-contained file bindings", () => {
   expect(defaultKeymap["revision-files"]["?"]).toBeUndefined();
 
   // Mode-local in files
+  expect(defaultKeymap["revision-files"].s).toBe("split");
   expect(defaultKeymap["revision-files"]["ctrl-s"]).toBeUndefined();
   expect(defaultKeymap["revision-files"]["alt-s"]).toBeUndefined();
+  expect(resolveForState("s", state)).toBe("split");
   expect(resolveForState("ctrl-s", state)).toBeNull();
   expect(resolveForState("alt-s", state)).toBeNull();
   expect(resolveForState("r", state)).toBe("restore");
