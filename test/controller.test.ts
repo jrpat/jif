@@ -706,6 +706,82 @@ test("startSplit opens inline confirmation when specific files are selected", ()
   harness.store.dispose();
 });
 
+test("startSplit uses the focused file in Files mode when nothing is selected", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "working copy",
+        marker: "working-copy",
+        filesLoaded: true,
+        files: [
+          { path: "src/app.ts", status: "M" },
+          { path: "src/ui/render.tsx", status: "M" },
+        ],
+      }),
+    ],
+  });
+
+  harness.store.actions.openFocusedRevision();
+  harness.store.actions.moveFocus(1);
+
+  expect(harness.store.state.focusMode).toBe("files");
+  expect(harness.store.state.selectedFilePaths).toEqual([]);
+
+  harness.controller.startSplit();
+
+  expect(harness.store.state.focusMode).toBe("inline-confirmation");
+  expect(harness.store.state.inlineConfirmation?.message).toBe("Split only focused file?");
+  expect(harness.store.state.inlineConfirmation?.actualCommandByOption.yes).toContain(
+    join(REPO_PATH, "src/ui/render.tsx"),
+  );
+  expect(harness.runInteractiveCommands).toEqual([]);
+  harness.store.dispose();
+});
+
+test("startSplit does nothing in Files mode when no file is focused", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "working copy",
+        marker: "working-copy",
+        filesLoaded: true,
+        files: [],
+      }),
+    ],
+  });
+
+  harness.store.actions.openFocusedRevision();
+  harness.controller.startSplit();
+
+  expect(harness.store.state.focusMode).toBe("files");
+  expect(harness.store.state.inlineConfirmation).toBeNull();
+  expect(harness.runInteractiveCommands).toEqual([]);
+  harness.store.dispose();
+});
+
+test("startSplit still splits the whole revision from the revision log", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "working copy",
+        marker: "working-copy",
+      }),
+    ],
+  });
+
+  harness.controller.startSplit();
+
+  expect(harness.runInteractiveCommands).toEqual(["split -r a"]);
+  expect(harness.store.state.inlineConfirmation).toBeNull();
+  harness.store.dispose();
+});
+
 test("startSplit opens inline confirmation when files stay selected after focus leaves files mode", () => {
   const harness = createControllerHarness({
     revisions: [

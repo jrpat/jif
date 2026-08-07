@@ -261,7 +261,7 @@ Active when a revision is expanded and a file is focused. Self-contained — it 
 | `h` / `←` | collapse | Collapse the file list and return to the revision |
 | `space` | toggle-file-selection | Add or remove the focused file from the selection |
 | `a` | select-all-files | Select every changed file, or clear the selection if all are already selected |
-| `s` | split | Split using the current file selection |
+| `s` | split | Split the selected files, or the focused file when nothing is selected |
 | `d` | show-diff | Show the focused file's diff as a [full-screen preview](#full-screen-preview) |
 | `r` | restore | Restore selected files to their state before this change |
 | `ctrl-u` | untrack | Stop tracking the focused file, or all selected files (`jj file untrack <paths>`) |

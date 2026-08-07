@@ -174,10 +174,10 @@ export function createJifCommandController(args: Readonly<{
     );
   }
 
-  // `jj split` and `jj split --parallel` share the same flow: split the whole
-  // revision when nothing is selected, otherwise confirm whether to carve out
-  // only the selected files. The parallel variant just threads `-p` into every
-  // composed command and preview.
+  // `jj split` and `jj split --parallel` share the same flow. Files mode uses
+  // the selected files, or its focused file when the selection is empty;
+  // revision-log mode splits the whole revision when no retained selection is
+  // present. The parallel variant threads `-p` through each command and preview.
   function beginSplit(parallel: boolean) {
     const state = store.snapshot();
     const revision = getFocusedRevision(state);
@@ -195,17 +195,29 @@ export function createJifCommandController(args: Readonly<{
     const selectedFilePaths = state.expandedRowId === revision.rowId
       ? state.selectedFilePaths
       : [];
+    let splitFilePaths = selectedFilePaths;
+    let usesFocusedFile = false;
+    if (splitFilePaths.length === 0 && state.focusMode === "files") {
+      const focusedFile = getFocusedFile(state);
+      if (!focusedFile) {
+        return;
+      }
+      splitFilePaths = [focusedFile.path];
+      usesFocusedFile = true;
+    }
 
-    if (selectedFilePaths.length === 0) {
+    if (splitFilePaths.length === 0) {
       void args.runInteractiveJjCommand(quoteCommand([...baseArgs, "-r", revisionArg]));
       return;
     }
 
-    const absoluteFilePaths = selectedFilePaths.map((filePath) => join(state.repoPath, filePath));
+    const absoluteFilePaths = splitFilePaths.map((filePath) => join(state.repoPath, filePath));
     store.actions.openInlineConfirmation({
       kind: "split-files",
       rowId: revision.rowId,
-      message: parallel ? "Split only selected files into a sibling?" : "Split only selected files?",
+      message: parallel
+        ? `Split only ${usesFocusedFile ? "focused file" : "selected files"} into a sibling?`
+        : `Split only ${usesFocusedFile ? "focused file" : "selected files"}?`,
       options: ["yes", "interactive", "no"],
       selectedOption: "yes",
       actualCommandByOption: {
