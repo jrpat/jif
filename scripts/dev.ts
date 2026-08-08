@@ -2,7 +2,7 @@
 // files change.
 //
 // This replaces `bun --watch`, which reload-loops with jif: the watcher
-// re-triggers faster than the TUI can complete its (opentui 0.4.x) startup, so
+// re-triggers faster than the TUI can complete its OpenTUI startup, so
 // the screen is cleared on every restart and never stays painted. This launcher
 // watches only `src/` and `index.ts` (never the runtime-writable tree), so jif's
 // own startup activity can't trigger a restart, and it debounces real edits.

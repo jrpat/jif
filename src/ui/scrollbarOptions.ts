@@ -2,7 +2,7 @@ import type { ScrollBarRenderable, ScrollBoxRenderable } from "@opentui/core";
 
 const synchronizedVerticalScrollbars = new WeakSet<ScrollBarRenderable>();
 
-// opentui 0.4.x stores scrollbar track colors verbatim through their setters
+// OpenTUI 0.5.1 stores scrollbar track colors verbatim through its setters
 // (`parseColor(undefined) === undefined`) and `ScrollBar.renderVertical`
 // fills the track unconditionally, so handing it an `undefined` color makes a
 // native `fillRect` dereference `undefined` and throw on every frame. opentui's
@@ -33,7 +33,7 @@ export function buildScrollbarTrackOptions(
 /**
  * Synchronizes a vertical scrollbar's thumb with its viewport size.
  *
- * This is a version-dependent workaround for OpenTUI 0.4.x, which can retain
+ * This is a version-dependent workaround for OpenTUI 0.5.1, which can retain
  * a stale slider viewport size after laying out scrollbox content. OpenTUI's
  * slider also clamps that size to the scroll range, so the range is widened
  * only while the correct viewport size is assigned and restored immediately.
