@@ -1,7 +1,10 @@
 import { expect, test } from "bun:test";
+import { createComputed, createRoot, createSignal } from "solid-js";
 import type { AppState } from "../src/domain/types.ts";
 import { createRowId } from "../src/domain/rowIds.ts";
+import { resolveAppConfig } from "../src/config/index.ts";
 import {
+  createPreviewPanePresentation,
   getPreviewTargetKey,
   resolvePreviewScrollPosition,
 } from "../src/ui/previewRefresh.ts";
@@ -84,4 +87,45 @@ test("preview navigation resets scroll for a different logical target", () => {
     scrollLeft: 7,
     scrollTop: 23,
   })).toEqual({ x: 0, y: 0 });
+});
+
+test("extra mode leaves preview presentation consumers undisturbed", () => {
+  createRoot((dispose) => {
+    const [state, setState] = createSignal<AppState>(createFilesState({
+      focusMode: "revisions",
+      focusModeStack: ["revisions"],
+    }));
+    const config = resolveAppConfig({});
+    const presentation = createPreviewPanePresentation({
+      getState: state,
+      getConfig: () => config.preview,
+      getTerminalWidth: () => 160,
+    });
+    let shownConsumerRuns = 0;
+    let fullScreenConsumerRuns = 0;
+
+    createComputed(() => {
+      presentation.shown();
+      shownConsumerRuns += 1;
+    });
+    createComputed(() => {
+      presentation.fullScreen();
+      fullScreenConsumerRuns += 1;
+    });
+
+    setState((current) => ({
+      ...current,
+      focusMode: "extra",
+      focusModeStack: ["revisions", "extra"],
+    }));
+    setState((current) => ({
+      ...current,
+      focusMode: "revisions",
+      focusModeStack: ["revisions"],
+    }));
+
+    expect(shownConsumerRuns).toBe(1);
+    expect(fullScreenConsumerRuns).toBe(1);
+    dispose();
+  });
 });

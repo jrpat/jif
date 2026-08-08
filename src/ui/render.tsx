@@ -40,9 +40,6 @@ import {
   effectivePreviewCols,
   effectivePreviewPosition,
   effectivePreviewRows,
-  effectivePreviewVisible,
-  isPreviewFullScreen,
-  isPreviewPaneShown,
 } from "../domain/preview.ts";
 import {
   getRevisionBorderPolicy,
@@ -136,7 +133,11 @@ import { executeShellCommand as executeShellTextCommand } from "../jj/process.ts
 import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 import { switchWorkspace } from "./workspaceSwitch.ts";
 import { resolveLogSurfaceMode } from "./logSurface.ts";
-import { getPreviewTargetKey, resolvePreviewScrollPosition } from "./previewRefresh.ts";
+import {
+  createPreviewPanePresentation,
+  getPreviewTargetKey,
+  resolvePreviewScrollPosition,
+} from "./previewRefresh.ts";
 import "./scrollboxRegistration.ts";
 
 const EXTRA_EMPTY_MESSAGE = "No extra bindings defined. Bind keys under `keymap.extra` in your config.";
@@ -196,11 +197,13 @@ export function JifView(props: {
   const [previewHeader, setPreviewHeader] = createSignal<string | null>(null);
   const [previewLoading, setPreviewLoading] = createSignal(false);
   let previewSeq = 0;
-  const previewVisible = () =>
-    effectivePreviewVisible(store.state, config.preview, terminalSize().width);
-  const previewFullScreen = () => isPreviewFullScreen(store.state);
-  const previewShown = () =>
-    isPreviewPaneShown(store.state, config.preview, terminalSize().width);
+  const previewPresentation = createPreviewPanePresentation({
+    getState: () => store.state,
+    getConfig: () => config.preview,
+    getTerminalWidth: () => terminalSize().width,
+  });
+  const previewFullScreen = previewPresentation.fullScreen;
+  const previewShown = previewPresentation.shown;
   const previewPosition = () =>
     effectivePreviewPosition(store.state, config.preview, terminalSize().width);
   const previewCols = () =>

@@ -1,3 +1,6 @@
+import { createMemo, type Accessor } from "solid-js";
+import type { PreviewConfig, PreviewSettings } from "../domain/preview.ts";
+import { isPreviewFullScreen, isPreviewPaneShown } from "../domain/preview.ts";
 import type { AppState } from "../domain/types.ts";
 import {
   getExpandedRevision,
@@ -8,6 +11,29 @@ import {
 import type { LogSurfaceMode } from "./logSurface.ts";
 
 export type PreviewScrollPosition = Readonly<{ x: number; y: number }>;
+
+type PreviewPaneState = Pick<AppState, "focusMode" | "previewFullScreen"> & PreviewSettings;
+
+/**
+ * Stable presentation signals for the preview pane. Focus overlays such as
+ * Extra mode can change `focusMode` without changing either derived value;
+ * memos keep those no-op transitions from refreshing or redrawing the pane.
+ */
+export function createPreviewPanePresentation(args: {
+  getState: () => PreviewPaneState;
+  getConfig: () => PreviewConfig;
+  getTerminalWidth: () => number;
+}): Readonly<{
+  fullScreen: Accessor<boolean>;
+  shown: Accessor<boolean>;
+}> {
+  return {
+    fullScreen: createMemo(() => isPreviewFullScreen(args.getState())),
+    shown: createMemo(() =>
+      isPreviewPaneShown(args.getState(), args.getConfig(), args.getTerminalWidth())
+    ),
+  };
+}
 
 /**
  * Stable identity for the content shown in the preview pane. Repository
