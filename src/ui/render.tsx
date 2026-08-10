@@ -2132,8 +2132,10 @@ function RevisionSideChips(props: {
             ? props.colors.conflictTagFill
             : chip.kind === "bookmark" ? props.colors.bookmarkTagFill : props.colors.workspaceTagFill;
 
+          // Loose headers are two rows tall; keep the chip fill on the identity row.
           return (
             <box
+              height={1}
               flexShrink={0}
               paddingX={1}
               backgroundColor={backgroundColor()}

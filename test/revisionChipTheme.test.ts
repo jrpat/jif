@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-test("revision side chips update their colors when config changes", async () => {
+test("revision side chips update colors without bleeding into loose descriptions", async () => {
   const proc = Bun.spawn({
     cmd: ["bun", "run", "test/helpers/renderRevisionChipTheme.tsx"],
     cwd: process.cwd(),
@@ -23,6 +23,8 @@ test("revision side chips update their colors when config changes", async () => 
     defaultWorkspaceBg,
     overrideBookmarkBg,
     overrideWorkspaceBg,
+    bookmarkBleedsIntoDescription,
+    workspaceBleedsIntoDescription,
   } = JSON.parse(stdout) as {
     initialBg: [number, number, number, number];
     refreshedBg: [number, number, number, number];
@@ -30,6 +32,8 @@ test("revision side chips update their colors when config changes", async () => 
     defaultWorkspaceBg: [number, number, number, number];
     overrideBookmarkBg: [number, number, number, number];
     overrideWorkspaceBg: [number, number, number, number];
+    bookmarkBleedsIntoDescription: boolean;
+    workspaceBleedsIntoDescription: boolean;
   };
 
   expect(initialBg).toEqual([17, 34, 51, 255]);
@@ -38,4 +42,6 @@ test("revision side chips update their colors when config changes", async () => 
   expect(defaultWorkspaceBg).toEqual([31, 31, 0, 255]);
   expect(overrideBookmarkBg).toEqual([17, 34, 51, 255]);
   expect(overrideWorkspaceBg).toEqual([221, 238, 255, 255]);
+  expect(bookmarkBleedsIntoDescription).toBeFalse();
+  expect(workspaceBleedsIntoDescription).toBeFalse();
 });

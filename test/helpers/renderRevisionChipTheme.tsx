@@ -56,6 +56,21 @@ function findChipBackground(frame: CapturedFrame, text: string): RGBA {
   return chipSpan.bg;
 }
 
+function lineHasBackground(frame: CapturedFrame, text: string, background: RGBA): boolean {
+  const line = frame.lines.find((candidate) =>
+    candidate.spans.map((span) => span.text).join("").includes(text)
+  );
+
+  if (!line) {
+    throw new Error(`Expected to find a line containing ${text}.`);
+  }
+
+  const expected = background.toInts();
+  return line.spans.some((span) =>
+    span.bg.toInts().every((channel, index) => channel === expected[index])
+  );
+}
+
 async function renderChipBackgrounds(args: {
   revision: RevisionSummary;
   config: ResolvedAppConfig;
@@ -87,9 +102,13 @@ async function renderChipBackgrounds(args: {
   try {
     await rendered.renderOnce();
     const frame = rendered.captureSpans();
+    const bookmarkBg = findChipBackground(frame, "main");
+    const workspaceBg = findChipBackground(frame, "review");
     return {
-      bookmarkBg: findChipBackground(frame, "main").toInts(),
-      workspaceBg: findChipBackground(frame, "review").toInts(),
+      bookmarkBg: bookmarkBg.toInts(),
+      workspaceBg: workspaceBg.toInts(),
+      bookmarkBleedsIntoDescription: lineHasBackground(frame, args.revision.description.slice(0, 10), bookmarkBg),
+      workspaceBleedsIntoDescription: lineHasBackground(frame, args.revision.description.slice(0, 10), workspaceBg),
     };
   } finally {
     rendered.renderer.destroy();
@@ -153,7 +172,10 @@ try {
     config: createConfig(),
   });
   const overrideColors = await renderChipBackgrounds({
-    revision: createRevision({ workspaces: ["review"] }),
+    revision: createRevision({
+      description: "description long enough to run underneath both side chips",
+      workspaces: ["review"],
+    }),
     config: createConfig({
       bookmarkTagFill: "#112233",
       bookmarkTagText: "#111111",
@@ -169,6 +191,8 @@ try {
     defaultWorkspaceBg: defaultColors.workspaceBg,
     overrideBookmarkBg: overrideColors.bookmarkBg,
     overrideWorkspaceBg: overrideColors.workspaceBg,
+    bookmarkBleedsIntoDescription: overrideColors.bookmarkBleedsIntoDescription,
+    workspaceBleedsIntoDescription: overrideColors.workspaceBleedsIntoDescription,
   }));
 } finally {
   rendered.renderer.destroy();
