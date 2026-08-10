@@ -10,6 +10,7 @@ function configWithoutScrollbarColors(): ResolvedAppConfig {
   return {
     ...config,
     colorScheme: {
+      ...config.colorScheme,
       semanticColors: {
         ...config.colorScheme.semanticColors,
         chromeFillThree: undefined,

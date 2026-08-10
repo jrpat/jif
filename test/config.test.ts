@@ -204,6 +204,26 @@ test("resolveAppConfig keeps the focused row fill subtle", () => {
   expect(light.colorScheme.semanticColors.rowDraftFocusedFill).toBe("#fbe8fb");
 });
 
+test("resolveAppConfig scales focused row fill down outside the tight layout", () => {
+  const dark = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
+  const light = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_LIGHT,
+  });
+
+  expect(dark.colorScheme.rowFocusedFillByLayout).toEqual({
+    loose: "#0f0f0f",
+    normal: "#0f0f0f",
+    tight: dark.colorScheme.semanticColors.rowFocusedFill,
+  });
+  expect(light.colorScheme.rowFocusedFillByLayout).toEqual({
+    loose: "#eeeeee",
+    normal: "#eeeeee",
+    tight: light.colorScheme.semanticColors.rowFocusedFill,
+  });
+});
+
 test("resolveAppConfig steps from preview to file group to focused file fills", () => {
   const dark = resolveAppConfig(defaultAppConfig, {
     palette: FALLBACK_PALETTE_DARK,

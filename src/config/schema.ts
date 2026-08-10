@@ -80,6 +80,8 @@ export type SemanticColorScheme = Readonly<{
   statusErrorFill: SemanticColorValue;
 }>;
 
+type LayoutFocusedRowFill = Readonly<Record<AppLayout, SemanticColorValue>>;
+
 type SemanticColorKey = keyof SemanticColorScheme;
 
 export const DEFAULT_PREVIEW_PANE_FILL_OPACITY = 0.03;
@@ -133,6 +135,7 @@ export type PreviewNarrowBehavior = "below" | "hide";
 export type ResolvedAppConfig = Readonly<{
   colorScheme: Readonly<{
     semanticColors: SemanticColorScheme;
+    rowFocusedFillByLayout: LayoutFocusedRowFill;
   }>;
   terminalPalette: readonly (string | null)[];
   log: Readonly<{
@@ -248,6 +251,8 @@ const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   statusErrorFill:        { source: "red",         opacity: 0.12 },
 };
 
+const ROOMY_LAYOUT_FOCUSED_ROW_FILL_SCALE = 0.75;
+
 // ---------- Palette source → TerminalColors lookup ----------
 
 const paletteIndexMap: Record<string, number> = {
@@ -337,6 +342,32 @@ export function resolveSemanticColors(
   return result as SemanticColorScheme;
 }
 
+function resolveFocusedRowFillByLayout(
+  palette: TerminalColors,
+  overrides?: Partial<Record<SemanticColorKey, SemanticColorOverride>>,
+): LayoutFocusedRowFill {
+  const override = overrides?.rowFocusedFill;
+  const tight = typeof override === "string"
+    ? override
+    : resolveColorDef(override ?? defaultColorDefs.rowFocusedFill, palette);
+  const background = palette.defaultBackground ??
+    FALLBACK_PALETTE_DARK.defaultBackground ??
+    "#000000";
+  const roomy = typeof override === "string"
+    ? blendColor(override, background, ROOMY_LAYOUT_FOCUSED_ROW_FILL_SCALE)
+    : resolveColorDef({
+      ...(override ?? defaultColorDefs.rowFocusedFill),
+      opacity: (override ?? defaultColorDefs.rowFocusedFill).opacity *
+        ROOMY_LAYOUT_FOCUSED_ROW_FILL_SCALE,
+    }, palette);
+
+  return {
+    loose: roomy,
+    normal: roomy,
+    tight,
+  };
+}
+
 export const defaultAppConfig: AppConfig = {};
 
 export function defineConfig(config: AppConfig): AppConfig {
@@ -353,10 +384,15 @@ export function resolveAppConfig(
   const semanticColors = palette
     ? resolveSemanticColors(palette, config.colorScheme?.colors)
     : fallbackSemanticColors(config.colorScheme?.colors);
+  const resolvedPalette = palette ?? FALLBACK_PALETTE_DARK;
 
   return {
     colorScheme: {
       semanticColors,
+      rowFocusedFillByLayout: resolveFocusedRowFillByLayout(
+        resolvedPalette,
+        config.colorScheme?.colors,
+      ),
     },
     terminalPalette: palette?.palette ?? FALLBACK_PALETTE_DARK.palette,
     log: {

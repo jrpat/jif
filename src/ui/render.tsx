@@ -1615,7 +1615,7 @@ export function RevisionItem(props: {
       case "browse":
         return props.state.focusMode === "files" && isExpanded()
           ? colors().fileGroupFocusedFill
-          : colors().rowFocusedFill;
+          : props.config.colorScheme.rowFocusedFillByLayout[props.state.layout];
       case "draft": return colors().rowDraftFocusedFill;
       case "target": return colors().rowPinnedTargetFill;
     }

@@ -606,7 +606,7 @@ The color configuration supports `light`, `dark`, and `auto` theme mode. In `aut
 
 Palette detection waits 50ms after the last color answer before falling back for anything the terminal left unanswered. jif keeps listening for the terminal's default-background answer after that startup deadline and reapplies its colors if the answer arrives late, so a slow response may cause a brief color change but will not leave the fallback theme in place. To avoid that change by waiting longer before the first frame (for example over a slow SSH connection), set the `OTUI_PALETTE_IDLE_TIMEOUT_MS` environment variable to a higher value.
 
-Autocomplete suggestion focus is controlled separately from revision-row focus. Override `colorScheme.colors.promptSuggestionFocusedFill` to change the highlighted suggestion background without changing `rowFocusedFill`.
+Autocomplete suggestion focus is controlled separately from revision-row focus. Override `colorScheme.colors.promptSuggestionFocusedFill` to change the highlighted suggestion background without changing `rowFocusedFill`. The revision-row `rowFocusedFill` value is the anchor used by the most compact (`tight`) layout; `normal` and `loose` use 75% of its intensity against the terminal background (6.75% foreground opacity with the default theme).
 
 When navigating an expanded revision's files, the whole file group uses the subtle `fileGroupFocusedFill`, while the focused file row uses the stronger `fileFocusedFill`. A selected focused file keeps `rowSelectedFill`, so selection remains visible under the file cursor.
 
