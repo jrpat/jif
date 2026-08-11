@@ -330,6 +330,19 @@ test("Revision Log Navigation owns revision focus movement", () => {
   expect(defaultKeymap.interdiff["alt-j"]).toBeUndefined();
 });
 
+test("Log owns half-page viewport scrolling", () => {
+  expect(defaultKeymap.log[")"]).toBe("scroll-log-down-half-page");
+  expect(defaultKeymap.log["("]).toBe("scroll-log-up-half-page");
+
+  for (const mode of ["revision-log", "op-log", "evolog", "rebase"] as const) {
+    expect(resolveCommand(mode, ")")).toBe("scroll-log-down-half-page");
+    expect(resolveCommand(mode, "(")).toBe("scroll-log-up-half-page");
+  }
+
+  expect(resolveCommand("revision-files", ")")).toBeNull();
+  expect(resolveCommand("revision-files", "(")).toBeNull();
+});
+
 test("Log owns generic retry and flag bindings while Revision Draft owns draft mechanics", () => {
   expect(defaultKeymap.log["!"]).toBe("force-last-command");
   expect(defaultKeymap.log["-"]).toBe("toggle-flags");

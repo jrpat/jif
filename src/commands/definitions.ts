@@ -109,6 +109,7 @@ export type CommandController = Readonly<{
   revertOperation: () => void;
   showOperationDiff: () => void;
   scrollDiffViewer: (rowDelta: number, colDelta: number) => void;
+  scrollLogPage: (pageDelta: number) => void;
   scrollHelpToast: (rowDelta: number) => void;
   togglePreview: () => void;
   cyclePreviewPosition: () => void;
@@ -178,6 +179,18 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Move Up",
     description: "Move through revisions or files",
     run: (controller) => controller.moveFocus(-1),
+  },
+  {
+    id: "scroll-log-down-half-page",
+    title: "Half Page Down",
+    description: "Scroll the log down by half a page",
+    run: (controller) => controller.scrollLogPage(0.5),
+  },
+  {
+    id: "scroll-log-up-half-page",
+    title: "Half Page Up",
+    description: "Scroll the log up by half a page",
+    run: (controller) => controller.scrollLogPage(-0.5),
   },
   {
     id: "scroll-down",

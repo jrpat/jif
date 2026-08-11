@@ -131,6 +131,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     showOperationDiff: () => calls.push("showOperationDiff"),
     scrollDiffViewer: (rowDelta, colDelta) =>
       calls.push(`scrollDiffViewer(${rowDelta},${colDelta})`),
+    scrollLogPage: (pageDelta) => calls.push(`scrollLogPage(${pageDelta})`),
     scrollHelpToast: (rowDelta) => calls.push(`scrollHelpToast(${rowDelta})`),
     togglePreview: () => calls.push("togglePreview"),
     cyclePreviewPosition: () => calls.push("cyclePreviewPosition"),
@@ -237,6 +238,26 @@ test("dispatchGlobalKey routes g to the git command bar", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["focusGitCommandBar"]);
+});
+
+test("dispatchGlobalKey routes parentheses to half-page log scrolling", () => {
+  const calls: string[] = [];
+  const state = createState();
+
+  expect(dispatchGlobalKey({
+    normalizedKey: ")",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  })).toBeTrue();
+  expect(dispatchGlobalKey({
+    normalizedKey: "(",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  })).toBeTrue();
+
+  expect(calls).toEqual(["scrollLogPage(0.5)", "scrollLogPage(-0.5)"]);
 });
 
 test("dispatchGlobalKey routes ctrl-. to the shell command bar", () => {

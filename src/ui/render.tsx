@@ -74,6 +74,7 @@ import {
 import { getChangedFileRowBackgroundColor, getRevisionRowBackgroundColor } from "./rowBackgrounds.ts";
 import { isScrollboxAtBottom, observeScrollboxBottomReached, scrollToKeepChildVisible, type ScrollVisibilityDirection } from "./scroll.ts";
 import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
+import { createLogPageScroller } from "./logPageScroller.ts";
 import {
   buildAlignedShortcutGrids,
   buildShortcutEntries,
@@ -279,6 +280,9 @@ export function JifView(props: {
   let diffViewport: ScrollBoxRenderable | undefined;
   let helpViewport: ScrollBoxRenderable | undefined;
   let previewViewport: ScrollBoxRenderable | undefined;
+  const logPageScroller = createLogPageScroller({
+    getViewport: () => logViewport,
+  });
   let renderedPreviewTargetKey: string | null = null;
   const detectAndApplyPalette = createPaletteDetector({
     renderer,
@@ -449,6 +453,7 @@ export function JifView(props: {
     getDiffViewport: () => diffViewport,
     getHelpViewport: () => helpViewport,
     getPreviewViewport: () => previewViewport,
+    scrollLogPage: logPageScroller.scrollByPage,
     getTerminalSize: () => terminalSize(),
     getPreviewConfig: () => config.preview,
     logShortcutPanelToggle: ({ before, after, focusMode }) => {

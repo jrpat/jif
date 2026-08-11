@@ -76,6 +76,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   diffViewport?: ScrollBoxRenderable;
   helpViewport?: ScrollBoxRenderable;
   previewViewport?: ScrollBoxRenderable;
+  scrollLogPage?: (pageDelta: number) => void;
   composedDiffOutput?: string;
   composedDiffCalls?: Array<readonly string[]>;
   anchorRange?: readonly string[];
@@ -230,6 +231,7 @@ function createControllerHarness(harnessOptions: Readonly<{
     getDiffViewport: () => harnessOptions.diffViewport,
     getHelpViewport: () => harnessOptions.helpViewport,
     getPreviewViewport: () => harnessOptions.previewViewport,
+    scrollLogPage: (pageDelta) => harnessOptions.scrollLogPage?.(pageDelta),
     getTerminalSize: () => harnessOptions.terminalSize ?? { width: 120, height: 40 },
     getPreviewConfig: () => ({
       position: "auto",
@@ -1426,6 +1428,19 @@ test("scrollDiffViewer is a no-op when no scrollbox is registered", () => {
   const harness = createControllerHarness({});
 
   expect(() => harness.controller.scrollDiffViewer(1, 0)).not.toThrow();
+  harness.store.dispose();
+});
+
+test("scrollLogPage delegates viewport movement to the renderer scroller", () => {
+  const calls: number[] = [];
+  const harness = createControllerHarness({
+    scrollLogPage: (pageDelta) => calls.push(pageDelta),
+  });
+
+  harness.controller.scrollLogPage(0.5);
+  harness.controller.scrollLogPage(-0.5);
+
+  expect(calls).toEqual([0.5, -0.5]);
   harness.store.dispose();
 });
 

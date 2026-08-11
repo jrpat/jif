@@ -159,6 +159,8 @@ export const defaultKeymap: Keymap = {
     down: alias("move-down"),
     k: "move-up",
     up: alias("move-up"),
+    ")": "scroll-log-down-half-page",
+    "(": "scroll-log-up-half-page",
     G: "jump-to-bottom",
     ":": "command-bar",
     "ctrl-;": alias("command-bar"),

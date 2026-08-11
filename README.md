@@ -170,6 +170,7 @@ Viewing and navigating the revision log.
 |-----|---------|-------------|
 | `j` / `↓` | move-down | Move through revisions or files |
 | `k` / `↑` | move-up | Move through revisions or files |
+| `)` / `(` | scroll-log-down-half-page / scroll-log-up-half-page | Scroll the main log down / up by half a page |
 | `J` | move-parent | Follow the graph to the nearest visible parent, skipping branches |
 | `K` | move-child | Follow the graph to the nearest visible child, skipping branches |
 | `alt-j` | jump-to-next-divergent | When the focused revision is divergent (showing the `/N` suffix), cycle to the next visible sibling sharing its change-id |
@@ -893,6 +894,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `revertOperation()` | Revert the focused operation |
 | `restrictRevsetToFocusedFile()` | Show revisions that changed the focused file |
 | `scrollDiffViewer(rowDelta, colDelta)` | Scroll the diff viewer by rows and columns |
+| `scrollLogPage(pageDelta)` | Scroll the main log by a fraction of its viewport (`0.5` is half a page) |
 | `scrollHelpToast(rowDelta)` | Scroll the visible help toast |
 | `selectAllFiles()` | Select all files in the expanded revision, or clear them if all are selected |
 | `selectNextInlineConfirmationOption()` | Move to the next inline confirmation option |
