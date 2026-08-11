@@ -3,6 +3,25 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.9.0 — 2026-08-11
+
+### Highlights
+
+- Press `)` or `(` to scroll the main log down or up by half a page.
+- Long revision descriptions in the loose layout now wrap to two lines by default; set `log.looseDescriptionMaxLines` to choose the limit.
+
+### All changes
+
+- Add half-page log scrolling
+- Wrap loose-layout descriptions across configurable lines
+- Reduce idle revision border opacity to fifteen percent
+- Connect focused revision borders at shared junctions
+- Keep graph lines gray beside colored revision markers
+- Scale revision focus fill by layout
+- Stop loose-layout chips from bleeding into descriptions
+- Upgrade OpenTUI to 0.5.1
+- Prevent preview refreshes during Extra mode
+
 ## v0.8.1 — 2026-08-07
 
 ### Highlights
