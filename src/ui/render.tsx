@@ -49,6 +49,7 @@ import { MessageOverlay, StatusArea } from "./statusArea.tsx";
 import { createJifRuntime } from "./runtime.ts";
 import {
   buildRevisionGutterPlan,
+  deriveGraphContinuationLine,
   measureBoxedGraphWidth,
   measureGutterPlanWidth,
   splitGraphTitleSegments,
@@ -1682,8 +1683,11 @@ export function RevisionItem(props: {
   const activeGraphWidth = () => isBoxedLayout() ? inlineGraphWidth() : superGraphWidth();
   const activeGraphTail = () => isBoxedLayout() ? inlineGraphTail() : superGutterPlan().tail;
   const activeGraphDetail = () => activeGutterPlan().detail;
-  const effectiveHeaderRowCount = () =>
-    props.revision.marker === "elided" ? 1 : layoutPlan().header.rowCount;
+  const descriptionLineLimit = () =>
+    props.state.layout === "loose" ? props.config.log.looseDescriptionMaxLines : 1;
+  const descriptionGraphContinuation = createMemo(() =>
+    deriveGraphContinuationLine(props.revision.graphRows[1] ?? activeGutterPlan().subtitle)
+  );
   const descriptionSlotLayout = () => layoutPlan().header.slots.description;
   const commandSlotLayout = () => layoutPlan().header.slots.command;
   const showsTopNarrowConnector = () =>
@@ -1776,6 +1780,23 @@ export function RevisionItem(props: {
                 {padRight(gutterPlan().subtitle, activeGraphWidth())}
               </text>
             </box>
+            <box
+              visible={props.state.layout === "loose" && props.revision.marker !== "elided"}
+              width="100%"
+              height={0}
+              maxHeight={Math.max(0, descriptionLineLimit() - 1)}
+              flexGrow={1}
+              overflow="hidden"
+              flexDirection="column"
+            >
+              <Index each={Array.from({ length: Math.max(0, descriptionLineLimit() - 1) })}>
+                {() => (
+                  <text fg={continuationGraphColor()}>
+                    {padRight(descriptionGraphContinuation(), activeGraphWidth())}
+                  </text>
+                )}
+              </Index>
+            </box>
             <Index each={activeGraphTail()}>
               {(graphLine) => (
                 <text fg={continuationGraphColor()}>
@@ -1816,7 +1837,7 @@ export function RevisionItem(props: {
             <box
               id={`revision-slot-header-${props.revision.rowId}`}
               width="100%"
-              height={effectiveHeaderRowCount()}
+              height={props.revision.marker === "elided" ? 1 : undefined}
               flexDirection="column"
               position="relative"
               overflow="hidden"
@@ -1824,10 +1845,10 @@ export function RevisionItem(props: {
               <box
                 visible={props.revision.marker !== "elided"}
                 width="100%"
-                height={layoutPlan().header.rowCount}
+                height={1}
                 flexDirection="row"
                 position="relative"
-                overflow="hidden"
+                overflow={descriptionSlotLayout().placement === "positioned" ? "visible" : "hidden"}
               >
                 <box
                   id={`revision-slot-identity-${props.revision.rowId}`}
@@ -1884,7 +1905,7 @@ export function RevisionItem(props: {
                   flexGrow={descriptionSlotLayout().placement === "flow" && descriptionSlotLayout().grow ? 1 : 0}
                   flexBasis={descriptionSlotLayout().placement === "flow" && descriptionSlotLayout().grow ? 0 : undefined}
                   minWidth={0}
-                  height={1}
+                  height={descriptionLineLimit()}
                   overflow="hidden"
                   flexDirection="row"
                 >
@@ -1893,7 +1914,7 @@ export function RevisionItem(props: {
                     flexBasis={0}
                     minWidth={0}
                     fg={descriptionColor()}
-                    wrapMode="none"
+                    wrapMode={descriptionSlotLayout().placement === "positioned" ? "word" : "none"}
                     truncate={true}
                   >
                     {props.revision.description}
@@ -1930,6 +1951,20 @@ export function RevisionItem(props: {
                   />
                 </box>
               </box>
+              <text
+                visible={
+                  props.revision.marker !== "elided" &&
+                  descriptionSlotLayout().placement === "positioned"
+                }
+                width="100%"
+                maxHeight={descriptionLineLimit()}
+                overflow="hidden"
+                opacity={0}
+                wrapMode="word"
+                truncate={true}
+              >
+                {props.revision.description}
+              </text>
               <text
                 visible={props.revision.marker === "elided"}
                 width="100%"

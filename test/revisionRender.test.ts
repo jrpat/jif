@@ -39,6 +39,9 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     cycledToTight,
     longTight,
     resizedLongTight,
+    looseDescriptionDefault,
+    looseDescriptionOneLine,
+    looseDescriptionThreeLines,
     divergentFocused,
     looseChipsInline,
     oversizedBookmarkChipNormal,
@@ -93,6 +96,9 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
       initialFrame: string;
       resizedFrame: string;
     };
+    looseDescriptionDefault: string;
+    looseDescriptionOneLine: string;
+    looseDescriptionThreeLines: string;
     divergentFocused: string;
     looseChipsInline: string;
     oversizedBookmarkChipNormal: string;
@@ -193,6 +199,24 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
   expect(resizedLongTightLines[0]).toContain("this is a very");
   expect(resizedLongTightLines[0]!.length).toBeLessThanOrEqual(40);
   expect(resizedLongTightLines[1]?.trim() ?? "").toBe("");
+
+  expect(looseDescriptionDefault).toContain("alpha bravo charlie delta");
+  expect(looseDescriptionDefault).toContain("echo foxtrot golf hotel");
+  expect(looseDescriptionDefault).not.toContain("india juliet");
+  expect(
+    looseDescriptionDefault.split("\n").find((line) => line.includes("echo foxtrot")),
+  ).toStartWith("│ │");
+
+  expect(looseDescriptionOneLine).toContain("alpha bravo charlie delta");
+  expect(looseDescriptionOneLine).not.toContain("echo foxtrot");
+
+  expect(looseDescriptionThreeLines).toContain("alpha bravo charlie delta");
+  expect(looseDescriptionThreeLines).toContain("echo foxtrot golf hotel");
+  expect(looseDescriptionThreeLines).toContain("india juliet kilo lima");
+  expect(looseDescriptionThreeLines).not.toContain("mike november");
+  expect(
+    looseDescriptionThreeLines.split("\n").find((line) => line.includes("india juliet")),
+  ).toStartWith("│ │");
 
   expect(divergentFocused).toContain("sh/0 older divergent");
   expect(divergentFocused).toContain("sh/1 focused divergent");

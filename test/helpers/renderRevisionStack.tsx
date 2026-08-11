@@ -432,6 +432,49 @@ async function renderLongSuperCondensedDescriptionAfterResize() {
   };
 }
 
+async function renderLooseWrappedDescription(looseDescriptionMaxLines?: number) {
+  const revisions = [
+    createRevision(
+      "curr",
+      "alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike november",
+      ["@  ", "│  "],
+    ),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout: "loose" });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+
+  const rendered = await testRender(() => (
+    <box width={32} flexDirection="column">
+      <RevisionItem
+        fileFilterActions={store.actions}
+        state={store.state}
+        revision={store.state.revisions[0]!}
+        index={0}
+        previousRowId={null}
+        nextRowId={null}
+        config={resolveAppConfig({
+          commands: { layout: "loose" },
+          log: looseDescriptionMaxLines === undefined
+            ? undefined
+            : { looseDescriptionMaxLines },
+        })}
+        focusedRowId="curr"
+        selectedRowIds={new Set()}
+        expandedRowId={null}
+        commandTargetRowId={null}
+      />
+    </box>
+  ), { width: 32, height: 8 });
+
+  await rendered.renderOnce();
+  const frame = rendered.captureCharFrame();
+  rendered.renderer.destroy();
+  return frame;
+}
+
 async function renderDateChipWithLongDescription(layout: AppLayout) {
   const revisions = [
     createRevision(
@@ -803,6 +846,9 @@ const selectedFocusedFileBackgrounds = await renderFocusedFileBackgrounds(true);
 const cycledToTight = await renderLayoutCycleAfterMount();
 const longTight = await renderLongSuperCondensedDescription();
 const resizedLongTight = await renderLongSuperCondensedDescriptionAfterResize();
+const looseDescriptionDefault = await renderLooseWrappedDescription();
+const looseDescriptionOneLine = await renderLooseWrappedDescription(1);
+const looseDescriptionThreeLines = await renderLooseWrappedDescription(3);
 const divergentFocused = await renderDivergentFocusedRevision();
 const looseChipsInline = await renderExpandedRevisionWithChips();
 const oversizedBookmarkChipNormal = await renderOversizedSideChip("normal", "bookmark");
@@ -852,6 +898,9 @@ console.log(JSON.stringify({
   cycledToTight,
   longTight,
   resizedLongTight,
+  looseDescriptionDefault,
+  looseDescriptionOneLine,
+  looseDescriptionThreeLines,
   divergentFocused,
   looseChipsInline,
   oversizedBookmarkChipNormal,

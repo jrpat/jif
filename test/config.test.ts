@@ -279,6 +279,24 @@ test("resolveAppConfig defaults log.revisionIdAdditionalChars to 0", () => {
   expect(resolved.log.revisionIdAdditionalChars).toBe(0);
 });
 
+test("resolveAppConfig defaults loose descriptions to two lines", () => {
+  const resolved = resolveAppConfig(defaultAppConfig);
+
+  expect(resolved.log.looseDescriptionMaxLines).toBe(2);
+});
+
+test("resolveAppConfig floors and clamps the loose description line limit", () => {
+  expect(resolveAppConfig({
+    log: { looseDescriptionMaxLines: 3.8 },
+  }).log.looseDescriptionMaxLines).toBe(3);
+  expect(resolveAppConfig({
+    log: { looseDescriptionMaxLines: 0 },
+  }).log.looseDescriptionMaxLines).toBe(1);
+  expect(resolveAppConfig({
+    log: { looseDescriptionMaxLines: Number.POSITIVE_INFINITY },
+  }).log.looseDescriptionMaxLines).toBe(2);
+});
+
 test("resolveAppConfig leaves bookmark and workspace label truncation disabled by default", () => {
   const resolved = resolveAppConfig(defaultAppConfig);
 

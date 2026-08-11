@@ -652,6 +652,25 @@ export default {
 </details>
 
 <details>
+<summary>Revision Descriptions</summary>
+
+The loose layout wraps revision descriptions onto at most two lines by default.
+Change that limit with `log.looseDescriptionMaxLines`:
+
+```ts
+export default {
+  log: {
+    looseDescriptionMaxLines: 3,
+  },
+} satisfies Jif.Config;
+```
+
+The value is floored and clamped to at least `1`. Normal and tight layouts keep
+descriptions on one line.
+
+</details>
+
+<details>
 <summary>Revision Chip Labels</summary>
 
 Bookmark and workspace chip labels are untruncated by default. Set one maximum

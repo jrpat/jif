@@ -154,6 +154,7 @@ export default {
   log: {
     // scrollMargin: 1,
     // revisionIdAdditionalChars: 0,
+    // looseDescriptionMaxLines: 2,
     // bookmarkLabelMaxLength: null,
     // workspaceLabelMaxLength: null,
   },
@@ -462,6 +463,7 @@ ${keymapScopes.map((scope) => `    | "${scope}"`).join("\n")};
     log?: Readonly<{
       scrollMargin?: number;
       revisionIdAdditionalChars?: number;
+      looseDescriptionMaxLines?: number;
       bookmarkLabelMaxLength?: LayoutLabelMaxLength;
       workspaceLabelMaxLength?: LayoutLabelMaxLength;
     }>;

@@ -94,6 +94,7 @@ export type AppConfig = Readonly<{
   log?: Readonly<{
     scrollMargin?: number;
     revisionIdAdditionalChars?: number;
+    looseDescriptionMaxLines?: number;
     bookmarkLabelMaxLength?: LayoutLabelMaxLength;
     workspaceLabelMaxLength?: LayoutLabelMaxLength;
   }>;
@@ -141,6 +142,7 @@ export type ResolvedAppConfig = Readonly<{
   log: Readonly<{
     scrollMargin: number;
     revisionIdAdditionalChars: number;
+    looseDescriptionMaxLines: number;
     bookmarkLabelMaxLength: ResolvedLayoutLabelMaxLength;
     workspaceLabelMaxLength: ResolvedLayoutLabelMaxLength;
   }>;
@@ -398,6 +400,9 @@ export function resolveAppConfig(
     log: {
       scrollMargin: config.log?.scrollMargin ?? 1,
       revisionIdAdditionalChars: config.log?.revisionIdAdditionalChars ?? 0,
+      looseDescriptionMaxLines: resolveLooseDescriptionMaxLines(
+        config.log?.looseDescriptionMaxLines,
+      ),
       bookmarkLabelMaxLength: resolveLayoutLabelMaxLength(
         config.log?.bookmarkLabelMaxLength,
       ),
@@ -434,6 +439,14 @@ export function resolveAppConfig(
       splitViewWidth: Math.max(0, Math.floor(config.preview?.splitViewWidth ?? 160)),
     },
   };
+}
+
+function resolveLooseDescriptionMaxLines(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) {
+    return 2;
+  }
+
+  return Math.max(1, Math.floor(value));
 }
 
 function resolveLayoutLabelMaxLength(
