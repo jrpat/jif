@@ -33,6 +33,7 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     tightExpanded,
     normalFocusedBackgrounds,
     tightFocusedBackgrounds,
+    graphTitleForegrounds,
     focusedFileBackgrounds,
     selectedFocusedFileBackgrounds,
     cycledToTight,
@@ -73,6 +74,10 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     tightFocusedBackgrounds: {
       graphBg: [number, number, number, number];
       contentBg: [number, number, number, number];
+    };
+    graphTitleForegrounds: {
+      lineFg: [number, number, number, number];
+      markerFg: [number, number, number, number];
     };
     focusedFileBackgrounds: {
       groupBg: [number, number, number, number];
@@ -157,6 +162,8 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
   expect(tight).not.toContain("─┤");
   expect(tightFocusedBackgrounds.graphBg.slice(0, 3)).toEqual(expectedTightFocusedBg);
   expect(tightFocusedBackgrounds.contentBg.slice(0, 3)).toEqual(expectedTightFocusedBg);
+  expect(graphTitleForegrounds.lineFg.slice(0, 3)).toEqual([119, 119, 119]);
+  expect(graphTitleForegrounds.markerFg.slice(0, 3)).toEqual([170, 0, 255]);
   expect(focusedFileBackgrounds.groupBg.slice(0, 3)).toEqual([17, 17, 17]);
   expect(focusedFileBackgrounds.fileBg.slice(0, 3)).toEqual([34, 34, 34]);
   expect(selectedFocusedFileBackgrounds.groupBg.slice(0, 3)).toEqual([17, 17, 17]);

@@ -139,6 +139,54 @@ async function renderFocusedRevisionBackgrounds(layout: AppLayout) {
   };
 }
 
+async function renderGraphTitleForegrounds() {
+  const revisions = [
+    createRevision("curr", "immutable branch", ["│ ◆  ", "│ │  "], {
+      marker: "immutable",
+    }),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout: "normal" });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+
+  const rendered = await testRender(() => (
+    <box width={32} flexDirection="column">
+      <RevisionItem
+        fileFilterActions={store.actions}
+        state={store.state}
+        revision={store.state.revisions[0]!}
+        index={0}
+        previousRowId={null}
+        nextRowId={null}
+        config={resolveAppConfig({
+          commands: { layout: "normal" },
+          colorScheme: {
+            colors: {
+              graphImmutable: "#aa00ff",
+              textTertiary: "#777777",
+            },
+          },
+        })}
+        focusedRowId={null}
+        selectedRowIds={new Set()}
+        expandedRowId={null}
+        commandTargetRowId={null}
+      />
+    </box>
+  ), { width: 32, height: 4 });
+
+  await rendered.renderOnce();
+  const spans = rendered.captureSpans();
+  rendered.renderer.destroy();
+
+  return {
+    lineFg: findLineSpan(spans, "cu immutable branch", "│").fg.toInts(),
+    markerFg: findLineSpan(spans, "cu immutable branch", "◆").fg.toInts(),
+  };
+}
+
 async function renderFocusedFileBackgrounds(selected: boolean) {
   const revisions = [
     createRevision("curr", "branch", ["@  ", "│  "], {
@@ -749,6 +797,7 @@ const tight = await renderRevisionStack("tight", "curr");
 const tightExpanded = await renderRevisionStack("tight", "curr", "curr");
 const normalFocusedBackgrounds = await renderFocusedRevisionBackgrounds("normal");
 const tightFocusedBackgrounds = await renderFocusedRevisionBackgrounds("tight");
+const graphTitleForegrounds = await renderGraphTitleForegrounds();
 const focusedFileBackgrounds = await renderFocusedFileBackgrounds(false);
 const selectedFocusedFileBackgrounds = await renderFocusedFileBackgrounds(true);
 const cycledToTight = await renderLayoutCycleAfterMount();
@@ -797,6 +846,7 @@ console.log(JSON.stringify({
   tightExpanded,
   normalFocusedBackgrounds,
   tightFocusedBackgrounds,
+  graphTitleForegrounds,
   focusedFileBackgrounds,
   selectedFocusedFileBackgrounds,
   cycledToTight,

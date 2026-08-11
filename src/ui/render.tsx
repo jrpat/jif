@@ -1749,7 +1749,11 @@ export function RevisionItem(props: {
               <Index each={splitGraphTitleSegments(padRight(activeGutterPlan().title, activeGraphWidth()))}>
                 {(segment) => (
                   <text
-                    fg={segment().isMarker && props.revision.hasConflict ? colors().statusError : titleGraphColor()}
+                    fg={
+                      segment().isMarker
+                        ? (props.revision.hasConflict ? colors().statusError : titleGraphColor())
+                        : continuationGraphColor()
+                    }
                     attributes={segment().isMarker && props.revision.hasConflict ? TextAttributes.BOLD : undefined}
                   >
                     {segment().text}
