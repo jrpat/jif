@@ -148,7 +148,7 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
 
   expect(normalUnfocused).toContain("│ │ └");
   expect(normalUnfocused).toContain("├─╯");
-  expect(normalFocused).toContain("│ │ ┌");
+  expect(normalFocused).toContain("│ │ ├");
   expect(normalFocused).toContain("│ │ └");
   expect(normalFocused).toContain("├─╯");
   expect(normalFocusedBackgrounds.graphBg.slice(0, 3)).toEqual(expectedNormalFocusedBg);
@@ -196,8 +196,8 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
 
   expect(divergentFocused).toContain("sh/0 older divergent");
   expect(divergentFocused).toContain("sh/1 focused divergent");
-  expect(divergentFocused).toContain("│ │ ┌──────────────────────────┐");
-  expect(divergentFocused.split("│ │ ┌──────────────────────────┐").length - 1).toBe(1);
+  expect(divergentFocused).toContain("│ │ ├──────────────────────────┤");
+  expect(divergentFocused.split("│ │ ├──────────────────────────┤").length - 1).toBe(1);
 
   // Loose layout rides the chips on the revision id row and gives the
   // description a row of its own.
