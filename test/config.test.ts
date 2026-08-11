@@ -163,6 +163,18 @@ test("resolveAppConfig makes the scrollbar thumb three steps more prominent than
   expect(light.colorScheme.semanticColors.chromeScrollbarThumb).toBe("#c2c2c2");
 });
 
+test("resolveAppConfig keeps idle revision borders at fifteen percent opacity", () => {
+  const dark = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_DARK,
+  });
+  const light = resolveAppConfig(defaultAppConfig, {
+    palette: FALLBACK_PALETTE_LIGHT,
+  });
+
+  expect(dark.colorScheme.semanticColors.rowBorderIdle).toBe("#222222");
+  expect(light.colorScheme.semanticColors.rowBorderIdle).toBe("#d9d9d9");
+});
+
 test("resolveAppConfig derives adaptive diff preview colors from the palette", () => {
   const dark = resolveAppConfig(defaultAppConfig, {
     palette: FALLBACK_PALETTE_DARK,

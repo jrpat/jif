@@ -200,7 +200,7 @@ const defaultColorDefs: Record<SemanticColorKey, PaletteColorDef> = {
   fileGroupFocusedFill:   { source: "foreground",  opacity: 0.06 },
   fileFocusedFill:        { source: "foreground",  opacity: 0.12 },
   rowCommandTargetBorder: { source: "yellow",      opacity: 1.0  },
-  rowBorderIdle:          { source: "foreground",  opacity: 0.20 },
+  rowBorderIdle:          { source: "foreground",  opacity: 0.15 },
   rowBorderFocus:         { source: "foreground",  opacity: 0.50 },
   rowBorderDraftFocus:    { source: "magenta",     opacity: 0.50 },
   rowBorderSelected:      { source: "green",       opacity: 0.50 },
