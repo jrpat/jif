@@ -12,7 +12,10 @@ import type { LogSurfaceMode } from "./logSurface.ts";
 
 export type PreviewScrollPosition = Readonly<{ x: number; y: number }>;
 
-type PreviewPaneState = Pick<AppState, "focusMode" | "previewFullScreen"> & PreviewSettings;
+type PreviewPaneState = Pick<
+  AppState,
+  "focusMode" | "focusModeStack" | "previewFullScreen"
+> & PreviewSettings;
 
 /**
  * Stable presentation signals for the preview pane. Focus overlays such as

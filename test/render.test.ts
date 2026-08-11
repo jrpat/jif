@@ -1,5 +1,35 @@
 import { expect, test } from "bun:test";
-import { resolveBottomChromeLayout, shouldShowCommandPreview } from "../src/ui/bottomChrome.ts";
+import {
+  resolveBottomChromeLayout,
+  shouldShowCommandPreview,
+  shouldShowTransientShortcutPanel,
+} from "../src/ui/bottomChrome.ts";
+
+test("full-screen preview does not automatically show shortcut bindings", () => {
+  expect(shouldShowTransientShortcutPanel({
+    showsPersistentShortcutPanel: false,
+    focusMode: "preview",
+    previewFullScreen: true,
+    modeShortcutBindingCount: 11,
+    showsCommandPreview: false,
+  })).toBeFalse();
+
+  expect(shouldShowTransientShortcutPanel({
+    showsPersistentShortcutPanel: true,
+    focusMode: "preview",
+    previewFullScreen: true,
+    modeShortcutBindingCount: 11,
+    showsCommandPreview: false,
+  })).toBeFalse();
+
+  expect(shouldShowTransientShortcutPanel({
+    showsPersistentShortcutPanel: false,
+    focusMode: "preview",
+    previewFullScreen: false,
+    modeShortcutBindingCount: 11,
+    showsCommandPreview: false,
+  })).toBeTrue();
+});
 
 test("resolveBottomChromeLayout stacks transient shortcuts above the command preview", () => {
   expect(resolveBottomChromeLayout({

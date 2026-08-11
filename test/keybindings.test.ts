@@ -3,7 +3,7 @@ import { resolveConfiguredKeymap } from "../src/config/index.ts";
 import { commandDefinitions, type CommandController } from "../src/commands/definitions.ts";
 import type { AppState } from "../src/domain/types.ts";
 import { getRevisionArg } from "../src/domain/revisionIds.ts";
-import { applyShortcutFilter, createInitialState, draftConfigs, enterExtraMode, openShortcutFilter, openShortcutPanel, setShortcutFilterQuery, startCommandDraft } from "../src/state/store.ts";
+import { applyShortcutFilter, createInitialState, draftConfigs, enterExtraMode, enterPreviewMode, openShortcutFilter, openShortcutPanel, setShortcutFilterQuery, startCommandDraft } from "../src/state/store.ts";
 import { bindingCommand, defaultKeymap, type Keymap } from "../src/modes.ts";
 import {
   dispatchGlobalKey,
@@ -828,6 +828,13 @@ test("question mark activates filtering only while the shortcut panel is visible
 
   const draft = startCommandDraft(createState(), draftConfigs.rebase);
   expect(getShortcutFilterKeyAction("?", draft, defaultKeymap, true)).toBe("activate");
+});
+
+test("full-screen preview shortcuts reserve escape for the visible panel", () => {
+  const state = openShortcutPanel(enterPreviewMode(createState(), { fullScreen: true }));
+
+  expect(getShortcutFilterKeyAction("?", state, defaultKeymap, true)).toBe("activate");
+  expect(getShortcutFilterKeyAction("escape", state, defaultKeymap, true)).toBe("cancel");
 });
 
 test("shortcut filter editing reserves input keys and recognizes cancel controls", () => {
@@ -2160,6 +2167,26 @@ test("dispatchGlobalKey routes q to cancelOrBlur in op-log mode", () => {
     ...createState(),
     focusMode: "op-log",
     focusModeStack: ["revisions", "op-log"],
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "q",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["cancelOrBlur"]);
+});
+
+test("dispatchGlobalKey routes q to cancelOrBlur in preview mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "preview",
+    focusModeStack: ["revisions", "preview"],
+    previewFullScreen: true,
   };
 
   const handled = dispatchGlobalKey({

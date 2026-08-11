@@ -94,7 +94,11 @@ import {
   type ShortcutPanelLayout,
   type ShortcutSummarySegment,
 } from "./shortcutPanel.ts";
-import { resolveBottomChromeLayout, shouldShowCommandPreview } from "./bottomChrome.ts";
+import {
+  resolveBottomChromeLayout,
+  shouldShowCommandPreview,
+  shouldShowTransientShortcutPanel,
+} from "./bottomChrome.ts";
 import { resolveKeyToken } from "./keyboard.ts";
 import {
   dispatchGlobalKey,
@@ -716,12 +720,13 @@ export function JifView(props: {
     })
   );
   const showsTransientShortcutPanel = createMemo(() =>
-    !showsPersistentShortcutPanel() && (
-      store.state.focusMode === "extra" ||
-      store.state.focusMode === "preview" ||
-      (modeShortcutBindings().length > 0 &&
-        (showsCommandPreview() || store.state.focusMode === "bookmark"))
-    )
+    shouldShowTransientShortcutPanel({
+      showsPersistentShortcutPanel: showsPersistentShortcutPanel(),
+      focusMode: store.state.focusMode,
+      previewFullScreen: store.state.previewFullScreen,
+      modeShortcutBindingCount: modeShortcutBindings().length,
+      showsCommandPreview: showsCommandPreview(),
+    })
   );
   const splitsInheritedShortcuts = createMemo(() =>
     store.state.shortcutFilterQuery.trim() === "" &&

@@ -173,10 +173,15 @@ describe("effectivePreviewDiffView", () => {
 
 describe("full-screen takeover", () => {
   const WIDE = 200;
-  function pane(over: Partial<PreviewSettings> & { focusMode?: FocusMode; previewFullScreen?: boolean } = {}) {
+  function pane(over: Partial<PreviewSettings> & {
+    focusMode?: FocusMode;
+    focusModeStack?: readonly FocusMode[];
+    previewFullScreen?: boolean;
+  } = {}) {
     return {
       ...settings(),
       focusMode: "revisions" as FocusMode,
+      focusModeStack: ["revisions"] as readonly FocusMode[],
       previewFullScreen: false,
       ...over,
     };
@@ -187,6 +192,14 @@ describe("full-screen takeover", () => {
     expect(isPreviewFullScreen(pane({ focusMode: "preview" }))).toBe(false);
     // A flag left set on another surface must not blank the log.
     expect(isPreviewFullScreen(pane({ previewFullScreen: true }))).toBe(false);
+  });
+
+  test("the takeover remains active beneath shortcut filtering", () => {
+    expect(isPreviewFullScreen(pane({
+      focusMode: "shortcut-filter",
+      focusModeStack: ["revisions", "preview", "shortcut-filter"],
+      previewFullScreen: true,
+    }))).toBe(true);
   });
 
   test("the takeover shows the pane even when the split pane is switched off", () => {

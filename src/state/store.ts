@@ -376,6 +376,7 @@ const SHORTCUT_FILTER_FOCUS_MODES = new Set<FocusMode>([
   "diff-viewer",
   "notifications",
   "bookmark",
+  "preview",
   "extra",
   "shortcut-filter",
 ]);
@@ -1690,7 +1691,9 @@ export function cancelOrBlurState(state: AppState): AppState {
   }
 
   if (state.focusMode === "preview") {
-    return exitPreviewMode(state);
+    return state.shortcutPanelExpanded
+      ? closeShortcutPanel(state)
+      : exitPreviewMode(state);
   }
 
   if (state.shortcutPanelExpanded) {

@@ -54,6 +54,13 @@ export function getShortcutFilterKeyAction(
     return "activate";
   }
 
+  if (
+    shortcutPanelVisible &&
+    (normalizedKey === "escape" || normalizedKey === "ctrl-c")
+  ) {
+    return "cancel";
+  }
+
   const filterActive = filterEditing || state.shortcutFilterQuery !== "";
   if (!filterActive) {
     return "inactive";

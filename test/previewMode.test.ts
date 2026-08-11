@@ -6,6 +6,8 @@ import {
   createInitialState,
   enterPreviewMode,
   exitPreviewMode,
+  openShortcutFilter,
+  openShortcutPanel,
   openPreviewPin,
   togglePreviewFullScreen,
 } from "../src/state/store.ts";
@@ -68,6 +70,28 @@ describe("preview mode", () => {
 
   test("cancelOrBlurState exits preview mode", () => {
     expect(cancelOrBlurState(enterPreviewMode(createState())).focusMode).toBe("revisions");
+  });
+
+  test("shortcut filtering layers above a full-screen preview", () => {
+    let state = enterPreviewMode(createState(), { fullScreen: true });
+    state = openShortcutPanel(state);
+    state = openShortcutFilter(state);
+
+    expect(state.focusMode).toBe("shortcut-filter");
+    expect(state.focusModeStack).toEqual(["revisions", "preview", "shortcut-filter"]);
+
+    state = cancelOrBlurState(state);
+    expect(state.focusMode).toBe("preview");
+    expect(state.shortcutPanelExpanded).toBeTrue();
+    expect(state.previewFullScreen).toBeTrue();
+
+    state = cancelOrBlurState(state);
+    expect(state.focusMode).toBe("preview");
+    expect(state.shortcutPanelExpanded).toBeFalse();
+    expect(state.previewFullScreen).toBeTrue();
+
+    state = cancelOrBlurState(state);
+    expect(state.focusMode).toBe("revisions");
   });
 
   test("enterPreviewMode opts into the full-screen takeover", () => {
@@ -152,8 +176,8 @@ describe("preview mode", () => {
     expect(resolveCommand("op-log", "d", defaultKeymap)).toBe("show-operation-diff");
   });
 
-  test("escape is the only way out: q is inert and P is no longer bound", () => {
-    expect(isKeyExplicitlyUnbound("preview", "q", defaultKeymap)).toBeTrue();
+  test("q can fall through to global cancel while P remains unbound", () => {
+    expect(isKeyExplicitlyUnbound("preview", "q", defaultKeymap)).toBeFalse();
     expect(resolveCommand("preview", "q", defaultKeymap)).toBeNull();
     expect(resolveCommand("preview", "escape", defaultKeymap)).toBe("exit-preview-mode");
     expect(resolveCommand("preview", "P", defaultKeymap)).toBeNull();

@@ -388,9 +388,6 @@ export const defaultKeymap: Keymap = {
     // Bound explicitly, though the global escape already unwinds to the same
     // place, so the mode's own panel says how to leave it.
     escape: "exit-preview-mode",
-    // In non-root modes the global q binding becomes cancel. Preview mode is
-    // intentionally exited only by escape.
-    q: null,
   },
   extra: {},
 };

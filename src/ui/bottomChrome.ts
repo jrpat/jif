@@ -1,8 +1,30 @@
+import type { FocusMode } from "../domain/types.ts";
+
 export type BottomChromeLayout = Readonly<{
   showExpandedShortcutPanel: boolean;
   showCollapsedStatusArea: boolean;
   bottomSurfaceHeight: number;
 }>;
+
+export function shouldShowTransientShortcutPanel(args: {
+  showsPersistentShortcutPanel: boolean;
+  focusMode: FocusMode;
+  previewFullScreen: boolean;
+  modeShortcutBindingCount: number;
+  showsCommandPreview: boolean;
+}): boolean {
+  if (args.showsPersistentShortcutPanel) {
+    return false;
+  }
+
+  if (args.focusMode === "preview") {
+    return !args.previewFullScreen;
+  }
+
+  return args.focusMode === "extra" ||
+    (args.modeShortcutBindingCount > 0 &&
+      (args.showsCommandPreview || args.focusMode === "bookmark"));
+}
 
 export function shouldShowCommandPreview(args: {
   showsPromptSurface: boolean;

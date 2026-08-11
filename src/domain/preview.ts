@@ -25,9 +25,12 @@ export function isPreviewingSingleFile(
  * Preview mode, so it is never in effect outside it however the flag was left.
  */
 export function isPreviewFullScreen(
-  state: Pick<AppState, "focusMode" | "previewFullScreen">,
+  state: Pick<AppState, "focusMode" | "focusModeStack" | "previewFullScreen">,
 ): boolean {
-  return state.focusMode === "preview" && state.previewFullScreen;
+  const presentationMode = state.focusMode === "shortcut-filter"
+    ? state.focusModeStack.findLast((mode) => mode !== "shortcut-filter")
+    : state.focusMode;
+  return presentationMode === "preview" && state.previewFullScreen;
 }
 
 /**
@@ -37,7 +40,7 @@ export function isPreviewFullScreen(
  * rules that govern the split pane.
  */
 export function isPreviewPaneShown(
-  state: Pick<AppState, "focusMode" | "previewFullScreen"> & PreviewSettings,
+  state: Pick<AppState, "focusMode" | "focusModeStack" | "previewFullScreen"> & PreviewSettings,
   preview: PreviewConfig,
   terminalWidth: number,
 ): boolean {

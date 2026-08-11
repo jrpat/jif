@@ -136,7 +136,11 @@ Controls for the [preview pane](#preview-pane). Available in Normal, secondary r
 
 `ctrl+[` / `ctrl+]` require a terminal that distinguishes them from other keys via the Kitty keyboard protocol (kitty, Ghostty, WezTerm, recent iTerm2, Alacritty, foot). In terminals without it, `ctrl+[` is indistinguishable from Escape.
 
-Preview mode is entered with `d` and keeps its shortcut panel open while you read:
+Preview mode is entered with `d`. Its full-screen takeover leaves the shortcut
+panel collapsed so the diff gets all available space; press `?` whenever you
+want to see its controls. Press `?` again to filter those controls. `escape`
+clears the filter first, then dismisses the panel, and only then exits Preview
+mode:
 
 | Key | Description |
 |-----|-------------|
@@ -148,9 +152,9 @@ Preview mode is entered with `d` and keeps its shortcut panel open while you rea
 | `w` | Toggle word wrap |
 | `ctrl+enter` | In Files, toggle effectively full-file preview context |
 | `space` | Toggle between the full-screen preview and the split pane |
-| `escape` | Exit Preview mode |
+| `escape` / `q` | Exit Preview mode |
 
-Every key but `escape` keeps Preview mode active. Preview mode does not resize the pane — `space` picks between the two layouts, and `ctrl+[` / `ctrl+]` size the split from the log, where the space it is taking from is visible.
+Every key but `escape` and `q` keeps Preview mode active. Preview mode does not resize the pane — `space` picks between the two layouts, and `ctrl+[` / `ctrl+]` size the split from the log, where the space it is taking from is visible.
 
 #### Full-screen preview
 
@@ -158,7 +162,7 @@ Every key but `escape` keeps Preview mode active. Preview mode does not resize t
 
 Leaving the takeover with `space` always lands on a visible split pane: if the pane was hidden for this session it is shown, and if the `auto` layout would still hide it on this terminal, its position is pinned to the side that layout resolves to (announced with the usual position toast).
 
-`escape` exits Preview mode entirely, dropping both the takeover and any pinned diff. The composers `ctrl+d` and `i` pin their result here rather than in the [diff viewer](#diff-viewer); while a diff is pinned the pane shows it instead of following the cursor, and the header carries the exact `jj` command that produced it.
+`escape` or `q` exits Preview mode entirely, dropping both the takeover and any pinned diff. The composers `ctrl+d` and `i` pin their result here rather than in the [diff viewer](#diff-viewer); while a diff is pinned the pane shows it instead of following the cursor, and the header carries the exact `jj` command that produced it.
 
 ### Normal
 
