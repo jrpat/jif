@@ -33,7 +33,7 @@ test("default middle revisions share a connected divider", () => {
   expect(row.borderChars?.topRight).toBe(BorderChars.single.topRight);
 });
 
-test("focused row owns both shared dividers with connected junctions", () => {
+test("focused row owns both shared dividers with true corners", () => {
   const previousRow = getPolicy("default", null, "focused");
   const focusedRow = getPolicy("focused", "default", "default");
   const nextRow = getPolicy("default", "focused", null);
@@ -44,10 +44,10 @@ test("focused row owns both shared dividers with connected junctions", () => {
   expect(focusedRow.ownsTop).toBeTrue();
   expect(focusedRow.ownsBottom).toBeTrue();
   expect(focusedRow.borderSides).toEqual(["top", "right", "bottom", "left"]);
-  expect(focusedRow.borderChars?.topLeft).toBe(BorderChars.single.leftT);
-  expect(focusedRow.borderChars?.topRight).toBe(BorderChars.single.rightT);
-  expect(focusedRow.borderChars?.bottomLeft).toBe(BorderChars.single.leftT);
-  expect(focusedRow.borderChars?.bottomRight).toBe(BorderChars.single.rightT);
+  expect(focusedRow.borderChars?.topLeft).toBe(BorderChars.single.topLeft);
+  expect(focusedRow.borderChars?.topRight).toBe(BorderChars.single.topRight);
+  expect(focusedRow.borderChars?.bottomLeft).toBe(BorderChars.single.bottomLeft);
+  expect(focusedRow.borderChars?.bottomRight).toBe(BorderChars.single.bottomRight);
 
   expect(nextRow.ownsTop).toBeFalse();
   expect(nextRow.borderSides).toEqual(["right", "bottom", "left"]);
@@ -120,20 +120,20 @@ test("left corners use true corners for affected rows with mixed neighbor widths
   expect(mixedWidths.borderChars?.bottomLeft).toBe(BorderChars.single.bottomLeft);
 });
 
-test("focused row connects to neighbors at the same graph width", () => {
+test("focused row stays disconnected from neighbors at the same graph width", () => {
   const focusedSameWidth = getPolicy("focused", "default", "default", {
     current: 1, previous: 1, next: 1,
   });
-  expect(focusedSameWidth.borderChars?.topLeft).toBe(BorderChars.single.leftT);
-  expect(focusedSameWidth.borderChars?.bottomLeft).toBe(BorderChars.single.leftT);
+  expect(focusedSameWidth.borderChars?.topLeft).toBe(BorderChars.single.topLeft);
+  expect(focusedSameWidth.borderChars?.bottomLeft).toBe(BorderChars.single.bottomLeft);
 });
 
-test("focused row connects to wider neighbors with offset T-junctions", () => {
+test("focused row stays disconnected from wider neighbors", () => {
   const focusedWithWiderNeighbors = getPolicy("focused", "default", "default", {
     current: 3, previous: 1, next: 1,
   });
-  expect(focusedWithWiderNeighbors.borderChars?.topLeft).toBe(BorderChars.single.topT);
-  expect(focusedWithWiderNeighbors.borderChars?.bottomLeft).toBe(BorderChars.single.bottomT);
+  expect(focusedWithWiderNeighbors.borderChars?.topLeft).toBe(BorderChars.single.topLeft);
+  expect(focusedWithWiderNeighbors.borderChars?.bottomLeft).toBe(BorderChars.single.bottomLeft);
 });
 
 test("selected row always uses true corners regardless of graph width", () => {

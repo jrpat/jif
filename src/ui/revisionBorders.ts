@@ -7,6 +7,10 @@ import {
 
 export type RevisionRowState = "default" | "affected" | "focused" | "selected";
 
+export function revisionRowConnectsToNeighbors(rowState: RevisionRowState): boolean {
+  return rowState === "default" || rowState === "affected";
+}
+
 export function getRevisionBorderPolicy(options: Readonly<{
   rowState: RevisionRowState;
   previousRowState: RevisionRowState | null;
@@ -76,10 +80,7 @@ function getBorderChars(options: Readonly<{
   nextGraphWidth: number | null;
 }>): BorderCharacters {
   const chars: BorderCharacters = { ...BorderChars.single };
-  const useConnectedCorners =
-    options.rowState === "default" ||
-    options.rowState === "affected" ||
-    options.rowState === "focused";
+  const useConnectedCorners = revisionRowConnectsToNeighbors(options.rowState);
 
   if (options.ownsTop && options.hasPreviousRow && useConnectedCorners) {
     if (options.previousGraphWidth === options.currentGraphWidth) {

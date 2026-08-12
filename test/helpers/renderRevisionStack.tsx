@@ -600,6 +600,46 @@ async function renderDivergentFocusedRevision() {
   return frame;
 }
 
+async function renderOffsetFocusedRevision() {
+  const revisions = [
+    createRevision("prev", "above", ["○  ", "│  "]),
+    createRevision("curr", "focused", ["│ ○  ", "│ │  "]),
+    createRevision("next", "below", ["○  ", "│  "]),
+  ] as const;
+  const store = createAppStore("/tmp/repo", { layout: "normal" });
+  store.actions.applyRepositoryData({
+    repoPath: "/tmp/repo",
+    revisions,
+  });
+
+  const rendered = await testRender(() => (
+    <box width={32} flexDirection="column">
+      <For each={store.state.revisions}>
+        {(revision, index) => (
+          <RevisionItem
+            fileFilterActions={store.actions}
+            state={store.state}
+            revision={revision}
+            index={index()}
+            previousRowId={store.state.revisions[index() - 1]?.rowId ?? null}
+            nextRowId={store.state.revisions[index() + 1]?.rowId ?? null}
+            config={resolveAppConfig({ commands: { layout: "normal" } })}
+            focusedRowId="curr"
+            selectedRowIds={new Set()}
+            expandedRowId={null}
+            commandTargetRowId={null}
+          />
+        )}
+      </For>
+    </box>
+  ), { width: 32, height: 12 });
+
+  await rendered.renderOnce();
+  const frame = rendered.captureCharFrame();
+  rendered.renderer.destroy();
+  return frame;
+}
+
 async function renderExpandedRevisionWithChips() {
   const revisions = [
     createRevision("curr", "branch", ["@  ", "│  "], {
@@ -850,6 +890,7 @@ const looseDescriptionDefault = await renderLooseWrappedDescription();
 const looseDescriptionOneLine = await renderLooseWrappedDescription(1);
 const looseDescriptionThreeLines = await renderLooseWrappedDescription(3);
 const divergentFocused = await renderDivergentFocusedRevision();
+const offsetFocused = await renderOffsetFocusedRevision();
 const looseChipsInline = await renderExpandedRevisionWithChips();
 const oversizedBookmarkChipNormal = await renderOversizedSideChip("normal", "bookmark");
 const oversizedBookmarkChipTight = await renderOversizedSideChip("tight", "bookmark");
@@ -902,6 +943,7 @@ console.log(JSON.stringify({
   looseDescriptionOneLine,
   looseDescriptionThreeLines,
   divergentFocused,
+  offsetFocused,
   looseChipsInline,
   oversizedBookmarkChipNormal,
   oversizedBookmarkChipTight,

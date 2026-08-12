@@ -43,6 +43,7 @@ import {
 } from "../domain/preview.ts";
 import {
   getRevisionBorderPolicy,
+  revisionRowConnectsToNeighbors,
   type RevisionRowState,
 } from "./revisionBorders.ts";
 import { MessageOverlay, StatusArea } from "./statusArea.tsx";
@@ -1702,21 +1703,25 @@ export function RevisionItem(props: {
   const commandSlotLayout = () => layoutPlan().header.slots.command;
   const showsTopNarrowConnector = () =>
     isBoxedLayout() &&
+    revisionRowConnectsToNeighbors(effectiveRowState()) &&
     borderPolicy().ownsTop &&
     connectedPrevLeftCol() !== null &&
     currentLeftCol() < connectedPrevLeftCol()!;
   const showsTopWideConnector = () =>
     isBoxedLayout() &&
+    revisionRowConnectsToNeighbors(effectiveRowState()) &&
     borderPolicy().ownsTop &&
     connectedPrevLeftCol() !== null &&
     currentLeftCol() > connectedPrevLeftCol()!;
   const showsBottomNarrowConnector = () =>
     isBoxedLayout() &&
+    revisionRowConnectsToNeighbors(effectiveRowState()) &&
     borderPolicy().ownsBottom &&
     connectedNextLeftCol() !== null &&
     currentLeftCol() < connectedNextLeftCol()!;
   const showsBottomWideConnector = () =>
     isBoxedLayout() &&
+    revisionRowConnectsToNeighbors(effectiveRowState()) &&
     borderPolicy().ownsBottom &&
     connectedNextLeftCol() !== null &&
     currentLeftCol() > connectedNextLeftCol()!;
