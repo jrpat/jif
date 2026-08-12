@@ -3,6 +3,17 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.9.1 — 2026-08-11
+
+### Highlights
+
+No new features in this patch release.
+
+### All changes
+
+- Isolate focused revision boxes from neighboring rows
+- Polish full-screen preview shortcut behavior.
+
 ## v0.9.0 — 2026-08-11
 
 ### Highlights
