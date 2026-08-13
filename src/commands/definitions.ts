@@ -73,6 +73,7 @@ export type CommandController = Readonly<{
   startBookmarkSet: () => void;
   startBookmarkTrack: () => void;
   startBookmarkUntrack: () => void;
+  copyBookmarkName: () => void;
   toggleSelection: () => void;
   toggleFileSelection: () => void;
   selectAllFiles: () => void;
@@ -1192,6 +1193,14 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Untrack",
     description: "Untrack a remote bookmark",
     run: (controller) => controller.startBookmarkUntrack(),
+    group: "mode",
+  },
+  {
+    id: "bookmark-copy-name",
+    title: "Copy Name",
+    description: "Copy the focused revision's bookmark name to the clipboard",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.copyBookmarkName(),
     group: "mode",
   },
 ];

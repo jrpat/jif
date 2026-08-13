@@ -402,6 +402,9 @@ Pressing `b` from Normal mode enters Bookmark mode and waits for the next keystr
 | `s` | bookmark-set | Open the command bar with `b set  -r <focused>` and bookmark-name autocomplete |
 | `t` | bookmark-track | Open the command bar with `b track ` and bookmark-name autocomplete |
 | `u` | bookmark-untrack | Open the command bar with `b untrack ` and bookmark-name autocomplete |
+| `C` | bookmark-copy-name | Copy the focused revision's bookmark name to the system clipboard |
+
+Copy takes the focused revision's own bookmarks, without jj's sync (`*`) or conflict (`??`) markers. A single bookmark goes straight to the clipboard and reports as a toast. When the revision carries several, the shell command bar opens instead with `printf %s  | pbcopy` (the platform's clipboard writer: `pbcopy`, `clip`, `wl-copy`, or `xclip -selection clipboard`), the cursor in the name slot, and those bookmarks as the suggestion list.
 
 Bookmark autocomplete is sorted with the closest ancestor bookmark first (visually at the bottom of the suggestion list), then more distant ancestors, then descendants by ascending distance, then any unrelated bookmarks. For Move-to, bookmarks already pointing at the focused revision are excluded; for the other prompts they appear at the highest priority (closest to the cursor).
 
@@ -856,6 +859,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `collapseNotification()` | Collapse the focused notification |
 | `commit()` | Commit the working-copy revision |
 | `confirm()` | Confirm the active command draft, prompt, or inline confirmation |
+| `copyBookmarkName()` | Copy the focused revision's bookmark name, or open a shell copy prompt when it has several |
 | `cycleLayout()` | Cycle the revision layout |
 | `describe()` | Edit the focused revision description |
 | `editFocusedNotification()` | Open the focused notification text in `$EDITOR` |

@@ -152,6 +152,7 @@ These are the built-in ids you can bind keys to. (Scopes in parentheses are the 
 ### Bookmark mode
 - `enter-bookmark-mode`.
 - `bookmark-create`, `bookmark-move-from`, `bookmark-move-to`, `bookmark-delete`, `bookmark-forget`, `bookmark-set`, `bookmark-track`, `bookmark-untrack`.
+- `bookmark-copy-name` (copy the focused revision's bookmark name to the clipboard).
 
 ### Op log / Evolog
 - `open-operation-log`, `open-evolog`.

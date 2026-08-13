@@ -5,6 +5,7 @@ import { createAppStore } from "../src/state/appStore.ts";
 import { draftConfigs, getDisplayedCommandText } from "../src/state/store.ts";
 import type { ChangedFile, OperationLogEntry, RepositoryData, RevisionSummary } from "../src/domain/types.ts";
 import { quoteCommand } from "../src/jj/process.ts";
+import { clipboardCopyCommandText } from "../src/ui/clipboard.ts";
 import { createJifCommandController } from "../src/ui/controller.ts";
 import { effectivePreviewCols } from "../src/domain/preview.ts";
 
@@ -82,6 +83,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   anchorRange?: readonly string[];
   absorbTargets?: readonly string[];
   openReleasesPageError?: Error;
+  copyToClipboardError?: Error;
 }>) {
   const store = createAppStore(REPO_PATH);
   if (harnessOptions.revisions) {
@@ -119,6 +121,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   let restartCalls = 0;
   let executeCurrentCommandCalls = 0;
   const editorTexts: string[] = [];
+  const clipboardTexts: string[] = [];
   let reloadConfigCalls = 0;
   let openReleasesPageCalls = 0;
 
@@ -206,6 +209,12 @@ function createControllerHarness(harnessOptions: Readonly<{
         throw harnessOptions.openReleasesPageError;
       }
     },
+    copyToClipboard: async (text) => {
+      if (harnessOptions.copyToClipboardError) {
+        throw harnessOptions.copyToClipboardError;
+      }
+      clipboardTexts.push(text);
+    },
     reloadConfig: async () => {
       reloadConfigCalls += 1;
     },
@@ -266,6 +275,7 @@ function createControllerHarness(harnessOptions: Readonly<{
     refreshOptions,
     persistedLayouts,
     editorTexts,
+    clipboardTexts,
     resolveAbsorbSources,
     get suspendCalls() {
       return suspendCalls;
@@ -335,6 +345,99 @@ test("openReleasesPage reports opener failures as an error event", async () => {
     .snapshot()
     .statusMessages.filter((message) => message.level === "error");
   expect(errors.map((message) => message.text)).toContain("no browser");
+  harness.store.dispose();
+});
+
+test("copyBookmarkName copies the single bookmark straight to the clipboard", async () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "tip",
+        // The `*` marks a bookmark out of sync with its remote; it is not part
+        // of the name, so it must not reach the clipboard.
+        bookmarks: ["main*"],
+      }),
+    ],
+  });
+
+  harness.store.actions.enterBookmarkLeader();
+  harness.controller.copyBookmarkName();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(harness.clipboardTexts).toEqual(["main"]);
+  expect(harness.store.snapshot().focusMode).toBe("revisions");
+  expect(harness.store.snapshot().statusMessages.at(-1)?.text).toBe("Copied main");
+  harness.store.dispose();
+});
+
+test("copyBookmarkName reports clipboard failures as an error event", async () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "tip",
+        bookmarks: ["main"],
+      }),
+    ],
+    copyToClipboardError: new Error("no pbcopy"),
+  });
+
+  harness.controller.copyBookmarkName();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  const errors = harness.store
+    .snapshot()
+    .statusMessages.filter((message) => message.level === "error");
+  expect(errors.map((message) => message.text)).toContain("no pbcopy");
+  harness.store.dispose();
+});
+
+test("copyBookmarkName warns when the focused revision has no bookmark", async () => {
+  const harness = createControllerHarness({
+    revisions: [createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "tip" })],
+  });
+
+  harness.store.actions.enterBookmarkLeader();
+  harness.controller.copyBookmarkName();
+  await Promise.resolve();
+
+  expect(harness.clipboardTexts).toEqual([]);
+  const state = harness.store.snapshot();
+  expect(state.statusMessages.at(-1)?.level).toBe("warning");
+  expect(state.focusMode).toBe("revisions");
+  harness.store.dispose();
+});
+
+test("copyBookmarkName opens a shell copy prompt when the revision has several bookmarks", () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({
+        rowId: "aaaaaaaa",
+        revisionId: "aaaaaaaa",
+        description: "tip",
+        bookmarks: ["main*", "release"],
+      }),
+    ],
+  });
+
+  harness.store.actions.enterBookmarkLeader();
+  harness.controller.copyBookmarkName();
+
+  const state = harness.store.snapshot();
+  expect(harness.clipboardTexts).toEqual([]);
+  expect(state.focusMode).toBe("command");
+  expect(state.commandBar.kind).toBe("shell");
+  expect(state.commandBar.text).toBe(`printf %s  | ${clipboardCopyCommandText()}`);
+  expect(state.commandBarBookmark?.initialCursorOffset).toBe("printf %s ".length);
+  expect(state.commandBarBookmark?.suggestions.map((suggestion) => suggestion.name)).toEqual([
+    "main",
+    "release",
+  ]);
   harness.store.dispose();
 });
 

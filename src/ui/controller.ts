@@ -8,7 +8,9 @@ import type {
   ShellCommandOptions,
 } from "../commands/definitions.ts";
 import type { AppLayout, BookmarkSuggestion, ChangedFile, FocusMode, OperationLogEntry, RebaseSourceKind, RebaseTargetKind } from "../domain/types.ts";
+import { bookmarkNameFromLabel } from "../domain/bookmarks.ts";
 import { getChangeIdFromRevisionId, getRevisionArg } from "../domain/revisionIds.ts";
+import { clipboardCopyCommandText } from "./clipboard.ts";
 import { buildBookmarkSuggestions, type BookmarkTarget } from "../state/bookmarkSuggestions.ts";
 import { buildForceRetryPlan } from "../jj/forceRetry.ts";
 import { tokenizeCommandText } from "../jj/client.ts";
@@ -115,6 +117,7 @@ export function createJifCommandController(args: Readonly<{
   runInteractiveShellCommand: RunInteractiveShellCommand;
   openTextInEditor: OpenTextInEditor;
   openReleasesPage: () => Promise<void>;
+  copyToClipboard: (text: string) => Promise<void>;
   applyRevsetQuery: ApplyRevsetQuery;
   restoreLogRevsetFromFileFilter: RestoreLogRevsetFromFileFilter;
   switchWorkspace: SwitchWorkspace;
@@ -762,6 +765,51 @@ export function createJifCommandController(args: Readonly<{
         client,
         store,
       });
+    },
+    copyBookmarkName() {
+      const state = store.snapshot();
+      const revision = getFocusedRevision(state);
+      if (!revision) return;
+
+      const names = revision.bookmarks.map(bookmarkNameFromLabel);
+      if (names.length === 0) {
+        store.actions.exitBookmarkLeader();
+        store.actions.pushEvent("No bookmark on the focused revision.", "warning");
+        return;
+      }
+
+      // One bookmark is unambiguous, so copy it outright. Several are a choice
+      // only the user can make: hand them the pipeline with the name slot open
+      // and their names as the suggestion list.
+      const [only] = names;
+      if (names.length === 1 && only !== undefined) {
+        store.actions.exitBookmarkLeader();
+        void (async () => {
+          try {
+            await args.copyToClipboard(only);
+            store.actions.pushEvent(`Copied ${only}`, "success");
+          } catch (error) {
+            reportError(store, error);
+          }
+        })();
+        return;
+      }
+
+      const prefix = "printf %s ";
+      store.actions.startBookmarkPrompt(
+        `${prefix} | ${clipboardCopyCommandText()}`,
+        prefix.length,
+        {
+          kind: "shell",
+          focusedRevisionId: revision.revisionId,
+          suggestions: names.map((name) => ({
+            name,
+            targetChangeId: getChangeIdFromRevisionId(revision.revisionId),
+            bucket: "current" as const,
+            distance: 0,
+          })),
+        },
+      );
     },
     startSplit() {
       beginSplit(false);

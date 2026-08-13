@@ -1144,7 +1144,13 @@ export function startBookmarkPrompt(
   state: AppState,
   prefill: string,
   cursorOffset: number,
-  options: { focusedRevisionId: string; suggestions: readonly BookmarkSuggestion[] | null },
+  options: {
+    focusedRevisionId: string;
+    suggestions: readonly BookmarkSuggestion[] | null;
+    // Every `jj bookmark` flow composes on the jj bar; only the copy flow,
+    // which pipes a name into the system clipboard, opens the shell bar.
+    kind?: CommandBarKind;
+  },
 ): AppState {
   const baseStack = state.focusMode === "bookmark"
     ? getBrowseFocusModeStack(state)
@@ -1161,7 +1167,7 @@ export function startBookmarkPrompt(
     ...state,
     inlineConfirmation: null,
     commandBar: {
-      kind: "jj",
+      kind: options.kind ?? "jj",
       text: prefill,
       manual: true,
     },

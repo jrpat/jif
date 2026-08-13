@@ -126,6 +126,7 @@ import { createFocusClickGuard } from "./focusClickGuard.ts";
 import { suspendProcessToShell } from "./suspend.ts";
 import { openTextInEditor } from "./openTextInEditor.ts";
 import { openUrl, JIF_RELEASES_URL } from "./openUrl.ts";
+import { copyToClipboard } from "./clipboard.ts";
 import { hasVisibleSearchHighlights, hasVisibleSearchScope, stripAnsi } from "../search/matching.ts";
 import { getStatusHelpToastMaxBodyHeight, getStatusToastMaxBodyHeight } from "./statusMessages.ts";
 import {
@@ -451,6 +452,7 @@ export function JifView(props: {
       },
     }),
     openReleasesPage: () => openUrl({ url: JIF_RELEASES_URL }),
+    copyToClipboard: (text) => copyToClipboard({ text }),
     reloadConfig,
     refreshRepository: (options) => refreshRepository(undefined, undefined, options),
     expandElidedRevisions: runtime.expandElidedRevisions,

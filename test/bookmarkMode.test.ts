@@ -12,7 +12,8 @@ import {
   startBookmarkPrompt,
   startCommandDraft,
 } from "../src/state/store.ts";
-import { getActiveMode } from "../src/modes.ts";
+import { bookmarkNameFromLabel } from "../src/domain/bookmarks.ts";
+import { defaultKeymap, getActiveMode, resolveCommand } from "../src/modes.ts";
 
 const ROW_ONE = createRowId("11111111", "aaaaaaaa");
 const ROW_TWO = createRowId("22222222", "bbbbbbbb");
@@ -165,6 +166,37 @@ describe("bookmark leader mode", () => {
     expect(state.commandBarBookmark?.suggestions).toHaveLength(0);
   });
 
+  test("startBookmarkPrompt can open the shell bar instead of the jj bar", () => {
+    const state = startBookmarkPrompt(
+      enterBookmarkLeader(createState()),
+      "printf %s  | pbcopy",
+      "printf %s ".length,
+      {
+        kind: "shell",
+        focusedRevisionId: "bbbbbbbb",
+        suggestions: [
+          { name: "main", targetChangeId: "bbbbbbbb", bucket: "current", distance: 0 },
+        ],
+      },
+    );
+
+    expect(state.focusMode).toBe("command");
+    expect(state.commandBar.kind).toBe("shell");
+    expect(state.commandBar.text).toBe("printf %s  | pbcopy");
+    expect(state.commandBarBookmark?.initialCursorOffset).toBe("printf %s ".length);
+  });
+
+  test("startBookmarkPrompt defaults to the jj bar", () => {
+    const state = startBookmarkPrompt(
+      enterBookmarkLeader(createState()),
+      "b delete ",
+      "b delete ".length,
+      { focusedRevisionId: "bbbbbbbb", suggestions: [] },
+    );
+
+    expect(state.commandBar.kind).toBe("jj");
+  });
+
   test("cancelling a bookmark prompt clears commandBarBookmark", () => {
     const opened = startBookmarkPrompt(
       enterBookmarkLeader(createState()),
@@ -178,6 +210,33 @@ describe("bookmark leader mode", () => {
     const cancelled = cancelOrBlurState(opened);
     expect(cancelled.commandBarBookmark).toBeNull();
     expect(cancelled.commandBar.text).toBe("");
+  });
+});
+
+describe("bookmark name labels", () => {
+  test("bookmarkNameFromLabel drops jj's sync and conflict markers", () => {
+    expect(bookmarkNameFromLabel("main")).toBe("main");
+    expect(bookmarkNameFromLabel("main*")).toBe("main");
+    expect(bookmarkNameFromLabel("main??")).toBe("main");
+    expect(bookmarkNameFromLabel("main*??")).toBe("main");
+  });
+
+  test("bookmarkNameFromLabel keeps the remote suffix, which is part of the name", () => {
+    expect(bookmarkNameFromLabel("main@origin")).toBe("main@origin");
+  });
+});
+
+describe("bookmark copy binding", () => {
+  test("shift+c in bookmark mode copies the focused revision's bookmark name", () => {
+    expect(resolveCommand("bookmark", "C", defaultKeymap)).toBe("bookmark-copy-name");
+  });
+
+  // `c` creates; the shifted key must not be swallowed by it or by anything
+  // Bookmark inherits from Revision Log Navigation.
+  test("shift+c does not collide with create or an inherited binding", () => {
+    expect(resolveCommand("bookmark", "c", defaultKeymap)).toBe("bookmark-create");
+    expect(resolveCommand("revision-log", "C", defaultKeymap)).toBeNull();
+    expect(defaultKeymap._global.C).toBeUndefined();
   });
 });
 

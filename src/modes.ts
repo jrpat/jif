@@ -362,6 +362,7 @@ export const defaultKeymap: Keymap = {
     s: "bookmark-set",
     t: "bookmark-track",
     u: "bookmark-untrack",
+    C: "bookmark-copy-name",
   },
   "bookmark-move": {},
   "set-parents": {

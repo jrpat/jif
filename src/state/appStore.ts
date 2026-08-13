@@ -5,6 +5,7 @@ import type {
   AppState,
   BookmarkSuggestion,
   ChangedFile,
+  CommandBarKind,
   CommandInvocation,
   CommandDraftConfig,
   FailedCommand,
@@ -404,7 +405,11 @@ export function createAppStore(
       startBookmarkPrompt(
         prefill: string,
         cursorOffset: number,
-        options: { focusedRevisionId: string; suggestions: readonly BookmarkSuggestion[] | null },
+        options: {
+          focusedRevisionId: string;
+          suggestions: readonly BookmarkSuggestion[] | null;
+          kind?: CommandBarKind;
+        },
       ) {
         mutate((currentState) => startBookmarkPrompt(currentState, prefill, cursorOffset, options));
       },

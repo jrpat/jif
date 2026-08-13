@@ -177,6 +177,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     startBookmarkSet: () => calls.push("startBookmarkSet"),
     startBookmarkTrack: () => calls.push("startBookmarkTrack"),
     startBookmarkUntrack: () => calls.push("startBookmarkUntrack"),
+    copyBookmarkName: () => calls.push("copyBookmarkName"),
     jj: async () => {
       calls.push("jj");
     },
@@ -2140,6 +2141,39 @@ test("dispatchGlobalKey routes q to quit in normal mode", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["quit"]);
+});
+
+test("dispatchGlobalKey routes C to the bookmark copy in bookmark mode", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "bookmark",
+    focusModeStack: ["revisions", "bookmark"],
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "C",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["copyBookmarkName"]);
+});
+
+test("dispatchGlobalKey leaves C unhandled in normal mode", () => {
+  const calls: string[] = [];
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "C",
+    state: createState(),
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeFalse();
+  expect(calls).toEqual([]);
 });
 
 test("dispatchGlobalKey routes q to cancelOrBlur in files mode", () => {
