@@ -4,9 +4,13 @@ import type { AppState } from "../src/domain/types.ts";
 import { createRowId } from "../src/domain/rowIds.ts";
 import { resolveAppConfig } from "../src/config/index.ts";
 import {
+  EMPTY_RENDERED_PREVIEW,
+  completePreviewRefresh,
   createPreviewPanePresentation,
+  failPreviewRefresh,
   getPreviewTargetKey,
   resolvePreviewScrollPosition,
+  startPreviewRefresh,
 } from "../src/ui/previewRefresh.ts";
 import { createInitialState } from "../src/state/store.ts";
 
@@ -87,6 +91,49 @@ test("preview navigation resets scroll for a different logical target", () => {
     scrollLeft: 7,
     scrollTop: 23,
   })).toEqual({ x: 0, y: 0 });
+});
+
+test("starting a preview refresh retains the complete rendered preview", () => {
+  const rendered = {
+    targetKey: "old-target",
+    header: "old metadata\n\nold description",
+    diff: "old diff",
+    loading: false,
+  };
+
+  expect(startPreviewRefresh(rendered)).toEqual({
+    ...rendered,
+    loading: true,
+  });
+});
+
+test("completing a preview refresh swaps the whole rendered preview", () => {
+  expect(completePreviewRefresh("new-target", {
+    header: "new metadata\n\nnew description",
+    diff: "new diff",
+  })).toEqual({
+    targetKey: "new-target",
+    header: "new metadata\n\nnew description",
+    diff: "new diff",
+    loading: false,
+  });
+});
+
+test("a failed preview refresh keeps the previous content", () => {
+  const rendered = startPreviewRefresh({
+    targetKey: "old-target",
+    header: "old header",
+    diff: "old diff",
+    loading: false,
+  });
+
+  expect(failPreviewRefresh(rendered)).toEqual({
+    targetKey: "old-target",
+    header: "old header",
+    diff: "old diff",
+    loading: false,
+  });
+  expect(failPreviewRefresh(EMPTY_RENDERED_PREVIEW)).toBe(EMPTY_RENDERED_PREVIEW);
 });
 
 test("extra mode leaves preview presentation consumers undisturbed", () => {

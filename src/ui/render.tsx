@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { MouseButton, RGBA, StyledText, TextAttributes, type MouseEvent, type ScrollBoxRenderable, type TextChunk } from "@opentui/core";
-import { For, Index, Show, createEffect, createMemo, createRenderEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Index, Show, createEffect, createMemo, createRenderEffect, createSignal, onCleanup, onMount, untrack } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { useKeyboard, useRenderer } from "@opentui/solid";
 import { createCommandRunner } from "../commands/runner.ts";
@@ -142,9 +142,13 @@ import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 import { switchWorkspace } from "./workspaceSwitch.ts";
 import { resolveLogSurfaceMode } from "./logSurface.ts";
 import {
+  EMPTY_RENDERED_PREVIEW,
+  completePreviewRefresh,
   createPreviewPanePresentation,
+  failPreviewRefresh,
   getPreviewTargetKey,
   resolvePreviewScrollPosition,
+  startPreviewRefresh,
 } from "./previewRefresh.ts";
 import "./scrollboxRegistration.ts";
 
@@ -201,9 +205,7 @@ export function JifView(props: {
     width: Math.max(renderer.width, 1),
     height: Math.max(renderer.height, 1),
   });
-  const [previewDiff, setPreviewDiff] = createSignal("");
-  const [previewHeader, setPreviewHeader] = createSignal<string | null>(null);
-  const [previewLoading, setPreviewLoading] = createSignal(false);
+  const [renderedPreview, setRenderedPreview] = createSignal(EMPTY_RENDERED_PREVIEW);
   let previewSeq = 0;
   const previewPresentation = createPreviewPanePresentation({
     getState: () => store.state,
@@ -289,7 +291,6 @@ export function JifView(props: {
   const logPageScroller = createLogPageScroller({
     getViewport: () => logViewport,
   });
-  let renderedPreviewTargetKey: string | null = null;
   const detectAndApplyPalette = createPaletteDetector({
     renderer,
     rawConfig,
@@ -314,9 +315,7 @@ export function JifView(props: {
     actions: store.actions,
     resetViewState: () => {
       previewSeq += 1;
-      setPreviewHeader(null);
-      setPreviewDiff("");
-      setPreviewLoading(false);
+      setRenderedPreview(EMPTY_RENDERED_PREVIEW);
       setCurrentRevisionLoadLimit(DEFAULT_REPOSITORY_LOAD_LIMIT);
       setCanLoadMoreRevisions(true);
       setLoadingMoreRevisions(false);
@@ -486,9 +485,7 @@ export function JifView(props: {
     // focus-derived content until Preview mode ends.
     const pin = store.state.previewPin;
     if (pin) {
-      setPreviewHeader(pin.header);
-      setPreviewDiff(pin.diff);
-      setPreviewLoading(false);
+      setRenderedPreview(completePreviewRefresh(null, pin));
       previewViewport?.scrollTo({ x: 0, y: 0 });
       return;
     }
@@ -497,16 +494,11 @@ export function JifView(props: {
       !visible ||
       (mode !== "revisions" && mode !== "files" && mode !== "op-log" && mode !== "evolog")
     ) {
-      renderedPreviewTargetKey = null;
-      setPreviewHeader(null);
-      setPreviewDiff("");
-      setPreviewLoading(false);
+      setRenderedPreview(EMPTY_RENDERED_PREVIEW);
       return;
     }
 
     let fetcher: (() => Promise<{ diff: string; header: string | null }>) | null = null;
-    // Shown immediately (from state) while the async fetch runs.
-    let placeholderHeader: string | null = null;
 
     if (mode === "revisions") {
       const revision = getFocusedRevision(store.state);
@@ -537,63 +529,53 @@ export function JifView(props: {
     } else if (mode === "op-log") {
       const entry = getFocusedOperationLogEntry(store.state);
       if (entry) {
-        placeholderHeader = stripAnsi(entry.lines[0] ?? "").trim() || entry.id;
-        const header = placeholderHeader;
+        const header = stripAnsi(entry.lines[0] ?? "").trim() || entry.id;
         fetcher = async () => ({ diff: await client.loadOperationDiffGit(entry.id), header });
       }
     } else {
       const entry = store.state.evologEntries[store.state.focusedEvologIndex];
       const commitId = entry?.commitId;
       if (entry && commitId) {
-        placeholderHeader = stripAnsi(entry.lines[0] ?? "").trim() || commitId;
-        const header = placeholderHeader;
+        const header = stripAnsi(entry.lines[0] ?? "").trim() || commitId;
         fetcher = async () => ({ diff: await client.loadEvologEntryDiff(commitId), header });
       }
     }
-
-    setPreviewHeader(placeholderHeader);
 
     if (!fetcher) {
       // A rewritten revision temporarily has no loaded files. Keep showing the
       // same logical file preview until its refreshed file list arrives; this
       // also prevents the scrollbox from clamping its position against an
       // empty payload in the meantime.
-      if (mode === "files" && targetKey !== null && targetKey === renderedPreviewTargetKey) {
-        setPreviewLoading(true);
+      const renderedTargetKey = untrack(() => renderedPreview().targetKey);
+      if (mode === "files" && targetKey !== null && targetKey === renderedTargetKey) {
+        setRenderedPreview(startPreviewRefresh);
         return;
       }
 
-      renderedPreviewTargetKey = null;
-      setPreviewDiff("");
-      setPreviewLoading(false);
+      setRenderedPreview(EMPTY_RENDERED_PREVIEW);
       return;
     }
 
     const runFetch = fetcher;
     const timer = setTimeout(() => {
-      setPreviewLoading(true);
+      setRenderedPreview(startPreviewRefresh);
       void (async () => {
         try {
           const result = await runFetch();
           if (seq === previewSeq && store.state.repoPath === activeRoot) {
+            const renderedTargetKey = untrack(() => renderedPreview().targetKey);
             const scrollPosition = resolvePreviewScrollPosition(
-              renderedPreviewTargetKey,
+              renderedTargetKey,
               targetKey,
               previewViewport,
             );
-            setPreviewDiff(result.diff);
-            setPreviewHeader(result.header);
-            renderedPreviewTargetKey = targetKey;
+            setRenderedPreview(completePreviewRefresh(targetKey, result));
             previewViewport?.scrollTo(scrollPosition);
           }
         } catch (error) {
           if (seq === previewSeq && store.state.repoPath === activeRoot) {
-            setPreviewDiff("");
+            setRenderedPreview(failPreviewRefresh);
             store.actions.reportError(error);
-          }
-        } finally {
-          if (seq === previewSeq && store.state.repoPath === activeRoot) {
-            setPreviewLoading(false);
           }
         }
       })();
@@ -1233,14 +1215,14 @@ export function JifView(props: {
               backgroundColor={config.colorScheme.semanticColors.previewPaneFill}
             >
               <PreviewPane
-                header={previewHeader()}
+                header={renderedPreview().header}
                 headerDividerAfterLine={
                   store.state.previewPin === null && logSurfaceMode() === "revisions"
                     ? REVISION_PREVIEW_METADATA_LINE_COUNT
                     : null
                 }
-                diff={previewDiff()}
-                loading={previewLoading()}
+                diff={renderedPreview().diff}
+                loading={renderedPreview().loading}
                 viewportWidth={previewViewportWidth()}
                 config={config}
                 previewWordWrap={store.state.previewWordWrap}

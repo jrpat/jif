@@ -12,6 +12,43 @@ import type { LogSurfaceMode } from "./logSurface.ts";
 
 export type PreviewScrollPosition = Readonly<{ x: number; y: number }>;
 
+export type RenderedPreview = Readonly<{
+  targetKey: string | null;
+  header: string | null;
+  diff: string;
+  loading: boolean;
+}>;
+
+export const EMPTY_RENDERED_PREVIEW: RenderedPreview = Object.freeze({
+  targetKey: null,
+  header: null,
+  diff: "",
+  loading: false,
+});
+
+/** Keep the prior preview intact while its replacement is loading. */
+export function startPreviewRefresh(current: RenderedPreview): RenderedPreview {
+  return current.loading ? current : { ...current, loading: true };
+}
+
+/** Build one payload so Solid exposes the new header and diff together. */
+export function completePreviewRefresh(
+  targetKey: string | null,
+  result: Readonly<{ header: string | null; diff: string }>,
+): RenderedPreview {
+  return {
+    targetKey,
+    header: result.header,
+    diff: result.diff,
+    loading: false,
+  };
+}
+
+/** A failed replacement leaves the last successfully rendered content visible. */
+export function failPreviewRefresh(current: RenderedPreview): RenderedPreview {
+  return current.loading ? { ...current, loading: false } : current;
+}
+
 type PreviewPaneState = Pick<
   AppState,
   "focusMode" | "focusModeStack" | "previewFullScreen"
