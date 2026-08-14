@@ -3,6 +3,17 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.10.0 — 2026-08-14
+
+### Highlights
+
+- Press `C` in Bookmark mode to copy the focused revision's bookmark name to the system clipboard.
+
+### All changes
+
+- Swap revision previews atomically
+- Add a Bookmark-mode shortcut for copying a bookmark name
+
 ## v0.9.1 — 2026-08-11
 
 ### Highlights
