@@ -112,7 +112,7 @@ async function renderFocusedRevisionBackgrounds(layout: AppLayout) {
   });
 
   const rendered = await testRender(() => (
-    <box width={32} flexDirection="column">
+    <box width={32} flexDirection="column" backgroundColor="#010203">
       <RevisionItem
         fileFilterActions={store.actions}
         state={store.state}
@@ -134,8 +134,8 @@ async function renderFocusedRevisionBackgrounds(layout: AppLayout) {
   rendered.renderer.destroy();
 
   return {
-    graphBg: findLineSpan(spans, "cu branch", "○").bg.toInts(),
-    contentBg: findLineSpan(spans, "cu branch", "cu").bg.toInts(),
+    graphBg: findLineSpan(spans, "cu", "○").bg.toInts(),
+    contentBg: findLineSpan(spans, "cu", "cu").bg.toInts(),
   };
 }
 
@@ -878,6 +878,7 @@ const normalUnfocused = await renderRevisionStack("normal", null);
 const normalFocused = await renderRevisionStack("normal", "curr");
 const tight = await renderRevisionStack("tight", "curr");
 const tightExpanded = await renderRevisionStack("tight", "curr", "curr");
+const looseFocusedBackgrounds = await renderFocusedRevisionBackgrounds("loose");
 const normalFocusedBackgrounds = await renderFocusedRevisionBackgrounds("normal");
 const tightFocusedBackgrounds = await renderFocusedRevisionBackgrounds("tight");
 const graphTitleForegrounds = await renderGraphTitleForegrounds();
@@ -931,6 +932,7 @@ console.log(JSON.stringify({
   normalFocused,
   tight,
   tightExpanded,
+  looseFocusedBackgrounds,
   normalFocusedBackgrounds,
   tightFocusedBackgrounds,
   graphTitleForegrounds,

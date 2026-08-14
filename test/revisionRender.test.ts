@@ -31,6 +31,7 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     normalFocused,
     tight,
     tightExpanded,
+    looseFocusedBackgrounds,
     normalFocusedBackgrounds,
     tightFocusedBackgrounds,
     graphTitleForegrounds,
@@ -71,6 +72,10 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
     normalFocused: string;
     tight: string;
     tightExpanded: string;
+    looseFocusedBackgrounds: {
+      graphBg: [number, number, number, number];
+      contentBg: [number, number, number, number];
+    };
     normalFocusedBackgrounds: {
       graphBg: [number, number, number, number];
       contentBg: [number, number, number, number];
@@ -133,6 +138,7 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
   };
 
   const focusedBgByLayout = resolveAppConfig({}).colorScheme.rowFocusedFillByLayout;
+  const expectedLooseFocusedBg = hexToRgb(focusedBgByLayout.loose!);
   const expectedNormalFocusedBg = hexToRgb(focusedBgByLayout.normal!);
   const expectedTightFocusedBg = hexToRgb(focusedBgByLayout.tight!);
 
@@ -161,7 +167,9 @@ test("normal-layout branch elbow rows keep gutter dividers aligned with focused 
   expect(normalFocused).toContain("│ │ └─");
   expect(normalFocused).not.toContain("│ │ ├─");
   expect(normalFocused).toContain("├─╯");
-  expect(normalFocusedBackgrounds.graphBg.slice(0, 3)).toEqual(expectedNormalFocusedBg);
+  expect(looseFocusedBackgrounds.graphBg.slice(0, 3)).toEqual([1, 2, 3]);
+  expect(looseFocusedBackgrounds.contentBg.slice(0, 3)).toEqual(expectedLooseFocusedBg);
+  expect(normalFocusedBackgrounds.graphBg.slice(0, 3)).toEqual([1, 2, 3]);
   expect(normalFocusedBackgrounds.contentBg.slice(0, 3)).toEqual(expectedNormalFocusedBg);
 
   expect(tight).toContain("├─╯");

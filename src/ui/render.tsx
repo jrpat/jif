@@ -1640,14 +1640,16 @@ export function RevisionItem(props: {
       colors: colors(),
     })
   );
-  const rowBackgroundColor = createMemo(() =>
+  const resolveRowBackgroundColor = (focused: boolean) =>
     getRevisionRowBackgroundColor({
-      focused: isFocused(),
+      focused,
       selected: isSelected(),
       commandRoleFill: commandRoleColors()?.rowFill,
       affected: isAffected(),
       colors: { ...colors(), rowFocusedFill: focusFillColor() },
-    })
+    });
+  const rowBackgroundColor = createMemo(() =>
+    resolveRowBackgroundColor(isFocused())
   );
   const commandChipBackgroundColor = createMemo(() =>
     isAbsorbDefaultDeselected()
@@ -1674,6 +1676,13 @@ export function RevisionItem(props: {
   }));
   const superGraphWidth = createMemo(() => measureGutterPlanWidth(superGutterPlan()));
   const isBoxedLayout = () => layoutPlan().contentFrame === "bordered";
+  // Boxed layouts keep cursor focus inside the content frame so the graph
+  // remains visually separate. The unboxed tight layout still fills the row.
+  const outerRowBackgroundColor = createMemo(() =>
+    isBoxedLayout() && isFocused() && commandRoleColors() === null
+      ? resolveRowBackgroundColor(false)
+      : rowBackgroundColor()
+  );
   const activeGutterPlan = () => isBoxedLayout() ? gutterPlan() : superGutterPlan();
   const activeGraphWidth = () => isBoxedLayout() ? inlineGraphWidth() : superGraphWidth();
   const activeGraphTail = () => isBoxedLayout() ? inlineGraphTail() : superGutterPlan().tail;
@@ -1715,7 +1724,7 @@ export function RevisionItem(props: {
       id={`revision-${props.revision.rowId}`}
       width="100%"
       flexDirection="column"
-      backgroundColor={rowBackgroundColor()}
+      backgroundColor={outerRowBackgroundColor()}
       opacity={anyExpanded() && !isExpanded() ? 0.6 : 1}
       onMouseDown={(event: MouseEvent) => {
         if (event.button !== MouseButton.LEFT) return;
