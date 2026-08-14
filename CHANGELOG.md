@@ -3,6 +3,16 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.10.1 — 2026-08-14
+
+### Highlights
+
+No new features in this patch release.
+
+### All changes
+
+- Keep focus fill inside boxed revision rows
+
 ## v0.10.0 — 2026-08-14
 
 ### Highlights
