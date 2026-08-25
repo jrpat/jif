@@ -3,6 +3,20 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.11.0 — 2026-08-25
+
+### Highlights
+
+- Revision previews now show the bookmarks pointing at the focused revision in their metadata.
+- `bookmark track` completion now suggests every tracked and untracked remote bookmark as an exact `name@remote` symbol.
+- Press `z` to center the focused revision, operation, or evolog entry in the viewport.
+
+### All changes
+
+- Show bookmarks in revision preview metadata
+- Autosuggest remote bookmarks when composing 'bookmark track'
+- Add command to center focused log rows
+
 ## v0.10.1 — 2026-08-14
 
 ### Highlights
