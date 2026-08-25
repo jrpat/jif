@@ -65,7 +65,7 @@ import {
   buildRevisionChangeIdSegments,
   formatRelativeAgo,
   formatRevisionPreviewHeader,
-  REVISION_PREVIEW_METADATA_LINE_COUNT,
+  getRevisionPreviewMetadataLineCount,
   getRevisionChangeIdDisplayLength,
   getRevisionCommandRoleColors,
   getRevisionChangeIdColors,
@@ -1224,7 +1224,7 @@ export function JifView(props: {
                 header={renderedPreview().header}
                 headerDividerAfterLine={
                   store.state.previewPin === null && logSurfaceMode() === "revisions"
-                    ? REVISION_PREVIEW_METADATA_LINE_COUNT
+                    ? getRevisionPreviewMetadataLineCount(renderedPreview().header)
                     : null
                 }
                 diff={renderedPreview().diff}

@@ -657,6 +657,7 @@ test("revision preview metadata loads ids, signatures, dates, and the full descr
     "2026-07-24 10:30:00",
     "Grace Hopper",
     "grace@example.com",
+    "main\nfeature/ui",
     "A full revision description",
   ].join("\u001f");
 
@@ -679,6 +680,7 @@ test("revision preview metadata loads ids, signatures, dates, and the full descr
     committerLocalTimestamp: "2026-07-24 10:30:00",
     committerName: "Grace Hopper",
     committerEmail: "grace@example.com",
+    bookmarks: ["main", "feature/ui"],
     description: "A full revision description",
   });
   expect(calls).toEqual([{
@@ -690,7 +692,7 @@ test("revision preview metadata loads ids, signatures, dates, and the full descr
       "-r",
       "abc",
       "-T",
-      'change_id ++ "\u001f" ++ commit_id ++ "\u001f" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "\u001f" ++ author.name() ++ "\u001f" ++ author.email() ++ "\u001f" ++ committer.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "\u001f" ++ committer.name() ++ "\u001f" ++ committer.email() ++ "\u001f" ++ description',
+      'change_id ++ "\u001f" ++ commit_id ++ "\u001f" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "\u001f" ++ author.name() ++ "\u001f" ++ author.email() ++ "\u001f" ++ committer.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "\u001f" ++ committer.name() ++ "\u001f" ++ committer.email() ++ "\u001f" ++ bookmarks.map(|bookmark| bookmark.name()).join("\\n") ++ "\u001f" ++ description',
     ],
     options: { workingCopy: "read-only" },
   }]);
@@ -743,7 +745,13 @@ test("JjClient loads a real sample repository", async () => {
   expect(previewMetadata.committerLocalTimestamp).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
   expect(previewMetadata.committerName).not.toBe("");
   expect(previewMetadata.committerEmail).toContain("@");
+  expect(previewMetadata.bookmarks).toEqual(previewRevision!.bookmarks);
   expect(previewMetadata.description.trim().split("\n")[0]).toBe(previewRevision!.description);
+
+  const bookmarkedRevision = repository.revisions.find((revision) => revision.bookmarks.length > 0);
+  expect(bookmarkedRevision).toBeDefined();
+  const bookmarkedMetadata = await client.loadRevisionPreviewMetadata(bookmarkedRevision!.revisionId);
+  expect(bookmarkedMetadata.bookmarks).toEqual(bookmarkedRevision!.bookmarks);
 
   const knownFiles = await client.loadKnownFiles();
   expect(knownFiles).toContain("src/app.ts");

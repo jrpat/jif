@@ -7,7 +7,7 @@ import {
   resolveAppConfig,
 } from "../../src/config/index.ts";
 import { PreviewPane } from "../../src/ui/PreviewPane.tsx";
-import { REVISION_PREVIEW_METADATA_LINE_COUNT } from "../../src/ui/revisionHeader.ts";
+import { getRevisionPreviewMetadataLineCount } from "../../src/ui/revisionHeader.ts";
 import "../../src/ui/scrollboxRegistration.ts";
 
 const originalConsoleLog = console.log;
@@ -275,17 +275,21 @@ index 3333333..4444444 100644
 ${Array.from({ length: 40 }, (_, i) => `+betaline${i}`).join("\n")}
 `;
 
-const withHeader = await capture(
-  [
+const revisionHeader = [
     "Change ID: qpvuntsmwlqt",
     "Commit ID: 0123456789abcdef",
     "Committer: 2026-07-24 10:30:00 · Grace <g@x.co>",
     "Author   : 2026-07-23 09:15:00 · Ada <a@x.co>",
+    "Bookmarks:",
+    "  main",
+    "  feature/ui",
     "",
     "Add a preview pane that word-wraps its full description across the pane",
-  ].join("\n"),
+  ].join("\n");
+const withHeader = await capture(
+  revisionHeader,
   multiFileDiff,
-  { headerDividerAfterLine: REVISION_PREVIEW_METADATA_LINE_COUNT },
+  { headerDividerAfterLine: getRevisionPreviewMetadataLineCount(revisionHeader) },
 );
 // Header carries a unique token so we can tell whether it scrolled off-screen.
 const scrollingHeader = await capture("ZZHEADERZZ revision summary", tallDiff, {

@@ -5,7 +5,12 @@ import type { RevisionRowState } from "./revisionBorders.ts";
 const NO_DESCRIPTION_PLACEHOLDER = "(no description)";
 const EMPTY_NO_DESCRIPTION_PLACEHOLDER = "(empty) (no description)";
 
-export const REVISION_PREVIEW_METADATA_LINE_COUNT = 4;
+export function getRevisionPreviewMetadataLineCount(header: string | null): number | null {
+  if (header === null) return null;
+
+  const separatorLineIndex = header.split("\n").findIndex((line) => line.length === 0);
+  return separatorLineIndex >= 0 ? separatorLineIndex : null;
+}
 
 export type RevisionChangeIdSegment = Readonly<{
   kind: "prefix" | "suffix";
@@ -231,16 +236,21 @@ export function formatRevisionPreviewHeader(
     committerLocalTimestamp: string;
     committerName: string;
     committerEmail: string;
+    bookmarks: readonly string[];
     description: string;
   }>,
   fallbackDescription: string,
 ): string {
   const description = metadata.description.trim() || fallbackDescription;
+  const bookmarkLines = metadata.bookmarks.length > 0
+    ? ["Bookmarks:", ...metadata.bookmarks.map((bookmark) => `  ${bookmark}`)]
+    : [];
   return [
     `Change ID: ${metadata.changeId}`,
     `Commit ID: ${metadata.commitId}`,
     `Committer: ${metadata.committerLocalTimestamp} · ${metadata.committerName} <${metadata.committerEmail}>`,
     `Author   : ${metadata.authorLocalTimestamp} · ${metadata.authorName} <${metadata.authorEmail}>`,
+    ...bookmarkLines,
     "",
     description,
   ].join("\n");

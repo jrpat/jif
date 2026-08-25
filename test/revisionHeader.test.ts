@@ -4,6 +4,7 @@ import {
   buildRevisionChangeIdSegments,
   formatRelativeAgo,
   formatRevisionPreviewHeader,
+  getRevisionPreviewMetadataLineCount,
   getRevisionChangeIdDisplayLength,
   getRevisionCommandRoleColors,
   getRevisionChangeIdColors,
@@ -302,12 +303,16 @@ test("formatRevisionPreviewHeader puts revision metadata before the description"
     committerLocalTimestamp: "2026-07-24 10:30:00",
     committerName: "Grace Hopper",
     committerEmail: "grace@example.com",
+    bookmarks: ["main", "feature/ui"],
     description: "Subject\n\nBody",
   }, "(no description)")).toBe([
     "Change ID: qpvuntsmwlqt",
     "Commit ID: 0123456789abcdef",
     "Committer: 2026-07-24 10:30:00 · Grace Hopper <grace@example.com>",
     "Author   : 2026-07-23 09:15:00 · Ada Lovelace <ada@example.com>",
+    "Bookmarks:",
+    "  main",
+    "  feature/ui",
     "",
     "Subject",
     "",
@@ -325,8 +330,39 @@ test("formatRevisionPreviewHeader retains the no-description placeholder", () =>
     committerLocalTimestamp: "2026-07-24 10:30:00",
     committerName: "Grace Hopper",
     committerEmail: "grace@example.com",
+    bookmarks: [],
     description: "",
-  }, "(empty) (no description)")).toEndWith("\n\n(empty) (no description)");
+  }, "(empty) (no description)")).toBe([
+    "Change ID: qpvuntsmwlqt",
+    "Commit ID: 0123456789abcdef",
+    "Committer: 2026-07-24 10:30:00 · Grace Hopper <grace@example.com>",
+    "Author   : 2026-07-23 09:15:00 · Ada Lovelace <ada@example.com>",
+    "",
+    "(empty) (no description)",
+  ].join("\n"));
+});
+
+test("getRevisionPreviewMetadataLineCount finds the description divider after bookmark rows", () => {
+  expect(getRevisionPreviewMetadataLineCount([
+    "Change ID: qpvuntsmwlqt",
+    "Commit ID: 0123456789abcdef",
+    "Committer: committer",
+    "Author   : author",
+    "Bookmarks:",
+    "  main",
+    "  feature/ui",
+    "",
+    "Subject",
+  ].join("\n"))).toBe(7);
+
+  expect(getRevisionPreviewMetadataLineCount([
+    "Change ID: qpvuntsmwlqt",
+    "Commit ID: 0123456789abcdef",
+    "Committer: committer",
+    "Author   : author",
+    "",
+    "Subject",
+  ].join("\n"))).toBe(4);
 });
 
 test("getRevisionSelectionMarker fills the one-character slot after the change id without shifting layout", () => {

@@ -96,13 +96,17 @@ test("PreviewPane renders split per-file diffs through the built-in diff compone
   const commitIdIndex = result.withHeader.lines.findIndex((line) => line.includes("Commit ID:"));
   const authorIndex = result.withHeader.lines.findIndex((line) => line.includes("Author   :"));
   const committerIndex = result.withHeader.lines.findIndex((line) => line.includes("Committer:"));
+  const bookmarksIndex = result.withHeader.lines.findIndex((line) => line.includes("Bookmarks:"));
+  const lastBookmarkIndex = result.withHeader.lines.findIndex((line) => line.includes("feature/ui"));
   const firstDividerIndex = result.withHeader.lines.findIndex((line) => line.includes("─"));
   const descriptionIndex = result.withHeader.lines.findIndex((line) => line.includes("Add a preview pane"));
   expect(changeIdIndex).toBe(firstContentIndex);
   expect(commitIdIndex).toBe(changeIdIndex + 1);
   expect(committerIndex).toBe(commitIdIndex + 1);
   expect(authorIndex).toBe(committerIndex + 1);
-  expect(firstDividerIndex).toBe(authorIndex + 1);
+  expect(bookmarksIndex).toBe(authorIndex + 1);
+  expect(lastBookmarkIndex).toBe(bookmarksIndex + 2);
+  expect(firstDividerIndex).toBe(lastBookmarkIndex + 1);
   expect(result.withHeader.lines[firstDividerIndex + 1]?.trim()).toBe("");
   expect(descriptionIndex).toBe(firstDividerIndex + 2);
   expect(withHeaderText).toContain("preview");

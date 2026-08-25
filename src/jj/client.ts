@@ -51,6 +51,7 @@ export type RevisionPreviewMetadata = Readonly<{
   committerLocalTimestamp: string;
   committerName: string;
   committerEmail: string;
+  bookmarks: readonly string[];
   description: string;
 }>;
 
@@ -298,7 +299,7 @@ export class JjClient {
         "-r",
         revisionArg,
         "-T",
-        `change_id ++ "${FIELD_SEPARATOR}" ++ commit_id ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ author.name() ++ "${FIELD_SEPARATOR}" ++ author.email() ++ "${FIELD_SEPARATOR}" ++ committer.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ committer.name() ++ "${FIELD_SEPARATOR}" ++ committer.email() ++ "${FIELD_SEPARATOR}" ++ description`,
+        `change_id ++ "${FIELD_SEPARATOR}" ++ commit_id ++ "${FIELD_SEPARATOR}" ++ author.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ author.name() ++ "${FIELD_SEPARATOR}" ++ author.email() ++ "${FIELD_SEPARATOR}" ++ committer.timestamp().local().format("%Y-%m-%d %H:%M:%S") ++ "${FIELD_SEPARATOR}" ++ committer.name() ++ "${FIELD_SEPARATOR}" ++ committer.email() ++ "${FIELD_SEPARATOR}" ++ bookmarks.map(|bookmark| bookmark.name()).join("\\n") ++ "${FIELD_SEPARATOR}" ++ description`,
       ],
       { workingCopy: "read-only" },
     );
@@ -311,6 +312,7 @@ export class JjClient {
       committerLocalTimestamp = "",
       committerName = "",
       committerEmail = "",
+      rawBookmarks = "",
       ...descriptionParts
     ] = result.stdout.split(FIELD_SEPARATOR);
     return {
@@ -322,6 +324,7 @@ export class JjClient {
       committerLocalTimestamp: committerLocalTimestamp.trim(),
       committerName: committerName.trim(),
       committerEmail: committerEmail.trim(),
+      bookmarks: rawBookmarks.split("\n").map((bookmark) => bookmark.trim()).filter(Boolean),
       description: descriptionParts.join(FIELD_SEPARATOR),
     };
   }
