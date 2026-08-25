@@ -117,12 +117,23 @@ export function buildComposeItems(args: {
   help: JjHelp | undefined;
   revsetItems: readonly CompletionItem[];
   bookmarks: readonly string[];
+  remoteBookmarks?: readonly string[];
   commandAliases?: readonly JjCommandAlias[];
 }): AutocompleteListItem[] {
-  const { context, help, revsetItems, bookmarks, commandAliases = [] } = args;
+  const {
+    context,
+    help,
+    revsetItems,
+    bookmarks,
+    remoteBookmarks = [],
+    commandAliases = [],
+  } = args;
+  const bookmarkCandidates = isBookmarkTrackPath(context.path)
+    ? [...new Set([...remoteBookmarks, ...bookmarks])]
+    : bookmarks;
 
   if (context.kind === "value") {
-    return buildValueItems(context, revsetItems, bookmarks);
+    return buildValueItems(context, revsetItems, bookmarkCandidates);
   }
 
   // Both subcommand and flag-or-subcommand kinds need the loaded model.
@@ -138,7 +149,7 @@ export function buildComposeItems(args: {
     // Bookmark-name positional (e.g. `jj bookmark set `): surface bookmark
     // names alongside flags unless the user is clearly typing a flag.
     if (!dash && context.path[0] === "bookmark" && isBookmarkNamePositional(help)) {
-      for (const name of fuzzyFilter(context.partial, bookmarks, (b) => b)) {
+      for (const name of fuzzyFilter(context.partial, bookmarkCandidates, (b) => b)) {
         items.push({ id: `bmname:${name}`, tag: "bm", text: name });
       }
     }
@@ -179,6 +190,10 @@ export function buildComposeItems(args: {
   }
 
   return items;
+}
+
+function isBookmarkTrackPath(path: readonly string[]): boolean {
+  return path.length === 2 && path[0] === "bookmark" && path[1] === "track";
 }
 
 function buildValueItems(

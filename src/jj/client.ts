@@ -450,6 +450,27 @@ export class JjClient {
     }
   }
 
+  async loadRemoteBookmarks(): Promise<string[]> {
+    try {
+      const template = 'if(remote, name ++ "@" ++ remote ++ "\\n", "")';
+      const result = await this.runJj([
+        "bookmark",
+        "list",
+        "--all-remotes",
+        "--color",
+        "never",
+        "--template",
+        template,
+      ]);
+      return result.stdout
+        .split("\n")
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0);
+    } catch {
+      return [];
+    }
+  }
+
   async loadBookmarkTargets(): Promise<readonly { name: string; changeId: string }[]> {
     try {
       const template = `if(remote, "", name ++ "\\t" ++ self.normal_target().change_id().shortest(8) ++ "\\n")`;

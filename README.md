@@ -401,13 +401,13 @@ Pressing `b` from Normal mode enters Bookmark mode and waits for the next keystr
 | `d` | bookmark-delete | Open the command bar with `b delete ` and bookmark-name autocomplete |
 | `f` | bookmark-forget | Open the command bar with `b forget ` and bookmark-name autocomplete |
 | `s` | bookmark-set | Open the command bar with `b set  -r <focused>` and bookmark-name autocomplete |
-| `t` | bookmark-track | Open the command bar with `b track ` and bookmark-name autocomplete |
+| `t` | bookmark-track | Open the command bar with `b track ` and autocomplete for local names plus every exact `name@remote` bookmark symbol |
 | `u` | bookmark-untrack | Open the command bar with `b untrack ` and bookmark-name autocomplete |
 | `C` | bookmark-copy-name | Copy the focused revision's bookmark name to the system clipboard |
 
 Copy takes the focused revision's own bookmarks, without jj's sync (`*`) or conflict (`??`) markers. A single bookmark goes straight to the clipboard and reports as a toast. When the revision carries several, the shell command bar opens instead with `printf %s  | pbcopy` (the platform's clipboard writer: `pbcopy`, `clip`, `wl-copy`, or `xclip -selection clipboard`), the cursor in the name slot, and those bookmarks as the suggestion list.
 
-Bookmark autocomplete is sorted with the closest ancestor bookmark first (visually at the bottom of the suggestion list), then more distant ancestors, then descendants by ascending distance, then any unrelated bookmarks. For Move-to, bookmarks already pointing at the focused revision are excluded; for the other prompts they appear at the highest priority (closest to the cursor).
+Bookmark autocomplete is sorted with the closest ancestor bookmark first (visually at the bottom of the suggestion list), then more distant ancestors, then descendants by ascending distance, then any unrelated bookmarks. For Move-to, bookmarks already pointing at the focused revision are excluded; for the other prompts they appear at the highest priority (closest to the cursor). Track puts exact remote bookmark symbols first and includes tracked and untracked bookmarks from every remote.
 
 ### Search
 
@@ -1117,7 +1117,7 @@ Press `-` while composing to flip between short and long flag names. Press `:` a
 
 The `:` command bar has two views: structured **complete-at-point**, and your **command history**. It always opens in complete-at-point, and you switch to history at any time with `ctrl-h`. With an empty input you can also just press `:` again — a `:` typed as the first-and-only character is treated as the toggle command rather than text, so `:` `:` drops you straight into history. History is the alternate view, so it is drawn with a double border; complete-at-point uses the plain single border. Switching into history is a no-op when you have none.
 
-Complete-at-point suggests the next thing a `jj` command needs: subcommands, configured command aliases, flags, revisions, enum values, and bookmark names. `tab` inserts the current suggestion and advances to the next thing to complete; the arrows / `ctrl-n`,`ctrl-p` / `ctrl-j`,`ctrl-k` move through the list. `enter` runs the command, unless you have moved to a suggestion, in which case it accepts that suggestion. The flag and value metadata comes straight from `jj`'s own help, so it matches your installed `jj`; command aliases come from `jj config list aliases`, excluding aliases that start with `util`. The `>` shell command bar is unchanged (history only).
+Complete-at-point suggests the next thing a `jj` command needs: subcommands, configured command aliases, flags, revisions, enum values, and bookmark names. For `bookmark track`, it supplements local names with every tracked and untracked remote bookmark as an exact `name@remote` symbol. `tab` inserts the current suggestion and advances to the next thing to complete; the arrows / `ctrl-n`,`ctrl-p` / `ctrl-j`,`ctrl-k` move through the list. `enter` runs the command, unless you have moved to a suggestion, in which case it accepts that suggestion. The flag and value metadata comes straight from `jj`'s own help, so it matches your installed `jj`; command aliases come from `jj config list aliases`, excluding aliases that start with `util`. The `>` shell command bar is unchanged (history only).
 
 Both command bars wrap long commands and grow to half the terminal height before scrolling, so the full command stays visible without crowding out the log.
 

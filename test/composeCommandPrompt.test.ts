@@ -56,6 +56,10 @@ test("compose command bar: defaults to complete-at-point, toggles with ':'/ctrl+
   expect(result.ctrlHFromComposeToHistory).toBe(true);
   expect(result.ctrlHPreservesText).toBe(true);
 
+  // `bookmark track` loads the broader all-remotes list lazily and offers each
+  // exact remote symbol, including bookmarks from more than one remote.
+  expect(result.trackShowsAllRemoteBookmarks).toBe(true);
+
   // The shell bar has only the history view: it opens there, keeps the single
   // border (nothing is "alternate" when there is one view), and Tab navigates.
   expect(result.shellOpensInHistory).toBe(true);

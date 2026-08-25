@@ -218,6 +218,58 @@ describe("buildComposeItems", () => {
     expect(items.map((item) => item.id)).toEqual(["bmname:main", "bmname:feature/ui"]);
   });
 
+  test("bookmark track includes every exact remote bookmark symbol", () => {
+    const items = buildComposeItems({
+      context: ctx({ kind: "flag-or-subcommand", path: ["bookmark", "track"] }),
+      help: {
+        kind: "leaf",
+        hasSubcommands: false,
+        subcommands: [],
+        flags: [],
+        positionals: [{
+          token: "BOOKMARK[@REMOTE]",
+          optional: false,
+          variadic: true,
+          description: "Bookmark name patterns or remote bookmark symbols to track",
+        }],
+      },
+      revsetItems: [],
+      bookmarks: ["main", "feature/ui"],
+      remoteBookmarks: ["main@origin", "feature/ui@origin", "release@upstream"],
+    });
+
+    expect(items.map((item) => item.id)).toEqual([
+      "bmname:main@origin",
+      "bmname:feature/ui@origin",
+      "bmname:release@upstream",
+      "bmname:main",
+      "bmname:feature/ui",
+    ]);
+  });
+
+  test("other bookmark commands do not include remote bookmark symbols", () => {
+    const items = buildComposeItems({
+      context: ctx({ kind: "flag-or-subcommand", path: ["bookmark", "untrack"] }),
+      help: {
+        kind: "leaf",
+        hasSubcommands: false,
+        subcommands: [],
+        flags: [],
+        positionals: [{
+          token: "BOOKMARK[@REMOTE]",
+          optional: false,
+          variadic: true,
+          description: "Bookmark name patterns or remote bookmark symbols to untrack",
+        }],
+      },
+      revsetItems: [],
+      bookmarks: ["main"],
+      remoteBookmarks: ["main@origin"],
+    });
+
+    expect(items.map((item) => item.id)).toEqual(["bmname:main"]);
+  });
+
   test("revset value offers @, @- literals plus revset items", () => {
     const items = buildComposeItems({
       context: ctx({ kind: "value", token: "REVSETS", path: ["log"] } as Partial<ComposeContext> &

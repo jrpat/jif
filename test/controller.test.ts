@@ -83,6 +83,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   composedDiffCalls?: Array<readonly string[]>;
   anchorRange?: readonly string[];
   absorbTargets?: readonly string[];
+  remoteBookmarks?: readonly string[];
   openReleasesPageError?: Error;
   copyToClipboardError?: Error;
 }>) {
@@ -161,6 +162,9 @@ function createControllerHarness(harnessOptions: Readonly<{
       },
       async loadBookmarkTargets() {
         return [];
+      },
+      async loadRemoteBookmarks() {
+        return harnessOptions.remoteBookmarks ?? [];
       },
       async loadAncestorChangeIds() {
         return [];
@@ -439,6 +443,29 @@ test("copyBookmarkName opens a shell copy prompt when the revision has several b
   expect(state.commandBarBookmark?.suggestions.map((suggestion) => suggestion.name)).toEqual([
     "main",
     "release",
+  ]);
+  harness.store.dispose();
+});
+
+test("startBookmarkTrack suggests every exact remote bookmark symbol", async () => {
+  const harness = createControllerHarness({
+    revisions: [
+      createRevision({ rowId: "aaaaaaaa", revisionId: "aaaaaaaa", description: "tip" }),
+    ],
+    remoteBookmarks: ["main@origin", "feature/ui@origin", "release@upstream"],
+  });
+
+  harness.store.actions.enterBookmarkLeader();
+  harness.controller.startBookmarkTrack();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  const state = harness.store.snapshot();
+  expect(state.commandBar.text).toBe("b track ");
+  expect(state.commandBarBookmark?.suggestions.map((suggestion) => suggestion.name)).toEqual([
+    "main@origin",
+    "feature/ui@origin",
+    "release@upstream",
   ]);
   harness.store.dispose();
 });

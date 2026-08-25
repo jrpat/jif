@@ -67,6 +67,8 @@ export function CommandPrompt(props: {
     bookmarks: readonly string[];
     commandAliases: readonly JjCommandAlias[];
   }>({ revsetItems: [], bookmarks: [], commandAliases: [] });
+  const [remoteBookmarks, setRemoteBookmarks] = createSignal<readonly string[]>([]);
+  let remoteBookmarksRequested = false;
   const [historyMode, setHistoryMode] = createSignal(false);
   const [helpVersion, setHelpVersion] = createSignal(0);
   // Both views exist only on the jj bar: the shell bar and bookmark completion
@@ -184,6 +186,25 @@ export function CommandPrompt(props: {
     }
   });
 
+  // Remote bookmarks are only useful for `bookmark track`, and listing every
+  // remote requires jj's broader `--all-remotes` query. Load them lazily once
+  // the command path resolves instead of adding that work to every command bar.
+  createEffect(() => {
+    const ctx = composeContext();
+    const client = props.client;
+    if (
+      remoteBookmarksRequested ||
+      !client ||
+      ctx?.path.length !== 2 ||
+      ctx.path[0] !== "bookmark" ||
+      ctx.path[1] !== "track"
+    ) {
+      return;
+    }
+    remoteBookmarksRequested = true;
+    void client.loadRemoteBookmarks().then(setRemoteBookmarks);
+  });
+
   const composeItems = createMemo<AutocompleteListItem[]>(() => {
     helpVersion();
     const ctx = composeContext();
@@ -196,6 +217,7 @@ export function CommandPrompt(props: {
       help: props.helpCache?.peek(ctx.path),
       revsetItems: data.revsetItems,
       bookmarks: data.bookmarks,
+      remoteBookmarks: remoteBookmarks(),
       commandAliases: data.commandAliases,
     });
   });

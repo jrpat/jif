@@ -31,11 +31,35 @@ Options:
   -h, --help                Print help
 `;
 
-function makeClient(): JjClient {
+const BOOKMARK_HELP = `Manage bookmarks
+
+Usage: jj bookmark [OPTIONS] <COMMAND>
+
+Commands:
+  track  Start tracking given remote bookmarks
+
+Options:
+  -h, --help  Print help
+`;
+
+const BOOKMARK_TRACK_HELP = `Start tracking given remote bookmarks
+
+Usage: jj bookmark track [OPTIONS] <BOOKMARK[@REMOTE]>...
+
+Arguments:
+  <BOOKMARK[@REMOTE]>...  Bookmark name patterns or remote bookmark symbols to track
+
+Options:
+  -h, --help  Print help
+`;
+
+function makeClient(options?: { remoteBookmarks?: readonly string[] }): JjClient {
   return {
     async runHelp(path: readonly string[]): Promise<string> {
       if (path.length === 0) return TOP_HELP;
       if (path.length === 1 && path[0] === "log") return LOG_HELP;
+      if (path.length === 1 && path[0] === "bookmark") return BOOKMARK_HELP;
+      if (path.join(" ") === "bookmark track") return BOOKMARK_TRACK_HELP;
       return "";
     },
     async loadBookmarks() {
@@ -49,6 +73,9 @@ function makeClient(): JjClient {
     },
     async loadCommandAliases() {
       return [];
+    },
+    async loadRemoteBookmarks() {
+      return [...(options?.remoteBookmarks ?? [])];
     },
   } as unknown as JjClient;
 }
@@ -100,9 +127,10 @@ function mountPrompt(opts: {
   kittyKeyboard?: boolean;
   historyDelayTicks?: number;
   initialText?: string;
+  remoteBookmarks?: readonly string[];
   onSubmit?: () => void;
 }): Promise<Rendered> {
-  const client = makeClient();
+  const client = makeClient({ remoteBookmarks: opts.remoteBookmarks });
   const helpCache = new JjHelpCache(client);
   return testRender(
     () => {
@@ -134,6 +162,26 @@ function mountPrompt(opts: {
     },
     { width: 80, height: 14, kittyKeyboard: opts.kittyKeyboard ?? false },
   );
+}
+
+async function renderRemoteBookmarkTrackSuggestions() {
+  const rendered = await mountPrompt({
+    history: [],
+    initialText: "bookmark track ",
+    remoteBookmarks: ["main@origin", "feature/ui@origin", "release@upstream"],
+  });
+  try {
+    await settle(rendered);
+    const frame = frameText(rendered);
+    return {
+      trackShowsAllRemoteBookmarks:
+        frame.includes("main@origin") &&
+        frame.includes("feature/ui@origin") &&
+        frame.includes("release@upstream"),
+    };
+  } finally {
+    rendered.renderer.destroy();
+  }
 }
 
 // No history -> opens in compose. The default Tab target (bottom flag) is
@@ -341,6 +389,7 @@ console.log(
     ...(await renderComposeDefaultAndColonToggle()),
     ...(await renderHistoryNoAutoFocus()),
     ...(await renderCtrlHWithText()),
+    ...(await renderRemoteBookmarkTrackSuggestions()),
     ...(await renderShellTab()),
   }),
 );

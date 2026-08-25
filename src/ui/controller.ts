@@ -60,6 +60,7 @@ type ControllerClient = Readonly<{
   resolveRange(from: string, to: string): Promise<readonly string[]>;
   resolveAbsorbTargets(source: string): Promise<readonly string[]>;
   loadBookmarkTargets(): Promise<readonly BookmarkTarget[]>;
+  loadRemoteBookmarks(): Promise<readonly string[]>;
   loadAncestorChangeIds(focusedChangeId: string): Promise<readonly string[]>;
   loadDescendantChangeIds(focusedChangeId: string): Promise<readonly string[]>;
   loadKnownFiles(): Promise<readonly string[]>;
@@ -1275,23 +1276,37 @@ async function openBookmarkPromptWithSuggestions(args: Readonly<{
   cursorOffset: number;
   revision: { revisionId: string };
   includeCurrent: boolean;
+  includeRemoteBookmarks?: boolean;
   client: ControllerClient;
   store: AppStore;
 }>) {
   try {
     const focusedChangeId = getChangeIdFromRevisionId(args.revision.revisionId);
-    const [bookmarks, ancestors, descendants] = await Promise.all([
+    const [bookmarks, ancestors, descendants, remoteBookmarks] = await Promise.all([
       args.client.loadBookmarkTargets(),
       args.client.loadAncestorChangeIds(focusedChangeId),
       args.client.loadDescendantChangeIds(focusedChangeId),
+      args.includeRemoteBookmarks ? args.client.loadRemoteBookmarks() : Promise.resolve([]),
     ]);
-    const suggestions: readonly BookmarkSuggestion[] = buildBookmarkSuggestions(
+    const localSuggestions = buildBookmarkSuggestions(
       bookmarks,
       focusedChangeId,
       ancestors,
       descendants,
       { includeCurrent: args.includeCurrent },
     );
+    const localNames = new Set(localSuggestions.map((suggestion) => suggestion.name));
+    const remoteSuggestions: readonly BookmarkSuggestion[] = remoteBookmarks
+      .filter((name) => !localNames.has(name))
+      .map((name) => ({
+        name,
+        // Remote completion only consumes the name. It has no local graph
+        // position to rank, so keep it in a separate leading group.
+        targetChangeId: "",
+        bucket: "other",
+        distance: Number.POSITIVE_INFINITY,
+      }));
+    const suggestions = [...remoteSuggestions, ...localSuggestions];
     args.store.actions.startBookmarkPrompt(args.prefill, args.cursorOffset, {
       focusedRevisionId: args.revision.revisionId,
       suggestions,
@@ -1316,6 +1331,7 @@ async function openBookmarkPromptSimple(args: Readonly<{
     cursorOffset,
     revision,
     includeCurrent: true,
+    includeRemoteBookmarks: args.keyword === "track",
     client: args.client,
     store: args.store,
   });
