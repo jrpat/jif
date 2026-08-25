@@ -111,6 +111,7 @@ export type CommandController = Readonly<{
   showOperationDiff: () => void;
   scrollDiffViewer: (rowDelta: number, colDelta: number) => void;
   scrollLogPage: (pageDelta: number) => void;
+  centerFocusedLogRow: () => void;
   scrollHelpToast: (rowDelta: number) => void;
   togglePreview: () => void;
   cyclePreviewPosition: () => void;
@@ -192,6 +193,12 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     title: "Half Page Up",
     description: "Scroll the log up by half a page",
     run: (controller) => controller.scrollLogPage(-0.5),
+  },
+  {
+    id: "center-focused-row",
+    title: "Center Focused Row",
+    description: "Center the focused row in the log viewport",
+    run: (controller) => controller.centerFocusedLogRow(),
   },
   {
     id: "scroll-down",

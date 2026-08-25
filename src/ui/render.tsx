@@ -140,7 +140,7 @@ import {
 import { executeShellCommand as executeShellTextCommand } from "../jj/process.ts";
 import { makeScrollAcceleration } from "./scrollAcceleration.ts";
 import { switchWorkspace } from "./workspaceSwitch.ts";
-import { resolveLogSurfaceMode } from "./logSurface.ts";
+import { getFocusedLogRowId, resolveLogSurfaceMode } from "./logSurface.ts";
 import {
   EMPTY_RENDERED_PREVIEW,
   completePreviewRefresh,
@@ -460,6 +460,12 @@ export function JifView(props: {
     getHelpViewport: () => helpViewport,
     getPreviewViewport: () => previewViewport,
     scrollLogPage: logPageScroller.scrollByPage,
+    centerFocusedLogRow: () => {
+      const childId = getFocusedLogRowId(store.state);
+      if (childId) {
+        logPageScroller.centerChild(childId);
+      }
+    },
     getTerminalSize: () => terminalSize(),
     getPreviewConfig: () => config.preview,
     logShortcutPanelToggle: ({ before, after, focusMode }) => {

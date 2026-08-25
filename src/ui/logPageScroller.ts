@@ -2,7 +2,7 @@ import type { ScrollBoxRenderable } from "@opentui/core";
 
 type LogViewport = Pick<
   ScrollBoxRenderable,
-  "scrollBy" | "scrollHeight" | "scrollTop" | "viewport"
+  "findDescendantById" | "scrollBy" | "scrollHeight" | "scrollTop" | "viewport"
 >;
 
 function clampScrollTop(viewport: LogViewport, value: number): number {
@@ -33,5 +33,25 @@ export function createLogPageScroller(options: Readonly<{
     }
   };
 
-  return { scrollByPage } as const;
+  const centerChild = (childId: string) => {
+    const viewport = options.getViewport();
+    if (!viewport) return;
+
+    const child = viewport.findDescendantById(childId);
+    if (!child) return;
+
+    const centeredTop = viewport.viewport.y + Math.floor(
+      (viewport.viewport.height - child.height) / 2,
+    );
+    const target = clampScrollTop(
+      viewport,
+      viewport.scrollTop + child.y - centeredTop,
+    );
+    const delta = target - viewport.scrollTop;
+    if (delta !== 0) {
+      viewport.scrollBy({ x: 0, y: delta });
+    }
+  };
+
+  return { centerChild, scrollByPage } as const;
 }

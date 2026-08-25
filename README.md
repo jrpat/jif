@@ -92,7 +92,7 @@ be invoked immediately. Press `?` again to edit the applied filter. The first
 
 Keybindings are per-mode. Global bindings are available in every mode and may be overridden by a mode-specific binding for the same key.
 
-Log-oriented modes share a common **Log** binding set: linear movement, the command bar, search, fast jump, help, preview, retry, and flag controls. Revision-backed modes additionally inherit **Revision Log Navigation**: graph movement (`J`/`K`), divergent sibling cycling (`alt-j`), bookmark and workspace jumps (`[`/`]`, `{`/`}`), and the working-copy jump (`@`). Normal and Bookmark inherit Revision Log Navigation; revision operation composers such as Rebase and Squash inherit it through an abstract **Revision Draft** mode, which adds `enter` to confirm and `space` to select revisions without inheriting revision-log-only commands from Normal. Operation Log and Evolog inherit only Log. Each mode is annotated below with what, if anything, it inherits.
+Log-oriented modes share a common **Log** binding set: linear movement, viewport positioning, the command bar, search, fast jump, help, preview, retry, and flag controls. Revision-backed modes additionally inherit **Revision Log Navigation**: graph movement (`J`/`K`), divergent sibling cycling (`alt-j`), bookmark and workspace jumps (`[`/`]`, `{`/`}`), and the working-copy jump (`@`). Normal and Bookmark inherit Revision Log Navigation; revision operation composers such as Rebase and Squash inherit it through an abstract **Revision Draft** mode, which adds `enter` to confirm and `space` to select revisions without inheriting revision-log-only commands from Normal. Operation Log and Evolog inherit only Log. Each mode is annotated below with what, if anything, it inherits.
 
 When the shortcut panel is expanded, Revision Log Navigation commands keep it open so the inherited and mode-specific bindings remain visible in separate sections while focus moves.
 
@@ -175,6 +175,7 @@ Viewing and navigating the revision log.
 | `j` / `↓` | move-down | Move through revisions or files |
 | `k` / `↑` | move-up | Move through revisions or files |
 | `)` / `(` | scroll-log-down-half-page / scroll-log-up-half-page | Scroll the main log down / up by half a page |
+| `z` | center-focused-row | Center the focused revision in the viewport |
 | `J` | move-parent | Follow the graph to the nearest visible parent, skipping branches |
 | `K` | move-child | Follow the graph to the nearest visible child, skipping branches |
 | `alt-j` | jump-to-next-divergent | When the focused revision is divergent (showing the `/N` suffix), cycle to the next visible sibling sharing its change-id |
@@ -433,6 +434,7 @@ Active while the operation log panel is open. Inherits the shared **Log** bindin
 |-----|---------|-------------|
 | `j` / `↓` | move-down | Focus the next operation |
 | `k` / `↑` | move-up | Focus the previous operation |
+| `z` | center-focused-row | Center the focused operation in the viewport |
 | `G` | jump-to-bottom | Jump to the last operation in the log |
 | `@` | jump-to-current-operation | Jump to the current operation (top of the log) |
 | `r` | restore-operation | Restore the focused operation |
@@ -452,6 +454,7 @@ Active while the evolog panel is open. Opened from Normal with `ctrl-e` for the 
 | `d` | show-diff | Show the focused entry's diff as a [full-screen preview](#full-screen-preview) |
 | `j` / `↓` | move-down | Focus the next evolog entry |
 | `k` / `↑` | move-up | Focus the previous evolog entry |
+| `z` | center-focused-row | Center the focused evolog entry in the viewport |
 | `G` | jump-to-bottom | Jump to the last evolog entry |
 | `:` | command-bar | Run a jj subcommand |
 | `>` | shell-command-bar | Run a shell command |
@@ -903,6 +906,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `restrictRevsetToFocusedFile()` | Show revisions that changed the focused file |
 | `scrollDiffViewer(rowDelta, colDelta)` | Scroll the diff viewer by rows and columns |
 | `scrollLogPage(pageDelta)` | Scroll the main log by a fraction of its viewport (`0.5` is half a page) |
+| `centerFocusedLogRow()` | Center the focused revision, operation, or evolog entry in the main log viewport |
 | `scrollHelpToast(rowDelta)` | Scroll the visible help toast |
 | `selectAllFiles()` | Select all files in the expanded revision, or clear them if all are selected |
 | `selectNextInlineConfirmationOption()` | Move to the next inline confirmation option |

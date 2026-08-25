@@ -133,7 +133,7 @@ test("suspend uses ctrl-z canonically and Z as a normal-mode alias", () => {
 
 test("resolveCommand returns null for unbound keys", () => {
   const state = createState();
-  expect(resolveForState("z", state)).toBeNull();
+  expect(resolveForState("\\", state)).toBeNull();
 });
 
 test("open-evolog canExecute is false when no focused revision or marker is elided", () => {
@@ -330,17 +330,20 @@ test("Revision Log Navigation owns revision focus movement", () => {
   expect(defaultKeymap.interdiff["alt-j"]).toBeUndefined();
 });
 
-test("Log owns half-page viewport scrolling", () => {
+test("Log owns shared viewport positioning", () => {
   expect(defaultKeymap.log[")"]).toBe("scroll-log-down-half-page");
   expect(defaultKeymap.log["("]).toBe("scroll-log-up-half-page");
+  expect(defaultKeymap.log.z).toBe("center-focused-row");
 
   for (const mode of ["revision-log", "op-log", "evolog", "rebase"] as const) {
     expect(resolveCommand(mode, ")")).toBe("scroll-log-down-half-page");
     expect(resolveCommand(mode, "(")).toBe("scroll-log-up-half-page");
+    expect(resolveCommand(mode, "z")).toBe("center-focused-row");
   }
 
   expect(resolveCommand("revision-files", ")")).toBeNull();
   expect(resolveCommand("revision-files", "(")).toBeNull();
+  expect(resolveCommand("revision-files", "z")).toBeNull();
 });
 
 test("Log owns generic retry and flag bindings while Revision Draft owns draft mechanics", () => {

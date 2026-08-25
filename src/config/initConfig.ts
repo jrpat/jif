@@ -368,6 +368,7 @@ namespace Jif {
     moveFocusToBookmark: (direction: 1 | -1) => void;
     focusLogBottom: () => void;
     focusCurrentOperation: () => void;
+    centerFocusedLogRow: () => void;
     openFocusedRevision: () => void;
     closeFocusedRevision: () => void;
     quit: () => void;

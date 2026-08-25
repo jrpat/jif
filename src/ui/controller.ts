@@ -129,6 +129,7 @@ export function createJifCommandController(args: Readonly<{
   getHelpViewport(): ScrollBoxRenderable | undefined;
   getPreviewViewport(): ScrollBoxRenderable | undefined;
   scrollLogPage(pageDelta: number): void;
+  centerFocusedLogRow(): void;
   getTerminalSize(): Readonly<{ width: number; height: number }>;
   getPreviewConfig(): ResolvedAppConfig["preview"];
   logShortcutPanelToggle(details: Readonly<{
@@ -883,6 +884,9 @@ export function createJifCommandController(args: Readonly<{
     },
     scrollLogPage(pageDelta: number) {
       args.scrollLogPage(pageDelta);
+    },
+    centerFocusedLogRow() {
+      args.centerFocusedLogRow();
     },
     scrollHelpToast(rowDelta: number) {
       args.getHelpViewport()?.scrollBy({ x: 0, y: rowDelta });

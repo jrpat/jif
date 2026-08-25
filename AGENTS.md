@@ -19,6 +19,7 @@
 - Default runtime and package manager is Bun.
 - Commit messages should use:
   - a subject line that is a single sentence under 72 characters stating what changed
+  - a subject that accurately identifies what the change added, modified, or removed; do not substitute the behavior it enables, the goal it serves, or an action a user can trigger (for example, `Add command to center focused log rows`, not `Center focused log rows`)
   - one to four short paragraphs, each up to four sentences, describing what changed and any significant decisions
   - enough context to explain why the change was made and what tradeoffs or alternatives mattered
 - Prefer:
@@ -59,4 +60,3 @@
 - Debug mode should launch against a freshly materialized sample repo instead of the ambient working directory:
   - `bun run index.ts --sample`
 - `bun run dev` runs `scripts/dev.ts`, a launcher that restarts jif on `src/` changes. Do not switch `dev` back to `bun --watch`: bun's watcher reload-loops against jif's startup (it re-triggers faster than the opentui TUI can paint its first frame), so the screen is cleared on every restart and stays blank. The custom launcher only watches `src/` and `index.ts`, so jif's runtime file activity can't retrigger it.
-

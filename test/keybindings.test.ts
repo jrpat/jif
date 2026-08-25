@@ -132,6 +132,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     scrollDiffViewer: (rowDelta, colDelta) =>
       calls.push(`scrollDiffViewer(${rowDelta},${colDelta})`),
     scrollLogPage: (pageDelta) => calls.push(`scrollLogPage(${pageDelta})`),
+    centerFocusedLogRow: () => calls.push("centerFocusedLogRow"),
     scrollHelpToast: (rowDelta) => calls.push(`scrollHelpToast(${rowDelta})`),
     togglePreview: () => calls.push("togglePreview"),
     cyclePreviewPosition: () => calls.push("cyclePreviewPosition"),
@@ -259,6 +260,19 @@ test("dispatchGlobalKey routes parentheses to half-page log scrolling", () => {
   })).toBeTrue();
 
   expect(calls).toEqual(["scrollLogPage(0.5)", "scrollLogPage(-0.5)"]);
+});
+
+test("dispatchGlobalKey routes z to focused-row centering", () => {
+  const calls: string[] = [];
+
+  expect(dispatchGlobalKey({
+    normalizedKey: "z",
+    state: createState(),
+    commands: commandDefinitions,
+    controller: createController(calls),
+  })).toBeTrue();
+
+  expect(calls).toEqual(["centerFocusedLogRow"]);
 });
 
 test("dispatchGlobalKey routes ctrl-. to the shell command bar", () => {

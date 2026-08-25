@@ -24,6 +24,32 @@ export function resolveLogSurfaceMode(
   return "revisions";
 }
 
+export function getFocusedLogRowId(
+  state: Pick<
+    AppState,
+    | "focusMode"
+    | "focusModeStack"
+    | "revisions"
+    | "focusedRevisionIndex"
+    | "focusedOperationLogIndex"
+    | "focusedEvologIndex"
+  >,
+): string | null {
+  switch (resolveLogSurfaceMode(state)) {
+    case "revisions": {
+      const revision = state.revisions[state.focusedRevisionIndex];
+      return revision ? `revision-slot-header-${revision.rowId}` : null;
+    }
+    case "op-log":
+      return `operation-log-entry-${state.focusedOperationLogIndex}`;
+    case "evolog":
+      return `evolog-entry-${state.focusedEvologIndex}`;
+    case "files":
+    case "notifications":
+      return null;
+  }
+}
+
 function isLogSurfaceMode(mode: FocusMode): mode is LogSurfaceMode {
   return mode === "revisions" ||
     mode === "files" ||

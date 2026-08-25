@@ -78,6 +78,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   helpViewport?: ScrollBoxRenderable;
   previewViewport?: ScrollBoxRenderable;
   scrollLogPage?: (pageDelta: number) => void;
+  centerFocusedLogRow?: () => void;
   composedDiffOutput?: string;
   composedDiffCalls?: Array<readonly string[]>;
   anchorRange?: readonly string[];
@@ -241,6 +242,7 @@ function createControllerHarness(harnessOptions: Readonly<{
     getHelpViewport: () => harnessOptions.helpViewport,
     getPreviewViewport: () => harnessOptions.previewViewport,
     scrollLogPage: (pageDelta) => harnessOptions.scrollLogPage?.(pageDelta),
+    centerFocusedLogRow: () => harnessOptions.centerFocusedLogRow?.(),
     getTerminalSize: () => harnessOptions.terminalSize ?? { width: 120, height: 40 },
     getPreviewConfig: () => ({
       position: "auto",
@@ -1544,6 +1546,20 @@ test("scrollLogPage delegates viewport movement to the renderer scroller", () =>
   harness.controller.scrollLogPage(-0.5);
 
   expect(calls).toEqual([0.5, -0.5]);
+  harness.store.dispose();
+});
+
+test("centerFocusedLogRow delegates viewport movement to the renderer scroller", () => {
+  let calls = 0;
+  const harness = createControllerHarness({
+    centerFocusedLogRow: () => {
+      calls += 1;
+    },
+  });
+
+  harness.controller.centerFocusedLogRow();
+
+  expect(calls).toBe(1);
   harness.store.dispose();
 });
 
