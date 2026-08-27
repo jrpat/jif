@@ -231,11 +231,12 @@ describe("bookmark copy binding", () => {
     expect(resolveCommand("bookmark", "C", defaultKeymap)).toBe("bookmark-copy-name");
   });
 
-  // `c` creates; the shifted key must not be swallowed by it or by anything
-  // Bookmark inherits from Revision Log Navigation.
-  test("shift+c does not collide with create or an inherited binding", () => {
+  // `c` creates, and Bookmark's own shifted binding overrides the Copy-mode
+  // entry key from Normal rather than inheriting it.
+  test("shift+c overrides the normal Copy-mode entry binding", () => {
     expect(resolveCommand("bookmark", "c", defaultKeymap)).toBe("bookmark-create");
-    expect(resolveCommand("revision-log", "C", defaultKeymap)).toBeNull();
+    expect(resolveCommand("revision-log", "C", defaultKeymap)).toBe("enter-copy-mode");
+    expect(resolveCommand("bookmark", "C", defaultKeymap)).toBe("bookmark-copy-name");
     expect(defaultKeymap._global.C).toBeUndefined();
   });
 });

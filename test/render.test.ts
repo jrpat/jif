@@ -31,6 +31,16 @@ test("full-screen preview does not automatically show shortcut bindings", () => 
   })).toBeTrue();
 });
 
+test("copy mode automatically shows its shortcut bindings", () => {
+  expect(shouldShowTransientShortcutPanel({
+    showsPersistentShortcutPanel: false,
+    focusMode: "copy",
+    previewFullScreen: false,
+    modeShortcutBindingCount: 5,
+    showsCommandPreview: false,
+  })).toBeTrue();
+});
+
 test("resolveBottomChromeLayout stacks transient shortcuts above the command preview", () => {
   expect(resolveBottomChromeLayout({
     showsCommandPrompt: false,

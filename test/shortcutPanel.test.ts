@@ -490,6 +490,7 @@ test("shortcutModeLabel formats the current mode for the panel header", () => {
   expect(shortcutModeLabel("revision-draft")).toBe("Revision Draft");
   expect(shortcutModeLabel("revision-files")).toBe("Files");
   expect(shortcutModeLabel("command")).toBe("Command");
+  expect(shortcutModeLabel("copy")).toBe("Copy");
   expect(shortcutModeLabel("rebase")).toBe("Rebase");
   expect(shortcutModeLabel("squash")).toBe("Squash");
 });
@@ -520,6 +521,28 @@ test("getShortcutPanelBindings always lists marker navigation regardless of targ
   expect(ids).toContain("move-to-prev-immutable");
   expect(ids).toContain("move-to-next-workspace");
   expect(ids).toContain("move-to-prev-workspace");
+});
+
+test("Copy mode pluralizes the bookmark shortcut for the focused revision", () => {
+  for (const [bookmarks, expectedTitle] of [
+    [[], "Bookmark"],
+    [["main"], "Bookmark"],
+    [["main", "release"], "Bookmarks"],
+  ] as const) {
+    const base = createState();
+    const state: AppState = {
+      ...base,
+      focusMode: "copy",
+      focusModeStack: ["revisions", "copy"],
+      revisions: base.revisions.map((revision, index) =>
+        index === base.focusedRevisionIndex ? { ...revision, bookmarks } : revision
+      ),
+    };
+
+    const binding = getShortcutPanelBindings(state, bindingsForMode(state))
+      .find(({ key }) => key === "b");
+    expect(binding?.command.title).toBe(expectedTitle);
+  }
 });
 
 test("getShortcutPanelBindings narrows rebase draft shortcuts to draft-relevant actions", () => {

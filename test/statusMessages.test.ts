@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { STATUS_MESSAGE_DURATION_MS, getStatusMessageDismissDelay } from "../src/ui/statusMessages.ts";
+import {
+  STATUS_MESSAGE_DURATION_MS,
+  getStatusMessageDismissDelay,
+  shouldAutoDismissStatusMessage,
+} from "../src/ui/statusMessages.ts";
 
 test("getStatusMessageDismissDelay returns the remaining lifetime for a recent toast", () => {
   expect(getStatusMessageDismissDelay(1_000, 2_000)).toBe(STATUS_MESSAGE_DURATION_MS - 1_000);
@@ -16,4 +20,12 @@ test("getStatusMessageDismissDelay is based on createdAt instead of render time"
 
   expect(initialDelay).toBe(4_000);
   expect(rerenderedDelay).toBe(2_000);
+});
+
+test("success and warning toasts auto-dismiss while info, error, and help persist", () => {
+  expect(shouldAutoDismissStatusMessage({ level: "success" })).toBeTrue();
+  expect(shouldAutoDismissStatusMessage({ level: "warning" })).toBeTrue();
+  expect(shouldAutoDismissStatusMessage({ level: "info" })).toBeFalse();
+  expect(shouldAutoDismissStatusMessage({ level: "error" })).toBeFalse();
+  expect(shouldAutoDismissStatusMessage({ level: "warning", variant: "help" })).toBeFalse();
 });

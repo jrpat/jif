@@ -39,7 +39,9 @@ import {
   closeDiffViewer,
   closeNotifications,
   enterBookmarkLeader,
+  enterCopyMode,
   exitBookmarkLeader,
+  exitCopyMode,
   enterExtraMode,
   exitExtraMode,
   enterPreviewMode,
@@ -190,8 +192,9 @@ export function createAppStore(
         text: string,
         level: StatusLevel,
         command?: CommandInvocation,
+        title?: string,
       ) {
-        mutate((currentState) => pushEvent(currentState, text, level, undefined, command));
+        mutate((currentState) => pushEvent(currentState, text, level, undefined, command, title));
       },
       reportError(error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
@@ -202,8 +205,9 @@ export function createAppStore(
         text: string,
         level: StatusLevel,
         command?: CommandInvocation,
+        title?: string,
       ) {
-        mutate((currentState) => pushStatusMessage(currentState, id, text, level, command));
+        mutate((currentState) => pushStatusMessage(currentState, id, text, level, command, title));
       },
       upsertStatusMessage(id: string, text: string, level: StatusLevel) {
         mutate((currentState) => upsertStatusMessage(currentState, id, text, level));
@@ -214,9 +218,10 @@ export function createAppStore(
         level: StatusLevel,
         variant?: StatusMessageVariant,
         command?: CommandInvocation,
+        title?: string,
       ) {
         mutate((currentState) =>
-          updateStatusMessage(currentState, id, text, level, variant, command)
+          updateStatusMessage(currentState, id, text, level, variant, command, title)
         );
       },
       touchStatusMessage(id: string) {
@@ -226,8 +231,9 @@ export function createAppStore(
         text: string,
         level: StatusLevel,
         command?: CommandInvocation,
+        title?: string,
       ) {
-        mutate((currentState) => logEvent(currentState, text, level, command));
+        mutate((currentState) => logEvent(currentState, text, level, command, title));
       },
       applyRepositoryData(repositoryData: RepositoryData) {
         mutate((currentState) => applyRepositoryData(currentState, repositoryData));
@@ -388,6 +394,12 @@ export function createAppStore(
       exitBookmarkLeader() {
         mutate((currentState) => exitBookmarkLeader(currentState));
       },
+      enterCopyMode() {
+        mutate((currentState) => enterCopyMode(currentState));
+      },
+      exitCopyMode() {
+        mutate((currentState) => exitCopyMode(currentState));
+      },
       enterExtraMode() {
         mutate((currentState) => enterExtraMode(currentState));
       },
@@ -413,6 +425,7 @@ export function createAppStore(
           focusedRevisionId: string;
           suggestions: readonly BookmarkSuggestion[] | null;
           kind?: CommandBarKind;
+          clipboard?: Readonly<{ prefix: string; suffix: string }>;
         },
       ) {
         mutate((currentState) => startBookmarkPrompt(currentState, prefill, cursorOffset, options));

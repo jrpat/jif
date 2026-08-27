@@ -12,6 +12,7 @@ import type { PersistenceService } from "../persistence/service.ts";
 import { isFilesOnlyRevset } from "../revset/files.ts";
 import type { AppStore } from "../state/appStore.ts";
 import { commandCanExecute, getDisplayedCommandText } from "../state/store.ts";
+import { CLIPBOARD_SUCCESS_TITLE } from "./clipboard.ts";
 
 type CommandRunnerLike = Readonly<{
   run(options: CommandRunOptions): Promise<boolean>;
@@ -73,6 +74,7 @@ export function createJifRuntime(args: Readonly<{
     ): Promise<void> {
       const state = store.snapshot();
       const commandText = (commandOverride ?? getDisplayedCommandText(state)).trim();
+      const clipboardText = getClipboardPromptText(commandText, state.commandBarBookmark?.clipboard);
       const workspaceRoot = args.getWorkspaceRoot();
       const executor: CommandExecutor = state.commandBar.kind === "shell" ? "shell" : "jj";
       const submissionOptions = executor === "jj"
@@ -97,6 +99,12 @@ export function createJifRuntime(args: Readonly<{
         failureFeedback: interactive ? "event" : "status-toast",
         focusWorkingCopyAfterRefresh: submissionOptions?.focusWorkingCopyAfterRefresh,
         recordHistory,
+        ...(clipboardText === null
+          ? {}
+          : {
+              successMessage: clipboardText,
+              successTitle: CLIPBOARD_SUCCESS_TITLE,
+            }),
       });
     },
 
@@ -238,4 +246,19 @@ export function createJifRuntime(args: Readonly<{
       await applyRevsetQuery(fallbackRevset);
     },
   };
+}
+
+function getClipboardPromptText(
+  commandText: string,
+  context?: Readonly<{ prefix: string; suffix: string }>,
+): string | null {
+  if (
+    !context ||
+    !commandText.startsWith(context.prefix) ||
+    !commandText.endsWith(context.suffix)
+  ) {
+    return null;
+  }
+
+  return commandText.slice(context.prefix.length, -context.suffix.length);
 }

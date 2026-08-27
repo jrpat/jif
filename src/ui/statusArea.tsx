@@ -15,6 +15,7 @@ import {
   getStatusColor,
   getStatusMessageDismissDelay,
   getStatusToastBodyHeight,
+  shouldAutoDismissStatusMessage,
 } from "./statusMessages.ts";
 import { SPINNER_INTERVAL_MS, formatSpinnerText } from "./spinner.ts";
 
@@ -387,7 +388,9 @@ function StatusToast(props: {
   const isHelp = () => props.message.variant === "help";
   const bodyHeight = createMemo(() =>
     getStatusToastBodyHeight(
-      getNotificationBodyText(props.message.text, props.message.command),
+      // A copy result replaces the implementation-specific clipboard command
+      // with a stable presentation title.
+      getNotificationBodyText(props.message.text, props.message.command, props.message.title),
       isHelp() ? props.maxHelpBodyHeight : props.maxBodyHeight,
     )
   );
@@ -395,9 +398,9 @@ function StatusToast(props: {
     isHelp() ? getHelpToastBorderColor(props.config) : getStatusColor(props.message.level, colors);
 
   createEffect(() => {
-    // Help toasts persist until the user dismisses them; everything else is
-    // only auto-dismissed once it has reached its terminal "success" state.
-    if (props.message.level !== "success" || isHelp()) return;
+    // Terminal success and warning feedback expires; loading/info, errors, and
+    // help remain until some later state transition or explicit dismissal.
+    if (!shouldAutoDismissStatusMessage(props.message)) return;
     const timer = setTimeout(
       props.onDismiss,
       getStatusMessageDismissDelay(props.message.lastInteractedAt),
@@ -442,6 +445,7 @@ function StatusToast(props: {
         id={`status-toast-body-${props.message.id}`}
         text={props.message.text}
         command={props.message.command}
+        title={props.message.title}
         commandColor={borderColor()}
         bodyHeight={bodyHeight()}
         config={props.config}

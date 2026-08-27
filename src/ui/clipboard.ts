@@ -8,6 +8,8 @@ export type SpawnClipboardWriter = (
 
 type Env = Readonly<Record<string, string | undefined>>;
 
+export const CLIPBOARD_SUCCESS_TITLE = "Copied to clipboard";
+
 // The command that reads stdin and puts it on the system clipboard. macOS has
 // `pbcopy`, Windows has `clip`, and Linux/BSD split by display server: Wayland
 // sessions get `wl-copy`, X11 gets `xclip`.

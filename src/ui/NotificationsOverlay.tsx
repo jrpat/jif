@@ -59,7 +59,7 @@ function NotificationCard(props: Readonly<{
   const colors = () => props.config.colorScheme.semanticColors;
   const lines = createMemo(() => props.entry.text.split(/\r\n|\r|\n/));
   const commandLineCount = createMemo(() =>
-    getNotificationCommandLineCount(props.entry.command)
+    getNotificationCommandLineCount(props.entry.command, props.entry.title)
   );
   const visibleLines = createMemo(() => {
     if (props.expanded) return lines();
@@ -98,6 +98,7 @@ function NotificationCard(props: Readonly<{
       <ScrollableAnsiBody
         text={visibleLines().join("\n")}
         command={props.entry.command}
+        title={props.entry.title}
         commandColor={borderColor()}
         bodyHeight={bodyHeight()}
         config={props.config}

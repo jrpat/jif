@@ -170,6 +170,32 @@ test("executeCurrentCommand uses shell execution and shell history for the shell
   harness.store.dispose();
 });
 
+test("bookmark copy prompts replace shell feedback with the copied text", async () => {
+  const harness = createRuntimeHarness({ shellCwd: "/tmp/parent-shell" });
+  const prefix = "printf %s ";
+  const suffix = " | pbcopy";
+  harness.store.actions.startBookmarkPrompt(
+    `${prefix}${suffix}`,
+    prefix.length,
+    {
+      kind: "shell",
+      focusedRevisionId: "aaaaaaaa",
+      suggestions: [],
+      clipboard: { prefix, suffix },
+    },
+  );
+
+  await harness.runtime.executeCurrentCommand(`${prefix}main${suffix}`);
+
+  expect(harness.commandRuns[0]).toMatchObject({
+    commandText: "printf %s main | pbcopy",
+    executor: "shell",
+    successTitle: "Copied to clipboard",
+    successMessage: "main",
+  });
+  harness.store.dispose();
+});
+
 test("executeCurrentCommand for the jj command bar does not pass a cwd", async () => {
   const harness = createRuntimeHarness({ shellCwd: "/tmp/parent-shell" });
 

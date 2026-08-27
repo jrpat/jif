@@ -42,3 +42,25 @@ test("command output styles the command bold in the status color", () => {
   expect((commandChunk!.attributes ?? 0) & TextAttributes.BOLD).not.toBe(0);
   expect(commandChunk!.fg?.toInts()).toEqual(RGBA.fromHex("#12ab34").toInts());
 });
+
+test("a presentation title replaces the command text without hiding the output", () => {
+  const command = {
+    commandText: "printf %s main | pbcopy",
+    executor: "shell" as const,
+    interactive: false,
+  };
+
+  expect(getNotificationBodyText("main", command, "Copied to clipboard")).toBe(
+    "Copied to clipboard\nmain",
+  );
+
+  const result = buildNotificationStyledText({
+    text: "main",
+    command,
+    title: "Copied to clipboard",
+    commandColor: "#12ab34",
+  });
+  expect(result.chunks.map((chunk) => chunk.text).join("")).toBe(
+    "Copied to clipboard\nmain",
+  );
+});

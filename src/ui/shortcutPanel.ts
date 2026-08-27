@@ -1,6 +1,6 @@
 import type { CommandDefinition } from "../commands/definitions.ts";
 import type { AppState, FocusMode } from "../domain/types.ts";
-import { isFileFocusMode, modeDefinitions, revisionLogNavCommandIds, type CanonicalKeyBinding, type KeymapScope, type Mode } from "../modes.ts";
+import { getActiveMode, isFileFocusMode, modeDefinitions, resolveModeCommandTitle, revisionLogNavCommandIds, type CanonicalKeyBinding, type KeymapScope, type Mode } from "../modes.ts";
 import { commandCanExecute, getFocusedChildRevision, getFocusedFile, getFocusedParentRevision, getFocusedRevision } from "../state/store.ts";
 import { hasMatch, score } from "fzy.js";
 
@@ -477,8 +477,22 @@ export function getShortcutPanelBindings(
   state: AppState,
   bindings: readonly ShortcutPanelBindingInput[],
 ): readonly ShortcutPanelBindingInput[] {
-  const actionable = bindings.filter(({ command }) => commandHasImmediateEffect(state, command));
   const focusMode = shortcutPanelFocusMode(state);
+  const mode = getActiveMode(state);
+  const contextualBindings = bindings.map((binding) => {
+    const title = resolveModeCommandTitle(
+      mode,
+      state,
+      binding.command.id,
+      binding.command.title,
+    );
+    return title === binding.command.title
+      ? binding
+      : { ...binding, command: { ...binding.command, title } };
+  });
+  const actionable = contextualBindings.filter(({ command }) =>
+    commandHasImmediateEffect(state, command)
+  );
 
   if (state.focusMode === "preview") {
     return actionable;

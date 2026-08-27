@@ -32,11 +32,13 @@ export type CommandRunnerActions = Readonly<{
     level: StatusLevel,
     variant?: StatusMessageVariant,
     command?: CommandInvocation,
+    title?: string,
   ): void;
   logEvent(
     text: string,
     level: StatusLevel,
     command?: CommandInvocation,
+    title?: string,
   ): void;
   setLoading(loading: boolean): void;
   setLastFailedCommand(command: FailedCommand): void;
@@ -72,6 +74,8 @@ export type CommandRunOptions = Readonly<{
   failureFeedback: CommandFeedbackMode;
   recordHistory?: RecordHistory;
   focusWorkingCopyAfterRefresh?: boolean;
+  successMessage?: string;
+  successTitle?: string;
 }>;
 
 export function createTrackedCommand(
@@ -173,10 +177,11 @@ export function createCommandRunner(args: Readonly<{
         publishSuccess(
           args.actions,
           toastId,
-          resultMessage,
+          options.successMessage ?? resultMessage,
           options.successFeedback,
           successVariant,
           invocation,
+          options.successTitle,
         );
         await args.refreshRepository({ workingCopy: "read-only" });
         if (options.focusWorkingCopyAfterRefresh) {
@@ -324,12 +329,13 @@ function publishSuccess(
   feedback: CommandFeedbackMode,
   variant: StatusMessageVariant | undefined,
   command: CommandInvocation,
+  title?: string,
 ) {
   if (feedback === "status-toast") {
     if (toastId !== null) {
-      actions.updateStatusMessage(toastId, message, "success", variant, command);
+      actions.updateStatusMessage(toastId, message, "success", variant, command, title);
     }
-    actions.logEvent(message, "success", command);
+    actions.logEvent(message, "success", command, title);
     return;
   }
 

@@ -6,6 +6,7 @@ import type { CommandInvocation } from "../src/domain/types.ts";
 function createActionLog() {
   const entries: string[] = [];
   const publishedCommands: CommandInvocation[] = [];
+  const publishedTitles: string[] = [];
   const commandSuffix = (command?: CommandInvocation) =>
     command
       ? `:${command.executor === "jj" ? "jj " : ""}${command.commandText}`
@@ -14,6 +15,7 @@ function createActionLog() {
   return {
     entries,
     publishedCommands,
+    publishedTitles,
     actions: {
       clearLastFailedCommand() {
         entries.push("clearLastFailedCommand");
@@ -33,12 +35,15 @@ function createActionLog() {
         level: string,
         variant?: string,
         command?: CommandInvocation,
+        title?: string,
       ) {
+        if (title) publishedTitles.push(title);
         entries.push(
           `updateStatusMessage:${id}:${level}:${text}${variant ? `:${variant}` : ""}${commandSuffix(command)}`,
         );
       },
-      logEvent(text: string, level: string, command?: CommandInvocation) {
+      logEvent(text: string, level: string, command?: CommandInvocation, title?: string) {
+        if (title) publishedTitles.push(title);
         entries.push(`logEvent:${level}:${text}${commandSuffix(command)}`);
         if (command) publishedCommands.push(command);
       },
@@ -213,6 +218,33 @@ test("command runner records history and updates a status toast on success", asy
     "logEvent:success:ok:jj describe -r abc",
     "refreshRepository",
   ]);
+});
+
+test("command runner can replace successful command feedback with a title and message", async () => {
+  const { entries, actions, publishedTitles } = createActionLog();
+  const runner = createCommandRunner({
+    actions,
+    executeCommandArgs: async () => "",
+    executeShellCommand: async () => "Executed: printf %s main | pbcopy",
+    refreshRepository: async () => true,
+    createToastId: () => "toast-1",
+  });
+
+  await runner.run({
+    commandText: "printf %s main | pbcopy",
+    executor: "shell",
+    canExecute: true,
+    successFeedback: "status-toast",
+    failureFeedback: "status-toast",
+    successTitle: "Copied to clipboard",
+    successMessage: "main",
+  });
+
+  expect(entries).toContain(
+    "updateStatusMessage:toast-1:success:main:printf %s main | pbcopy",
+  );
+  expect(entries).toContain("logEvent:success:main:printf %s main | pbcopy");
+  expect(publishedTitles).toEqual(["Copied to clipboard", "Copied to clipboard"]);
 });
 
 test("command runner keeps successful file track snapshot warnings retryable", async () => {

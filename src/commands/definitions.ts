@@ -59,6 +59,7 @@ export type CommandController = Readonly<{
   startNewRevision: () => void;
   editRevision: () => void;
   enterBookmarkMode: () => void;
+  enterCopyMode: () => void;
   enterExtraMode: () => void;
   enterPreviewMode: () => void;
   exitPreviewMode: () => void;
@@ -75,6 +76,10 @@ export type CommandController = Readonly<{
   startBookmarkTrack: () => void;
   startBookmarkUntrack: () => void;
   copyBookmarkName: () => void;
+  copyRevisionId: () => void;
+  copyGitCommitId: () => void;
+  copyDescriptionSummary: () => void;
+  copyDescription: () => void;
   toggleSelection: () => void;
   toggleFileSelection: () => void;
   selectAllFiles: () => void;
@@ -1148,6 +1153,46 @@ export const commandDefinitions: readonly CommandDefinition[] = [
     description: "Pin the focused revision as an explicit --insert-before target, or unpin it",
     canExecute: (state) => !focusedIsElided(state),
     run: (controller) => controller.toggleNewBetweenBefore(),
+    group: "mode",
+  },
+  {
+    id: "enter-copy-mode",
+    title: "Copy",
+    description: "Enter copy mode for revision metadata",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.enterCopyMode(),
+    group: "global",
+  },
+  {
+    id: "copy-revision-id",
+    title: "Revision ID",
+    description: "Copy the focused revision ID to the clipboard",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.copyRevisionId(),
+    group: "mode",
+  },
+  {
+    id: "copy-git-commit-id",
+    title: "Git Commit ID",
+    description: "Copy the focused revision's Git commit ID to the clipboard",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.copyGitCommitId(),
+    group: "mode",
+  },
+  {
+    id: "copy-description-summary",
+    title: "Description Summary",
+    description: "Copy the focused revision's description summary to the clipboard",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.copyDescriptionSummary(),
+    group: "mode",
+  },
+  {
+    id: "copy-description",
+    title: "Full Description",
+    description: "Copy the focused revision's full description to the clipboard",
+    canExecute: (state) => !focusedIsElided(state),
+    run: (controller) => controller.copyDescription(),
     group: "mode",
   },
   {

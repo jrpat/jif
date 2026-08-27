@@ -1689,6 +1689,20 @@ test("pushEvent appends visible status messages instead of replacing them", () =
   expect(state.eventLog).toHaveLength(2);
 });
 
+test("pushEvent carries a presentation title into the toast and event log", () => {
+  const state = pushEvent(
+    createState(),
+    "main",
+    "success",
+    123,
+    undefined,
+    "Copied to clipboard",
+  );
+
+  expect(state.statusMessages.at(-1)?.title).toBe("Copied to clipboard");
+  expect(state.eventLog.at(-1)?.title).toBe("Copied to clipboard");
+});
+
 test("upsertStatusMessage replaces a same-id toast in place, preserving others", () => {
   let state = createState();
   state = pushEvent(state, "other", "success", 10);

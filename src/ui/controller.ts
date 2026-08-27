@@ -8,9 +8,10 @@ import type {
   ShellCommandOptions,
 } from "../commands/definitions.ts";
 import type { AppLayout, BookmarkSuggestion, ChangedFile, FocusMode, OperationLogEntry, RebaseSourceKind, RebaseTargetKind } from "../domain/types.ts";
+import type { RevisionPreviewMetadata } from "../jj/client.ts";
 import { bookmarkNameFromLabel } from "../domain/bookmarks.ts";
 import { getChangeIdFromRevisionId, getRevisionArg } from "../domain/revisionIds.ts";
-import { clipboardCopyCommandText } from "./clipboard.ts";
+import { CLIPBOARD_SUCCESS_TITLE, clipboardCopyCommandText } from "./clipboard.ts";
 import { buildBookmarkSuggestions, type BookmarkTarget } from "../state/bookmarkSuggestions.ts";
 import { buildForceRetryPlan } from "../jj/forceRetry.ts";
 import { tokenizeCommandText } from "../jj/client.ts";
@@ -64,6 +65,7 @@ type ControllerClient = Readonly<{
   loadAncestorChangeIds(focusedChangeId: string): Promise<readonly string[]>;
   loadDescendantChangeIds(focusedChangeId: string): Promise<readonly string[]>;
   loadKnownFiles(): Promise<readonly string[]>;
+  loadRevisionPreviewMetadata(revisionArg: string): Promise<RevisionPreviewMetadata>;
 }>;
 
 type ExecuteCurrentCommand = (
@@ -149,6 +151,25 @@ export function createJifCommandController(args: Readonly<{
       previewConfig,
     );
     store.actions.setPreviewSizePercentOverride(next);
+  }
+
+  function exitCopyLeaderModes() {
+    store.actions.exitBookmarkLeader();
+    store.actions.exitCopyMode();
+  }
+
+  async function writeClipboardText(text: string) {
+    try {
+      await args.copyToClipboard(text);
+      store.actions.pushEvent(text, "success", undefined, CLIPBOARD_SUCCESS_TITLE);
+    } catch (error) {
+      reportError(store, error);
+    }
+  }
+
+  function copyText(text: string) {
+    exitCopyLeaderModes();
+    void writeClipboardText(text);
   }
 
   /**
@@ -646,6 +667,9 @@ export function createJifCommandController(args: Readonly<{
     enterBookmarkMode() {
       store.actions.enterBookmarkLeader();
     },
+    enterCopyMode() {
+      store.actions.enterCopyMode();
+    },
     enterExtraMode() {
       store.actions.enterExtraMode();
     },
@@ -778,7 +802,7 @@ export function createJifCommandController(args: Readonly<{
 
       const names = revision.bookmarks.map(bookmarkNameFromLabel);
       if (names.length === 0) {
-        store.actions.exitBookmarkLeader();
+        exitCopyLeaderModes();
         store.actions.pushEvent("No bookmark on the focused revision.", "warning");
         return;
       }
@@ -788,25 +812,19 @@ export function createJifCommandController(args: Readonly<{
       // and their names as the suggestion list.
       const [only] = names;
       if (names.length === 1 && only !== undefined) {
-        store.actions.exitBookmarkLeader();
-        void (async () => {
-          try {
-            await args.copyToClipboard(only);
-            store.actions.pushEvent(`Copied ${only}`, "success");
-          } catch (error) {
-            reportError(store, error);
-          }
-        })();
+        copyText(only);
         return;
       }
 
       const prefix = "printf %s ";
+      const suffix = ` | ${clipboardCopyCommandText()}`;
       store.actions.startBookmarkPrompt(
-        `${prefix} | ${clipboardCopyCommandText()}`,
+        `${prefix}${suffix}`,
         prefix.length,
         {
           kind: "shell",
           focusedRevisionId: revision.revisionId,
+          clipboard: { prefix, suffix },
           suggestions: names.map((name) => ({
             name,
             targetChangeId: getChangeIdFromRevisionId(revision.revisionId),
@@ -815,6 +833,32 @@ export function createJifCommandController(args: Readonly<{
           })),
         },
       );
+    },
+    copyRevisionId() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (revision) copyText(revision.revisionId);
+    },
+    copyGitCommitId() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (revision) copyText(revision.commitId);
+    },
+    copyDescriptionSummary() {
+      const revision = getFocusedRevision(store.snapshot());
+      if (revision) copyText(revision.description);
+    },
+    copyDescription() {
+      const revisionArg = getFocusedRevisionArg(store.snapshot());
+      if (!revisionArg) return;
+
+      exitCopyLeaderModes();
+      void (async () => {
+        try {
+          const metadata = await client.loadRevisionPreviewMetadata(revisionArg);
+          await writeClipboardText(metadata.description);
+        } catch (error) {
+          reportError(store, error);
+        }
+      })();
     },
     startSplit() {
       beginSplit(false);

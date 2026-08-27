@@ -51,6 +51,14 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(typesText).toContain("namespace Jif {");
   expect(typesText).toContain("switchWorkspace: (workspaceName: string) => Promise<void>;");
   expect(typesText).toContain("moveFocusToImmutable: (direction: 1 | -1) => void;");
+  expect(typesText).toContain('type FocusMode = "revisions"');
+  expect(typesText).toContain('| "bookmark" | "copy" | "preview"');
+  expect(typesText).toContain("title?: string;");
+  expect(typesText).toContain("enterCopyMode: () => void;");
+  expect(typesText).toContain("copyRevisionId: () => void;");
+  expect(typesText).toContain("copyGitCommitId: () => void;");
+  expect(typesText).toContain("copyDescriptionSummary: () => void;");
+  expect(typesText).toContain("copyDescription: () => void;");
   expect(typesText).toContain("type Config = Readonly<{");
   expect(typesText).toContain('"promptSuggestionFocusedFill"');
   expect(typesText).toContain('"previewPaneFill"');

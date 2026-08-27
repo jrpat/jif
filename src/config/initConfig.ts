@@ -199,7 +199,7 @@ declare global {
 namespace Jif {
   type AppLayout = "loose" | "normal" | "tight";
   type LayoutLabelMaxLength = number | null | Readonly<Partial<Record<AppLayout, number | null>>>;
-  type FocusMode = "revisions" | "files" | "file-filter" | "op-log" | "evolog" | "inline-confirmation" | "command" | "revset" | "file-search" | "search" | "shortcut-filter" | "diff-viewer" | "notifications" | "bookmark" | "preview" | "extra";
+  type FocusMode = "revisions" | "files" | "file-filter" | "op-log" | "evolog" | "inline-confirmation" | "command" | "revset" | "file-search" | "search" | "shortcut-filter" | "diff-viewer" | "notifications" | "bookmark" | "copy" | "preview" | "extra";
   type SearchScopeId = "revision-log" | "operation-log" | "evolog";
   type SearchMode = "search" | "fast-jump";
   type StatusLevel = "info" | "success" | "warning" | "error";
@@ -264,6 +264,7 @@ namespace Jif {
     id: string;
     text: string;
     command?: CommandInvocation;
+    title?: string;
     level: StatusLevel;
     createdAt: number;
   }>;
@@ -272,6 +273,7 @@ namespace Jif {
     id: string;
     text: string;
     command?: CommandInvocation;
+    title?: string;
     level: StatusLevel;
     createdAt: number;
   }>;
@@ -387,6 +389,11 @@ namespace Jif {
     startInterdiff: () => void;
     startNewRevision: () => void;
     editRevision: () => void;
+    enterCopyMode: () => void;
+    copyRevisionId: () => void;
+    copyGitCommitId: () => void;
+    copyDescriptionSummary: () => void;
+    copyDescription: () => void;
     toggleSelection: () => void;
     toggleFileSelection: () => void;
     selectAllFiles: () => void;

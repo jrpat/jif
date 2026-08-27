@@ -30,6 +30,7 @@ export type Mode =
   | "diff-viewer"
   | "notifications"
   | "bookmark"
+  | "copy"
   | "bookmark-move"
   | "set-parents"
   | "new-between"
@@ -41,6 +42,7 @@ export type ModeDefinition = Readonly<{
   parent?: Mode;
   inputPassthrough: boolean;
   label: string;
+  commandTitles?: Readonly<Record<string, (state: AppState) => string>>;
 }>;
 
 export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
@@ -99,12 +101,32 @@ export const modeDefinitions: Readonly<Record<Mode, ModeDefinition>> = {
     inputPassthrough: false,
     label: "Bookmark",
   },
+  copy: {
+    id: "copy",
+    inputPassthrough: false,
+    label: "Copy",
+    commandTitles: {
+      "bookmark-copy-name": (state) =>
+        (state.revisions[state.focusedRevisionIndex]?.bookmarks.length ?? 0) > 1
+          ? "Bookmarks"
+          : "Bookmark",
+    },
+  },
   "bookmark-move": { id: "bookmark-move", parent: "revision-draft", inputPassthrough: false, label: "Bookmark Move" },
   "set-parents": { id: "set-parents", parent: "revision-draft", inputPassthrough: false, label: "Set Parents" },
   "new-between": { id: "new-between", parent: "revision-draft", inputPassthrough: false, label: "New Between" },
   preview: { id: "preview", inputPassthrough: false, label: "Preview" },
   extra: { id: "extra", inputPassthrough: false, label: "Extra" },
 };
+
+export function resolveModeCommandTitle(
+  mode: Mode,
+  state: AppState,
+  commandId: string,
+  defaultTitle: string,
+): string {
+  return modeDefinitions[mode].commandTitles?.[commandId]?.(state) ?? defaultTitle;
+}
 
 export type KeymapBinding =
   | string
@@ -227,6 +249,7 @@ export const defaultKeymap: Keymap = {
     "ctrl-o": "open-operation-log",
     "ctrl-e": "open-evolog",
     b: "enter-bookmark-mode",
+    C: "enter-copy-mode",
     M: "set-parents",
     ";": "enter-extra-mode",
     "ctrl-enter": "expand-diff-context",
@@ -367,6 +390,13 @@ export const defaultKeymap: Keymap = {
     u: "bookmark-untrack",
     C: "bookmark-copy-name",
   },
+  copy: {
+    c: "copy-revision-id",
+    g: "copy-git-commit-id",
+    d: "copy-description-summary",
+    D: "copy-description",
+    b: "bookmark-copy-name",
+  },
   "bookmark-move": {},
   "set-parents": {
     " ": "toggle-set-parents-pick",
@@ -438,6 +468,7 @@ export function getActiveMode(state: AppState): Mode {
   if (state.commandDraft?.config.kind === "new-between") return "new-between";
   if (state.commandDraft?.config.kind === "bookmark-move") return "bookmark-move";
   if (focusMode === "bookmark") return "bookmark";
+  if (focusMode === "copy") return "copy";
   if (focusMode === "extra") return "extra";
   return "revision-log";
 }

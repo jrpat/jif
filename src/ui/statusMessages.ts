@@ -1,4 +1,5 @@
 import type { ResolvedAppConfig } from "../config/schema.ts";
+import type { StatusMessage } from "../domain/types.ts";
 
 export const STATUS_MESSAGE_DURATION_MS = 5000;
 export const STATUS_TOAST_MAX_BODY_LINES = 15;
@@ -11,6 +12,13 @@ export function getStatusMessageDismissDelay(
   now = Date.now(),
 ): number {
   return Math.max(0, STATUS_MESSAGE_DURATION_MS - (now - lastInteractedAt));
+}
+
+export function shouldAutoDismissStatusMessage(
+  message: Pick<StatusMessage, "level" | "variant">,
+): boolean {
+  return message.variant !== "help" &&
+    (message.level === "success" || message.level === "warning");
 }
 
 export function getStatusToastMaxBodyHeight(terminalHeight: number): number {

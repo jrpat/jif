@@ -804,6 +804,8 @@ export function JifView(props: {
     }
     if (details.mode === "extra") {
       store.actions.exitExtraMode();
+    } else if (details.mode === "copy") {
+      store.actions.exitCopyMode();
     } else if (details.mode === "bookmark") {
       store.actions.exitBookmarkLeader();
     }

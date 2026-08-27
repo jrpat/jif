@@ -9,6 +9,7 @@ import { buildScrollbarTrackOptions } from "./scrollbarOptions.ts";
 export function ScrollableAnsiBody(props: Readonly<{
   text: string;
   command?: CommandInvocation;
+  title?: string;
   commandColor?: string;
   bodyHeight: number;
   config: ResolvedAppConfig;
@@ -28,6 +29,7 @@ export function ScrollableAnsiBody(props: Readonly<{
       textRef.content = buildNotificationStyledText({
         text: props.text,
         command: props.command,
+        title: props.title,
         commandColor: props.commandColor,
         terminalPalette: props.config.terminalPalette,
       });

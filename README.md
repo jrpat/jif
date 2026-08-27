@@ -256,6 +256,7 @@ The revision-level split bindings are available only in the revision log, not wh
 | `q` | quit | Exit the application |
 | `!` | force-last-command | Retry the latest retryable command with the override flag `jj` is asking for:<br>• `--ignore-immutable` — when the command refused because the target is immutable<br>• `--allow-backwards` — when a bookmark move was rejected as backwards/sideways<br>• `--include-ignored` — when `jj file track` warned that it refused to snapshot some files |
 | `-` | toggle-flags | Toggle the command bar between short and long flag names while composing a command |
+| `C` | enter-copy-mode | Enter Copy mode for the focused revision |
 | `;` | enter-extra-mode | Enter Extra mode, a clean-slate scope for keys you define yourself in `keymap.extra` |
 
 ### Files
@@ -407,9 +408,23 @@ Pressing `b` from Normal mode enters Bookmark mode and waits for the next keystr
 | `u` | bookmark-untrack | Open the command bar with `b untrack ` and bookmark-name autocomplete |
 | `C` | bookmark-copy-name | Copy the focused revision's bookmark name to the system clipboard |
 
-Copy takes the focused revision's own bookmarks, without jj's sync (`*`) or conflict (`??`) markers. A single bookmark goes straight to the clipboard and reports as a toast. When the revision carries several, the shell command bar opens instead with `printf %s  | pbcopy` (the platform's clipboard writer: `pbcopy`, `clip`, `wl-copy`, or `xclip -selection clipboard`), the cursor in the name slot, and those bookmarks as the suggestion list.
+Copy takes the focused revision's own bookmarks, without jj's sync (`*`) or conflict (`??`) markers. A single bookmark goes straight to the clipboard and reports the full name in a `Copied to clipboard` toast. When the revision carries several, the shell command bar opens instead with `printf %s  | pbcopy` (the platform's clipboard writer: `pbcopy`, `clip`, `wl-copy`, or `xclip -selection clipboard`), the cursor in the name slot, and those bookmarks as the suggestion list.
 
 Bookmark autocomplete is sorted with the closest ancestor bookmark first (visually at the bottom of the suggestion list), then more distant ancestors, then descendants by ascending distance, then any unrelated bookmarks. For Move-to, bookmarks already pointing at the focused revision are excluded; for the other prompts they appear at the highest priority (closest to the cursor). Track puts exact remote bookmark symbols first and includes tracked and untracked bookmarks from every remote.
+
+### Copy
+
+Pressing `C` from Normal mode enters Copy mode for the focused revision. Like Extra mode, Copy is a clean-slate leader mode that opens its shortcut panel automatically; press `escape` to leave without copying.
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `c` | copy-revision-id | Copy the revision's exact jj revision id, including a divergent `/N` suffix when present |
+| `g` | copy-git-commit-id | Copy the full Git commit id |
+| `d` | copy-description-summary | Copy the description summary shown in the revision log |
+| `D` | copy-description | Copy the full description |
+| `b` | bookmark-copy-name | Copy the bookmark pointing to the revision |
+
+Every completed copy closes Copy mode and shows the full copied text in a success toast headed `Copied to clipboard`. The panel labels `b` as `Bookmark` when the focused revision has zero or one bookmark and `Bookmarks` when it has several. If several bookmarks point to the revision, `b` opens the shell command prompt with every bookmark as an autocomplete suggestion and the platform clipboard writer (`pbcopy`, `clip`, `wl-copy`, or `xclip -selection clipboard`) already in place.
 
 ### Search
 
@@ -865,11 +880,16 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `commit()` | Commit the working-copy revision |
 | `confirm()` | Confirm the active command draft, prompt, or inline confirmation |
 | `copyBookmarkName()` | Copy the focused revision's bookmark name, or open a shell copy prompt when it has several |
+| `copyDescription()` | Copy the focused revision's full description |
+| `copyDescriptionSummary()` | Copy the focused revision's description summary |
+| `copyGitCommitId()` | Copy the focused revision's full Git commit id |
+| `copyRevisionId()` | Copy the focused revision's exact jj revision id |
 | `cycleLayout()` | Cycle the revision layout |
 | `describe()` | Edit the focused revision description |
 | `editFocusedNotification()` | Open the focused notification text in `$EDITOR` |
 | `editRevision()` | Edit the focused revision |
 | `enterBookmarkMode()` | Enter the bookmark leader mode |
+| `enterCopyMode()` | Enter Copy mode |
 | `enterExtraMode()` | Enter Extra mode |
 | `expandNotification()` | Expand the focused notification |
 | `focusCommandBar()` | Open the `:` jj command bar |
@@ -1096,7 +1116,7 @@ Line wrapping can be toggled in-app with `shift+w`, with `w` in Preview mode, an
 <details>
 <summary>Help</summary>
 
-Most successful commands surface a short toast that fades on its own after a few seconds. Help output is different: running `help`, or any command ending in `-h` or `--help`, opens a blue-bordered toast that grows to fit the help text (up to half the terminal height) and stays until you dismiss it. It is not a mode of its own — the log keeps the keyboard, so `j`/`k` still navigate revisions while the help text is up, and `ctrl-j`/`ctrl-k` scroll the help toast itself by a line. Pressing `Esc` clears it, and so does running any other command (the next toast supersedes it).
+Successful commands and warnings surface short toasts that fade on their own after a few seconds. Help output is different: running `help`, or any command ending in `-h` or `--help`, opens a blue-bordered toast that grows to fit the help text (up to half the terminal height) and stays until you dismiss it. It is not a mode of its own — the log keeps the keyboard, so `j`/`k` still navigate revisions while the help text is up, and `ctrl-j`/`ctrl-k` scroll the help toast itself by a line. Pressing `Esc` clears it, and so does running any other command (the next toast supersedes it).
 
 </details>
 

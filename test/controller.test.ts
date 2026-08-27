@@ -84,6 +84,8 @@ function createControllerHarness(harnessOptions: Readonly<{
   anchorRange?: readonly string[];
   absorbTargets?: readonly string[];
   remoteBookmarks?: readonly string[];
+  fullDescription?: string;
+  revisionMetadataError?: Error;
   openReleasesPageError?: Error;
   copyToClipboardError?: Error;
 }>) {
@@ -124,6 +126,7 @@ function createControllerHarness(harnessOptions: Readonly<{
   let executeCurrentCommandCalls = 0;
   const editorTexts: string[] = [];
   const clipboardTexts: string[] = [];
+  const revisionMetadataCalls: string[] = [];
   let reloadConfigCalls = 0;
   let openReleasesPageCalls = 0;
 
@@ -174,6 +177,24 @@ function createControllerHarness(harnessOptions: Readonly<{
       },
       async loadKnownFiles() {
         return [];
+      },
+      async loadRevisionPreviewMetadata(revisionArg: string) {
+        revisionMetadataCalls.push(revisionArg);
+        if (harnessOptions.revisionMetadataError) {
+          throw harnessOptions.revisionMetadataError;
+        }
+        return {
+          changeId: revisionArg,
+          commitId: `${revisionArg}-commit`,
+          authorLocalTimestamp: "",
+          authorName: "",
+          authorEmail: "",
+          committerLocalTimestamp: "",
+          committerName: "",
+          committerEmail: "",
+          bookmarks: [],
+          description: harnessOptions.fullDescription ?? "full description",
+        };
       },
     },
     destroy: () => {},
@@ -282,6 +303,7 @@ function createControllerHarness(harnessOptions: Readonly<{
     persistedLayouts,
     editorTexts,
     clipboardTexts,
+    revisionMetadataCalls,
     resolveAbsorbSources,
     get suspendCalls() {
       return suspendCalls;
@@ -354,6 +376,88 @@ test("openReleasesPage reports opener failures as an error event", async () => {
   harness.store.dispose();
 });
 
+test("copyRevisionId copies the focused revision id with copy-specific feedback", async () => {
+  const harness = createControllerHarness({
+    revisions: [createRevision({
+      rowId: "aaaaaaaa",
+      revisionId: "aaaaaaaa/2",
+      description: "tip",
+    })],
+  });
+
+  harness.store.actions.enterCopyMode();
+  harness.controller.copyRevisionId();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(harness.clipboardTexts).toEqual(["aaaaaaaa/2"]);
+  const message = harness.store.snapshot().statusMessages.at(-1);
+  expect(message?.title).toBe("Copied to clipboard");
+  expect(message?.text).toBe("aaaaaaaa/2");
+  expect(harness.store.snapshot().focusMode).toBe("revisions");
+  harness.store.dispose();
+});
+
+test("copyGitCommitId copies the focused git commit id", async () => {
+  const harness = createControllerHarness({
+    revisions: [createRevision({
+      rowId: "aaaaaaaa",
+      revisionId: "aaaaaaaa",
+      commitId: "0123456789abcdef",
+      description: "tip",
+    })],
+  });
+
+  harness.controller.copyGitCommitId();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(harness.clipboardTexts).toEqual(["0123456789abcdef"]);
+  expect(harness.store.snapshot().statusMessages.at(-1)?.text).toBe("0123456789abcdef");
+  harness.store.dispose();
+});
+
+test("copyDescriptionSummary copies the visible description summary", async () => {
+  const harness = createControllerHarness({
+    revisions: [createRevision({
+      rowId: "aaaaaaaa",
+      revisionId: "aaaaaaaa",
+      description: "summary",
+    })],
+  });
+
+  harness.controller.copyDescriptionSummary();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(harness.clipboardTexts).toEqual(["summary"]);
+  expect(harness.store.snapshot().statusMessages.at(-1)?.text).toBe("summary");
+  harness.store.dispose();
+});
+
+test("copyDescription loads and copies the full revision description", async () => {
+  const harness = createControllerHarness({
+    revisions: [createRevision({
+      rowId: "aaaaaaaa",
+      revisionId: "aaaaaaaa",
+      description: "summary",
+    })],
+    fullDescription: "summary\n\nFull description body.",
+  });
+
+  harness.controller.copyDescription();
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(harness.revisionMetadataCalls).toEqual(["a"]);
+  expect(harness.clipboardTexts).toEqual(["summary\n\nFull description body."]);
+  expect(harness.store.snapshot().statusMessages.at(-1)?.text).toBe(
+    "summary\n\nFull description body.",
+  );
+  harness.store.dispose();
+});
+
 test("copyBookmarkName copies the single bookmark straight to the clipboard", async () => {
   const harness = createControllerHarness({
     revisions: [
@@ -375,7 +479,8 @@ test("copyBookmarkName copies the single bookmark straight to the clipboard", as
 
   expect(harness.clipboardTexts).toEqual(["main"]);
   expect(harness.store.snapshot().focusMode).toBe("revisions");
-  expect(harness.store.snapshot().statusMessages.at(-1)?.text).toBe("Copied main");
+  expect(harness.store.snapshot().statusMessages.at(-1)?.title).toBe("Copied to clipboard");
+  expect(harness.store.snapshot().statusMessages.at(-1)?.text).toBe("main");
   harness.store.dispose();
 });
 
@@ -440,6 +545,10 @@ test("copyBookmarkName opens a shell copy prompt when the revision has several b
   expect(state.commandBar.kind).toBe("shell");
   expect(state.commandBar.text).toBe(`printf %s  | ${clipboardCopyCommandText()}`);
   expect(state.commandBarBookmark?.initialCursorOffset).toBe("printf %s ".length);
+  expect(state.commandBarBookmark?.clipboard).toEqual({
+    prefix: "printf %s ",
+    suffix: ` | ${clipboardCopyCommandText()}`,
+  });
   expect(state.commandBarBookmark?.suggestions.map((suggestion) => suggestion.name)).toEqual([
     "main",
     "release",

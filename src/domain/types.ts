@@ -28,6 +28,7 @@ export type FocusMode =
   | "diff-viewer"
   | "notifications"
   | "bookmark"
+  | "copy"
   | "preview"
   | "extra";
 export type AppLayout = "loose" | "normal" | "tight";
@@ -119,6 +120,10 @@ export type CommandBarBookmarkContext = Readonly<{
   focusedRevisionId: string;
   initialCursorOffset: number;
   suggestions: readonly BookmarkSuggestion[];
+  clipboard?: Readonly<{
+    prefix: string;
+    suffix: string;
+  }>;
 }>;
 
 /**
@@ -179,6 +184,7 @@ export type CommandInvocation = Readonly<{
 export type StatusMessage = Readonly<{
   id: string;
   text: string;
+  title?: string;
   command?: CommandInvocation;
   level: StatusLevel;
   variant?: StatusMessageVariant;
@@ -189,6 +195,7 @@ export type StatusMessage = Readonly<{
 export type EventLogEntry = Readonly<{
   id: string;
   text: string;
+  title?: string;
   command?: CommandInvocation;
   level: StatusLevel;
   createdAt: number;

@@ -21,7 +21,7 @@ export function shouldShowTransientShortcutPanel(args: {
     return !args.previewFullScreen;
   }
 
-  return args.focusMode === "extra" ||
+  return args.focusMode === "copy" || args.focusMode === "extra" ||
     (args.modeShortcutBindingCount > 0 &&
       (args.showsCommandPreview || args.focusMode === "bookmark"));
 }

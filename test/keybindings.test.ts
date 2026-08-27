@@ -164,6 +164,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     startAbsorb: () => calls.push("startAbsorb"),
     abandonRevision: () => calls.push("abandonRevision"),
     enterBookmarkMode: () => calls.push("enterBookmarkMode"),
+    enterCopyMode: () => calls.push("enterCopyMode"),
     enterExtraMode: () => calls.push("enterExtraMode"),
     enterPreviewMode: () => calls.push("enterPreviewMode"),
     exitPreviewMode: () => calls.push("exitPreviewMode"),
@@ -180,6 +181,10 @@ function createController(calls: string[], errors: string[] = []): CommandContro
     startBookmarkTrack: () => calls.push("startBookmarkTrack"),
     startBookmarkUntrack: () => calls.push("startBookmarkUntrack"),
     copyBookmarkName: () => calls.push("copyBookmarkName"),
+    copyRevisionId: () => calls.push("copyRevisionId"),
+    copyGitCommitId: () => calls.push("copyGitCommitId"),
+    copyDescriptionSummary: () => calls.push("copyDescriptionSummary"),
+    copyDescription: () => calls.push("copyDescription"),
     jj: async () => {
       calls.push("jj");
     },
@@ -1399,6 +1404,45 @@ test("dispatchGlobalKey routes G to the bottom of the log", () => {
   expect(calls).toEqual(["focusLogBottom"]);
 });
 
+test("dispatchGlobalKey routes C from revisions into copy mode", () => {
+  const calls: string[] = [];
+  const handled = dispatchGlobalKey({
+    normalizedKey: "C",
+    state: createState(),
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["enterCopyMode"]);
+});
+
+test("dispatchGlobalKey routes copy mode keys to clipboard actions", () => {
+  const calls: string[] = [];
+  const state: AppState = {
+    ...createState(),
+    focusMode: "copy",
+    focusModeStack: ["revisions", "copy"],
+  };
+
+  for (const normalizedKey of ["c", "g", "d", "D", "b"]) {
+    expect(dispatchGlobalKey({
+      normalizedKey,
+      state,
+      commands: commandDefinitions,
+      controller: createController(calls),
+    })).toBeTrue();
+  }
+
+  expect(calls).toEqual([
+    "copyRevisionId",
+    "copyGitCommitId",
+    "copyDescriptionSummary",
+    "copyDescription",
+    "copyBookmarkName",
+  ]);
+});
+
 test("dispatchGlobalKey routes ] to the next bookmark", () => {
   const calls: string[] = [];
   const base = createState();
@@ -2219,20 +2263,6 @@ test("dispatchGlobalKey routes C to the bookmark copy in bookmark mode", () => {
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["copyBookmarkName"]);
-});
-
-test("dispatchGlobalKey leaves C unhandled in normal mode", () => {
-  const calls: string[] = [];
-
-  const handled = dispatchGlobalKey({
-    normalizedKey: "C",
-    state: createState(),
-    commands: commandDefinitions,
-    controller: createController(calls),
-  });
-
-  expect(handled).toBeFalse();
-  expect(calls).toEqual([]);
 });
 
 test("dispatchGlobalKey routes q to cancelOrBlur in files mode", () => {

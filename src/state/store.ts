@@ -376,6 +376,7 @@ const SHORTCUT_FILTER_FOCUS_MODES = new Set<FocusMode>([
   "diff-viewer",
   "notifications",
   "bookmark",
+  "copy",
   "preview",
   "extra",
   "shortcut-filter",
@@ -1081,6 +1082,25 @@ export function exitBookmarkLeader(state: AppState): AppState {
   return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
 }
 
+export function enterCopyMode(state: AppState): AppState {
+  if (state.focusMode === "copy") {
+    return state;
+  }
+
+  return replaceFocusModeStack({
+    ...state,
+    inlineConfirmation: null,
+  }, [...getBrowseFocusModeStack(state), "copy"]);
+}
+
+export function exitCopyMode(state: AppState): AppState {
+  if (state.focusMode !== "copy") {
+    return state;
+  }
+
+  return replaceFocusModeStack(state, getBrowseFocusModeStack(state));
+}
+
 export function enterExtraMode(state: AppState): AppState {
   if (state.focusMode === "extra") {
     return state;
@@ -1161,6 +1181,7 @@ export function startBookmarkPrompt(
     // Every `jj bookmark` flow composes on the jj bar; only the copy flow,
     // which pipes a name into the system clipboard, opens the shell bar.
     kind?: CommandBarKind;
+    clipboard?: Readonly<{ prefix: string; suffix: string }>;
   },
 ): AppState {
   const baseStack = state.focusMode === "bookmark"
@@ -1172,6 +1193,7 @@ export function startBookmarkPrompt(
         focusedRevisionId: options.focusedRevisionId,
         initialCursorOffset: cursorOffset,
         suggestions: options.suggestions,
+        ...(options.clipboard === undefined ? {} : { clipboard: options.clipboard }),
       };
 
   return replaceFocusModeStack({
@@ -1700,6 +1722,10 @@ export function cancelOrBlurState(state: AppState): AppState {
   if (state.focusMode === "bookmark") {
     const withoutDraft = state.commandDraft !== null ? cancelCommandDraft(state) : state;
     return exitBookmarkLeader(withoutDraft);
+  }
+
+  if (state.focusMode === "copy") {
+    return exitCopyMode(state);
   }
 
   if (state.focusMode === "extra") {
@@ -2535,11 +2561,13 @@ export function pushEvent(
   level: StatusLevel,
   createdAt = Date.now(),
   command?: CommandInvocation,
+  title?: string,
 ): AppState {
   const id = `${createdAt}-${state.eventLog.length}`;
   const event: EventLogEntry = {
     id,
     text,
+    title,
     command,
     level,
     createdAt,
@@ -2547,6 +2575,7 @@ export function pushEvent(
   const statusMessage: StatusMessage = {
     id,
     text,
+    title,
     command,
     level,
     createdAt,
@@ -2566,11 +2595,13 @@ export function pushStatusMessage(
   text: string,
   level: StatusLevel,
   command?: CommandInvocation,
+  title?: string,
 ): AppState {
   const now = Date.now();
   const message: StatusMessage = {
     id,
     text,
+    title,
     command,
     level,
     createdAt: now,
@@ -2607,13 +2638,14 @@ export function updateStatusMessage(
   level: StatusLevel,
   variant?: StatusMessageVariant,
   command?: CommandInvocation,
+  title?: string,
 ): AppState {
   const now = Date.now();
   return {
     ...state,
     statusMessages: state.statusMessages.map((m) =>
       m.id === id
-        ? { ...m, text, level, variant, command, lastInteractedAt: now }
+        ? { ...m, text, title, level, variant, command, lastInteractedAt: now }
         : m,
     ),
   };
@@ -2642,11 +2674,13 @@ export function logEvent(
   text: string,
   level: StatusLevel,
   command?: CommandInvocation,
+  title?: string,
 ): AppState {
   const createdAt = Date.now();
   const entry: EventLogEntry = {
     id: `${createdAt}-${state.eventLog.length}`,
     text,
+    title,
     command,
     level,
     createdAt,
