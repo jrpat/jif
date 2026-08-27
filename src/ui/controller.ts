@@ -276,6 +276,9 @@ export function createJifCommandController(args: Readonly<{
     moveFocusToBookmark(direction: 1 | -1) {
       store.actions.moveFocusToBookmark(direction);
     },
+    moveFocusToImmutable(direction: 1 | -1) {
+      store.actions.moveFocusToImmutable(direction);
+    },
     openOperationLog() {
       store.actions.openOperationLog();
       store.actions.setOperationLogLoading(true);

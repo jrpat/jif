@@ -105,6 +105,7 @@ import {
   moveFocus,
   moveFocusToChild,
   moveFocusToBookmark,
+  moveFocusToImmutable,
   moveFocusToNextDivergentSibling,
   moveFocusToParent,
   moveFocusToWorkspace,
@@ -272,6 +273,9 @@ export function createAppStore(
       },
       moveFocusToBookmark(direction: 1 | -1) {
         mutate((currentState) => moveFocusToBookmark(currentState, direction));
+      },
+      moveFocusToImmutable(direction: 1 | -1) {
+        mutate((currentState) => moveFocusToImmutable(currentState, direction));
       },
       openFocusedRevision() {
         mutate((currentState) => openFocusedRevision(currentState));

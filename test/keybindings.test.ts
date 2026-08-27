@@ -68,6 +68,7 @@ function createController(calls: string[], errors: string[] = []): CommandContro
       calls.push("switchToFocusedWorkspace");
     },
     moveFocusToBookmark: (direction: 1 | -1) => calls.push(`moveFocusToBookmark:${direction}`),
+    moveFocusToImmutable: (direction: 1 | -1) => calls.push(`moveFocusToImmutable:${direction}`),
     focusLogBottom: () => calls.push("focusLogBottom"),
     focusCurrentOperation: () => calls.push("focusCurrentOperation"),
     openOperationLog: () => calls.push("openOperationLog"),
@@ -1462,6 +1463,50 @@ test("dispatchGlobalKey routes [ at the first bookmark so it can fall back to @"
 
   expect(handled).toBeTrue();
   expect(calls).toEqual(["moveFocusToBookmark:-1"]);
+});
+
+test("dispatchGlobalKey routes alt-] to the next immutable revision", () => {
+  const calls: string[] = [];
+  const base = createState();
+  const state: AppState = {
+    ...base,
+    focusedRevisionIndex: 0,
+    revisions: base.revisions.map((revision, index) =>
+      index === 1 ? { ...revision, marker: "immutable" } : revision
+    ),
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "alt-]",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["moveFocusToImmutable:1"]);
+});
+
+test("dispatchGlobalKey routes alt-[ to the previous immutable revision", () => {
+  const calls: string[] = [];
+  const base = createState();
+  const state: AppState = {
+    ...base,
+    focusedRevisionIndex: 1,
+    revisions: base.revisions.map((revision, index) =>
+      index === 0 ? { ...revision, marker: "immutable" } : revision
+    ),
+  };
+
+  const handled = dispatchGlobalKey({
+    normalizedKey: "alt-[",
+    state,
+    commands: commandDefinitions,
+    controller: createController(calls),
+  });
+
+  expect(handled).toBeTrue();
+  expect(calls).toEqual(["moveFocusToImmutable:-1"]);
 });
 
 test("dispatchGlobalKey routes } to the next workspace", () => {

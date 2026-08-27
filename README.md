@@ -92,7 +92,7 @@ be invoked immediately. Press `?` again to edit the applied filter. The first
 
 Keybindings are per-mode. Global bindings are available in every mode and may be overridden by a mode-specific binding for the same key.
 
-Log-oriented modes share a common **Log** binding set: linear movement, viewport positioning, the command bar, search, fast jump, help, preview, retry, and flag controls. Revision-backed modes additionally inherit **Revision Log Navigation**: graph movement (`J`/`K`), divergent sibling cycling (`alt-j`), bookmark and workspace jumps (`[`/`]`, `{`/`}`), and the working-copy jump (`@`). Normal and Bookmark inherit Revision Log Navigation; revision operation composers such as Rebase and Squash inherit it through an abstract **Revision Draft** mode, which adds `enter` to confirm and `space` to select revisions without inheriting revision-log-only commands from Normal. Operation Log and Evolog inherit only Log. Each mode is annotated below with what, if anything, it inherits.
+Log-oriented modes share a common **Log** binding set: linear movement, viewport positioning, the command bar, search, fast jump, help, preview, retry, and flag controls. Revision-backed modes additionally inherit **Revision Log Navigation**: graph movement (`J`/`K`), divergent sibling cycling (`alt-j`), bookmark, immutable-revision, and workspace jumps (`[`/`]`, `alt-[`/`alt-]`, `{`/`}`), and the working-copy jump (`@`). Normal and Bookmark inherit Revision Log Navigation; revision operation composers such as Rebase and Squash inherit it through an abstract **Revision Draft** mode, which adds `enter` to confirm and `space` to select revisions without inheriting revision-log-only commands from Normal. Operation Log and Evolog inherit only Log. Each mode is annotated below with what, if anything, it inherits.
 
 When the shortcut panel is expanded, Revision Log Navigation commands keep it open so the inherited and mode-specific bindings remain visible in separate sections while focus moves.
 
@@ -181,13 +181,15 @@ Viewing and navigating the revision log.
 | `alt-j` | jump-to-next-divergent | When the focused revision is divergent (showing the `/N` suffix), cycle to the next visible sibling sharing its change-id |
 | `]` | move-to-next-bookmark | Jump down to the next visible revision that has a bookmark, without wrapping |
 | `[` | move-to-prev-bookmark | Jump up to the previous visible revision that has a bookmark, falling back to `@` when there is none |
+| `alt-]` | move-to-next-immutable | Jump down to the next visible immutable revision, without wrapping |
+| `alt-[` | move-to-prev-immutable | Jump up to the previous visible immutable revision, without wrapping |
 | `}` | move-to-next-workspace | Jump down to the next visible revision that has a workspace, without wrapping |
 | `{` | move-to-prev-workspace | Jump up to the previous visible revision that has a workspace, falling back to `@` when there is none |
 | `tab` | switch-active-workspace | Make the focused workspace marker the active workspace |
 | `@` | jump-to-working-copy | Jump to the working-copy revision |
 | `G` | jump-to-bottom | Jump to the last revision in the log |
 
-`J`/`K`, `alt-j`, `[`/`]`, `{`/`}`, and `@` come from the shared Revision Log Navigation bindings, so they remain available while composing revision operations such as Rebase or Squash. `tab` is Normal-only because it changes the active workspace rather than merely moving revision focus.
+`J`/`K`, `alt-j`, `[`/`]`, `alt-[`/`alt-]`, `{`/`}`, and `@` come from the shared Revision Log Navigation bindings, so they remain available while composing revision operations such as Rebase or Squash. `tab` is Normal-only because it changes the active workspace rather than merely moving revision focus.
 
 When the focused revision has multiple workspace chips, `tab` switches to the first one if none is active; otherwise it moves to the chip after the active workspace, wrapping to the first.
 
@@ -878,6 +880,7 @@ The `cmd` argument exposes command and state-transition helpers to inline keybin
 | `forceLastCommand()` | Retry the last retryable failed command with the requested override flag |
 | `moveFocus(delta)` | Move focus by `delta` rows in the active list |
 | `moveFocusToBookmark(direction)` | Move to the next (`1`) or previous (`-1`) visible bookmark; previous falls back to the working copy |
+| `moveFocusToImmutable(direction)` | Move to the next (`1`) or previous (`-1`) visible immutable revision, without wrapping |
 | `moveFocusToChild()` | Focus the nearest visible child revision |
 | `moveFocusToNextDivergentSibling()` | Cycle to another visible divergent sibling |
 | `moveFocusToParent()` | Focus the nearest visible parent revision |

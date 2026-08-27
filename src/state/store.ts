@@ -880,6 +880,13 @@ export function getAdjacentBookmarkRevisionIndex(
   return getAdjacentRevisionIndex(state, direction, (revision) => revision.bookmarks.length > 0);
 }
 
+export function getAdjacentImmutableRevisionIndex(
+  state: AppState,
+  direction: 1 | -1,
+): number | null {
+  return getAdjacentRevisionIndex(state, direction, (revision) => revision.marker === "immutable");
+}
+
 function moveFocusToIndex(state: AppState, nextIndex: number | null): AppState {
   if (nextIndex === null) {
     return state;
@@ -910,6 +917,10 @@ export function moveFocusToBookmark(state: AppState, direction: 1 | -1): AppStat
     return focusWorkingCopy(state);
   }
   return moveFocusToIndex(state, nextIndex);
+}
+
+export function moveFocusToImmutable(state: AppState, direction: 1 | -1): AppState {
+  return moveFocusToIndex(state, getAdjacentImmutableRevisionIndex(state, direction));
 }
 
 export function focusRevisionAt(state: AppState, index: number): AppState {

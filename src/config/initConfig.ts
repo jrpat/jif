@@ -366,6 +366,7 @@ namespace Jif {
     switchWorkspace: (workspaceName: string) => Promise<void>;
     switchToFocusedWorkspace: () => Promise<void>;
     moveFocusToBookmark: (direction: 1 | -1) => void;
+    moveFocusToImmutable: (direction: 1 | -1) => void;
     focusLogBottom: () => void;
     focusCurrentOperation: () => void;
     centerFocusedLogRow: () => void;

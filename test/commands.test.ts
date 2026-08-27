@@ -298,6 +298,8 @@ test("Revision Log Navigation owns revision focus movement", () => {
     "alt-j": "jump-to-next-divergent",
     "]": "move-to-next-bookmark",
     "[": "move-to-prev-bookmark",
+    "alt-]": "move-to-next-immutable",
+    "alt-[": "move-to-prev-immutable",
     "}": "move-to-next-workspace",
     "{": "move-to-prev-workspace",
     "@": "jump-to-working-copy",

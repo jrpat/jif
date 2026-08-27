@@ -1,4 +1,4 @@
-import { canOpenShortcutFilter, getAdjacentBookmarkRevisionIndex, getAdjacentWorkspaceRevisionIndex, getExpandedRevision, getFocusedChildRevision, getFocusedFile, getFocusedNotification, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
+import { canOpenShortcutFilter, getAdjacentBookmarkRevisionIndex, getAdjacentImmutableRevisionIndex, getAdjacentWorkspaceRevisionIndex, getExpandedRevision, getFocusedChildRevision, getFocusedFile, getFocusedNotification, getFocusedOperationLogEntry, getFocusedParentRevision, getNextDivergentSiblingIndex } from "../state/store.ts";
 import type { AppState, RebaseSourceKind, RebaseTargetKind } from "../domain/types.ts";
 import { canSearchState } from "../search/matching.ts";
 import { isPreviewingSingleFile } from "../domain/preview.ts";
@@ -28,6 +28,7 @@ export type CommandController = Readonly<{
   switchWorkspace: (workspaceName: string) => Promise<void>;
   switchToFocusedWorkspace: () => Promise<void>;
   moveFocusToBookmark: (direction: 1 | -1) => void;
+  moveFocusToImmutable: (direction: 1 | -1) => void;
   focusLogBottom: () => void;
   focusCurrentOperation: () => void;
   openOperationLog: () => void;
@@ -329,6 +330,20 @@ export const commandDefinitions: readonly CommandDefinition[] = [
       getAdjacentBookmarkRevisionIndex(state, -1) !== null ||
       state.revisions.some((revision) => revision.marker === "working-copy"),
     run: (controller) => controller.moveFocusToBookmark(-1),
+  },
+  {
+    id: "move-to-next-immutable",
+    title: "Next Immutable",
+    description: "Focus the next visible immutable revision",
+    canExecute: (state) => getAdjacentImmutableRevisionIndex(state, 1) !== null,
+    run: (controller) => controller.moveFocusToImmutable(1),
+  },
+  {
+    id: "move-to-prev-immutable",
+    title: "Previous Immutable",
+    description: "Focus the previous visible immutable revision",
+    canExecute: (state) => getAdjacentImmutableRevisionIndex(state, -1) !== null,
+    run: (controller) => controller.moveFocusToImmutable(-1),
   },
   {
     id: "jump-to-bottom",

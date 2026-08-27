@@ -53,6 +53,11 @@ test("resolveKeyToken builds alt-backtick from an Option+backtick press", () => 
   expect(resolveKeyToken({ name: "`", sequence: "`", option: true, meta: true })).toBe("alt-`");
 });
 
+test("resolveKeyToken builds Alt tokens for bracket keys", () => {
+  expect(resolveKeyToken({ name: "]", sequence: "]", option: true, meta: true })).toBe("alt-]");
+  expect(resolveKeyToken({ name: "[", sequence: "[", option: true, meta: true })).toBe("alt-[");
+});
+
 test("resolveKeyToken ignores true Meta/Command combos without option", () => {
   expect(resolveKeyToken({ name: "r", sequence: "r", meta: true })).toBeNull();
 });

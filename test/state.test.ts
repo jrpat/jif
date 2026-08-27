@@ -48,6 +48,7 @@ import {
   moveFocus,
   moveFocusToBookmark,
   moveFocusToChild,
+  moveFocusToImmutable,
   moveFocusToNextDivergentSibling,
   moveFocusToParent,
   moveFocusToWorkspace,
@@ -961,6 +962,50 @@ test("moveFocusToBookmark exits file navigation when jumping", () => {
   expect(state.focusMode).toBe("files");
 
   state = moveFocusToBookmark(state, 1);
+
+  expect(state.focusMode).toBe("revisions");
+  expect(state.expandedRowId).toBeNull();
+  expect(state.focusedRevisionIndex).toBe(1);
+  expect(state.focusedFileIndex).toBe(0);
+});
+
+test("moveFocusToImmutable jumps between visible immutable revisions without wrapping", () => {
+  const base = createBookmarkNavigationState();
+  let state: AppState = {
+    ...base,
+    revisions: base.revisions.map((revision, index) => ({
+      ...revision,
+      marker: index === 2 || index === 4 ? "immutable" : revision.marker,
+    })),
+  };
+
+  state = moveFocusToImmutable(state, 1);
+  expect(state.focusedRevisionIndex).toBe(2);
+
+  state = moveFocusToImmutable(state, 1);
+  expect(state.focusedRevisionIndex).toBe(4);
+
+  const afterLast = moveFocusToImmutable(state, 1);
+  expect(afterLast).toBe(state);
+
+  state = moveFocusToImmutable(state, -1);
+  expect(state.focusedRevisionIndex).toBe(2);
+
+  const beforeFirst = moveFocusToImmutable(state, -1);
+  expect(beforeFirst).toBe(state);
+});
+
+test("moveFocusToImmutable exits file navigation when jumping", () => {
+  const base = createBookmarkNavigationState();
+  let state: AppState = {
+    ...base,
+    revisions: base.revisions.map((revision, index) =>
+      index === 1 ? { ...revision, marker: "immutable" } : revision
+    ),
+  };
+  state = openFocusedRevision(state);
+
+  state = moveFocusToImmutable(state, 1);
 
   expect(state.focusMode).toBe("revisions");
   expect(state.expandedRowId).toBeNull();

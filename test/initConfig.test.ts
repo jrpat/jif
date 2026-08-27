@@ -50,6 +50,7 @@ test("initUserConfig creates placeholder config.ts and jif.d.ts", async () => {
   expect(typesText).toContain("declare global {");
   expect(typesText).toContain("namespace Jif {");
   expect(typesText).toContain("switchWorkspace: (workspaceName: string) => Promise<void>;");
+  expect(typesText).toContain("moveFocusToImmutable: (direction: 1 | -1) => void;");
   expect(typesText).toContain("type Config = Readonly<{");
   expect(typesText).toContain('"promptSuggestionFocusedFill"');
   expect(typesText).toContain('"previewPaneFill"');
