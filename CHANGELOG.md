@@ -3,6 +3,18 @@
 Stable releases are recorded here, newest first. Prerelease (beta) notes live
 on their GitHub Releases only.
 
+## v0.12.0 — 2026-08-28
+
+### Highlights
+
+- Press `C` to enter Copy mode and copy the focused revision's jj ID, full Git commit ID, description summary, full description, or bookmark.
+- Jump to the previous or next visible immutable revision with `alt-[` and `alt-]`, including while composing revision operations.
+
+### All changes
+
+- Add revision metadata copy mode
+- Add immutable revision navigation bindings
+
 ## v0.11.0 — 2026-08-25
 
 ### Highlights
