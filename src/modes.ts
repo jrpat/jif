@@ -150,6 +150,7 @@ const alias = (command: string): KeymapBinding => ({ command, canonical: false }
 // all of them at once.
 const previewBindings = {
   p: "toggle-preview",
+  enter: alias("toggle-preview"),
   "alt-p": "cycle-preview-position",
   W: "toggle-preview-word-wrap",
   "ctrl-[": "expand-preview",
@@ -219,7 +220,6 @@ export const defaultKeymap: Keymap = {
     h: "collapse",
     left: alias("collapse"),
     g: "git-command-bar",
-    enter: "confirm",
     r: "rebase",
     R: "restore-revision",
     y: "duplicate",

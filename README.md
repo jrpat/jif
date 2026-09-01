@@ -124,7 +124,7 @@ Controls for the [preview pane](#preview-pane). Available in Normal, secondary r
 
 | Key | Command | Description |
 |-----|---------|-------------|
-| `p` | toggle-preview | Show or hide the preview pane for this session |
+| `p` / `enter` | toggle-preview | Show or hide the preview pane for this session |
 | `d` | show-diff | Enter Preview mode with the pane taking over the whole screen |
 | `alt+p` | cycle-preview-position | Cycle the pane between auto, right, and below |
 | `shift+w` | toggle-preview-word-wrap | Wrap or unwrap long preview diff lines |
@@ -135,6 +135,8 @@ Controls for the [preview pane](#preview-pane). Available in Normal, secondary r
 | `ctrl+k` | scroll-preview-up | Scroll the preview up (falls back to the help toast when the pane is hidden) |
 
 `ctrl+[` / `ctrl+]` require a terminal that distinguishes them from other keys via the Kitty keyboard protocol (kitty, Ghostty, WezTerm, recent iTerm2, Alacritty, foot). In terminals without it, `ctrl+[` is indistinguishable from Escape.
+
+Operation drafts and other modal prompts retain `enter` for confirmation.
 
 Preview mode is entered with `d`. Its full-screen takeover leaves the shortcut
 panel collapsed so the diff gets all available space; press `?` whenever you
@@ -1097,7 +1099,7 @@ In Files mode, `ctrl+enter` toggles the focused file preview between jj's compac
 <details>
 <summary>Visibility and Placement</summary>
 
-Press `p` to show or hide the pane; whether it shows on startup is controlled by `preview.showByDefault`.
+Press `p` or `enter` to show or hide the pane; whether it shows on startup is controlled by `preview.showByDefault`.
 
 By default the pane is placed automatically: on the right in wide terminals and below the log in narrow ones (narrower than `preview.narrowWidth` columns). Set `preview.whenNarrow` to `"hide"` to hide the pane on narrow terminals instead of relocating it below.
 

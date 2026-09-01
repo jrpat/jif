@@ -190,6 +190,13 @@ describe("preview mode", () => {
     }
   });
 
+  test("enter aliases p on every browse surface with a split preview", () => {
+    for (const mode of ["revision-log", "revision-files", "op-log", "evolog"] as const) {
+      expect(resolveCommand(mode, "p", defaultKeymap)).toBe("toggle-preview");
+      expect(resolveCommand(mode, "enter", defaultKeymap)).toBe("toggle-preview");
+    }
+  });
+
   test("browse-mode preview bindings retain explicit labels", () => {
     const titleById = new Map(commandDefinitions.map(({ id, title }) => [id, title]));
     expect(Object.fromEntries([
