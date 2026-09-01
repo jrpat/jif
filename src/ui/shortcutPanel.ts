@@ -45,7 +45,7 @@ const MODIFIER_SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   shift: ["shift"],
 };
 const KEY_LABEL_ABBREVIATIONS: Readonly<Record<string, string>> = {
-  escape: "esc",
+  escape: "␛",
   enter: "ret",
   space: "⎵",
   " ": "⎵",

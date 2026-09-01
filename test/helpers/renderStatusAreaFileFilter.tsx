@@ -8,7 +8,7 @@ const rendered = await testRender(() => (
   <StatusArea
     shortcutSummary=""
     shortcutSummarySegments={[
-      { keyLabel: "esc", label: "log" },
+      { keyLabel: "␛", label: "log" },
       { keyLabel: ":", label: "command" },
     ]}
     shortcutLayout={{

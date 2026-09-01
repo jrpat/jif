@@ -85,6 +85,7 @@ import {
   buildShortcutSummarySegments,
   buildStateChipLabel,
   computeShortcutPanelHeight,
+  formatShortcutKeyLabel,
   getShortcutPanelBindings,
   resolveShortcutPanelBindings,
   shouldSplitShortcutPanelLayout,
@@ -657,7 +658,7 @@ export function JifView(props: {
     // for their exact combined label so trailing hints drop before overflowing.
     const availableWidth = shortcutContentWidth() - stateChipSummaryWidth(chipLabel);
     const leadingEntries = isFileFilterRevset()
-      ? [{ keyLabel: "esc", label: "log" }]
+      ? [{ keyLabel: formatShortcutKeyLabel("escape"), label: "log" }]
       : [];
     return buildShortcutSummarySegments(shortcutEntries(), availableWidth, leadingEntries);
   });

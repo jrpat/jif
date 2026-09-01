@@ -225,10 +225,10 @@ test("buildShortcutSummarySegments places leading segments first and budgets for
     makeBinding("move-down", "Move Down", "j"),
     makeBinding("move-up", "Move Up", "k"),
   ]);
-  const segments = buildShortcutSummarySegments(entries, 80, [{ keyLabel: "esc", label: "log" }]);
+  const segments = buildShortcutSummarySegments(entries, 80, [{ keyLabel: "␛", label: "log" }]);
 
   expect(segments).toEqual([
-    { keyLabel: "esc", label: "log" },
+    { keyLabel: "␛", label: "log" },
     { keyLabel: ":", label: "command" },
     { keyLabel: "?", label: "help" },
     { keyLabel: "j/k", label: "move" },
@@ -242,12 +242,12 @@ test("buildShortcutSummarySegments drops trailing hints when the leading hint ea
     makeBinding("move-down", "Move Down", "j"),
     makeBinding("move-up", "Move Up", "k"),
   ]);
-  // `esc log` (7) + gap (3) + `: command` (9) = 19 fits; adding `? help` would
+  // `␛ log` (5) + gap (3) + `: command` (9) = 17 fits; adding `? help` would
   // need 9 more, so it drops rather than overflowing the chip-narrowed row.
-  const leading = [{ keyLabel: "esc", label: "log" }];
+  const leading = [{ keyLabel: "␛", label: "log" }];
 
-  expect(buildShortcutSummarySegments(entries, 19, leading)).toEqual([
-    { keyLabel: "esc", label: "log" },
+  expect(buildShortcutSummarySegments(entries, 17, leading)).toEqual([
+    { keyLabel: "␛", label: "log" },
     { keyLabel: ":", label: "command" },
   ]);
 });
@@ -271,7 +271,8 @@ test("formatShortcutKeyLabel uses symbolic labels for space and modifiers", () =
   expect(formatShortcutKeyLabel("right")).toBe("→");
   expect(formatShortcutKeyLabel("down")).toBe("↓");
   expect(formatShortcutKeyLabel("up")).toBe("↑");
-  expect(formatShortcutKeyLabel("escape")).toBe("esc");
+  expect(formatShortcutKeyLabel("escape")).toBe("␛");
+  expect(formatShortcutKeyLabel("ctrl-escape")).toBe("⌃␛");
   expect(formatShortcutKeyLabel("j")).toBe("j");
 });
 

@@ -222,10 +222,10 @@ test("collapsed status area shows file chip and escape log shortcut", async () =
   const { frame } = JSON.parse(stdout) as { frame: string };
   const statusLine = frame.split("\n")[1] ?? "";
   expect(statusLine).toStartWith("│ file ");
-  expect(statusLine).not.toStartWith("│esc");
-  expect(statusLine).toContain(" file   esc log");
-  expect(frame).toContain("esc log");
-  expect(frame).not.toContain("esclog");
+  expect(statusLine).not.toStartWith("│␛");
+  expect(statusLine).toContain(" file   ␛ log");
+  expect(frame).toContain("␛ log");
+  expect(frame).not.toContain("␛log");
 });
 
 test("expanded panel renders user-defined bindings in a section above the built-ins", async () => {
